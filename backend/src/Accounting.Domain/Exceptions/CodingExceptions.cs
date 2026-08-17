@@ -1,7 +1,8 @@
 namespace Accounting.Domain.Exceptions;
 
 /// <summary>
-/// کد سطحی از کدینگ (گروه/کل/معین) خالی، با طول نادرست یا شامل کاراکتر غیرمجاز است.
+/// کد حساب خالی، با طول نادرست یا شامل کاراکتر غیرمجاز است.
+/// توسط <see cref="ValueObjects.AccountCode"/> استفاده می‌شود.
 /// </summary>
 public sealed class InvalidAccountCodeException : DomainException
 {
@@ -11,17 +12,7 @@ public sealed class InvalidAccountCodeException : DomainException
 }
 
 /// <summary>
-/// تلاش برای تعریف یک کد تکراری زیر همان والد (مثلاً دو کل با یک کد در یک گروه).
-/// </summary>
-public sealed class DuplicateAccountCodeException : DomainException
-{
-    public DuplicateAccountCodeException(string message) : base(message)
-    {
-    }
-}
-
-/// <summary>
-/// عنوان یک موجودیت (گروه/کل/معین/نوع تفصیلی/تفصیلی) خالی یا نامعتبر است.
+/// عنوان یک موجودیت خالی یا نامعتبر است. توسط <see cref="Common.Guard"/> استفاده می‌شود.
 /// </summary>
 public sealed class InvalidTitleException : DomainException
 {

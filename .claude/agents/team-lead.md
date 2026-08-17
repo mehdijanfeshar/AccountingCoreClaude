@@ -34,10 +34,10 @@ model: opus
 کاربر پس از دیدن تحلیل ریسک، صراحتاً گزینهٔ «Legacy کاملاً جایگزین شود» را انتخاب کرد.
 
 - **مدل نوشتن معتبر پروژه = Entityهای `Accounting.Domain.Legacy`.** مدل Rich دیگر مبنا نیست.
-- کلاس‌های Rich (`AccountGroup`, `GeneralLedgerAccount`, `SubsidiaryAccount`, `DetailAccount`, `DetailAccountType`, `SubsidiaryDetailTypeLink`, `Voucher`, `VoucherLine`, `VoucherLineDetailValue`, `VoucherPostingValidator`, `DetailRequirement`, `SubsidiaryDetailPolicy`) با `[Obsolete]` سطح warning علامت خورده‌اند.
-- **حذف فیزیکی نشده‌اند** و تو هم بدون درخواست صریح کاربر حذفشان نکن. برای کد جدید از آن‌ها استفاده نکن.
-- `Money`, `AccountCode`, `AccountNature`, `VoucherStatus`, `Guard`, `Exceptions/` منسوخ **نشده‌اند** و قابل بازاستفاده‌اند.
-- ۳۳ تست `Accounting.Domain.Tests` حذف/skip نشدند و سبز می‌مانند؛ اما وضعیتشان تغییر کرد: آن‌ها اکنون **مستندسازی اجرایی رفتار منسوخ**‌اند، نه اثبات رفتار مدل نوشتن فعلی. برای پوشش مدل جدید نمی‌توان به آن‌ها استناد کرد.
+- کلاس‌های Rich (`AccountGroup`, `GeneralLedgerAccount`, `SubsidiaryAccount`, `DetailAccount`, `DetailAccountType`, `SubsidiaryDetailTypeLink`, `Voucher`, `VoucherLine`, `VoucherLineDetailValue`, `VoucherPostingValidator`, `DetailRequirement`, `SubsidiaryDetailPolicy`) و Exceptionهای مختص آن‌ها دیگر در کد وجود ندارند.
+- **فیزیکاً حذف شدند** (۲۰۲۶-۰۸-۱۷، به درخواست صریح کاربر)؛ در تاریخچهٔ git تا commit `9f760ad` قابل بازیابی‌اند. اگر سندی هنوز به آن‌ها ارجاع می‌دهد، آن سند قدیمی است.
+- تایپ‌های باقی‌مانده و قابل بازاستفاده: `Money`, `AccountCode`, `AccountNature`, `VoucherStatus`, `Guard`, `DomainException`, `InvalidAccountCodeException`, `InvalidTitleException`, `NegativeAmountException`.
+- تست‌ها از ۳۳ به **۱۲** رسید (فقط `AccountCodeTests` و `MoneyTests` باقی ماندند). ⚠️ یعنی **پوشش تست مدل نوشتن فعلی صفر است**؛ هنگام ساخت اولین Command/Query حتماً `qa-tester` را فعال کن.
 - `docs/chart-of-accounts.md` با بنر SUPERSEDED علامت خورده و **پاک نشده** (سابقهٔ تصمیم‌های طراحی).
 
 ## اصل بنیادین
@@ -155,7 +155,7 @@ Agent باید برگرداند:
 
 ## Accounting Safety Gate
 
-⚠️ **این Gate از ۲۰۲۶-۰۸-۱۷ ماهیتش عوض شد.** به انتخاب صریح کاربر (گزینهٔ «ج»: Legacy جایگزین کامل مدل Rich)، تضمین‌های زیر دیگر **در سطح کد دامنه وجود ندارند**؛ مدل Rich که آن‌ها را enforce می‌کرد `[Obsolete]` شده است.
+⚠️ **این Gate از ۲۰۲۶-۰۸-۱۷ ماهیتش عوض شد.** به انتخاب صریح کاربر (گزینهٔ «ج»: Legacy جایگزین کامل مدل Rich)، تضمین‌های زیر دیگر **در سطح کد دامنه وجود ندارند**؛ مدل Rich که آن‌ها را enforce می‌کرد فیزیکاً حذف شده است.
 
 پس وظیفهٔ تو دیگر «تأیید اینکه این تضمین‌ها برقرارند» نیست — چون برقرار نیستند. وظیفهٔ جدیدت **شفاف‌سازی شکاف** است:
 

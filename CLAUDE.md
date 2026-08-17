@@ -36,11 +36,18 @@
 - سلسله‌مراتب ثابت سه‌سطحی گروه/کل/معین با طول کد ثابت
 - یک‌طرفه بودن بدهکار/بستانکار در هر ردیف
 
-**نحوهٔ اجرا — منسوخ‌سازی، نه حذف فیزیکی** (تصمیم `team-lead`):
-کلاس‌های Rich با `[Obsolete]` (سطح warning) علامت خورده‌اند ولی **حذف نشده‌اند**. دلایل:
-1. مخزن git هنوز init نشده → حذف فایل واقعاً غیرقابل‌بازگشت است.
-2. تأیید شد که **هیچ کد production ای** به مدل Rich وابسته نیست (تنها مصرف‌کننده ۳۳ تست است)، پس نگه‌داشتن آن نه هزینهٔ عملیاتی دارد و نه ریسک نشت به مسیر نوشتن.
-3. حذف فیزیکی پس از init شدن git و اثبات مدل نوشتنِ مبتنی بر Legacy، یک follow-up ساده و امن است.
+**نحوهٔ اجرا — حذف فیزیکی (انجام شد در ۲۰۲۶-۰۸-۱۷، به درخواست صریح کاربر):**
+مرحلهٔ اول با `[Obsolete]` انجام شد (چون git هنوز init نشده بود). پس از اینکه کاربر `git init` + commit اولیه (`9f760ad`) را زد، حذف قابل‌بازگشت شد و کاربر صریحاً حذف فیزیکی را درخواست کرد. **۲۲ فایل حذف شدند:**
+- ۹ Entity: `AccountGroup`, `GeneralLedgerAccount`, `SubsidiaryAccount`, `DetailAccount`, `DetailAccountType`, `SubsidiaryDetailTypeLink`, `Voucher`, `VoucherLine`, `VoucherLineDetailValue`
+- `Rules/VoucherPostingValidator.cs` (پوشهٔ `Rules/` و `Entities/` خالی و حذف شدند)
+- `ValueObjects/DetailRequirement.cs`, `ValueObjects/SubsidiaryDetailPolicy.cs`
+- ۳ فایل Exception که پس از حذف بالا هیچ مصرف‌کننده‌ای نداشتند: `VoucherExceptions.cs` (۴ کلاس)، `VoucherLineExceptions.cs` (۴ کلاس)، `DetailTypeExceptions.cs` (۱ کلاس). همچنین `DuplicateAccountCodeException` از داخل `CodingExceptions.cs` حذف شد (بقیهٔ کلاس‌های آن فایل هنوز استفاده می‌شوند).
+- ۷ فایل تست وابسته به تایپ‌های حذف‌شده (شامل `TestSupport/DomainFactory.cs` و `TestSupport/EntityIdAssigner.cs`).
+
+**آنچه عمداً باقی ماند** (چون هنوز مصرف‌کنندهٔ واقعی دارند و قابل بازاستفاده در مدل Legacy‌اند):
+`Money`, `AccountCode`, `AccountNature`, `VoucherStatus`, `Common/Guard.cs`, `Exceptions/DomainException.cs`, `Exceptions/MoneyExceptions.cs`, `Exceptions/CodingExceptions.cs` (شامل `InvalidAccountCodeException` و `InvalidTitleException`).
+
+تست‌ها از ۳۳ به **۱۲** رسید (`AccountCodeTests` + `MoneyTests`)، همگی سبز. `NoWarn CS0618` از csproj تست حذف شد چون دیگر لازم نیست.
 
 `docs/chart-of-accounts.md` در بالای فایل با بنر ⚠️ SUPERSEDED علامت خورد و **پاک نشد** (به‌عنوان سابقهٔ تصمیم‌های طراحی نگه داشته شد).
 
@@ -86,10 +93,10 @@ docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
 
 - [x] راه‌اندازی اولیه solution و پروژه‌های .NET — `backend/Accounting.sln` با ۴ پروژه روی net10.0؛ رفرنس‌ها طبق Clean Architecture (Api → Application+Infrastructure، Infrastructure → Application، Application → Domain، Domain بدون وابستگی)؛ Swagger با Swashbuckle.AspNetCore روی `/swagger` فعال و توسط qa-tester تأیید شد. فعلاً فقط اسکلت + `HealthController` است و هیچ کد دامنه‌ای نوشته نشده.
 - [ ] راه‌اندازی اولیه React (Vite) — طبق تصمیم فعلی، فرانت‌اند تا اطلاع ثانوی متوقف است؛ تمرکز روی backend/.
-- [~] ~~طراحی نهایی مدل دامنه کدینگ شناور~~ — **منسوخ شد (۲۰۲۶-۰۸-۱۷)**. rich domain model ساخته و تست شد، اما به تصمیم دوم کاربر کنار گذاشته شد. هر ۱۲ تایپ با `[Obsolete]` علامت خورده‌اند و **حذف نشده‌اند**. ۳۳ تست هنوز سبزند ولی اکنون «مستندسازی اجرایی رفتار منسوخ»‌اند، نه اثبات مدل نوشتن فعلی.
+- [x] ~~طراحی نهایی مدل دامنه کدینگ شناور~~ — **حذف شد (۲۰۲۶-۰۸-۱۷)**. rich domain model ساخته و تست شد، سپس به تصمیم دوم کاربر کنار گذاشته و در نهایت **فیزیکاً حذف شد** (۲۲ فایل). در تاریخچهٔ git تا commit `9f760ad` قابل بازیابی است.
 - [x] Reverse Engineering دیتابیس Legacy Oracle (schema `CENTRALACCOUNT`) — کشف Read-Only کامل schema (۶۵ جدول، ۷۷۴ ستون، ۸۲ FK، ۲۹ UNIQUE، ۱ sequence، ۲۸ View) و Scaffold همهٔ ۶۵ جدول به Entity + Fluent Mapping. **فقط Entity و Mapping** — هیچ Business Logic یا Repository.
 - [x] اجرای تصمیم معماری Legacy-as-Domain (۲۰۲۶-۰۸-۱۷) — هر ۶۵ کلاس Entity از `Accounting.Infrastructure/Legacy/Entities/` به `Accounting.Domain/Legacy/Entities/` **منتقل** شد (نه کپی) و namespace همه به `Accounting.Domain.Legacy` تغییر کرد. `LegacyDbContext.cs` با همهٔ Fluent Mappingها در `Accounting.Infrastructure/Legacy/` باقی ماند و با `using Accounting.Domain.Legacy;` به Entityهای جدید ارجاع می‌دهد. جهت وابستگی Infrastructure → Domain (مجاز)؛ `Accounting.Domain.csproj` همچنان **صفر** وابستگی خارجی دارد. build با ۰ خطا و ۱۶ warning (همگی NU1903 از قبل موجود، بدون هیچ warning نوع CS) و ۳۳/۳۳ تست سبز.
-- [x] اجرای تصمیم دوم «Legacy جایگزین کامل» (۲۰۲۶-۰۸-۱۷) — ۱۲ تایپ مدل Rich با `[Obsolete]` (سطح warning) علامت خوردند: ۹ Entity + `VoucherPostingValidator` + `DetailRequirement` + `SubsidiaryDetailPolicy`. `Money`, `AccountCode`, `AccountNature`, `VoucherStatus`, `Guard`, `Exceptions/` منسوخ **نشدند** (قابل بازاستفاده). `NoWarn CS0618` به csproj تست اضافه شد تا build تمیز بماند. **هیچ فایلی حذف نشد.** build ۰ خطا / ۱۶ warning پیش‌موجود، ۳۳/۳۳ تست سبز.
+- [x] اجرای تصمیم دوم «Legacy جایگزین کامل» (۲۰۲۶-۰۸-۱۷) — در دو مرحله: اول ۱۲ تایپ با `[Obsolete]` علامت خوردند، سپس **به درخواست صریح کاربر فیزیکاً حذف شدند** (۲۲ فایل شامل ۳ فایل Exception یتیم و ۷ فایل تست). جزئیات کامل در «تصمیم معماری دوم» بالا. اکنون `Accounting.Domain` فقط شامل `Legacy/` (۶۵ Entity) + `ValueObjects/` (۴ تایپ باقی‌مانده) + `Common/Guard.cs` + `Exceptions/` (۳ فایل) است. build ۰ خطا / ۱۶ warning پیش‌موجود (هیچ warning نوع CS)، **۱۲/۱۲ تست سبز**.
 - [x] حل ابهام «منبع حقیقت تفصیلی مجاز» — `TB_ACCOUNT_LINK_TAFSILGROUP` منبع حقیقت است (FK `FK_TAFSILGOUP_ACCOUNTCODE` به `TB_ACCOUNTCODE` + UNIQUE `UK_ACCOUNTLINKTAFSILGROUP` روی `ACCOUNT_ID, LEVEL_ID, TAFSILGROUP_ID`). زنجیره: `TB_ACCOUNTCODE → TB_ACCOUNT_LINK_TAFSILGROUP → TB_TAFSIL_LINK_TAFSILGROUP → TB_TAFSILI`.
 - [ ] اتصال به Oracle (مسیر Legacy) و طراحی مدل نوشتن مبتنی بر `Accounting.Domain.Legacy`
 - [ ] اولین Command/Query روی Entityهای Legacy
@@ -110,7 +117,8 @@ docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
 - **🟡 تضمین تراز (Debit == Credit)** — با تصمیم دوم کاربر از سطح کد حذف شد. اگر لازم شد باید در لایهٔ Application یا به‌صورت DB constraint بازسازی شود.
 - **~~نگاشت `VoucherLine.DetailPolicySnapshot`~~** — منتفی شد؛ `VoucherLine` منسوخ است و مسیر نوشتن دیگر از آن عبور نمی‌کند.
 - **`AccountNature` فعلاً فقط برچسب گزارشی است** و در اعتبارسنجی دخالت ندارد؛ اگر قرار است مانده بر اساس ماهیت محاسبه شود، جای آن سمت Read (View/MV) است.
-- **حذف فیزیکی کد منسوخ** — اکنون که git init شده، حذف ۱۲ تایپ `[Obsolete]` و ۳۳ تست مرتبط به‌صورت امن ممکن است. **انجام نشد** چون کاربر صریحاً درخواست نکرده بود؛ در صورت تمایل یک follow-up ساده است.
+- **~~حذف فیزیکی کد منسوخ~~** — ✅ انجام شد (۲۰۲۶-۰۸-۱۷، به درخواست صریح کاربر پس از init شدن git). ۲۲ فایل حذف شد؛ در commit `9f760ad` قابل بازیابی است.
+- **🟡 پوشش تست مدل نوشتن جدید صفر است** — با حذف ۲۱ تست مدل Rich، تنها ۱۲ تست باقی‌مانده مربوط به `AccountCode` و `Money` است. **هیچ تستی روی مدل نوشتن مبتنی بر `Accounting.Domain.Legacy` وجود ندارد**، چون هنوز چنین مدلی ساخته نشده. با ساخت اولین Command/Query باید `qa-tester` پوشش را بسازد.
 
 ## قوانین کاری تیم
 

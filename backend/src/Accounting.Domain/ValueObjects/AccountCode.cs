@@ -3,12 +3,15 @@ using Accounting.Domain.Exceptions;
 namespace Accounting.Domain.ValueObjects;
 
 /// <summary>
-/// کد یک سطح از کدینگ ثابت (گروه/کل/معین). طول کد برای هر سطح ثابت است
-/// (به ترتیب <see cref="Entities.AccountGroup.CodeLength"/>,
-/// <see cref="Entities.GeneralLedgerAccount.CodeLength"/>,
-/// <see cref="Entities.SubsidiaryAccount.CodeLength"/>) و فقط شامل ارقام است.
+/// کد یک حساب با طول ثابت و فقط شامل ارقام. طول موردانتظار هنگام فراخوانی
+/// <see cref="Create(string?, int)"/> به‌صورت پارامتر داده می‌شود.
 /// این Value Object تضمین می‌کند که هرگز یک کد خالی، با طول نادرست یا شامل کاراکتر
 /// غیرمجاز در سیستم وجود نداشته باشد.
+/// <para>
+/// یادداشت (۲۰۲۶-۰۸-۱۷): سلسله‌مراتب ثابت گروه/کل/معین که این تایپ در اصل برای آن
+/// ساخته شده بود حذف شد (تصمیم «Legacy جایگزین کامل»). خودِ این Value Object منسوخ
+/// نیست و برای اعتبارسنجی کد حساب در مدل مبتنی بر Legacy قابل استفاده است.
+/// </para>
 /// </summary>
 public sealed class AccountCode : IEquatable<AccountCode>
 {

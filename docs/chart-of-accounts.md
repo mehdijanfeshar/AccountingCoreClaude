@@ -14,7 +14,9 @@
 >
 > مدل نوشتن معتبر از این پس: Entityهای `Accounting.Domain.Legacy` در `backend/src/Accounting.Domain/Legacy/Entities/`.
 >
-> کلاس‌های Rich که این سند توصیف می‌کند با `[Obsolete]` علامت خورده‌اند اما **حذف نشده‌اند** (مخزن git هنوز init نشده؛ حذف غیرقابل‌بازگشت است).
+> کلاس‌های Rich که این سند توصیف می‌کند **فیزیکاً حذف شده‌اند** (۲۰۲۶-۰۸-۱۷، به درخواست صریح کاربر پس از init شدن git). کدشان در تاریخچهٔ git تا commit `9f760ad` قابل بازیابی است. بنابراین **نام کلاس‌ها و نمونه‌کدهای داخل این سند دیگر با کد موجود مطابقت ندارند.**
+>
+> تنها تایپ‌هایی که از این طراحی باقی ماندند: `Money`, `AccountCode`, `AccountNature`, `VoucherStatus`, `Guard`, `DomainException`, `InvalidAccountCodeException`, `InvalidTitleException`, `NegativeAmountException`.
 >
 > این فایل به‌عنوان **سابقهٔ تصمیم‌های طراحی و دلیل رد شدن طرح‌های جایگزین** نگه داشته می‌شود — به درخواست کاربر پاک نشده است. برای وضعیت جاری به `CLAUDE.md` مراجعه کن.
 
