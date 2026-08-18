@@ -23,7 +23,7 @@ model: opus
 
 لایهٔ جداگانهٔ Anti-Corruption بین Legacy Entity و Domain Entity وجود ندارد.
 
-- Entityهای تولیدشده از جدول‌های Legacy مستقیماً در پروژهٔ `Accounting.Domain` زندگی می‌کنند (namespace `Accounting.Domain.Legacy`) و شهروند درجه‌یک دامنه‌اند.
+- Entityهای تولیدشده از جدول‌های Legacy مستقیماً در پروژهٔ `Accounting.Domain` زندگی می‌کنند (پوشهٔ `Entity/`، namespace `Accounting.Domain.Entity` — از ۲۰۲۶-۰۸-۱۸ پس از مسطح‌سازی؛ پیش‌تر `Legacy/Entities/` و `Accounting.Domain.Legacy` بود) و شهروند درجه‌یک دامنه‌اند.
 - ترجمهٔ دولایه (Legacy Model ↔ Domain Model) و Mapper/Adapter/ACL برای صرفِ جداسازی مدل‌ها ساخته نمی‌شود.
 - **استثنای غیرقابل‌مذاکره:** پروژهٔ `Accounting.Domain` همچنان هیچ وابستگی خارجی ندارد. این قانون معکوس نشده است. بنابراین:
   - فقط کلاس‌های POCO به Domain منتقل می‌شوند.
@@ -33,7 +33,7 @@ model: opus
 
 کاربر پس از دیدن تحلیل ریسک، صراحتاً گزینهٔ «Legacy کاملاً جایگزین شود» را انتخاب کرد.
 
-- **مدل نوشتن معتبر پروژه = Entityهای `Accounting.Domain.Legacy`.** مدل Rich دیگر مبنا نیست.
+- **مدل نوشتن معتبر پروژه = Entityهای `Accounting.Domain.Entity`.** مدل Rich دیگر مبنا نیست.
 - کلاس‌های Rich (`AccountGroup`, `GeneralLedgerAccount`, `SubsidiaryAccount`, `DetailAccount`, `DetailAccountType`, `SubsidiaryDetailTypeLink`, `Voucher`, `VoucherLine`, `VoucherLineDetailValue`, `VoucherPostingValidator`, `DetailRequirement`, `SubsidiaryDetailPolicy`) و Exceptionهای مختص آن‌ها دیگر در کد وجود ندارند.
 - **فیزیکاً حذف شدند** (۲۰۲۶-۰۸-۱۷، به درخواست صریح کاربر)؛ در تاریخچهٔ git تا commit `9f760ad` قابل بازیابی‌اند. اگر سندی هنوز به آن‌ها ارجاع می‌دهد، آن سند قدیمی است.
 - تایپ‌های باقی‌مانده و قابل بازاستفاده: `Money`, `AccountCode`, `AccountNature`, `VoucherStatus`, `Guard`, `DomainException`, `InvalidAccountCodeException`, `InvalidTitleException`, `NegativeAmountException`.

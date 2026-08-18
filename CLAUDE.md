@@ -17,7 +17,7 @@
 
 پیامدها:
 - لایهٔ جداگانهٔ Anti-Corruption بین Legacy و Domain ساخته نمی‌شود.
-- Entityهای جدول‌های Legacy در `backend/src/Accounting.Domain/Legacy/` با namespace `Accounting.Domain.Legacy` زندگی می‌کنند و شهروند درجه‌یک دامنه‌اند.
+- Entityهای جدول‌های Legacy در `backend/src/Accounting.Domain/Entity/` با namespace `Accounting.Domain.Entity` زندگی می‌کنند و شهروند درجه‌یک دامنه‌اند. (این مسیر/namespace در ۲۰۲۶-۰۸-۱۸ از `Legacy/Entities/` + `Accounting.Domain.Legacy` تغییر نام یافت — رجوع به «تصمیم معماری سوم» پایین‌تر. نام خودِ تصمیم «Legacy-as-Domain» باقی است چون به مفهوم اشاره دارد نه به namespace.)
 - نقش ایجنت `entity-mapper` از «جلوگیری از نشت Legacy به Domain» به «ادغام کنترل‌شدهٔ Legacy در Domain» تغییر کرد.
 
 قیدی که معکوس **نشد** و همچنان برقرار است:
@@ -53,6 +53,21 @@
 
 ⚠️ **پیامدی که باید بدانید:** با این تصمیم، تضمین «بدهکار = بستانکار» دیگر در سطح کد وجود ندارد. اگر بعداً این تضمین لازم شد، باید صریحاً در لایهٔ Application/DB (constraint یا validation) بازسازی شود.
 
+### تصمیم معماری سوم: مسطح‌سازی پوشهٔ Entity و namespace جدید (۲۰۲۶-۰۸-۱۸)
+
+**به درخواست صریح صاحب پروژه** («همهٔ entityها الان داخل پوشهٔ Legacy هستند، در حالی که باید مستقیم داخل Domain/Entity باشند»)، از میان گزینه‌های مطرح‌شده کاربر **مسطح‌سازی کامل + namespace جدید** را انتخاب کرد:
+
+| قبل | بعد |
+|---|---|
+| `backend/src/Accounting.Domain/Legacy/Entities/*.cs` | `backend/src/Accounting.Domain/Entity/*.cs` |
+| `namespace Accounting.Domain.Legacy` | `namespace Accounting.Domain.Entity` |
+
+- پوشهٔ میانی `Entities/` حذف شد (یک سطح مسطح‌تر) و پوشه‌های خالی `Legacy/` و `Legacy/Entities/` پاک شدند.
+- انتقال با `git mv` انجام شد تا تاریخچهٔ فایل‌ها حفظ شود.
+- **دلیل معنایی:** با تصمیم دوم، این Entityها دیگر «مدل Legacy در کنار مدل اصلی» نیستند؛ آن‌ها **خودِ** مدل دامنه‌اند. نگه‌داشتن نام `Legacy` در مسیر/namespace این پیام غلط را می‌داد که مدل دیگری هم وجود دارد.
+- **آنچه عمداً تغییر **نکرد**:** سمت Infrastructure دست‌نخورده ماند — پوشهٔ `backend/src/Accounting.Infrastructure/Legacy/`، نام کلاس `LegacyDbContext` و `GuidToChar36Converter` همگی به همان نام باقی‌اند (آنجا واژهٔ Legacy هنوز درست است: نگاشت به schema قدیمی `CENTRALACCOUNT`). فقط `using` داخل `LegacyDbContext.cs` به `Accounting.Domain.Entity` به‌روز شد.
+- **نام خودِ تصمیم‌های «Legacy-as-Domain» و «Legacy جایگزین کامل» معتبر می‌ماند** — آن‌ها به مفهوم اشاره دارند، نه به namespace.
+
 ## تیم ایجنت‌ها
 
 کار این پروژه توسط تیمی از ساب‌ایجنت‌های تعریف‌شده در `.claude/agents/` انجام می‌شود:
@@ -76,9 +91,11 @@
 ## ساختار پوشه‌ها
 
 ```
-backend/src/Accounting.Domain          # موجودیت‌ها و قوانین دامنه
+backend/src/Accounting.Domain          # موجودیت‌ها و قوانین دامنه (صفر وابستگی خارجی)
+backend/src/Accounting.Domain/Entity   # ۶۵ Entity (namespace: Accounting.Domain.Entity) — POCO خالص
 backend/src/Accounting.Application     # CQRS: Commands/Queries/Handlers
 backend/src/Accounting.Infrastructure  # EF Core + Oracle، Repository
+backend/src/Accounting.Infrastructure/Legacy  # LegacyDbContext + Fluent Mapping + GuidToChar36Converter
 backend/src/Accounting.Api             # Controllers
 backend/tests/Accounting.Domain.Tests  # تست واحد قوانین دامنه (xUnit)
 frontend/src/features/chart-of-accounts
@@ -95,12 +112,62 @@ docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
 - [ ] راه‌اندازی اولیه React (Vite) — طبق تصمیم فعلی، فرانت‌اند تا اطلاع ثانوی متوقف است؛ تمرکز روی backend/.
 - [x] ~~طراحی نهایی مدل دامنه کدینگ شناور~~ — **حذف شد (۲۰۲۶-۰۸-۱۷)**. rich domain model ساخته و تست شد، سپس به تصمیم دوم کاربر کنار گذاشته و در نهایت **فیزیکاً حذف شد** (۲۲ فایل). در تاریخچهٔ git تا commit `9f760ad` قابل بازیابی است.
 - [x] Reverse Engineering دیتابیس Legacy Oracle (schema `CENTRALACCOUNT`) — کشف Read-Only کامل schema (۶۵ جدول، ۷۷۴ ستون، ۸۲ FK، ۲۹ UNIQUE، ۱ sequence، ۲۸ View) و Scaffold همهٔ ۶۵ جدول به Entity + Fluent Mapping. **فقط Entity و Mapping** — هیچ Business Logic یا Repository.
-- [x] اجرای تصمیم معماری Legacy-as-Domain (۲۰۲۶-۰۸-۱۷) — هر ۶۵ کلاس Entity از `Accounting.Infrastructure/Legacy/Entities/` به `Accounting.Domain/Legacy/Entities/` **منتقل** شد (نه کپی) و namespace همه به `Accounting.Domain.Legacy` تغییر کرد. `LegacyDbContext.cs` با همهٔ Fluent Mappingها در `Accounting.Infrastructure/Legacy/` باقی ماند و با `using Accounting.Domain.Legacy;` به Entityهای جدید ارجاع می‌دهد. جهت وابستگی Infrastructure → Domain (مجاز)؛ `Accounting.Domain.csproj` همچنان **صفر** وابستگی خارجی دارد. build با ۰ خطا و ۱۶ warning (همگی NU1903 از قبل موجود، بدون هیچ warning نوع CS) و ۳۳/۳۳ تست سبز.
+- [x] اجرای تصمیم معماری Legacy-as-Domain (۲۰۲۶-۰۸-۱۷) — هر ۶۵ کلاس Entity از `Accounting.Infrastructure/Legacy/Entities/` به `Accounting.Domain/Legacy/Entities/` **منتقل** شد (نه کپی) و namespace همه به `Accounting.Domain.Legacy` تغییر کرد. `LegacyDbContext.cs` با همهٔ Fluent Mappingها در `Accounting.Infrastructure/Legacy/` باقی ماند و با `using Accounting.Domain.Legacy;` به Entityهای جدید ارجاع می‌دهد. جهت وابستگی Infrastructure → Domain (مجاز)؛ `Accounting.Domain.csproj` همچنان **صفر** وابستگی خارجی دارد. build با ۰ خطا و ۱۶ warning (همگی NU1903 از قبل موجود، بدون هیچ warning نوع CS) و ۳۳/۳۳ تست سبز. ⚠️ **این مسیر/namespace بعداً در ۲۰۲۶-۰۸-۱۸ تغییر کرد** به `Accounting.Domain/Entity/` و `Accounting.Domain.Entity` (رجوع به «تصمیم معماری سوم»)؛ متن بالا وضعیت همان روز را ثبت می‌کند.
 - [x] اجرای تصمیم دوم «Legacy جایگزین کامل» (۲۰۲۶-۰۸-۱۷) — در دو مرحله: اول ۱۲ تایپ با `[Obsolete]` علامت خوردند، سپس **به درخواست صریح کاربر فیزیکاً حذف شدند** (۲۲ فایل شامل ۳ فایل Exception یتیم و ۷ فایل تست). جزئیات کامل در «تصمیم معماری دوم» بالا. اکنون `Accounting.Domain` فقط شامل `Legacy/` (۶۵ Entity) + `ValueObjects/` (۴ تایپ باقی‌مانده) + `Common/Guard.cs` + `Exceptions/` (۳ فایل) است. build ۰ خطا / ۱۶ warning پیش‌موجود (هیچ warning نوع CS)، **۱۲/۱۲ تست سبز**.
 - [x] حل ابهام «منبع حقیقت تفصیلی مجاز» — `TB_ACCOUNT_LINK_TAFSILGROUP` منبع حقیقت است (FK `FK_TAFSILGOUP_ACCOUNTCODE` به `TB_ACCOUNTCODE` + UNIQUE `UK_ACCOUNTLINKTAFSILGROUP` روی `ACCOUNT_ID, LEVEL_ID, TAFSILGROUP_ID`). زنجیره: `TB_ACCOUNTCODE → TB_ACCOUNT_LINK_TAFSILGROUP → TB_TAFSIL_LINK_TAFSILGROUP → TB_TAFSILI`.
-- [ ] اتصال به Oracle (مسیر Legacy) و طراحی مدل نوشتن مبتنی بر `Accounting.Domain.Legacy`
-- [ ] اولین Command/Query روی Entityهای Legacy
+- [x] تبدیل شناسه‌ها از `string` به `System.Guid` (۲۰۲۶-۰۸-۱۸) — **۱۷۷ پراپرتی ID/FK** در **۶۴** از ۶۵ Entity (۱۱۵ `Guid` + ۶۲ `Guid?`). دامنهٔ تبدیل مکانیکی و قابل‌ممیزی تعیین شد: دقیقاً همان ستون‌هایی که در Fluent Mapping با `HasMaxLength(36) + IsFixedLength()` یعنی Oracle `CHAR(36)` نگاشت شده بودند. `TB_YEAR` هیچ ستون `CHAR(36)` ندارد و دست‌نخورده ماند.
+  - **پیش‌شرط: verify روی دادهٔ زنده** (توسط `database-reverse-engineer`، کاملاً Read-Only، بدون DDL/DML): **۱۲۴٬۰۹۴** مقدار غیر-null در همهٔ ۱۷۷ ستون full-scan شد → ۱۰۰٪ منطبق بر `^[0-9a-f]{8}-...` یعنی dashed و **lowercase**؛ صفر مقدار خراب، صفر اختلاف طول/padding. صحت FK هم با join حساس‌به‌حروف تأیید شد (`SYSTEM_TYPE→TB_SYSTYPE` ۵۷/۵۷، `PARENTID→ID` ۱۲۲/۱۲۲).
+  - **ستون فیزیکی Oracle تغییر نکرد** — همچنان `CHAR(36)`. تبدیل با `GuidToChar36Converter` (یک `ValueConverter<Guid,string>` مشترک) در `Accounting.Infrastructure/Legacy/` انجام می‌شود و صریحاً روی تک‌تک ۱۷۷ پراپرتی اعمال شده (نه Convention سراسری) تا دامنه‌اش قابل‌ممیزی بماند. `Accounting.Domain` همچنان **صفر** وابستگی خارجی دارد (`Guid` جزو BCL است).
+  - ستون‌هایی که پسوند `ID` دارند ولی GUID **نیستند** عمداً `string` ماندند: `ADDUSERID`/`CHANGEUSERID`/`USERID` (طول ۱۰)، `DATE_RSID` (طول ۸)، `CONTROLID` (`NUMBER(1)`)، و کدهای کسب‌وکاری مثل `VAHEDCODE`/`ACCOUNTNUMBER`.
+  - نکتهٔ ظریف: `TB_VOUCHERSHEAD.SYSTEM_TYPE` با اینکه پسوند `_ID` ندارد، `CHAR(36)` و FK واقعی به `TB_SYSTYPE` است؛ تبدیل شد (در غیر این صورت مدل EF به‌خاطر عدم تطابق نوع دو سر FK اصلاً build نمی‌شد).
+  - build ۰ خطا (۱۶ warning پیش‌موجود NU1903، هیچ warning نوع CS)، **۲۲/۲۲ تست سبز** (۱۲ تست قبلی + ۱۰ تست جدید قرارداد round-trip).
+- [x] اتصال به Oracle (مسیر Legacy) و طراحی مدل نوشتن مبتنی بر `Accounting.Domain.Entity` — `LegacyDbContext` با `UseOracle(...)` در DI ثبت شد؛ connection string فقط از `IConfiguration`/User Secrets خوانده می‌شود و در `appsettings.json` تنها یک placeholder خالی هست. ⚠️ اتصال واقعی به دیتابیس هنوز **اجرا/تست نشده** (هیچ تست integration روی Oracle واقعی زده نشد — عمداً، برای جلوگیری از side effect روی دیتابیس Legacy).
+- [x] اولین Command روی Entityهای Legacy (الگوی پایه) — `CreateAccountCodeCommand` و `CreateVoucherHeadCommand` طبق ترتیب درخواستی صاحب پروژه (UnitOfWork → Interface → Repository → Command Service). **فقط Add؛ هیچ Query/Update/Delete و هیچ Controller ساخته نشد.** جزئیات در «فاز ۵» پایین‌تر.
+- [x] Query side (خواندن) روی `Accounting.Domain.Entity` — چهار Query با paging: `GetAccountCodes`/`GetAccountCodeById`/`GetVoucherHeads`/`GetVoucherHeadById` با `PagedResult<T>` و Read Repositoryهای مجزا.
+- [x] Controller/Endpoint برای هر ۶ سرویس (۲ Command + ۴ Query) — `AccountCodesController` و `VoucherHeadsController` + `GlobalExceptionHandler` مرکزی. جزئیات در «فاز ۶» پایین‌تر.
 - [ ] فرم صدور سند با تفصیلی داینامیک
+
+### فاز ۶ — لایهٔ HTTP (۲۰۲۶-۰۸-۱۸، برنچ `GetAccountCode`، commit نشده)
+
+اولین سطح HTTP واقعی پروژه. ۶ Endpoint روی ۲ Controller:
+
+| Method | Route | موفق | خطا |
+|---|---|---|---|
+| POST | `/api/account-codes` | 201 + `Location` + `{id}` | 400 / 409 / 500 |
+| GET | `/api/account-codes?pageNumber=&pageSize=` | 200 `PagedResult<AccountCodeDto>` | 400 / 500 |
+| GET | `/api/account-codes/{id:guid}` | 200 `AccountCodeDto` | 400 / 404 / 500 |
+| POST | `/api/voucher-heads` | 201 + `Location` + `{id}` | 400 / 409 / 500 |
+| GET | `/api/voucher-heads?pageNumber=&pageSize=&year=&vahedCode=` | 200 `PagedResult<VoucherHeadDto>` | 400 / 500 |
+| GET | `/api/voucher-heads/{id:guid}` | 200 `VoucherHeadDto` | 400 / 404 / 500 |
+
+paging: پیش‌فرض `pageNumber=1`, `pageSize=20`؛ سقف `MaxPageSize=200` و `MaxPageNumber=int.MaxValue/200` (برای جلوگیری از overflow در `Skip`). این سقف در Validator است و از طریق `ValidationBehavior` قبل از رسیدن به DB اعمال می‌شود.
+
+تصمیم‌های تثبیت‌شده:
+- **Controller کاملاً نازک است** — فقط `_mediator.Send(...)` و تنها انشعاب مجاز `null → 404`. هیچ business logic ای در Controller نیست.
+- **نگاشت خطا مرکزی است** (`Accounting.Api/GlobalExceptionHandler.cs` با `IExceptionHandler` + `AddProblemDetails`)؛ هیچ Controller ای `try/catch` ندارد.
+- **✅ نگاشت خطای UNIQUE حل شد:** `UnitOfWork.SaveChangesAsync` تنها جایی است که `OracleException` را می‌شناسد؛ ORA-00001 را به `DuplicateKeyException` (سطح Application) ترجمه می‌کند و `GlobalExceptionHandler` آن را به **409 Conflict** با پیام عمومی نگاشت می‌کند. **`Accounting.Api` هیچ ارجاعی به تایپ‌های Oracle ندارد** — فقط در XML doc نام Oracle آمده.
+- **هیچ متن خام Oracle/SQL/stack trace در بدنهٔ پاسخ درز نمی‌کند** (با تست صریح روی JSON سریال‌شده اثبات شد، در هر دو محیط Development و Production یکسان).
+- XML doc پروژهٔ Api حالا وارد Swagger می‌شود (`GenerateDocumentationFile` + `IncludeXmlComments`).
+
+تست: پروژهٔ جدید `backend/tests/Accounting.Api.Tests` با **۲۴ تست**. مجموع پروژه: **۱۳۱/۱۳۱ سبز** (۲۲ Domain + ۸۵ Application + ۲۴ Api). build ۰ خطا / ۱۶ warning پیش‌موجود NU1903.
+
+### فاز ۵ — اولین مسیر نوشتن CQRS (۲۰۲۶-۰۸-۱۸، برنچ `addAccountCode`، commit نشده)
+
+الگوی پایه‌ای که همهٔ Commandهای بعدی از روی آن ساخته می‌شوند:
+
+`Command (فقط primitive) → ValidationBehavior (FluentValidation) → Handler (ساخت Entity + تولید Guid) → Repository (فقط stage) → IUnitOfWork.SaveChangesAsync (یک‌بار، توسط Handler)`
+
+تصمیم‌های تثبیت‌شده:
+- **محل Interfaceها: `Accounting.Application/Common/Interfaces/`** (نه Domain) — چون `Accounting.Domain` باید صفر وابستگی بماند. Implementation در `Accounting.Infrastructure`.
+- **`IUnitOfWork` عمداً باریک و entity-agnostic است** — فقط `SaveChangesAsync` + `Begin/Commit/RollbackTransactionAsync`. هیچ پراپرتی per-entity ندارد. افزودن Entity بعدی **هیچ تغییری** در `IUnitOfWork`/`UnitOfWork` لازم ندارد؛ Repositoryها مستقیماً به Handler تزریق می‌شوند.
+- **مرز تراکنش در Handler است** — Repository فقط `DbSet.AddAsync` می‌زند و هرگز `SaveChangesAsync` صدا نمی‌زند.
+- **Command هرگز Entity نیست** — Command فقط primitive دارد و Handler خودش Entity می‌سازد.
+- **ID سمت Application تولید می‌شود** (`Guid.NewGuid()`)؛ تأیید شد که `ID` هیچ‌کدام از دو جدول DB-generated نیست.
+- **اعتبارسنجی عمداً فقط سطحی است** (NotEmpty/MaximumLength منطبق با Fluent Mapping) — طبق تصمیم «Legacy جایگزین کامل»، هیچ invariant حسابداری بازسازی نشد.
+
+پکیج‌های جدید در `Accounting.Application`: `MediatR` 14.2.0، `FluentValidation` 12.1.1، `FluentValidation.DependencyInjectionExtensions` 12.1.1. در تست: `Moq` 4.20.72.
+
+تست: پروژهٔ جدید `backend/tests/Accounting.Application.Tests` با **۴۱ تست** (شامل تأیید صریح ترتیب `AddAsync` قبل از `SaveChangesAsync`). مجموع پروژه: **۶۳/۶۳ سبز** (۲۲ Domain + ۴۱ Application). build ۰ خطا / ۱۶ warning پیش‌موجود NU1903.
 
 ## تصمیمات باز (برای فاز بعدی)
 
@@ -118,7 +185,31 @@ docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
 - **~~نگاشت `VoucherLine.DetailPolicySnapshot`~~** — منتفی شد؛ `VoucherLine` منسوخ است و مسیر نوشتن دیگر از آن عبور نمی‌کند.
 - **`AccountNature` فعلاً فقط برچسب گزارشی است** و در اعتبارسنجی دخالت ندارد؛ اگر قرار است مانده بر اساس ماهیت محاسبه شود، جای آن سمت Read (View/MV) است.
 - **~~حذف فیزیکی کد منسوخ~~** — ✅ انجام شد (۲۰۲۶-۰۸-۱۷، به درخواست صریح کاربر پس از init شدن git). ۲۲ فایل حذف شد؛ در commit `9f760ad` قابل بازیابی است.
-- **🟡 پوشش تست مدل نوشتن جدید صفر است** — با حذف ۲۱ تست مدل Rich، تنها ۱۲ تست باقی‌مانده مربوط به `AccountCode` و `Money` است. **هیچ تستی روی مدل نوشتن مبتنی بر `Accounting.Domain.Legacy` وجود ندارد**، چون هنوز چنین مدلی ساخته نشده. با ساخت اولین Command/Query باید `qa-tester` پوشش را بسازد.
+- **🔴 DEFAULTهای سمت Oracle که با `Guid` سازگار نیستند** (کشف‌شده ۲۰۲۶-۰۸-۱۸ حین تبدیل string→Guid). ۹ ستون DEFAULT دارند که مقدار تولیدی‌شان GUID معتبر نیست و خواندنش با converter فعلی `FormatException` می‌دهد:
+  - `TB_ACCOUNTCODE.PARENTID` با `DEFAULT '0'` — `'0'` یک GUID نیست. احتمالاً در سیستم قدیمی sentinel «بدون والد» برای گره ریشه بوده؛ ولی در دادهٔ فعلی هیچ ردیفی این مقدار را ندارد (ریشه‌ها `NULL` دارند).
+  - ۸ جدول با `ID DEFAULT sys_guid()`: `TB_CITY`, `TB_PROVINCE`, `TB_RABET`, `TB_RABET_CLOSING`, `TB_VAHED_INFO`, `TB_VAHED_TYPE`, `TB_WHITEANDBLACKLIST`, `TB_WHITELIST`. تابع `sys_guid()` مقدار `RAW(16)` برمی‌گرداند که داخل `CHAR(36)` به‌صورت **۳۲ کاراکتر بدون dash و UPPERCASE** (فرمت `"N"`) نوشته می‌شود و `Guid.ParseExact(s,"D")` آن را رد می‌کند.
+  - **وضعیت فعلی بی‌خطر است** چون اپلیکیشن قدیمی همیشه `ID` را صریح می‌داده و در دادهٔ زنده هیچ نمونه‌ای یافت نشد. خطر برای **کد جدید** ماست: هر `INSERT` که این ستون‌ها را خالی بگذارد، ردیفی می‌سازد که خواندن بعدی‌اش crash می‌کند.
+  - **تصمیم آگاهانه:** خواندن سخت‌گیرانه (`ParseExact`) نگه داشته شد تا خطا **بلند** شود؛ جایگزین یعنی `Guid.Parse` سهل‌گیر، مقدار `"N"` را می‌پذیرد و در نوشتن بعدی بی‌صدا به فرمت dashed بازنویسی می‌کند — یعنی تغییر خاموش دادهٔ Legacy، که برای سیستم حسابداری بدتر از crash است.
+  - **قبل از اولین Command/Query که این ۹ ستون را لمس کند باید یکی انتخاب شود:** (الف) همیشه ID را در کد Application تولید کنیم و هرگز به DEFAULT تکیه نکنیم، (ب) DEFAULTها با DDL اصلاح شوند، (ج) مسیر خواندن defensive شود.
+- **✅ ~~پوشش تست مدل نوشتن جدید صفر است~~** — حل شد در ۲۰۲۶-۰۸-۱۸. با فاز ۵، پروژهٔ `Accounting.Application.Tests` با ۴۱ تست ساخته شد (مجموع ۶۳). ⚠️ ولی این تست‌ها **همگی Unit با Mock** هستند؛ هیچ تست integration روی Oracle واقعی وجود ندارد، پس صحت Fluent Mapping و رفتار واقعی INSERT هنوز اثبات‌نشده است.
+
+- **✅ ~~`TB_ACCOUNTCODE.PARENTID` با `DEFAULT '0'` مسیر ساخت حساب ریشه را خراب می‌کند~~** — حل شد (۲۰۲۶-۰۸-۱۸). `HasDefaultValueSql("'0'")` از Fluent Mapping `PARENTID` حذف شد؛ فقط `HasConversion(GuidToChar36Converter)` باقی ماند. تأیید کاربر بر اساس قاعدهٔ کدینگ Legacy: گروه بدون والد (`PARENTID = null`)، کل←گروه، معین←کل (مثال عددی: گروه `11` → کل `1101` → معین `110101`)، پس این ستون باید بتواند واقعاً `NULL` باشد. حالا که `HasDefaultValueSql` حذف شده، EF Core دیگر `PARENTID` را `ValueGenerated.OnAdd` نمی‌داند و همیشه مقدار CLR واقعی (شامل `null` برای حساب ریشه) را صریح در INSERT می‌فرستد — DDL خود Oracle دست‌نخورده ماند. build ۰ خطا، ۶۳/۶۳ تست سبز. توجه: `TB_VOUCHERSHEAD.DOCLIFE` (`DEFAULT 0`) و `HEAD_DESC` (`DEFAULT '-'`) همچنان دست‌نخورده‌اند چون بی‌خطرند (مقدارشان با نوع ستون سازگار است). ۸ جدول دیگر با `sys_guid()` (خط بالا) هنوز حل‌نشده باقی‌اند — هنوز هیچ Command به آن‌ها دست نزده.
+
+- **🟡 دو UserSecrets store رقیب با همان کلید** — `Accounting.Api.csproj` دارای `UserSecretsId = f5497a90-...` و `Accounting.Infrastructure.csproj` دارای `99fb4522-...` است و **هر دو** کلید `ConnectionStrings:DefaultConnection` را دارند. `Program.cs` علاوه بر بارگذاری خودکار store پروژهٔ Api، صراحتاً `AddUserSecrets<Accounting.Infrastructure.AssemblyMarker>()` را هم صدا می‌زند؛ چون این provider **بعداً** اضافه می‌شود، مقدار store مربوط به Infrastructure برنده است. الان مقدار هر دو یکسان است پس مشکلی بروز نمی‌کند، ولی اگر کسی فقط یکی را عوض کند، تغییرش ممکن است بی‌صدا نادیده گرفته شود. پیشنهاد: یکی از دو store حذف شود.
+
+- **✅ ~~خطای UNIQUE به‌صورت خام به بیرون درز می‌کند~~** — حل شد در ۲۰۲۶-۰۸-۱۸ (فاز ۶). `UK_ACCOUNTCODE` و `UK_VOUCHERHEAD_NUMBER` حالا از طریق `UnitOfWork.SaveChangesAsync` (تشخیص `OracleException { Number: 1 }`) به `DuplicateKeyException` و سپس به **409 Conflict** با پیام عمومی نگاشت می‌شوند. ⚠️ این نگاشت فقط با Unit Test (ساخت `OracleException` واقعی از طریق reflection روی constructor داخلی درایور) اثبات شده؛ **روی Oracle واقعی هرگز اجرا نشده**. ضمناً بررسی پیش‌دستانه (pre-check) وجود ندارد — اتکا کاملاً به constraint سطح DB است، که برای شرایط رقابتی (race) در واقع رفتار درستی است.
+
+### 🔴 تصمیمات باز جدید — امنیت (کشف‌شده ۲۰۲۶-۰۸-۱۸ توسط `security-reviewer` در Gate فاز ۶)
+
+با ساخته‌شدن اولین سطح HTTP، این موارد از حالت نظری خارج شدند و **قبل از هرگونه میزبانی خارج از localhost باید تصمیم‌گیری شوند**:
+
+- **🔴 CRITICAL — هیچ Authentication/Authorization ای وجود ندارد.** `Program.cs` فقط `app.UseAuthorization()` را صدا می‌زند بدون هیچ `AddAuthentication()`، هیچ `[Authorize]` و هیچ policy. یعنی **هر کسی که به پورت برسد** می‌تواند بی‌نام‌ونشان در `TB_ACCOUNTCODE`/`TB_VOUCHERSHEAD` واقعی ردیف درج کند و کل کدینگ حساب‌ها و سرفصل اسناد را بخواند. حداقل کنترل لازم: یک scheme احراز هویت + `FallbackPolicy = RequireAuthenticatedUser` (نه `[Authorize]` اختیاری روی هر Controller، تا Controller بعدی که کسی یادش برود دوباره DB را باز نکند). **تا آن زمان این API نباید در هیچ شبکه‌ای در دسترس قرار گیرد.**
+- **🔴 CRITICAL — `ADDUSERID` توسط خود فراخوان قابل جعل است.** `CreateAccountCodeCommand.AddUserId` و `CreateVoucherHeadCommand.AddUserId` مستقیماً از بدنهٔ HTTP گرفته و در ستون `ADDUSERID` نوشته می‌شوند (تنها قید: `MaximumLength(10)`). این دقیقاً همان **تنها تضمین حسابداری‌ای است که در جدول Accounting Safety Gate هنوز ✅ بود** (Audit Trail) — و عملاً باطل می‌شود. راه‌حل: حذف `AddUserId` از هر دو Command و جایگزینی با `ICurrentUser` سمت سرور (مثل `CreatedDate`/`ISDELETED` که همین حالا درست سمت سرور ست می‌شوند).
+- **🟡 چندمستأجری (`VAHEDCODE`) مرز ایزولاسیون نیست.** `vahedCode` یک پارامتر **اختیاری query string** است که فراخوان خودش می‌دهد، نه فیلتری که سرور از هویت استخراج کند؛ یعنی هر کسی می‌تواند اسناد هر واحد سازمانی دیگری را مرور کند. باید صریحاً تصمیم گرفته شود: یا اجباری و سمت‌سروری شود، یا مستند شود که دید بین‌واحدی عمدی است.
+- **🟡 فیلدهای Audit در DTO برای همه قابل خواندن‌اند** — `AddUserId`/`ChangeUserId`/`IsDeleted` در هر دو DTO بی‌قید برگردانده می‌شوند. پس از افزودن نقش‌ها باید تصمیم گرفته شود که آیا این‌ها نیاز به نقش ممتاز دارند.
+- **🟡 هیچ Rate Limiting ای وجود ندارد** — سقف ۲۰۰ ردیف در هر صفحه کار می‌کند، ولی هیچ محدودیتی روی تعداد درخواست نیست، پس پیمایش کامل جدول‌ها با اسکریپت ممکن است.
+- **🟡 بدنهٔ POST همان MediatR Command است** — هر فیلدی که بعداً به Command اضافه شود، بی‌صدا بخشی از قرارداد عمومی API می‌شود. پیشنهاد `api-contract`: افزودن `CreateXRequest` نازک در لایهٔ Api. (اجرا نشد.)
+- **🟡 نسخه‌بندی API وجود ندارد** (`/api/...` بدون `/v1`). افزودن آن بعداً خودش یک breaking change است.
 
 ## قوانین کاری تیم
 

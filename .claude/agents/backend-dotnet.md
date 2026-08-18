@@ -78,7 +78,7 @@ Rule را دوباره در Handler کپی نکن.
 
 ## Legacy
 
-طبق تصمیم صاحب پروژه (۲۰۲۶-۰۸-۱۷) Entityهای Legacy خودشان Domain Entity هستند و در `Accounting.Domain/Legacy/` (namespace `Accounting.Domain.Legacy`) قرار دارند. برای استفاده از آن‌ها به لایهٔ ترجمه نیاز نداری.
+طبق تصمیم صاحب پروژه (۲۰۲۶-۰۸-۱۷) Entityهای Legacy خودشان Domain Entity هستند و در `Accounting.Domain/Entity/` (namespace `Accounting.Domain.Entity`، از ۲۰۲۶-۰۸-۱۸ پس از مسطح‌سازی) قرار دارند. برای استفاده از آن‌ها به لایهٔ ترجمه نیاز نداری.
 
 قیدهای باقی‌مانده:
 - `LegacyDbContext` و Fluent Mapping در `Accounting.Infrastructure` می‌مانند؛ Domain را به EF/Oracle وابسته نکن.

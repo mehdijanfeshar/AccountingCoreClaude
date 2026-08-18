@@ -43,3 +43,6 @@ Thumbs.db
 # Node (frontend, future)
 node_modules/
 dist/
+
+# Claude Code local/personal settings (hooks, permissions specific to this machine)
+.claude/settings.local.json
