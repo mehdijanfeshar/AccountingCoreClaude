@@ -10,8 +10,9 @@
 | ۲. Reverse Engineering دیتابیس Legacy Oracle | ✅ انجام شد |
 | ۳. تصمیم معماری: Legacy-as-Domain | ✅ انجام شد |
 | ۴. تصمیم معماری: Legacy جایگزین کامل مدل Rich | ✅ انجام شد (شامل حذف فیزیکی) |
-| ۵. مدل نوشتن روی `Accounting.Domain.Entity` (اتصال Oracle + اولین Command/Query) | 🟡 در حال انجام — الگوی Command پایه ساخته شد (Add برای `TB_ACCOUNTCODE` و `TB_VOUCHERSHEAD`)؛ ریسک `PARENTID DEFAULT '0'` حل شد. Query/Controller و اتصال واقعی (integration test روی Oracle) هنوز باقی است. |
-| ۶. فرم صدور سند با تفصیلی داینامیک (Frontend) | ⬜ متوقف — منتظر فاز ۵ |
+| ۵. مدل نوشتن روی `Accounting.Domain.Entity` (اتصال Oracle + اولین Command/Query) | ✅ انجام شد — ۲ Command + ۴ Query با paging؛ ریسک `PARENTID DEFAULT '0'` حل شد. ⚠️ اتصال واقعی (integration test روی Oracle) هنوز انجام نشده. |
+| ۶. لایهٔ HTTP (Controller/Endpoint + نگاشت مرکزی خطا) | ✅ انجام شد — ۶ Endpoint روی ۲ Controller، خطای UNIQUE → 409، ۱۳۱/۱۳۱ تست سبز. 🔴 **بدون هیچ Authentication** — رجوع به ریسک‌ها. |
+| ۷. فرم صدور سند با تفصیلی داینامیک (Frontend) | ⬜ متوقف — منتظر تصمیم Auth |
 
 ## Milestone Checklist
 
@@ -26,8 +27,12 @@
 - [x] اتصال به Oracle در سطح DI (`AddDbContext<LegacyDbContext>` + `UseOracle`، connection string فقط از User Secrets؛ `appsettings.json` فقط placeholder خالی). ⚠️ اتصال واقعی هنوز اجرا/تست نشده.
 - [x] طراحی مدل نوشتن (Command/Handler) مبتنی بر `Accounting.Domain.Entity` — الگوی پایه: `Command → ValidationBehavior → Handler → Repository (فقط stage) → IUnitOfWork.SaveChangesAsync`. `IUnitOfWork` عمداً باریک است تا افزودن Entity بعدی نیازی به تغییرش نداشته باشد. Interfaceها در `Accounting.Application/Common/Interfaces/`. (برنچ `addAccountCode`)
 - [x] پوشش تست مدل نوشتن — `Accounting.Application.Tests` با ۴۱ تست Unit (Mock)؛ مجموع **۶۳/۶۳ سبز**. شامل تأیید صریح ترتیب `AddAsync` قبل از `SaveChangesAsync`.
-- [ ] Controller/Endpoint برای دو Command موجود (عمداً خارج از دامنهٔ فاز فعلی)
-- [ ] Query side (خواندن) + تست integration واقعی روی Oracle
+- [x] Query side (خواندن) — ۴ Query با paging (`GetAccountCodes`/`GetAccountCodeById`/`GetVoucherHeads`/`GetVoucherHeadById`) + `PagedResult<T>` + Read Repositoryهای مجزا. سقف صفحه ۲۰۰ ردیف.
+- [x] Controller/Endpoint برای هر ۶ سرویس — `AccountCodesController` (`/api/account-codes`) و `VoucherHeadsController` (`/api/voucher-heads`)، هرکدام POST + GET list + GET by id. Controller کاملاً نازک (فقط `_mediator.Send` و انشعاب `null → 404`). (برنچ `GetAccountCode`)
+- [x] نگاشت مرکزی خطا — `GlobalExceptionHandler` (`IExceptionHandler` + `AddProblemDetails`): ValidationException → 400، `DuplicateKeyException` → 409، سایر → 500. هیچ متن Oracle/SQL/stack trace در بدنهٔ پاسخ درز نمی‌کند (با تست روی JSON سریال‌شده اثبات شد).
+- [x] پوشش تست لایهٔ HTTP — `Accounting.Api.Tests` با ۲۴ تست؛ مجموع **۱۳۱/۱۳۱ سبز** (۲۲ Domain + ۸۵ Application + ۲۴ Api).
+- [ ] **Authentication/Authorization** — 🔴 هیچ‌چیز پیاده نشده؛ مسدودکنندهٔ میزبانی
+- [ ] تست integration واقعی روی Oracle
 - [x] حل ریسک `PARENTID DEFAULT '0'` — حذف `HasDefaultValueSql` از Mapping (۲۰۲۶-۰۸-۱۸)
 - [ ] راه‌اندازی React (Vite) — متوقف تا اطلاع ثانوی
 - [ ] فرم صدور سند با فیلدهای تفصیلی داینامیک
@@ -54,7 +59,14 @@
 | 🟡 | تضمین تراز بدهکار=بستانکار | از سطح کد حذف شده؛ اگر لازم شود باید در Application یا DB constraint بازسازی شود. |
 | ✅ | ~~پوشش تست مدل نوشتن جدید~~ | حل شد (۲۰۲۶-۰۸-۱۸): ۴۱ تست Application، مجموع ۶۳. ولی همگی Unit با Mock‌اند — هیچ تست integration روی Oracle واقعی نیست. |
 | ✅ | ~~`PARENTID DEFAULT '0'` مسیر حساب ریشه را می‌شکند~~ | حل شد (۲۰۲۶-۰۸-۱۸): `HasDefaultValueSql("'0'")` از Fluent Mapping `TB_ACCOUNTCODE.PARENTID` حذف شد. تأیید کاربر: طبق قاعدهٔ کدینگ (گروه بدون والد، کل←گروه، معین←کل؛ مثال `11`→`1101`→`110101`) این ستون باید بتواند واقعاً `NULL` باشد نه `'0'`. حالا EF همیشه مقدار CLR واقعی (شامل `null` برای حساب ریشه) را صریح می‌فرستد. DDL خود Oracle دست‌نخورده ماند. build ۰ خطا، ۶۳/۶۳ تست سبز. |
-| 🟡 | خطای UNIQUE بدون نگاشت | `UK_ACCOUNTCODE` و `UK_VOUCHERHEAD_NUMBER` در DB وجود دارند (پس «شماره سند تکراری» در سطح DB تضمین شده)، ولی Application آن را به خطای معنادار نگاشت نمی‌کند؛ فعلاً `DbUpdateException` خام بالا می‌آید. |
+| ✅ | ~~خطای UNIQUE بدون نگاشت~~ | حل شد (۲۰۲۶-۰۸-۱۸، فاز ۶): `UnitOfWork` تنها جایی است که `OracleException` را می‌شناسد و ORA-00001 را به `DuplicateKeyException` ترجمه می‌کند؛ `GlobalExceptionHandler` آن را به **409 Conflict** با پیام عمومی نگاشت می‌کند. ⚠️ فقط Unit Test دارد، روی Oracle واقعی اجرا نشده. |
+| 🔴 | **هیچ Authentication/Authorization ای وجود ندارد** | `Program.cs` فقط `UseAuthorization()` دارد بدون هیچ scheme/`[Authorize]`/policy. هر فراخوان بی‌نام‌ونشان می‌تواند در `TB_ACCOUNTCODE`/`TB_VOUCHERSHEAD` واقعی درج کند و کل کدینگ و اسناد را بخواند. **این API نباید خارج از localhost میزبانی شود.** حداقل: scheme احراز هویت + `FallbackPolicy = RequireAuthenticatedUser`. |
+| 🔴 | **`ADDUSERID` قابل جعل توسط فراخوان** | هر دو Command مقدار `AddUserId` را از بدنهٔ HTTP می‌گیرند و مستقیم در ستون Audit می‌نویسند (تنها قید `MaximumLength(10)`). این **تنها تضمین حسابداری باقی‌ماندهٔ پروژه (Audit Trail)** را باطل می‌کند. راه‌حل: حذف از Command + `ICurrentUser` سمت سرور. |
+| 🟡 | `VAHEDCODE` مرز ایزولاسیون نیست | `vahedCode` پارامتر اختیاری query string است که فراخوان می‌دهد، نه فیلتر سمت‌سروری برخاسته از هویت؛ مرور اسناد واحدهای دیگر آزاد است. باید یا اجباری/سمت‌سروری شود یا صریحاً مستند شود که عمدی است. |
+| 🟡 | فیلدهای Audit در DTO عمومی‌اند | `AddUserId`/`ChangeUserId`/`IsDeleted` بی‌قید برگردانده می‌شوند؛ پس از افزودن نقش‌ها باید تصمیم گرفته شود. |
+| 🟡 | بدون Rate Limiting | سقف ۲۰۰ ردیف در هر صفحه کار می‌کند ولی تعداد درخواست محدود نیست. |
+| 🟡 | بدنهٔ POST همان MediatR Command است | هر فیلد جدید در Command بی‌صدا وارد قرارداد عمومی API می‌شود. پیشنهاد: `CreateXRequest` نازک در لایهٔ Api. |
+| 🟡 | بدون نسخه‌بندی API | مسیرها `/api/...` بدون `/v1`؛ افزودن بعدی خودش breaking change است. |
 | 🟡 | دو UserSecrets store رقیب | هم `Accounting.Api.csproj` و هم `Accounting.Infrastructure.csproj` هرکدام `UserSecretsId` جدا دارند و هر دو کلید `ConnectionStrings:DefaultConnection` را نگه می‌دارند؛ به‌خاطر ترتیب بارگذاری در `Program.cs`، مقدار Infrastructure برنده است. الان مقادیر یکسان‌اند ولی منبع خطای بی‌صدا در آینده است. |
 | 🔴 | DEFAULTهای Oracle ناسازگار با `Guid` | ۹ ستون DEFAULT سمت DB دارند که مقدارشان GUID معتبر **نیست** و خواندنشان `FormatException` می‌دهد: `TB_ACCOUNTCODE.PARENTID` با `DEFAULT '0'`، و ۸ جدول با `ID DEFAULT sys_guid()` (`TB_CITY`, `TB_PROVINCE`, `TB_RABET`, `TB_RABET_CLOSING`, `TB_VAHED_INFO`, `TB_VAHED_TYPE`, `TB_WHITEANDBLACKLIST`, `TB_WHITELIST`) — چون `sys_guid()` مقدار `RAW(16)` را ۳۲ کاراکتر **بدون dash و UPPERCASE** می‌نویسد. در دادهٔ فعلی هیچ ردیفی این حالت را ندارد (اپلیکیشن قدیمی همیشه ID را صریح می‌داده)، ولی اگر INSERT جدیدی ستون را خالی بگذارد، خواندن بعدی crash می‌کند. **قبل از اولین Command/Query که این ۹ ستون را لمس کند باید تصمیم‌گیری شود.** |
 
@@ -77,6 +89,7 @@
 
 ## گام بعدی پیشنهادی
 
-1. تصمیم دربارهٔ نگاشت خطای UNIQUE (`UK_ACCOUNTCODE` / `UK_VOUCHERHEAD_NUMBER`) به خطای معنادار Application.
-2. ساخت Controller/Endpoint برای دو Command موجود + هماهنگی با `api-contract`.
-3. اولین تست integration واقعی روی Oracle (با احتیاط و روی دادهٔ یک‌بارمصرف) تا صحت Fluent Mapping اثبات شود، شامل تست واقعی ساخت حساب ریشه (`ParentId = null`).
+1. **تصمیم دربارهٔ Authentication/Authorization** — مسدودکنندهٔ هر نوع میزبانی. شامل تصمیم دربارهٔ `ICurrentUser` و حذف `AddUserId` از Commandها تا Audit Trail دوباره معتبر شود.
+2. اولین تست integration واقعی روی Oracle (با احتیاط و روی دادهٔ یک‌بارمصرف) تا صحت Fluent Mapping اثبات شود — شامل ساخت حساب ریشه (`ParentId = null`) و تأیید عملی نگاشت ORA-00001 → 409.
+3. تصمیم دربارهٔ چندمستأجری `VAHEDCODE` (مرز ایزولاسیون یا اطلاعاتی).
+4. جداسازی `CreateXRequest` از MediatR Command + نسخه‌بندی API، پیش از آنکه مصرف‌کنندهٔ واقعی (فرانت‌اند) شروع کند.

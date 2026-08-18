@@ -14,7 +14,7 @@ public static class DependencyInjection
     /// Registers <see cref="LegacyDbContext"/> against Oracle using the
     /// <c>DefaultConnection</c> connection string (sourced from User Secrets in
     /// Development — never hardcoded here), plus <see cref="IUnitOfWork"/> and all write-side
-    /// repositories, scoped to the request/use-case lifetime.
+    /// and read-side repositories, scoped to the request/use-case lifetime.
     /// </summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
@@ -24,6 +24,8 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAccountCodeRepository, AccountCodeRepository>();
         services.AddScoped<IVoucherHeadRepository, VoucherHeadRepository>();
+        services.AddScoped<IAccountCodeReadRepository, AccountCodeReadRepository>();
+        services.AddScoped<IVoucherHeadReadRepository, VoucherHeadReadRepository>();
 
         return services;
     }

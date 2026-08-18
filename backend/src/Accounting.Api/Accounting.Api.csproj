@@ -5,6 +5,13 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>f5497a90-32c3-4331-bfe5-cbe71187b2f6</UserSecretsId>
+    <!-- Feeds Swagger (see IncludeXmlComments in Program.cs) with the XML summaries already
+         written on the controllers and their response records. Missing-XML-comment warnings
+         (CS1591) are suppressed because coverage is intentionally partial (e.g. interface-impl
+         members like GlobalExceptionHandler.TryHandleAsync do not each need their own summary)
+         and this project does not otherwise track/enforce full public-API doc coverage. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

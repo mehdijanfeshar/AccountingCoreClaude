@@ -123,9 +123,33 @@ docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
   - build ۰ خطا (۱۶ warning پیش‌موجود NU1903، هیچ warning نوع CS)، **۲۲/۲۲ تست سبز** (۱۲ تست قبلی + ۱۰ تست جدید قرارداد round-trip).
 - [x] اتصال به Oracle (مسیر Legacy) و طراحی مدل نوشتن مبتنی بر `Accounting.Domain.Entity` — `LegacyDbContext` با `UseOracle(...)` در DI ثبت شد؛ connection string فقط از `IConfiguration`/User Secrets خوانده می‌شود و در `appsettings.json` تنها یک placeholder خالی هست. ⚠️ اتصال واقعی به دیتابیس هنوز **اجرا/تست نشده** (هیچ تست integration روی Oracle واقعی زده نشد — عمداً، برای جلوگیری از side effect روی دیتابیس Legacy).
 - [x] اولین Command روی Entityهای Legacy (الگوی پایه) — `CreateAccountCodeCommand` و `CreateVoucherHeadCommand` طبق ترتیب درخواستی صاحب پروژه (UnitOfWork → Interface → Repository → Command Service). **فقط Add؛ هیچ Query/Update/Delete و هیچ Controller ساخته نشد.** جزئیات در «فاز ۵» پایین‌تر.
-- [ ] Controller/Endpoint برای این دو Command (عمداً خارج از دامنهٔ کار فعلی)
-- [ ] Query side (خواندن) روی `Accounting.Domain.Entity`
+- [x] Query side (خواندن) روی `Accounting.Domain.Entity` — چهار Query با paging: `GetAccountCodes`/`GetAccountCodeById`/`GetVoucherHeads`/`GetVoucherHeadById` با `PagedResult<T>` و Read Repositoryهای مجزا.
+- [x] Controller/Endpoint برای هر ۶ سرویس (۲ Command + ۴ Query) — `AccountCodesController` و `VoucherHeadsController` + `GlobalExceptionHandler` مرکزی. جزئیات در «فاز ۶» پایین‌تر.
 - [ ] فرم صدور سند با تفصیلی داینامیک
+
+### فاز ۶ — لایهٔ HTTP (۲۰۲۶-۰۸-۱۸، برنچ `GetAccountCode`، commit نشده)
+
+اولین سطح HTTP واقعی پروژه. ۶ Endpoint روی ۲ Controller:
+
+| Method | Route | موفق | خطا |
+|---|---|---|---|
+| POST | `/api/account-codes` | 201 + `Location` + `{id}` | 400 / 409 / 500 |
+| GET | `/api/account-codes?pageNumber=&pageSize=` | 200 `PagedResult<AccountCodeDto>` | 400 / 500 |
+| GET | `/api/account-codes/{id:guid}` | 200 `AccountCodeDto` | 400 / 404 / 500 |
+| POST | `/api/voucher-heads` | 201 + `Location` + `{id}` | 400 / 409 / 500 |
+| GET | `/api/voucher-heads?pageNumber=&pageSize=&year=&vahedCode=` | 200 `PagedResult<VoucherHeadDto>` | 400 / 500 |
+| GET | `/api/voucher-heads/{id:guid}` | 200 `VoucherHeadDto` | 400 / 404 / 500 |
+
+paging: پیش‌فرض `pageNumber=1`, `pageSize=20`؛ سقف `MaxPageSize=200` و `MaxPageNumber=int.MaxValue/200` (برای جلوگیری از overflow در `Skip`). این سقف در Validator است و از طریق `ValidationBehavior` قبل از رسیدن به DB اعمال می‌شود.
+
+تصمیم‌های تثبیت‌شده:
+- **Controller کاملاً نازک است** — فقط `_mediator.Send(...)` و تنها انشعاب مجاز `null → 404`. هیچ business logic ای در Controller نیست.
+- **نگاشت خطا مرکزی است** (`Accounting.Api/GlobalExceptionHandler.cs` با `IExceptionHandler` + `AddProblemDetails`)؛ هیچ Controller ای `try/catch` ندارد.
+- **✅ نگاشت خطای UNIQUE حل شد:** `UnitOfWork.SaveChangesAsync` تنها جایی است که `OracleException` را می‌شناسد؛ ORA-00001 را به `DuplicateKeyException` (سطح Application) ترجمه می‌کند و `GlobalExceptionHandler` آن را به **409 Conflict** با پیام عمومی نگاشت می‌کند. **`Accounting.Api` هیچ ارجاعی به تایپ‌های Oracle ندارد** — فقط در XML doc نام Oracle آمده.
+- **هیچ متن خام Oracle/SQL/stack trace در بدنهٔ پاسخ درز نمی‌کند** (با تست صریح روی JSON سریال‌شده اثبات شد، در هر دو محیط Development و Production یکسان).
+- XML doc پروژهٔ Api حالا وارد Swagger می‌شود (`GenerateDocumentationFile` + `IncludeXmlComments`).
+
+تست: پروژهٔ جدید `backend/tests/Accounting.Api.Tests` با **۲۴ تست**. مجموع پروژه: **۱۳۱/۱۳۱ سبز** (۲۲ Domain + ۸۵ Application + ۲۴ Api). build ۰ خطا / ۱۶ warning پیش‌موجود NU1903.
 
 ### فاز ۵ — اولین مسیر نوشتن CQRS (۲۰۲۶-۰۸-۱۸، برنچ `addAccountCode`، commit نشده)
 
@@ -173,7 +197,19 @@ docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
 
 - **🟡 دو UserSecrets store رقیب با همان کلید** — `Accounting.Api.csproj` دارای `UserSecretsId = f5497a90-...` و `Accounting.Infrastructure.csproj` دارای `99fb4522-...` است و **هر دو** کلید `ConnectionStrings:DefaultConnection` را دارند. `Program.cs` علاوه بر بارگذاری خودکار store پروژهٔ Api، صراحتاً `AddUserSecrets<Accounting.Infrastructure.AssemblyMarker>()` را هم صدا می‌زند؛ چون این provider **بعداً** اضافه می‌شود، مقدار store مربوط به Infrastructure برنده است. الان مقدار هر دو یکسان است پس مشکلی بروز نمی‌کند، ولی اگر کسی فقط یکی را عوض کند، تغییرش ممکن است بی‌صدا نادیده گرفته شود. پیشنهاد: یکی از دو store حذف شود.
 
-- **🟡 خطای UNIQUE به‌صورت خام به بیرون درز می‌کند** — `TB_ACCOUNTCODE.ACCCODE` دارای UNIQUE `UK_ACCOUNTCODE` و `TB_VOUCHERSHEAD` دارای UNIQUE `UK_VOUCHERHEAD_NUMBER` روی `(DOC_NUM, YEAR, VAHEDCODE)` است. خبر خوب: تضمین «شماره سند تکراری نشود» در سطح DB **وجود دارد**. خبر بد: هیچ بررسی پیش‌دستانه یا نگاشت خطایی در Application نیست، پس درج تکراری به‌صورت `DbUpdateException`/ORA-00001 خام بالا می‌آید (احتمالاً ۵۰۰). قبل از ساخت Controller باید تصمیم گرفته شود.
+- **✅ ~~خطای UNIQUE به‌صورت خام به بیرون درز می‌کند~~** — حل شد در ۲۰۲۶-۰۸-۱۸ (فاز ۶). `UK_ACCOUNTCODE` و `UK_VOUCHERHEAD_NUMBER` حالا از طریق `UnitOfWork.SaveChangesAsync` (تشخیص `OracleException { Number: 1 }`) به `DuplicateKeyException` و سپس به **409 Conflict** با پیام عمومی نگاشت می‌شوند. ⚠️ این نگاشت فقط با Unit Test (ساخت `OracleException` واقعی از طریق reflection روی constructor داخلی درایور) اثبات شده؛ **روی Oracle واقعی هرگز اجرا نشده**. ضمناً بررسی پیش‌دستانه (pre-check) وجود ندارد — اتکا کاملاً به constraint سطح DB است، که برای شرایط رقابتی (race) در واقع رفتار درستی است.
+
+### 🔴 تصمیمات باز جدید — امنیت (کشف‌شده ۲۰۲۶-۰۸-۱۸ توسط `security-reviewer` در Gate فاز ۶)
+
+با ساخته‌شدن اولین سطح HTTP، این موارد از حالت نظری خارج شدند و **قبل از هرگونه میزبانی خارج از localhost باید تصمیم‌گیری شوند**:
+
+- **🔴 CRITICAL — هیچ Authentication/Authorization ای وجود ندارد.** `Program.cs` فقط `app.UseAuthorization()` را صدا می‌زند بدون هیچ `AddAuthentication()`، هیچ `[Authorize]` و هیچ policy. یعنی **هر کسی که به پورت برسد** می‌تواند بی‌نام‌ونشان در `TB_ACCOUNTCODE`/`TB_VOUCHERSHEAD` واقعی ردیف درج کند و کل کدینگ حساب‌ها و سرفصل اسناد را بخواند. حداقل کنترل لازم: یک scheme احراز هویت + `FallbackPolicy = RequireAuthenticatedUser` (نه `[Authorize]` اختیاری روی هر Controller، تا Controller بعدی که کسی یادش برود دوباره DB را باز نکند). **تا آن زمان این API نباید در هیچ شبکه‌ای در دسترس قرار گیرد.**
+- **🔴 CRITICAL — `ADDUSERID` توسط خود فراخوان قابل جعل است.** `CreateAccountCodeCommand.AddUserId` و `CreateVoucherHeadCommand.AddUserId` مستقیماً از بدنهٔ HTTP گرفته و در ستون `ADDUSERID` نوشته می‌شوند (تنها قید: `MaximumLength(10)`). این دقیقاً همان **تنها تضمین حسابداری‌ای است که در جدول Accounting Safety Gate هنوز ✅ بود** (Audit Trail) — و عملاً باطل می‌شود. راه‌حل: حذف `AddUserId` از هر دو Command و جایگزینی با `ICurrentUser` سمت سرور (مثل `CreatedDate`/`ISDELETED` که همین حالا درست سمت سرور ست می‌شوند).
+- **🟡 چندمستأجری (`VAHEDCODE`) مرز ایزولاسیون نیست.** `vahedCode` یک پارامتر **اختیاری query string** است که فراخوان خودش می‌دهد، نه فیلتری که سرور از هویت استخراج کند؛ یعنی هر کسی می‌تواند اسناد هر واحد سازمانی دیگری را مرور کند. باید صریحاً تصمیم گرفته شود: یا اجباری و سمت‌سروری شود، یا مستند شود که دید بین‌واحدی عمدی است.
+- **🟡 فیلدهای Audit در DTO برای همه قابل خواندن‌اند** — `AddUserId`/`ChangeUserId`/`IsDeleted` در هر دو DTO بی‌قید برگردانده می‌شوند. پس از افزودن نقش‌ها باید تصمیم گرفته شود که آیا این‌ها نیاز به نقش ممتاز دارند.
+- **🟡 هیچ Rate Limiting ای وجود ندارد** — سقف ۲۰۰ ردیف در هر صفحه کار می‌کند، ولی هیچ محدودیتی روی تعداد درخواست نیست، پس پیمایش کامل جدول‌ها با اسکریپت ممکن است.
+- **🟡 بدنهٔ POST همان MediatR Command است** — هر فیلدی که بعداً به Command اضافه شود، بی‌صدا بخشی از قرارداد عمومی API می‌شود. پیشنهاد `api-contract`: افزودن `CreateXRequest` نازک در لایهٔ Api. (اجرا نشد.)
+- **🟡 نسخه‌بندی API وجود ندارد** (`/api/...` بدون `/v1`). افزودن آن بعداً خودش یک breaking change است.
 
 ## قوانین کاری تیم
 

@@ -1,6 +1,9 @@
+using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Infrastructure.Legacy;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Oracle.ManagedDataAccess.Client;
 
 namespace Accounting.Infrastructure.Persistence;
 
@@ -19,8 +22,26 @@ public sealed class UnitOfWork : IUnitOfWork, IAsyncDisposable
         _dbContext = dbContext;
     }
 
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-        => _dbContext.SaveChangesAsync(cancellationToken);
+    /// <summary>
+    /// Persists staged changes. Oracle-specific unique-constraint violations (ORA-00001, e.g.
+    /// <c>UK_ACCOUNTCODE</c> or <c>UK_VOUCHERHEAD_NUMBER</c>) are detected here — the only
+    /// place in the solution allowed to know about <see cref="OracleException"/> — and
+    /// translated into an Application-level <see cref="DuplicateKeyException"/> so that
+    /// <c>Accounting.Api</c> never has to reference Oracle types. Any other
+    /// <see cref="DbUpdateException"/> is rethrown as-is.
+    /// </summary>
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is OracleException { Number: 1 })
+        {
+            throw new DuplicateKeyException(
+                "A row with the same unique key already exists.", ex);
+        }
+    }
 
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
