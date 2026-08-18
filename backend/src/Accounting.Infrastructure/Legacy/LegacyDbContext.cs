@@ -266,7 +266,6 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.PARENTID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
-                .HasDefaultValueSql("'0'")
                 .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.SOURCEANDCONSUME_ID)
