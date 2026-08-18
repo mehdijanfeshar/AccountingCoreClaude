@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 // طبق تصمیم معماری Legacy-as-Domain (۲۰۲۶-۰۸-۱۷)، خودِ Entityها در پروژهٔ
 // Accounting.Domain زندگی می‌کنند و اینجا فقط Persistence Mapping آن‌ها می‌ماند.
 // جهت وابستگی: Infrastructure → Domain (مجاز). Domain هیچ ارجاعی به EF Core ندارد.
-using Accounting.Domain.Legacy;
+using Accounting.Domain.Entity;
 
 namespace Accounting.Infrastructure.Legacy;
 
@@ -163,10 +163,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNTCODE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNTHOLDER)
                 .HasMaxLength(80)
@@ -180,6 +182,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ACCOUNTTYPE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -187,10 +190,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.BANK_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.BRANCH_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.CARDNUMBER)
                 .HasMaxLength(16)
@@ -234,6 +239,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCCODE)
                 .HasMaxLength(6)
@@ -251,6 +257,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.IDENTYGROUPS_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.MOINFORCLOSE)
@@ -260,10 +267,12 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasDefaultValueSql("'0'")
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.SOURCEANDCONSUME_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TYPEACCCODE)
                 .HasComment("نوع حساب (1موقت2دائم)")
@@ -291,10 +300,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNTCODEID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -322,10 +333,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNTCOE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -341,6 +354,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.VAHEDTYPE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
 
             entity.HasOne(d => d.ACCOUNTCOE).WithMany(p => p.TB_ACCOUNTEXCEPTIONs)
@@ -363,10 +377,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNT_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -379,6 +395,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.LEVEL_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
 
@@ -403,10 +420,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNT_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -419,10 +438,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.LEVEL_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TAFSILGROUP_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
 
@@ -451,10 +472,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNT_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -467,10 +490,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.LEVEL_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TAFSILI_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
@@ -502,6 +527,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TITLE)
                 .HasMaxLength(100)
@@ -517,6 +543,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -533,10 +560,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.PAYRECEIVE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TAFSILI_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TITLE).HasMaxLength(250);
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
@@ -546,6 +575,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.VOUCHERSHEAD_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.YEAR)
                 .HasMaxLength(4)
@@ -571,11 +601,13 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("اي دي كدهاي شناسه دار ");
             entity.Property(e => e.ACCOUNTCODE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("اي دي كدينگ مالي ");
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -636,6 +668,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("اي دي كدهاي شناسه دار ");
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -643,6 +676,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ATTRIBFORACCOUNTCODE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ATTRIBUTEVALUE)
                 .HasMaxLength(20)
@@ -662,6 +696,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي ريز اسناد ");
             entity.Property(e => e.YEAR)
                 .HasMaxLength(4)
@@ -696,12 +731,14 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.NEWVALUE).HasColumnType("CLOB");
             entity.Property(e => e.OLDVALUE).HasColumnType("CLOB");
             entity.Property(e => e.RECORDID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TABLENAME)
                 .HasMaxLength(255)
@@ -726,10 +763,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.BANK_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.BRANCHCODE)
                 .HasMaxLength(5)
@@ -740,10 +779,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.CITY_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TAFSILI_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
 
             entity.HasOne(d => d.BANK).WithMany(p => p.TB_BANKBRANCH_LISTs)
@@ -766,6 +807,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي كارت بانك ");
             entity.Property(e => e.ACCOUNTNUMBER)
                 .HasMaxLength(13)
@@ -779,11 +821,13 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("كد بانك ");
             entity.Property(e => e.BRANCH_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("كد شعبه بانك ");
             entity.Property(e => e.CHANGEUSERID)
                 .HasMaxLength(10)
@@ -796,11 +840,13 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي چك يا اعلاميه ");
             entity.Property(e => e.CHECK_INCORRENT_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي در جريان سالهاي قبل  ");
             entity.Property(e => e.CHEQNO)
                 .HasMaxLength(8)
@@ -824,6 +870,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي فيش يا حواله ");
             entity.Property(e => e.RECIVDATE)
                 .HasMaxLength(8)
@@ -861,6 +908,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.BANKCODE)
                 .HasMaxLength(2)
@@ -880,6 +928,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasDefaultValueSql("null")
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -914,6 +963,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -924,6 +974,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.CHARGEANDCOSTHEAD_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.CREDITOR).HasColumnType("NUMBER(25)");
@@ -931,6 +982,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.EXPENSE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.PAIDAMOUNT).HasColumnType("NUMBER(25)");
@@ -940,6 +992,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.REVOLVINGFUND_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
@@ -971,10 +1024,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNT_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1017,6 +1072,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1028,10 +1084,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.CHARGE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.COST_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
@@ -1056,6 +1114,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment(" آي دي پرداختني (چك يا اعلاميه");
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1069,6 +1128,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي دسته چك ");
             entity.Property(e => e.CHEQ_DATE)
                 .HasMaxLength(8)
@@ -1125,10 +1185,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNT_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1146,6 +1208,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.CHECKTYPE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.FROMCHECKNUMBER)
@@ -1182,6 +1245,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1270,6 +1334,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("PK");
             entity.Property(e => e.ACCOUNTNUMBER)
                 .HasMaxLength(13)
@@ -1286,6 +1351,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.CHECK_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.CHEQ_DATE)
                 .HasMaxLength(8)
@@ -1348,6 +1414,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasDefaultValueSql("sys_guid() ")
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.CITYCODE)
                 .HasMaxLength(5)
@@ -1358,6 +1425,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.PROVINCE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
 
             entity.HasOne(d => d.PROVINCE).WithMany(p => p.TB_CITies)
@@ -1376,11 +1444,13 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي ريز اعلاميه ");
             entity.Property(e => e.ACCOUNTCODE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي حساب تفضيلي");
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1403,6 +1473,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي تيتر اعلاميه ");
             entity.Property(e => e.ELAM_ATRIBNO)
                 .HasMaxLength(10)
@@ -1439,6 +1510,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1450,15 +1522,18 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ELAMDETAIL_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.LEVEL_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TAFSILI_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
@@ -1493,6 +1568,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي تيتر اعلاميه ");
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1564,6 +1640,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("شناسه اعلاميه صادره");
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.PAY_NO)
@@ -1587,6 +1664,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي سند");
             entity.Property(e => e.WEB_STAT)
                 .HasPrecision(2)
@@ -1595,6 +1673,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("کارگاه");
             entity.Property(e => e.YEAR)
                 .HasMaxLength(4)
@@ -1617,10 +1696,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNTCODE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1639,6 +1720,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.EXPENCEGROUP_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.EXPENCENAME)
                 .HasMaxLength(200)
@@ -1669,6 +1751,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.DESCRIPTION)
                 .HasMaxLength(100)
@@ -1693,6 +1776,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1704,15 +1788,18 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.EXPENSE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.LEVEL_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TAFSILI_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
@@ -1753,6 +1840,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي مقادير متغير شناسنامه ");
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1768,11 +1856,13 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.IDENTITYHEAD_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.IDENTITYSUBGRPS_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي زير گروه شناسنامه ");
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
@@ -1784,6 +1874,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي آرتيكل اسناد ");
             entity.Property(e => e.YEAR)
                 .HasMaxLength(4)
@@ -1820,6 +1911,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي مقادير ثابت شناسنامه ");
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1835,11 +1927,13 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.IDENTITYHEAD_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.IDENTITYSUBGRPS_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي زير گروه شناسنامه ");
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
@@ -1874,6 +1968,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي گروه اصلي شناسنامه ");
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1897,6 +1992,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.TAFSILI_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE)
                 .HasPrecision(6)
@@ -1924,6 +2020,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1939,6 +2036,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.IDENTITYGROUPS_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.SERIAL)
@@ -1974,6 +2072,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي زير گروه شناسنامه ");
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -1989,6 +2088,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي گروه اصلي شناسنامه ");
             entity.Property(e => e.IDENTYSUBGROUPS_CODE)
                 .HasMaxLength(2)
@@ -2031,6 +2131,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2064,10 +2165,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNTCODE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2081,6 +2184,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.CHECK_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.CREDITOR).HasColumnType("NUMBER(25)");
@@ -2089,12 +2193,14 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.PAYRECIVHEAD_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.RADIF).HasPrecision(10);
             entity.Property(e => e.RECEIPT_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("شماره فيش");
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
@@ -2123,6 +2229,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2135,14 +2242,17 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.LEVEL_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.PAYRECIVDETAIL_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TAFSILI_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
@@ -2177,6 +2287,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2204,6 +2315,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.VOUCHERSHEAD_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.YEAR)
                 .HasMaxLength(4)
@@ -2226,6 +2338,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2264,10 +2377,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNTID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2300,6 +2415,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasDefaultValueSql("sys_guid() ")
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.PROVINCECODE)
                 .HasMaxLength(5)
@@ -2322,10 +2438,12 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasDefaultValueSql("sys_guid() ")
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNTCODE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2338,6 +2456,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.RABETTYPE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
 
@@ -2362,14 +2481,17 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasDefaultValueSql("sys_guid() ")
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNTCODE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNTCODE_RABET_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2387,6 +2509,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.VAHEDTYPE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.YEAR)
                 .HasMaxLength(4)
@@ -2416,6 +2539,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.RABETCODE)
                 .HasMaxLength(2)
@@ -2434,6 +2558,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2472,6 +2597,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2484,14 +2610,17 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.LEVEL_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.REVOLVINGFUND_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TAFSILI_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
@@ -2528,10 +2657,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNTCODE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2573,6 +2704,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.SYS_COD)
                 .HasMaxLength(4)
@@ -2595,6 +2727,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2644,6 +2777,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2656,6 +2790,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.TAFSILI_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
@@ -2674,6 +2809,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2702,6 +2838,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2714,10 +2851,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.TAFSILGROUP_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TAFSIL_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
@@ -2739,6 +2878,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2757,6 +2897,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.SOURCEID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.SYS_TYPE)
                 .HasMaxLength(1)
@@ -2768,6 +2909,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.VOUCHERSHEAD_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.YEAR)
                 .HasMaxLength(4)
@@ -2789,6 +2931,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2838,6 +2981,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.TMPVOUCHERHEAD_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
@@ -2868,14 +3012,17 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasDefaultValueSql("sys_guid() ")
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.CITY_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.PARENT_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.VAHEDCODE)
                 .HasMaxLength(4)
@@ -2886,6 +3033,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.VAHEDTYPE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
 
             entity.HasOne(d => d.VAHEDTYPE).WithMany(p => p.TB_VAHED_INFOs)
@@ -2906,6 +3054,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasDefaultValueSql("sys_guid() ")
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.PARENTTYPECODE)
                 .HasMaxLength(1)
@@ -2932,6 +3081,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2944,10 +3094,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.LEVEL_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TAFSILI_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
@@ -2956,6 +3108,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.VOUCHERSDETAIL_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.YEAR)
                 .HasMaxLength(4)
@@ -2982,10 +3135,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNT_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -2996,6 +3151,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.CHECK_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.CREDITOR).HasColumnType("NUMBER(25)");
@@ -3006,16 +3162,19 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ETEBAR_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.LOWLEVELCODE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.RADIF).HasPrecision(10);
             entity.Property(e => e.RECEIP_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
@@ -3024,6 +3183,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.VOUCHERSHEAD_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.YEAR)
                 .HasMaxLength(4)
@@ -3058,6 +3218,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("آي دي سند");
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -3109,6 +3270,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.PARENTHEAD_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.SNDVAHEDCODE)
                 .HasMaxLength(4)
@@ -3118,6 +3280,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .IsFixedLength()
+                .HasConversion(GuidToChar36Converter.Instance)
                 .HasComment("نوع سيستم4=اموال و3=اعلاميه مکانيزه");
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
@@ -3147,10 +3310,12 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasDefaultValueSql("sys_guid() ")
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNTCODE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -3177,6 +3342,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.VAHEDTYPE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
 
             entity.HasOne(d => d.ACCOUNTCODE).WithMany(p => p.TB_WHITEANDBLACKLISTs)
@@ -3199,10 +3365,12 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasDefaultValueSql("sys_guid() ")
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNTCODE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -3228,10 +3396,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.VAHEDINFO_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.VAHEDTYPE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
 
             entity.HasOne(d => d.ACCOUNTCODE).WithMany(p => p.TB_WHITELISTs)
@@ -3259,10 +3429,12 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ACCOUNTCODE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
@@ -3270,6 +3442,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.BRANCH_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.CHANGEUSERID)
                 .HasMaxLength(10)
@@ -3315,15 +3488,18 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.LEVEL_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.TAFSILI_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
@@ -3332,6 +3508,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.WORKSHOP_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
         });
 
