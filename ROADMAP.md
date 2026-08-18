@@ -10,7 +10,7 @@
 | ۲. Reverse Engineering دیتابیس Legacy Oracle | ✅ انجام شد |
 | ۳. تصمیم معماری: Legacy-as-Domain | ✅ انجام شد |
 | ۴. تصمیم معماری: Legacy جایگزین کامل مدل Rich | ✅ انجام شد (شامل حذف فیزیکی) |
-| ۵. مدل نوشتن روی `Accounting.Domain.Entity` (اتصال Oracle + اولین Command/Query) | ⬜ شروع نشده |
+| ۵. مدل نوشتن روی `Accounting.Domain.Entity` (اتصال Oracle + اولین Command/Query) | 🟡 در حال انجام — الگوی Command پایه ساخته شد (Add برای `TB_ACCOUNTCODE` و `TB_VOUCHERSHEAD`)؛ Query/Controller و اتصال واقعی تست‌نشده باقی است. یک ریسک 🔴 باز (`PARENTID DEFAULT '0'`) |
 | ۶. فرم صدور سند با تفصیلی داینامیک (Frontend) | ⬜ متوقف — منتظر فاز ۵ |
 
 ## Milestone Checklist
@@ -23,9 +23,12 @@
 - [x] حل ابهام منبع حقیقت تفصیلی مجاز → `TB_ACCOUNT_LINK_TAFSILGROUP`
 - [x] تبدیل ID/FK از نوع `string` به `System.Guid` — ۱۷۷ پراپرتی `CHAR(36)` در ۶۴ Entity (۱۱۵ `Guid` + ۶۲ `Guid?`) + `GuidToChar36Converter` در Infrastructure. پیش‌شرط آن verify روی دادهٔ زنده بود: ۱۲۴٬۰۹۴ مقدار، ۱۰۰٪ GUID استاندارد lowercase-dashed. build ۰ خطا، ۲۲/۲۲ تست سبز. (برنچ `feature/legacy-entity-guid-ids`)
 - [x] مسطح‌سازی محل Entityها: `Domain/Legacy/Entities/` → `Domain/Entity/` و namespace `Accounting.Domain.Legacy` → `Accounting.Domain.Entity` (۶۵ فایل با `git mv`). سمت Infrastructure (`Legacy/`, `LegacyDbContext`) عمداً بدون تغییر. build ۰ خطا، ۲۲/۲۲ تست سبز. (برنچ `feature/legacy-entity-guid-ids`)
-- [ ] اتصال واقعی به Oracle (connection string، DI برای `LegacyDbContext`)
-- [ ] طراحی مدل نوشتن (Command/Handler) مبتنی بر `Accounting.Domain.Entity`
-- [ ] اولین Command/Query end-to-end + پوشش تست (الان صفر تست روی مدل نوشتن)
+- [x] اتصال به Oracle در سطح DI (`AddDbContext<LegacyDbContext>` + `UseOracle`، connection string فقط از User Secrets؛ `appsettings.json` فقط placeholder خالی). ⚠️ اتصال واقعی هنوز اجرا/تست نشده.
+- [x] طراحی مدل نوشتن (Command/Handler) مبتنی بر `Accounting.Domain.Entity` — الگوی پایه: `Command → ValidationBehavior → Handler → Repository (فقط stage) → IUnitOfWork.SaveChangesAsync`. `IUnitOfWork` عمداً باریک است تا افزودن Entity بعدی نیازی به تغییرش نداشته باشد. Interfaceها در `Accounting.Application/Common/Interfaces/`. (برنچ `addAccountCode`)
+- [x] پوشش تست مدل نوشتن — `Accounting.Application.Tests` با ۴۱ تست Unit (Mock)؛ مجموع **۶۳/۶۳ سبز**. شامل تأیید صریح ترتیب `AddAsync` قبل از `SaveChangesAsync`.
+- [ ] Controller/Endpoint برای دو Command موجود (عمداً خارج از دامنهٔ فاز فعلی)
+- [ ] Query side (خواندن) + تست integration واقعی روی Oracle
+- [ ] حل ریسک 🔴 `PARENTID DEFAULT '0'` پیش از استفادهٔ واقعی از ساخت حساب ریشه
 - [ ] راه‌اندازی React (Vite) — متوقف تا اطلاع ثانوی
 - [ ] فرم صدور سند با فیلدهای تفصیلی داینامیک
 
@@ -49,7 +52,10 @@
 | 🟡 | نقش `TB_ACCOUNT_LINK_LEVEL` | مشخص نیست فعال است یا artifact قدیمی — نیاز به کوئری روی داده. |
 | 🟡 | یکپارچگی ارجاعی تفصیلی سند | `TB_VOUCHERDETAIL_LINK_TAFSILI` فقط یک FK دارد؛ `TAFSILI_ID`/`LEVEL_ID` بدون FK — هیچ تضمین سطح DB نیست. |
 | 🟡 | تضمین تراز بدهکار=بستانکار | از سطح کد حذف شده؛ اگر لازم شود باید در Application یا DB constraint بازسازی شود. |
-| 🟡 | پوشش تست مدل نوشتن جدید | صفر — فقط ۱۲ تست روی `AccountCode`/`Money` (+۱۰ تست قرارداد تبدیل Guid). باید با اولین Command/Query ساخته شود. |
+| ✅ | ~~پوشش تست مدل نوشتن جدید~~ | حل شد (۲۰۲۶-۰۸-۱۸): ۴۱ تست Application، مجموع ۶۳. ولی همگی Unit با Mock‌اند — هیچ تست integration روی Oracle واقعی نیست. |
+| 🔴 | `PARENTID DEFAULT '0'` مسیر حساب ریشه را می‌شکند | در Fluent Mapping، `TB_ACCOUNTCODE.PARENTID` هم `HasDefaultValueSql("'0'")` دارد هم `GuidToChar36Converter`. EF Core به‌خاطر DEFAULT ضمناً `ValueGenerated.OnAdd` می‌گذارد، پس با `ParentId = null` (حساب ریشه) ستون از INSERT حذف می‌شود و Oracle `'0'` می‌نویسد → یا نقض FK `FK_SELFREFRENCE`، یا ردیفی که **هر خواندن بعدی‌اش `FormatException` می‌دهد**. گزینه‌ها: `ValueGeneratedNever()` / حذف DEFAULT از mapping / اصلاح DDL. **نیازمند تصمیم کاربر.** |
+| 🟡 | خطای UNIQUE بدون نگاشت | `UK_ACCOUNTCODE` و `UK_VOUCHERHEAD_NUMBER` در DB وجود دارند (پس «شماره سند تکراری» در سطح DB تضمین شده)، ولی Application آن را به خطای معنادار نگاشت نمی‌کند؛ فعلاً `DbUpdateException` خام بالا می‌آید. |
+| 🟡 | دو UserSecrets store رقیب | هم `Accounting.Api.csproj` و هم `Accounting.Infrastructure.csproj` هرکدام `UserSecretsId` جدا دارند و هر دو کلید `ConnectionStrings:DefaultConnection` را نگه می‌دارند؛ به‌خاطر ترتیب بارگذاری در `Program.cs`، مقدار Infrastructure برنده است. الان مقادیر یکسان‌اند ولی منبع خطای بی‌صدا در آینده است. |
 | 🔴 | DEFAULTهای Oracle ناسازگار با `Guid` | ۹ ستون DEFAULT سمت DB دارند که مقدارشان GUID معتبر **نیست** و خواندنشان `FormatException` می‌دهد: `TB_ACCOUNTCODE.PARENTID` با `DEFAULT '0'`، و ۸ جدول با `ID DEFAULT sys_guid()` (`TB_CITY`, `TB_PROVINCE`, `TB_RABET`, `TB_RABET_CLOSING`, `TB_VAHED_INFO`, `TB_VAHED_TYPE`, `TB_WHITEANDBLACKLIST`, `TB_WHITELIST`) — چون `sys_guid()` مقدار `RAW(16)` را ۳۲ کاراکتر **بدون dash و UPPERCASE** می‌نویسد. در دادهٔ فعلی هیچ ردیفی این حالت را ندارد (اپلیکیشن قدیمی همیشه ID را صریح می‌داده)، ولی اگر INSERT جدیدی ستون را خالی بگذارد، خواندن بعدی crash می‌کند. **قبل از اولین Command/Query که این ۹ ستون را لمس کند باید تصمیم‌گیری شود.** |
 
 فهرست کامل و به‌روز همیشه در `CLAUDE.md` بخش «تصمیمات باز» است.
@@ -71,6 +77,7 @@
 
 ## گام بعدی پیشنهادی
 
-1. اتصال به Oracle (connection string در `appsettings`، ثبت `LegacyDbContext` در DI).
-2. طراحی اولین Command روی `Accounting.Domain.Entity` (مثلاً خواندن/ثبت یک حساب یا سند ساده) با `accounting-domain` + `backend-dotnet`.
-3. فعال‌سازی `qa-tester` هم‌زمان با اولین Command تا پوشش تست مدل نوشتن جدید از صفر شروع نشود.
+1. **تصمیم دربارهٔ ریسک 🔴 `PARENTID DEFAULT '0'`** — پیش از هر استفادهٔ واقعی از `CreateAccountCodeCommand` برای حساب ریشه.
+2. تصمیم دربارهٔ نگاشت خطای UNIQUE (`UK_ACCOUNTCODE` / `UK_VOUCHERHEAD_NUMBER`) به خطای معنادار Application.
+3. ساخت Controller/Endpoint برای دو Command موجود + هماهنگی با `api-contract`.
+4. اولین تست integration واقعی روی Oracle (با احتیاط و روی دادهٔ یک‌بارمصرف) تا صحت Fluent Mapping اثبات شود.

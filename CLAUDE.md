@@ -121,9 +121,29 @@ docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
   - ستون‌هایی که پسوند `ID` دارند ولی GUID **نیستند** عمداً `string` ماندند: `ADDUSERID`/`CHANGEUSERID`/`USERID` (طول ۱۰)، `DATE_RSID` (طول ۸)، `CONTROLID` (`NUMBER(1)`)، و کدهای کسب‌وکاری مثل `VAHEDCODE`/`ACCOUNTNUMBER`.
   - نکتهٔ ظریف: `TB_VOUCHERSHEAD.SYSTEM_TYPE` با اینکه پسوند `_ID` ندارد، `CHAR(36)` و FK واقعی به `TB_SYSTYPE` است؛ تبدیل شد (در غیر این صورت مدل EF به‌خاطر عدم تطابق نوع دو سر FK اصلاً build نمی‌شد).
   - build ۰ خطا (۱۶ warning پیش‌موجود NU1903، هیچ warning نوع CS)، **۲۲/۲۲ تست سبز** (۱۲ تست قبلی + ۱۰ تست جدید قرارداد round-trip).
-- [ ] اتصال به Oracle (مسیر Legacy) و طراحی مدل نوشتن مبتنی بر `Accounting.Domain.Entity`
-- [ ] اولین Command/Query روی Entityهای Legacy
+- [x] اتصال به Oracle (مسیر Legacy) و طراحی مدل نوشتن مبتنی بر `Accounting.Domain.Entity` — `LegacyDbContext` با `UseOracle(...)` در DI ثبت شد؛ connection string فقط از `IConfiguration`/User Secrets خوانده می‌شود و در `appsettings.json` تنها یک placeholder خالی هست. ⚠️ اتصال واقعی به دیتابیس هنوز **اجرا/تست نشده** (هیچ تست integration روی Oracle واقعی زده نشد — عمداً، برای جلوگیری از side effect روی دیتابیس Legacy).
+- [x] اولین Command روی Entityهای Legacy (الگوی پایه) — `CreateAccountCodeCommand` و `CreateVoucherHeadCommand` طبق ترتیب درخواستی صاحب پروژه (UnitOfWork → Interface → Repository → Command Service). **فقط Add؛ هیچ Query/Update/Delete و هیچ Controller ساخته نشد.** جزئیات در «فاز ۵» پایین‌تر.
+- [ ] Controller/Endpoint برای این دو Command (عمداً خارج از دامنهٔ کار فعلی)
+- [ ] Query side (خواندن) روی `Accounting.Domain.Entity`
 - [ ] فرم صدور سند با تفصیلی داینامیک
+
+### فاز ۵ — اولین مسیر نوشتن CQRS (۲۰۲۶-۰۸-۱۸، برنچ `addAccountCode`، commit نشده)
+
+الگوی پایه‌ای که همهٔ Commandهای بعدی از روی آن ساخته می‌شوند:
+
+`Command (فقط primitive) → ValidationBehavior (FluentValidation) → Handler (ساخت Entity + تولید Guid) → Repository (فقط stage) → IUnitOfWork.SaveChangesAsync (یک‌بار، توسط Handler)`
+
+تصمیم‌های تثبیت‌شده:
+- **محل Interfaceها: `Accounting.Application/Common/Interfaces/`** (نه Domain) — چون `Accounting.Domain` باید صفر وابستگی بماند. Implementation در `Accounting.Infrastructure`.
+- **`IUnitOfWork` عمداً باریک و entity-agnostic است** — فقط `SaveChangesAsync` + `Begin/Commit/RollbackTransactionAsync`. هیچ پراپرتی per-entity ندارد. افزودن Entity بعدی **هیچ تغییری** در `IUnitOfWork`/`UnitOfWork` لازم ندارد؛ Repositoryها مستقیماً به Handler تزریق می‌شوند.
+- **مرز تراکنش در Handler است** — Repository فقط `DbSet.AddAsync` می‌زند و هرگز `SaveChangesAsync` صدا نمی‌زند.
+- **Command هرگز Entity نیست** — Command فقط primitive دارد و Handler خودش Entity می‌سازد.
+- **ID سمت Application تولید می‌شود** (`Guid.NewGuid()`)؛ تأیید شد که `ID` هیچ‌کدام از دو جدول DB-generated نیست.
+- **اعتبارسنجی عمداً فقط سطحی است** (NotEmpty/MaximumLength منطبق با Fluent Mapping) — طبق تصمیم «Legacy جایگزین کامل»، هیچ invariant حسابداری بازسازی نشد.
+
+پکیج‌های جدید در `Accounting.Application`: `MediatR` 14.2.0، `FluentValidation` 12.1.1، `FluentValidation.DependencyInjectionExtensions` 12.1.1. در تست: `Moq` 4.20.72.
+
+تست: پروژهٔ جدید `backend/tests/Accounting.Application.Tests` با **۴۱ تست** (شامل تأیید صریح ترتیب `AddAsync` قبل از `SaveChangesAsync`). مجموع پروژه: **۶۳/۶۳ سبز** (۲۲ Domain + ۴۱ Application). build ۰ خطا / ۱۶ warning پیش‌موجود NU1903.
 
 ## تصمیمات باز (برای فاز بعدی)
 
@@ -147,7 +167,13 @@ docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
   - **وضعیت فعلی بی‌خطر است** چون اپلیکیشن قدیمی همیشه `ID` را صریح می‌داده و در دادهٔ زنده هیچ نمونه‌ای یافت نشد. خطر برای **کد جدید** ماست: هر `INSERT` که این ستون‌ها را خالی بگذارد، ردیفی می‌سازد که خواندن بعدی‌اش crash می‌کند.
   - **تصمیم آگاهانه:** خواندن سخت‌گیرانه (`ParseExact`) نگه داشته شد تا خطا **بلند** شود؛ جایگزین یعنی `Guid.Parse` سهل‌گیر، مقدار `"N"` را می‌پذیرد و در نوشتن بعدی بی‌صدا به فرمت dashed بازنویسی می‌کند — یعنی تغییر خاموش دادهٔ Legacy، که برای سیستم حسابداری بدتر از crash است.
   - **قبل از اولین Command/Query که این ۹ ستون را لمس کند باید یکی انتخاب شود:** (الف) همیشه ID را در کد Application تولید کنیم و هرگز به DEFAULT تکیه نکنیم، (ب) DEFAULTها با DDL اصلاح شوند، (ج) مسیر خواندن defensive شود.
-- **🟡 پوشش تست مدل نوشتن جدید صفر است** — با حذف ۲۱ تست مدل Rich، تنها ۱۲ تست باقی‌مانده مربوط به `AccountCode` و `Money` است. **هیچ تستی روی مدل نوشتن مبتنی بر `Accounting.Domain.Entity` وجود ندارد**، چون هنوز چنین مدلی ساخته نشده. با ساخت اولین Command/Query باید `qa-tester` پوشش را بسازد.
+- **✅ ~~پوشش تست مدل نوشتن جدید صفر است~~** — حل شد در ۲۰۲۶-۰۸-۱۸. با فاز ۵، پروژهٔ `Accounting.Application.Tests` با ۴۱ تست ساخته شد (مجموع ۶۳). ⚠️ ولی این تست‌ها **همگی Unit با Mock** هستند؛ هیچ تست integration روی Oracle واقعی وجود ندارد، پس صحت Fluent Mapping و رفتار واقعی INSERT هنوز اثبات‌نشده است.
+
+- **🔴 `TB_ACCOUNTCODE.PARENTID` با `DEFAULT '0'` مسیر ساخت حساب ریشه را خراب می‌کند (کشف‌شده ۲۰۲۶-۰۸-۱۸، تصمیم‌نگرفته)** — این دقیقاً همان ریسک ۹ ستون DEFAULT است که «قبل از اولین Commandی که این ستون‌ها را لمس کند» باید حل می‌شد، و `CreateAccountCodeCommand` اولین مصرف‌کنندهٔ آن است. در Fluent Mapping، `PARENTID` هم `HasDefaultValueSql("'0'")` دارد و هم `HasConversion(GuidToChar36Converter)`. رفتار EF Core: `HasDefaultValueSql` ضمناً `ValueGenerated.OnAdd` را فعال می‌کند، پس وقتی `ParentId = null` باشد (یعنی **حساب ریشه**)، EF ستون را از INSERT **حذف می‌کند** و Oracle مقدار `'0'` را می‌نویسد. پیامد: یا FK `FK_SELFREFRENCE` نقض می‌شود (ORA-02291)، یا اگر ردیفی با `ID='0'` وجود داشته باشد، ردیف ذخیره می‌شود و **هر خواندن بعدی آن ردیف با `FormatException` می‌ترکد** (چون `Guid.ParseExact("0","D")` شکست می‌خورد). گزینه‌ها: (الف) `ValueGeneratedNever()` روی `PARENTID` تا EF همیشه NULL صریح بفرستد، (ب) حذف `HasDefaultValueSql` از mapping، (ج) اصلاح DEFAULT با DDL سمت Oracle. **تا تصمیم‌گیری، `CreateAccountCodeCommand` برای حساب ریشه امن نیست.** توجه: `TB_VOUCHERSHEAD.DOCLIFE` (`DEFAULT 0`) و `HEAD_DESC` (`DEFAULT '-'`) همین رفتار را دارند ولی بی‌خطرند، چون مقدارشان با نوع ستون سازگار است.
+
+- **🟡 دو UserSecrets store رقیب با همان کلید** — `Accounting.Api.csproj` دارای `UserSecretsId = f5497a90-...` و `Accounting.Infrastructure.csproj` دارای `99fb4522-...` است و **هر دو** کلید `ConnectionStrings:DefaultConnection` را دارند. `Program.cs` علاوه بر بارگذاری خودکار store پروژهٔ Api، صراحتاً `AddUserSecrets<Accounting.Infrastructure.AssemblyMarker>()` را هم صدا می‌زند؛ چون این provider **بعداً** اضافه می‌شود، مقدار store مربوط به Infrastructure برنده است. الان مقدار هر دو یکسان است پس مشکلی بروز نمی‌کند، ولی اگر کسی فقط یکی را عوض کند، تغییرش ممکن است بی‌صدا نادیده گرفته شود. پیشنهاد: یکی از دو store حذف شود.
+
+- **🟡 خطای UNIQUE به‌صورت خام به بیرون درز می‌کند** — `TB_ACCOUNTCODE.ACCCODE` دارای UNIQUE `UK_ACCOUNTCODE` و `TB_VOUCHERSHEAD` دارای UNIQUE `UK_VOUCHERHEAD_NUMBER` روی `(DOC_NUM, YEAR, VAHEDCODE)` است. خبر خوب: تضمین «شماره سند تکراری نشود» در سطح DB **وجود دارد**. خبر بد: هیچ بررسی پیش‌دستانه یا نگاشت خطایی در Application نیست، پس درج تکراری به‌صورت `DbUpdateException`/ORA-00001 خام بالا می‌آید (احتمالاً ۵۰۰). قبل از ساخت Controller باید تصمیم گرفته شود.
 
 ## قوانین کاری تیم
 
