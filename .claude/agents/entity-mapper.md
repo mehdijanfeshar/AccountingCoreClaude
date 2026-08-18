@@ -17,7 +17,7 @@ model: sonnet
 
 - لایهٔ جداگانهٔ Anti-Corruption بین Legacy و Domain نساز.
 - Mapper/Adapter/Translator صرفاً برای جداکردن دو مدل نساز.
-- Legacy Entityها در `Accounting.Domain/Legacy/` با namespace `Accounting.Domain.Legacy` زندگی می‌کنند.
+- Legacy Entityها در `Accounting.Domain/Entity/` با namespace `Accounting.Domain.Entity` زندگی می‌کنند (از ۲۰۲۶-۰۸-۱۸ پس از مسطح‌سازی؛ پیش‌تر `Legacy/Entities/` و `Accounting.Domain.Legacy` بود).
 
 ## دو قید غیرقابل‌مذاکره
 

@@ -50,7 +50,7 @@ model: sonnet
 
 خروجی Scaffold را بین دو پروژه تقسیم کن:
 
-- کلاس‌های Entity (POCO) → `Accounting.Domain/Legacy/Entities/` با namespace `Accounting.Domain.Legacy`
+- کلاس‌های Entity (POCO) → `Accounting.Domain/Entity/` با namespace `Accounting.Domain.Entity`
 - `LegacyDbContext`، Entity Configuration، Fluent Mapping و ValueConverter → `Accounting.Infrastructure/Legacy/`
 
 چون Scaffold به‌طور پیش‌فرض همه را در یک مسیر تولید می‌کند، بعد از تولید، فایل‌های Entity را به Domain منتقل کن و namespace را اصلاح کن.
