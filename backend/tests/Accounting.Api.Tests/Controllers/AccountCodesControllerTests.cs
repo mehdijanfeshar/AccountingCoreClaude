@@ -26,7 +26,6 @@ public sealed class AccountCodesControllerTests
         SourceAndConsumeId: null,
         IdentyGroupsId: null,
         TypeAccCode: true,
-        AddUserId: "user1",
         MoInforClose: null,
         TypeAction: null);
 

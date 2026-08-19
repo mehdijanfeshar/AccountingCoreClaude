@@ -20,9 +20,6 @@ public sealed class CreateAccountCodeCommandValidator : AbstractValidator<Create
             .NotEmpty()
             .MaximumLength(200);
 
-        RuleFor(x => x.AddUserId)
-            .MaximumLength(10);
-
         RuleFor(x => x.MoInforClose)
             .MaximumLength(6);
     }

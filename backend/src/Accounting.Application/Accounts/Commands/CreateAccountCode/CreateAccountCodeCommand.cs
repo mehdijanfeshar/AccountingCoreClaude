@@ -15,7 +15,6 @@ namespace Accounting.Application.Accounts.Commands.CreateAccountCode;
 /// <param name="SourceAndConsumeId">Optional link to source/consume classification.</param>
 /// <param name="IdentyGroupsId">Optional link to identity group.</param>
 /// <param name="TypeAccCode">TYPEACCCODE column — نوع حساب (موقت/دائم).</param>
-/// <param name="AddUserId">Creating user identifier (max 10 chars). No ICurrentUser abstraction exists yet, so this is supplied by the caller.</param>
 /// <param name="MoInforClose">MOINFORCLOSE column (max 6 chars).</param>
 /// <param name="TypeAction">TYPEACTION column — نوع خلاف ماهیت.</param>
 public sealed record CreateAccountCodeCommand(
@@ -27,6 +26,5 @@ public sealed record CreateAccountCodeCommand(
     Guid? SourceAndConsumeId,
     Guid? IdentyGroupsId,
     bool? TypeAccCode,
-    string? AddUserId,
     string? MoInforClose,
     bool? TypeAction) : IRequest<Guid>;

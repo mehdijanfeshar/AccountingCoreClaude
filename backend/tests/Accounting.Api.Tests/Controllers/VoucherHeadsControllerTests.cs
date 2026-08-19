@@ -31,8 +31,7 @@ public sealed class VoucherHeadsControllerTests
         SndVahedCode: null,
         ParentHeadId: null,
         AttachFileName: null,
-        AtfNum: null,
-        AddUserId: "user1");
+        AtfNum: null);
 
     [Fact]
     public async Task Create_ReturnsCreatedAtActionWithGeneratedIdInBodyAndRouteValues()

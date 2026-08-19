@@ -125,7 +125,73 @@ docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
 - [x] اولین Command روی Entityهای Legacy (الگوی پایه) — `CreateAccountCodeCommand` و `CreateVoucherHeadCommand` طبق ترتیب درخواستی صاحب پروژه (UnitOfWork → Interface → Repository → Command Service). **فقط Add؛ هیچ Query/Update/Delete و هیچ Controller ساخته نشد.** جزئیات در «فاز ۵» پایین‌تر.
 - [x] Query side (خواندن) روی `Accounting.Domain.Entity` — چهار Query با paging: `GetAccountCodes`/`GetAccountCodeById`/`GetVoucherHeads`/`GetVoucherHeadById` با `PagedResult<T>` و Read Repositoryهای مجزا.
 - [x] Controller/Endpoint برای هر ۶ سرویس (۲ Command + ۴ Query) — `AccountCodesController` و `VoucherHeadsController` + `GlobalExceptionHandler` مرکزی. جزئیات در «فاز ۶» پایین‌تر.
+- [x] **فاز ۷ — Authentication/Authorization + رفع جعل‌پذیری `ADDUSERID`** (۲۰۲۶-۰۸-۱۹) — هر دو ریسک 🔴 CRITICAL که `security-reviewer` در Gate فاز ۶ کشف کرده بود حل شدند. اتصال inbound به IDP واقعی سازمان (`Tamin.Framework.Common.Security`) + `FallbackPolicy` + `ICurrentUser`. جزئیات در «فاز ۷» پایین‌تر. **۱۷۰/۱۷۰ تست سبز.**
 - [ ] فرم صدور سند با تفصیلی داینامیک
+
+### فاز ۷ — Authentication/Authorization + رفع جعل‌پذیری Audit (۲۰۲۶-۰۸-۱۹، برنچ `GetAccountCode`، commit نشده)
+
+هر دو ریسک 🔴 CRITICAL فاز ۶ حل شدند. طراحی توسط `security-reviewer`، پیاده‌سازی توسط `backend-dotnet`، تأیید توسط `qa-tester`.
+
+#### ۱. جعل‌پذیری `ADDUSERID` — حل شد ✅
+
+- پارامتر `AddUserId` **کاملاً حذف شد** از `CreateAccountCodeCommand` و `CreateVoucherHeadCommand` (و از Validatorهایشان). یعنی دیگر فقط «بی‌اعتماد» نیست — اصلاً بخشی از قرارداد ورودی نیست.
+- هر دو Handler حالا `ADDUSERID = _currentUser.UserId` می‌نویسند؛ دقیقاً مثل `CREATEDDATE`/`ISDELETED` که از قبل درست سمت سرور ست می‌شدند.
+- **این تنها تضمین ✅ باقی‌مانده در جدول Accounting Safety Gate (یعنی Audit Trail) بود که عملاً باطل شده بود؛ حالا واقعاً برقرار است.**
+- ⚠️ **Breaking change در قرارداد API:** فیلد `addUserId` از بدنهٔ هر دو POST حذف شد. چون هنوز هیچ مصرف‌کنندهٔ خارجی وجود ندارد، پذیرفته شد.
+- سمت **خواندن** (`AccountCodeDto`/`VoucherHeadDto`) عمداً `AddUserId` را همچنان برمی‌گرداند — آن جهت خواندن است و خارج از دامنهٔ این تغییر.
+
+#### ۲. `ICurrentUser`
+
+- قرارداد در `Accounting.Application/Common/Interfaces/ICurrentUser.cs` (طبق الگوی موجود `IUnitOfWork` — نه در Domain، تا `Accounting.Domain` صفر وابستگی بماند). پیاده‌سازی `HttpContextCurrentUser` در `Accounting.Api/Security/` بر پایهٔ `IHttpContextAccessor` و Claimها.
+- اعضا: `IsAuthenticated`, `UserId`, `VahedCode`, `IsInRole(role)`.
+- **`UserId` عمداً پرتاب می‌کند (throw) و هرگز truncate نمی‌کند** اگر کاربر احراز نشده باشد، Claim `NameIdentifier` نباشد، یا مقدار بیش از ۱۰ کاراکتر باشد (عرض ستون Legacy `ADDUSERID`). فلسفه: نوشتن یک هویت بریده‌شده در ستون Audit یک سیستم حسابداری، بدتر از خطای بلند است. (همان منطق تصمیم `ParseExact` در `GuidToChar36Converter`.)
+- `VahedCode` صرفاً **در دسترس** قرار گرفت ولی **به هیچ فیلتر Query وصل نشد** — عمداً؛ رجوع به تصمیم باز پایین.
+
+#### ۳. اسکیم احراز هویت **ورودی (inbound)**: IDP واقعی سازمان ✅
+
+> **تاریخچه:** ابتدا (۲۰۲۶-۰۸-۱۹، صبح) یک JWT محلی‌امضا به‌عنوان راه‌حل موقت پیاده شد (گزینهٔ B از `security-reviewer`). سپس **در همان روز** صاحب پروژه پکیج رسمی سازمان را در اختیار گذاشت و مسیر محلی **کاملاً حذف و جایگزین شد**. متن زیر وضعیت نهایی است.
+
+- پکیج `Tamin.Framework.Common.Security` **1.0.9** از feed داخلی سازمان (`https://nexus.tamin.ir/repository/nuget-v2-group/`، تعریف‌شده در `backend/NuGet.Config`).
+- فراخوانی: `builder.Services.AddTaminJWTToken(validAudience, environment)` در `Program.cs`.
+  - `validAudience` از کلید config `Tamin:Idp:Audience` خوانده می‌شود و در نبودش به مقدار پیش‌فرض برمی‌گردد. ⚠️ **مقدار فعلی به‌صراحت درخواست صاحب پروژه با پروژهٔ `Financial_Account` مشترک است** تا وقتی audience اختصاصی این سرویس در IDP سازمان ثبت شود.
+  - `environment` مشروط است: `IsProduction() ? Environments.Production : Environments.Test` (این enum فقط همین دو مقدار را دارد).
+- **رفتار واقعی پکیج که با reflection و اجرای واقعی تأیید شد (نه حدس):**
+  - اسکیم استاندارد `Bearer` را با `JwtBearerHandler` ثبت می‌کند و `DefaultScheme` را هم ست می‌کند → `SetFallbackPolicy(RequireAuthenticatedUser)` واقعاً scheme ای برای authenticate/challenge دارد. **نباید `AddAuthentication(...)` دوم اضافه شود** چون با اسکیم پکیج رقابت می‌کند.
+  - `ValidIssuer = http://idm.tamin.ir`، `IssuerSigningKey` یک **`JsonWebKey` ثابتِ جاسازی‌شده** است — **هیچ Authority/discovery/JWKS fetch ای در startup یا per-request انجام نمی‌شود**.
+  - `ValidateIssuer`/`ValidateAudience`/`ValidateLifetime`/`ValidateIssuerSigningKey` همگی `true`.
+  - `NameClaimType = .../identity/claims/name` و `RoleClaimType = .../identity/claims/role`.
+- **حذف‌شده (فیزیکی، طبق قانون پروژه — نه `[Obsolete]`):** `DevAuthController` + تست‌هایش، `JwtOptions`، `DevAuthOptions`، و بخش‌های `Jwt`/`DevAuth` از `appsettings.json`. دیگر هیچ توکن محلی‌امضایی در پروژه صادر نمی‌شود.
+- **`RolesAllowedAttribute` و `ClaimRequirementFilter`** هم در همین پکیج هستند و برای فاز بعدی (authorization سطح نقش/رکورد — تصمیم باز IDOR) در دسترس‌اند.
+
+- **یافتهٔ تعیین‌کننده:** در **هیچ‌کدام از ۶۵ جدول Legacy هیچ ستون password/hash/salt/token/credential وجود ندارد** → **schema Legacy اصلاً قادر به احراز هویت کسی نیست.** پس تکیه بر Legacy برای authentication ممکن نبود و تکیه بر IDP بیرونی سازمان اجتناب‌ناپذیر بود.
+
+#### ۴. Authorization و خطاها
+
+- `AddAuthorizationBuilder().SetFallbackPolicy(RequireAuthenticatedUser)` — عمداً به‌جای `[Authorize]` روی تک‌تک Controllerها، تا Controller بعدی که کسی یادش برود، دوباره دیتابیس را باز نکند.
+- **`app.UseAuthentication()` اصلاً در pipeline وجود نداشت** (خلأیی که `security-reviewer` کشف کرد) — اضافه شد، **قبل از** `app.UseAuthorization()`. بدون آن `HttpContext.User` هرگز پر نمی‌شد و policy بی‌صدا بی‌اثر می‌ماند.
+- تنها استثنا: `HealthController` با `[AllowAnonymous]` (probeها نمی‌توانند bearer token حمل کنند).
+- 401/403 توسط middleware تولید می‌شوند و **هرگز به `GlobalExceptionHandler` نمی‌رسند** (استثنا نیستند)؛ پس صریحاً به شکل `application/problem+json` با `traceId` و پیام عمومی درآمدند. جزئیات خطای اعتبارسنجی توکن فقط در Development برمی‌گردد.
+- ⚠️ **این shaping با `Configure<JwtBearerOptions>` و به‌صورت زنجیره‌ای (chain) انجام می‌شود، نه جایگزینی.** دلیل: `AddTaminJWTToken` خودش `OnMessageReceived` و `OnAuthenticationFailed` را wire می‌کند؛ اگر `options.Events = new JwtBearerEvents{...}` می‌نوشتیم، **کل آن‌ها بی‌صدا نابود می‌شدند**. پس delegate اصلی اول `await` می‌شود و فقط اگر `!Response.HasStarted && !context.Handled` بود، ProblemDetails ما نوشته می‌شود. `OnAuthenticationFailed`/`OnTokenValidated`/`OnMessageReceived` کاملاً دست‌نخورده‌اند.
+
+#### ۵. `TokenManager` — مسیر **خروجی (outbound)** به IDP واقعی سازمان
+
+صاحب پروژه الگوی `IDP.Services.TokenManager` را از پروژهٔ اصلی خودش (همان سازمان `tamin.org`) فرستاد و خواست «مثل همین» ساخته شود. پورت شد به `Accounting.Infrastructure/Idp/` با namespace `Accounting.Infrastructure.Idp`.
+
+**نکتهٔ کلیدی معماری که باید بدانید:** این `TokenManager` یک **acquirer از نوع outbound `client_credentials`** است — یعنی این API خودش به‌عنوان *client* از IDP توکن می‌گیرد تا به *سرویس‌های دیگر* سازمان زنگ بزند. **این به‌تنهایی CRITICAL #1 (محافظت از Controllerهای خودمان در برابر فراخوان‌های ورودی) را حل نمی‌کند** — آن مسیر جداگانه‌ای است (بخش ۳ بالا).
+
+- `ITokenManager` عمداً **داخلی به Infrastructure** ماند و به `Accounting.Application/Common/Interfaces/` اضافه **نشد**. دلیل: هیچ use case ای در Application امروز مصرف‌کنندهٔ آن نیست؛ وقتی شد، باید به یک interface هدف‌محور (مثلاً `IPersonDirectoryClient`) وابسته شود نه به این plumbing سطح‌پایین. (اجتناب از premature abstraction.)
+- **۶ نقص امنیتی/همزمانی الگوی اصلی حین پورت اصلاح شد** (نه کورکورانه کپی):
+  1. `HttpRequestException` بلعیده‌شده + `Console.WriteLine` → `ILogger` ساختاریافته و **انتشار خطا** با `TokenAcquisitionException`. دیگر هرگز توکن کهنه/`null` را بی‌صدا برنمی‌گرداند.
+  2. `new HttpClient()` در هر refresh (با وجود تزریق بلااستفادهٔ `IHttpClientFactory`) → استفادهٔ واقعی از factory با named client (رفع socket exhaustion / کهنگی DNS).
+  3. `static SemaphoreSlim` روی یک singleton → فیلد نمونه‌ای.
+  4. `Dictionary` با نوشتن بدون محافظت از مسیر خواندن → `ConcurrentDictionary` (باگ واقعی خرابی متناوب زیر بار، نه آرایشی).
+  5. `DateTime.Now` → `DateTime.UtcNow` در همهٔ محاسبات انقضا (drift منطقه‌زمانی/DST می‌توانست توکن منقضی را معتبر بشمارد).
+  6. افشای راز در لاگ → هیچ لاگ/پیام استثنا/`ToString` هرگز `ClientSecret` یا `access_token` خام را شامل نمی‌شود (اعتبارسنجی فقط **نام** پراپرتی‌های ناقص را فهرست می‌کند).
+- **نقص ۷ عمداً اصلاح نشد:** `Resources`/`External_Resources` پیکربندی می‌شود ولی در درخواست توکن **ارسال نمی‌شود** — دقیقاً مثل الگوی اصلی. حدس زده نشد؛ سؤالش برای صاحب پروژه باز است (پایین).
+- **اعتبارسنجی config تنبل (lazy) است، نه در startup** — برخلاف `Jwt:SigningKey` که fail-fast است. دلیل: هنوز هیچ‌چیز در این کدبیس به سرویس دیگری زنگ نمی‌زند، پس نبودِ `Idp:*` نباید بالاآمدن API را برای کار محلی خراب کند. خطای روشن در اولین `GetAccessTokenAsync` پرتاب می‌شود.
+- config با همان الگوی placeholder خالی در `appsettings.json` (`Idp:tamin:*`)؛ مقادیر واقعی فقط در User Secrets.
+
+تست: **۱۷۰/۱۷۰ سبز** (۲۲ Domain + ۸۴ Application + ۴۴ Api + ۲۰ Infrastructure) — `qa-tester` مستقلاً همین عدد را تأیید کرد. build ۰ خطا، بدون هیچ warning نوع CS (۱۶ warning پیش‌موجود NU1903 دست‌نخورده، بدون NU1902 — نسخهٔ transitive `Microsoft.IdentityModel.*` توسط resolver NuGet به ۸.۱۴.۰/۸.۰.۱ ارتقا یافت، فراتر از بازهٔ آسیب‌پذیر). Application از ۸۵ به ۸۴ رسید (حذف تست Validator مربوط به `AddUserId`)، Api از ۲۴ به ۴۴ (تست‌های `HttpContextCurrentUser`، `TaminJwtWiringTests` و مسیر Audit؛ `DevAuthController` و تست‌هایش پس از سوییچ به IDP واقعی فیزیکاً حذف شدند)، و پروژهٔ جدید `Accounting.Infrastructure.Tests` با ۲۰ تست (cache/انقضا/انتشار خطا/عدم افشای راز، همگی با `HttpMessageHandler` mock — **هیچ فراخوان شبکه‌ای واقعی به IDP انجام نشد**). همهٔ تست‌ها همچنان **Unit/Mock**؛ هیچ تست integration روی Oracle یا IDP واقعی اجرا نشد.
 
 ### فاز ۶ — لایهٔ HTTP (۲۰۲۶-۰۸-۱۸، برنچ `GetAccountCode`، commit نشده)
 
@@ -203,8 +269,36 @@ paging: پیش‌فرض `pageNumber=1`, `pageSize=20`؛ سقف `MaxPageSize=200`
 
 با ساخته‌شدن اولین سطح HTTP، این موارد از حالت نظری خارج شدند و **قبل از هرگونه میزبانی خارج از localhost باید تصمیم‌گیری شوند**:
 
-- **🔴 CRITICAL — هیچ Authentication/Authorization ای وجود ندارد.** `Program.cs` فقط `app.UseAuthorization()` را صدا می‌زند بدون هیچ `AddAuthentication()`، هیچ `[Authorize]` و هیچ policy. یعنی **هر کسی که به پورت برسد** می‌تواند بی‌نام‌ونشان در `TB_ACCOUNTCODE`/`TB_VOUCHERSHEAD` واقعی ردیف درج کند و کل کدینگ حساب‌ها و سرفصل اسناد را بخواند. حداقل کنترل لازم: یک scheme احراز هویت + `FallbackPolicy = RequireAuthenticatedUser` (نه `[Authorize]` اختیاری روی هر Controller، تا Controller بعدی که کسی یادش برود دوباره DB را باز نکند). **تا آن زمان این API نباید در هیچ شبکه‌ای در دسترس قرار گیرد.**
-- **🔴 CRITICAL — `ADDUSERID` توسط خود فراخوان قابل جعل است.** `CreateAccountCodeCommand.AddUserId` و `CreateVoucherHeadCommand.AddUserId` مستقیماً از بدنهٔ HTTP گرفته و در ستون `ADDUSERID` نوشته می‌شوند (تنها قید: `MaximumLength(10)`). این دقیقاً همان **تنها تضمین حسابداری‌ای است که در جدول Accounting Safety Gate هنوز ✅ بود** (Audit Trail) — و عملاً باطل می‌شود. راه‌حل: حذف `AddUserId` از هر دو Command و جایگزینی با `ICurrentUser` سمت سرور (مثل `CreatedDate`/`ISDELETED` که همین حالا درست سمت سرور ست می‌شوند).
+- **✅ ~~🔴 CRITICAL — هیچ Authentication/Authorization ای وجود ندارد.~~** — **حل شد در ۲۰۲۶-۰۸-۱۹ (فاز ۷).** IDP واقعی سازمان (`Tamin.Framework.Common.Security`) + `app.UseAuthentication()` (که اصلاً در pipeline نبود) + `SetFallbackPolicy(RequireAuthenticatedUser)` + `[AllowAnonymous]` فقط روی `HealthController`. جزئیات کامل و تصمیم باز باقی‌مانده (نگاشت claim) پایین‌تر.
+- **✅ ~~🔴 CRITICAL — `ADDUSERID` توسط خود فراخوان قابل جعل است.~~** — **حل شد در ۲۰۲۶-۰۸-۱۹ (فاز ۷).** `AddUserId` کاملاً از هر دو Command حذف شد و مقدار از `ICurrentUser.UserId` سمت سرور می‌آید. چون پراپرتی دیگر **اصلاً وجود ندارد**، بازگشت این آسیب‌پذیری خطای کامپایل می‌دهد نه خطای منطقی (تأیید `qa-tester`).
+
+### ✅ ~~تصمیم باز — اتصال inbound به IDP واقعی سازمان~~ — حل شد (۲۰۲۶-۰۸-۱۹)
+
+صاحب پروژه پکیج رسمی `Tamin.Framework.Common.Security` 1.0.9 را در اختیار گذاشت و مسیر inbound به IDP واقعی سازمان وصل شد (فاز ۷ بخش ۳). سؤال‌های قبلی به‌این‌ترتیب منتفی شدند: پکیج خودش `ValidIssuer = http://idm.tamin.ir` و یک `JsonWebKey` ثابتِ جاسازی‌شده دارد، پس **نه discovery URL لازم است نه JWKS fetch**. audience هم به‌صراحت درخواست کاربر فعلاً با `Financial_Account` مشترک است.
+
+پکیج `IDP` (که در کد outbound `TokenManager` استفاده شده بود) روی feed سازمان **پیدا نشد** → یعنی یک پروژهٔ لوکال داخل solution اصلی کاربر بوده، نه پکیج منتشرشده. پس پورت دستی `TokenManager` به `Accounting.Infrastructure/Idp/` تصمیم درستی بوده و باقی می‌ماند.
+
+### 🔴 تصمیم باز جدید — نگاشت claim برای `ADDUSERID` (۲۰۲۶-۰۸-۱۹)
+
+**این تنها سؤال باقی‌مانده از بستهٔ auth است و عمداً حدس زده نشد.**
+
+`HttpContextCurrentUser.UserId` فعلاً `ClaimTypes.NameIdentifier` را می‌خواند و اگر غایب یا **بیش از ۱۰ کاراکتر** باشد throw می‌کند (عرض ستون Legacy `ADDUSERID`). اما:
+
+- **معلوم نیست کدام claim در توکن واقعی IDP سازمان یک شناسهٔ ≤۱۰ کاراکتری قابل‌نگاشت به `ADDUSERID` دارد.** اگر `sub` یک GUID باشد، قطعاً جا نمی‌شود.
+- نکتهٔ مرتبط: پکیج `NameClaimType` را روی `.../identity/claims/name` ست می‌کند (نه `nameidentifier`)، پس `User.Identity.Name` به claim دیگری اشاره می‌کند.
+- معلوم نیست بین کدهای کاربری قدیمی Legacy (که ستون `ADDUSERID` را پر کرده‌اند) و هویت‌های IDP جدید اصلاً نگاشتی وجود دارد یا نه.
+
+**⚠️ این هرگز با یک توکن واقعی IDP تست/تأیید نشده** (هیچ فراخوان شبکه‌ای به IDP انجام نشد).
+
+**چرا فعلاً بی‌خطر است:** طراحی `ICurrentUser` عمداً **fail-loud** است — هر ناسازگاری بلافاصله خطا می‌دهد، نه اینکه بی‌صدا یک مقدار غلط/بریده در ستون Audit یک سیستم حسابداری بنویسد. این رفتار **درست است و باید حفظ شود**؛ فقط باید با اولین توکن واقعی راستی‌آزمایی شود.
+
+### 🟡 تصمیمات باز دیگر که در فاز ۷ عمداً حل نشدند
+
+- **`VahedCode` سمت سرور اعمال نمی‌شود.** `ICurrentUser.VahedCode` ساخته شد ولی **به هیچ فیلتر Query وصل نشد**. یعنی `?vahedCode=` همچنان یک پارامتر اختیاری و غیرقابل‌اعتماد است و هر کاربر احراز‌شده می‌تواند اسناد هر واحد سازمانی دیگری را ببیند. باید تصمیم گرفته شود: اجباری و سمت‌سروری شود، یا دید بین‌واحدی صریحاً عمدی اعلام شود.
+- **IDOR روی `GetById`** — فاز ۷ فقط authentication و جعل Audit را حل کرد، **نه authorization در سطح رکورد**. هر کاربر احراز‌شده می‌تواند هر `ID` ای را بخواند. باید تأیید شود که این برای این مرحله قابل‌قبول است.
+- **محدودکردن Kestrel به `localhost`** — توصیهٔ `security-reviewer` به‌عنوان کاهش‌دهندهٔ ریسک فوری و بدون کد، تا وقتی auth نهایی مستقر نشده. تصمیم عملیاتی با صاحب پروژه.
+- **پوشش تست pipeline احراز هویت** — تست‌های `Accounting.Api.Tests` همگی unit اند (بدون `WebApplicationFactory`)، پس این‌که واقعاً یک درخواست بدون توکن ۴۰۱ می‌گیرد و `FallbackPolicy` عملاً اعمال می‌شود **در هیچ تستی اثبات نشده**. `qa-tester` این را به‌عنوان بزرگ‌ترین شکاف پوشش اعلام کرد و عمداً نبست، چون `AddInfrastructure` هنگام ساخت host یک `UseOracle` ثبت می‌کند و یک تست ساده‌لوحانه ممکن بود ناخواسته به دیتابیس **زندهٔ** واقعی وصل شود.
+- **`DevAuthController.Roles` allowlist ندارد** — فقط `UserId` در برابر allowlist سنجیده می‌شود؛ نقش‌ها آزادانه در توکن dev درج می‌شوند. ریسک پایین (این endpoint خارج از Development مقدار 404 می‌دهد).
 - **🟡 چندمستأجری (`VAHEDCODE`) مرز ایزولاسیون نیست.** `vahedCode` یک پارامتر **اختیاری query string** است که فراخوان خودش می‌دهد، نه فیلتری که سرور از هویت استخراج کند؛ یعنی هر کسی می‌تواند اسناد هر واحد سازمانی دیگری را مرور کند. باید صریحاً تصمیم گرفته شود: یا اجباری و سمت‌سروری شود، یا مستند شود که دید بین‌واحدی عمدی است.
 - **🟡 فیلدهای Audit در DTO برای همه قابل خواندن‌اند** — `AddUserId`/`ChangeUserId`/`IsDeleted` در هر دو DTO بی‌قید برگردانده می‌شوند. پس از افزودن نقش‌ها باید تصمیم گرفته شود که آیا این‌ها نیاز به نقش ممتاز دارند.
 - **🟡 هیچ Rate Limiting ای وجود ندارد** — سقف ۲۰۰ ردیف در هر صفحه کار می‌کند، ولی هیچ محدودیتی روی تعداد درخواست نیست، پس پیمایش کامل جدول‌ها با اسکریپت ممکن است.

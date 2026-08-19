@@ -20,8 +20,7 @@ public sealed class CreateVoucherHeadCommandValidatorTests
         SndVahedCode: null,
         ParentHeadId: null,
         AttachFileName: null,
-        AtfNum: null,
-        AddUserId: "user1");
+        AtfNum: null);
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -182,16 +181,5 @@ public sealed class CreateVoucherHeadCommandValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateVoucherHeadCommand.AtfNum));
-    }
-
-    [Fact]
-    public void Validate_AddUserIdOverMaxLength_Fails()
-    {
-        var command = ValidCommand() with { AddUserId = new string('a', 11) };
-
-        var result = _validator.Validate(command);
-
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateVoucherHeadCommand.AddUserId));
     }
 }
