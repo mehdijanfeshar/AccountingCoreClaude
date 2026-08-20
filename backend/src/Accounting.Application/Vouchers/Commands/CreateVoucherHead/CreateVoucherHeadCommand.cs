@@ -26,7 +26,6 @@ namespace Accounting.Application.Vouchers.Commands.CreateVoucherHead;
 /// <param name="ParentHeadId">Optional self-referencing parent voucher head.</param>
 /// <param name="AttachFileName">ATTACHFILE_NAME column (max 100 chars).</param>
 /// <param name="AtfNum">ATF_NUM column (max 15 chars, fixed length).</param>
-/// <param name="AddUserId">Creating user identifier (max 10 chars). No ICurrentUser abstraction exists yet, so this is supplied by the caller.</param>
 public sealed record CreateVoucherHeadCommand(
     string DocNum,
     string DateDoc,
@@ -41,5 +40,4 @@ public sealed record CreateVoucherHeadCommand(
     string? SndVahedCode,
     Guid? ParentHeadId,
     string? AttachFileName,
-    string? AtfNum,
-    string? AddUserId) : IRequest<Guid>;
+    string? AtfNum) : IRequest<Guid>;

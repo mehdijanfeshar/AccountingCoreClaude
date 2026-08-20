@@ -42,8 +42,5 @@ public sealed class CreateVoucherHeadCommandValidator : AbstractValidator<Create
 
         RuleFor(x => x.AtfNum)
             .MaximumLength(15);
-
-        RuleFor(x => x.AddUserId)
-            .MaximumLength(10);
     }
 }

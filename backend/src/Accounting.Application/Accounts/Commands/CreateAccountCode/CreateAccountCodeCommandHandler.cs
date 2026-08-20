@@ -7,17 +7,24 @@ namespace Accounting.Application.Accounts.Commands.CreateAccountCode;
 /// <summary>
 /// Constructs the <see cref="TB_ACCOUNTCODE"/> Domain entity from the command, stages it via
 /// <see cref="IAccountCodeRepository"/>, and owns the transaction boundary by calling
-/// <see cref="IUnitOfWork.SaveChangesAsync"/> exactly once.
+/// <see cref="IUnitOfWork.SaveChangesAsync"/> exactly once. <c>ADDUSERID</c> is sourced from
+/// <see cref="ICurrentUser"/> (the authenticated caller) — never from the request — so it
+/// cannot be forged by the client.
 /// </summary>
 public sealed class CreateAccountCodeCommandHandler : IRequestHandler<CreateAccountCodeCommand, Guid>
 {
     private readonly IAccountCodeRepository _accountCodeRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUser _currentUser;
 
-    public CreateAccountCodeCommandHandler(IAccountCodeRepository accountCodeRepository, IUnitOfWork unitOfWork)
+    public CreateAccountCodeCommandHandler(
+        IAccountCodeRepository accountCodeRepository,
+        IUnitOfWork unitOfWork,
+        ICurrentUser currentUser)
     {
         _accountCodeRepository = accountCodeRepository;
         _unitOfWork = unitOfWork;
+        _currentUser = currentUser;
     }
 
     public async Task<Guid> Handle(CreateAccountCodeCommand request, CancellationToken cancellationToken)
@@ -33,7 +40,7 @@ public sealed class CreateAccountCodeCommandHandler : IRequestHandler<CreateAcco
             SOURCEANDCONSUME_ID = request.SourceAndConsumeId,
             IDENTYGROUPS_ID = request.IdentyGroupsId,
             TYPEACCCODE = request.TypeAccCode,
-            ADDUSERID = request.AddUserId,
+            ADDUSERID = _currentUser.UserId,
             MOINFORCLOSE = request.MoInforClose,
             TYPEACTION = request.TypeAction,
             CREATEDDATE = DateTime.UtcNow,

@@ -21,21 +21,28 @@ public sealed class CreateVoucherHeadCommandHandlerTests
         SndVahedCode: null,
         ParentHeadId: null,
         AttachFileName: null,
-        AtfNum: null,
-        AddUserId: "user1");
+        AtfNum: null);
+
+    private static Mock<ICurrentUser> CurrentUserMock(string userId = "user1")
+    {
+        var currentUser = new Mock<ICurrentUser>();
+        currentUser.SetupGet(u => u.UserId).Returns(userId);
+        return currentUser;
+    }
 
     [Fact]
     public async Task Handle_MapsCommandFieldsOntoStagedEntity()
     {
         var repository = new Mock<IVoucherHeadRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
         TB_VOUCHERSHEAD? staged = null;
         repository
             .Setup(r => r.AddAsync(It.IsAny<TB_VOUCHERSHEAD>(), It.IsAny<CancellationToken>()))
             .Callback<TB_VOUCHERSHEAD, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
         var command = ValidCommand();
 
         await handler.Handle(command, CancellationToken.None);
@@ -55,7 +62,27 @@ public sealed class CreateVoucherHeadCommandHandlerTests
         Assert.Equal(command.ParentHeadId, staged.PARENTHEAD_ID);
         Assert.Equal(command.AttachFileName, staged.ATTACHFILE_NAME);
         Assert.Equal(command.AtfNum, staged.ATF_NUM);
-        Assert.Equal(command.AddUserId, staged.ADDUSERID);
+    }
+
+    [Fact]
+    public async Task Handle_SetsAddUserIdFromCurrentUser_NeverFromRequest()
+    {
+        var repository = new Mock<IVoucherHeadRepository>();
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock("srvusr01");
+        TB_VOUCHERSHEAD? staged = null;
+        repository
+            .Setup(r => r.AddAsync(It.IsAny<TB_VOUCHERSHEAD>(), It.IsAny<CancellationToken>()))
+            .Callback<TB_VOUCHERSHEAD, CancellationToken>((entity, _) => staged = entity)
+            .Returns(Task.CompletedTask);
+
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+
+        await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        Assert.NotNull(staged);
+        Assert.Equal("srvusr01", staged!.ADDUSERID);
+        currentUser.VerifyGet(u => u.UserId, Times.AtLeastOnce);
     }
 
     [Fact]
@@ -63,13 +90,14 @@ public sealed class CreateVoucherHeadCommandHandlerTests
     {
         var repository = new Mock<IVoucherHeadRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
         TB_VOUCHERSHEAD? staged = null;
         repository
             .Setup(r => r.AddAsync(It.IsAny<TB_VOUCHERSHEAD>(), It.IsAny<CancellationToken>()))
             .Callback<TB_VOUCHERSHEAD, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -83,13 +111,14 @@ public sealed class CreateVoucherHeadCommandHandlerTests
     {
         var repository = new Mock<IVoucherHeadRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
         TB_VOUCHERSHEAD? staged = null;
         repository
             .Setup(r => r.AddAsync(It.IsAny<TB_VOUCHERSHEAD>(), It.IsAny<CancellationToken>()))
             .Callback<TB_VOUCHERSHEAD, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -103,8 +132,9 @@ public sealed class CreateVoucherHeadCommandHandlerTests
     {
         var repository = new Mock<IVoucherHeadRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -119,6 +149,7 @@ public sealed class CreateVoucherHeadCommandHandlerTests
     {
         var repository = new Mock<IVoucherHeadRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
         var callOrder = new List<string>();
 
         repository
@@ -130,7 +161,7 @@ public sealed class CreateVoucherHeadCommandHandlerTests
             .Callback(() => callOrder.Add("SaveChangesAsync"))
             .ReturnsAsync(1);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -142,10 +173,11 @@ public sealed class CreateVoucherHeadCommandHandlerTests
     {
         var repository = new Mock<IVoucherHeadRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(), token);
 

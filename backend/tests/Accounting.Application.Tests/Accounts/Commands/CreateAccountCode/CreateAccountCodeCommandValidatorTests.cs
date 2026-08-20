@@ -15,7 +15,6 @@ public sealed class CreateAccountCodeCommandValidatorTests
         SourceAndConsumeId: null,
         IdentyGroupsId: null,
         TypeAccCode: true,
-        AddUserId: "user1",
         MoInforClose: null,
         TypeAction: null);
 
@@ -79,27 +78,6 @@ public sealed class CreateAccountCodeCommandValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateAccountCodeCommand.AccCodeName));
-    }
-
-    [Fact]
-    public void Validate_AddUserIdOverMaxLength_Fails()
-    {
-        var command = ValidCommand() with { AddUserId = new string('a', 11) };
-
-        var result = _validator.Validate(command);
-
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateAccountCodeCommand.AddUserId));
-    }
-
-    [Fact]
-    public void Validate_AddUserIdNull_Passes()
-    {
-        var command = ValidCommand() with { AddUserId = null };
-
-        var result = _validator.Validate(command);
-
-        Assert.True(result.IsValid);
     }
 
     [Fact]

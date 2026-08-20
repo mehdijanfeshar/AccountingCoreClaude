@@ -16,22 +16,29 @@ public sealed class CreateAccountCodeCommandHandlerTests
         SourceAndConsumeId: null,
         IdentyGroupsId: null,
         TypeAccCode: true,
-        AddUserId: "user1",
         MoInforClose: null,
         TypeAction: null);
+
+    private static Mock<ICurrentUser> CurrentUserMock(string userId = "user1")
+    {
+        var currentUser = new Mock<ICurrentUser>();
+        currentUser.SetupGet(u => u.UserId).Returns(userId);
+        return currentUser;
+    }
 
     [Fact]
     public async Task Handle_MapsCommandFieldsOntoStagedEntity()
     {
         var repository = new Mock<IAccountCodeRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
         TB_ACCOUNTCODE? staged = null;
         repository
             .Setup(r => r.AddAsync(It.IsAny<TB_ACCOUNTCODE>(), It.IsAny<CancellationToken>()))
             .Callback<TB_ACCOUNTCODE, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateAccountCodeCommandHandler(repository.Object, unitOfWork.Object);
+        var handler = new CreateAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
         var command = ValidCommand();
 
         await handler.Handle(command, CancellationToken.None);
@@ -45,9 +52,29 @@ public sealed class CreateAccountCodeCommandHandlerTests
         Assert.Equal(command.SourceAndConsumeId, staged.SOURCEANDCONSUME_ID);
         Assert.Equal(command.IdentyGroupsId, staged.IDENTYGROUPS_ID);
         Assert.Equal(command.TypeAccCode, staged.TYPEACCCODE);
-        Assert.Equal(command.AddUserId, staged.ADDUSERID);
         Assert.Equal(command.MoInforClose, staged.MOINFORCLOSE);
         Assert.Equal(command.TypeAction, staged.TYPEACTION);
+    }
+
+    [Fact]
+    public async Task Handle_SetsAddUserIdFromCurrentUser_NeverFromRequest()
+    {
+        var repository = new Mock<IAccountCodeRepository>();
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock("srvusr01");
+        TB_ACCOUNTCODE? staged = null;
+        repository
+            .Setup(r => r.AddAsync(It.IsAny<TB_ACCOUNTCODE>(), It.IsAny<CancellationToken>()))
+            .Callback<TB_ACCOUNTCODE, CancellationToken>((entity, _) => staged = entity)
+            .Returns(Task.CompletedTask);
+
+        var handler = new CreateAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+
+        await handler.Handle(ValidCommand(), CancellationToken.None);
+
+        Assert.NotNull(staged);
+        Assert.Equal("srvusr01", staged!.ADDUSERID);
+        currentUser.VerifyGet(u => u.UserId, Times.AtLeastOnce);
     }
 
     [Fact]
@@ -55,13 +82,14 @@ public sealed class CreateAccountCodeCommandHandlerTests
     {
         var repository = new Mock<IAccountCodeRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
         TB_ACCOUNTCODE? staged = null;
         repository
             .Setup(r => r.AddAsync(It.IsAny<TB_ACCOUNTCODE>(), It.IsAny<CancellationToken>()))
             .Callback<TB_ACCOUNTCODE, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateAccountCodeCommandHandler(repository.Object, unitOfWork.Object);
+        var handler = new CreateAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -75,13 +103,14 @@ public sealed class CreateAccountCodeCommandHandlerTests
     {
         var repository = new Mock<IAccountCodeRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
         TB_ACCOUNTCODE? staged = null;
         repository
             .Setup(r => r.AddAsync(It.IsAny<TB_ACCOUNTCODE>(), It.IsAny<CancellationToken>()))
             .Callback<TB_ACCOUNTCODE, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateAccountCodeCommandHandler(repository.Object, unitOfWork.Object);
+        var handler = new CreateAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -95,8 +124,9 @@ public sealed class CreateAccountCodeCommandHandlerTests
     {
         var repository = new Mock<IAccountCodeRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
 
-        var handler = new CreateAccountCodeCommandHandler(repository.Object, unitOfWork.Object);
+        var handler = new CreateAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -111,6 +141,7 @@ public sealed class CreateAccountCodeCommandHandlerTests
     {
         var repository = new Mock<IAccountCodeRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
         var callOrder = new List<string>();
 
         repository
@@ -122,7 +153,7 @@ public sealed class CreateAccountCodeCommandHandlerTests
             .Callback(() => callOrder.Add("SaveChangesAsync"))
             .ReturnsAsync(1);
 
-        var handler = new CreateAccountCodeCommandHandler(repository.Object, unitOfWork.Object);
+        var handler = new CreateAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -134,10 +165,11 @@ public sealed class CreateAccountCodeCommandHandlerTests
     {
         var repository = new Mock<IAccountCodeRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        var handler = new CreateAccountCodeCommandHandler(repository.Object, unitOfWork.Object);
+        var handler = new CreateAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(), token);
 

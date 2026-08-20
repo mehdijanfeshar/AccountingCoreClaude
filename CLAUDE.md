@@ -125,7 +125,158 @@ docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
 - [x] اولین Command روی Entityهای Legacy (الگوی پایه) — `CreateAccountCodeCommand` و `CreateVoucherHeadCommand` طبق ترتیب درخواستی صاحب پروژه (UnitOfWork → Interface → Repository → Command Service). **فقط Add؛ هیچ Query/Update/Delete و هیچ Controller ساخته نشد.** جزئیات در «فاز ۵» پایین‌تر.
 - [x] Query side (خواندن) روی `Accounting.Domain.Entity` — چهار Query با paging: `GetAccountCodes`/`GetAccountCodeById`/`GetVoucherHeads`/`GetVoucherHeadById` با `PagedResult<T>` و Read Repositoryهای مجزا.
 - [x] Controller/Endpoint برای هر ۶ سرویس (۲ Command + ۴ Query) — `AccountCodesController` و `VoucherHeadsController` + `GlobalExceptionHandler` مرکزی. جزئیات در «فاز ۶» پایین‌تر.
+- [x] **فاز ۷ — Authentication/Authorization + رفع جعل‌پذیری `ADDUSERID`** (۲۰۲۶-۰۸-۱۹) — هر دو ریسک 🔴 CRITICAL که `security-reviewer` در Gate فاز ۶ کشف کرده بود حل شدند. اتصال inbound به IDP واقعی سازمان (`Tamin.Framework.Common.Security`) + `FallbackPolicy` + `ICurrentUser`. جزئیات در «فاز ۷» پایین‌تر. **۱۷۰/۱۷۰ تست سبز.**
+- [x] **فاز ۸ — تکمیل CRUD: Update + Delete (Soft Delete)** (۲۰۲۶-۰۸-۱۹) — ۴ Command جدید و ۴ Endpoint جدید، همگی `POST` با فعل صریح در route (`PUT`/`DELETE` به‌درخواست صریح صاحب پروژه ممنوع شدند — رجوع به «فاز ۸» پایین‌تر). جزئیات در «فاز ۸» پایین‌تر. **۲۵۹/۲۵۹ تست سبز** (پس از یک پاس `/code-review` که ۲ باگ واقعی و ۱ شکاف اعتبارسنجی پیدا و رفع کرد).
+- [x] **فاز ۹ — cascade کامل سه‌سطحی حذف نرم سند** (۲۰۲۶-۰۸-۲۰) — ریسک 🔴 «نبود cascade» از فاز ۸ **کاملاً** بسته شد: `TB_VOUCHERSHEAD` → `TB_VOUCHERSDETAIL` → `TB_VOUCHERDETAIL_LINK_TAFSILI`. جزئیات در «فاز ۹» پایین‌تر. **۲۷۲/۲۷۲ تست سبز.**
 - [ ] فرم صدور سند با تفصیلی داینامیک
+
+### فاز ۹ — cascade کامل سه‌سطحی حذف نرم سند (۲۰۲۶-۰۸-۲۰، برنچ `changejWT`، commit نشده)
+
+به درخواست صریح صاحب پروژه، در دو مرحله: اول «وقتی سند از هدر حذف بشه، دیتیل‌هاش هم باید حذف بشن»، سپس افزودن سطح سوم (`TB_VOUCHERDETAIL_LINK_TAFSILI`).
+
+**زنجیرهٔ کامل cascade — هر سه سطح در یک تراکنش/یک `SaveChangesAsync`:**
+`TB_VOUCHERSHEAD` → `TB_VOUCHERSDETAIL` → `TB_VOUCHERDETAIL_LINK_TAFSILI`
+
+**تصمیم ۱ — محل متد: داخل همان `IVoucherHeadRepository`** (نه repository/interface مستقل برای هیچ‌کدام از دو جدول فرزند).
+متد: `Task<int> SoftDeleteDetailTreeAsync(Guid headId, string? changeUserId, DateTime updatedDate, CancellationToken)` — که مجموع ردیف‌های حذف‌شدهٔ هر دو سطح را برمی‌گرداند.
+دلیل: اجتناب از premature abstraction — هیچ Command/Query مستقلی برای `TB_VOUCHERSDETAIL` یا `TB_VOUCHERDETAIL_LINK_TAFSILI` وجود ندارد و هر دو فقط به‌عنوان بخشی از aggregate سند قابل دسترسی‌اند؛ همان قضاوتی که قبلاً برای `ITokenManager` هم اعمال شد. سطح سوم عمداً **داخل همان متد** ادغام شد (نه متد دوم) چون IDهای ردیف‌ها از قبل در حافظه هستند (بدون کوئری اضافه) و این کار ساختاراً غیرممکن می‌کند که کسی سطح ۲ را cascade کند ولی سطح ۳ را فراموش کند. نام متد از `SoftDeleteDetailLinesAsync` به `SoftDeleteDetailTreeAsync` تغییر کرد تا دامنهٔ واقعی‌اش را بیان کند. اگر روزی مسیر نوشتن مستقلی ساخته شد، باید بازبینی و استخراج شود (در XML doc ثبت شد).
+
+**تصمیم ۳ — دامنهٔ سطح سوم عمداً وسیع‌تر از «ردیف‌هایی که همین الان حذف شدند» است.**
+لینک‌های تفصیلی بر اساس **همهٔ** ردیف‌های سند (صرف‌نظر از `ISDELETED` آن‌ها) فیلتر می‌شوند، نه فقط ردیف‌هایی که در همین فراخوان حذف شدند. دلیل: اگر ردیفی قبلاً به‌تنهایی soft-delete شده بود ولی لینک‌های تفصیلی‌اش فعال مانده بودند، محدودکردن دامنه به ردیف‌های تازه‌حذف‌شده باعث می‌شد آن لینک‌های فعالِ یتیم زیر یک سند حذف‌شده باقی بمانند. این تضمین می‌کند «پس از حذف سند، هیچ چیزی زیر آن فعال نمی‌ماند». برای همین هم فقط **یک** کوئری برای ردیف‌ها زده می‌شود (بدون فیلتر `ISDELETED` در SQL) و تفکیک «نیازمند حذف» از «مجموعهٔ کامل ID» در حافظه انجام می‌شود.
+
+**تصمیم ۲ — load+mutate، نه `ExecuteUpdateAsync`.**
+با اینکه EF Core 10 از `ExecuteUpdateAsync` پشتیبانی می‌کند، عمداً استفاده **نشد**: آن متد بلافاصله و خارج از change tracker روی دیتابیس اجرا می‌شود و invariant پروژه («Repository فقط stage می‌کند؛ Handler تنها مالک مرز تراکنش است و یک‌بار `SaveChangesAsync` صدا می‌زند») را می‌شکند. بدون یک `BeginTransactionAsync` صریح، ممکن بود update ردیف‌ها commit شود ولی update سرسند بعداً شکست بخورد — یعنی **cascade نیمه‌کاره**، که برای دادهٔ حسابداری غیرقابل‌قبول است. مقیاس هم کراندار است (ده‌ها ردیف در هر سند) پس load+mutate ارزان است.
+
+**نکتهٔ ظریف NULL — و اینکه چرا در سطح سوم فرق می‌کند:** در `TB_VOUCHERSDETAIL` فیلتر عمداً `d.ISDELETED == null || d.ISDELETED == false` نوشته شد، نه `d.ISDELETED != true`. چون `ISDELETED` آنجا `bool?` است، فرم دوم در منطق سه‌مقداری SQL ردیف‌های `NULL` را حذف می‌کرد — در حالی که Handler سرسند از قبل `null` را «حذف‌نشده» تلقی می‌کند. این با تست واقعی روی SQLite تأیید شد (ترجمهٔ SQL: `"ISDELETED" IS NULL OR NOT ("ISDELETED")`).
+اما در `TB_VOUCHERDETAIL_LINK_TAFSILI` ستون `ISDELETED` از نوع `bool` **غیر-nullable** است (تفاوت واقعی schema بین این جدول و دو جدول بالادست)، پس آنجا فیلتر سادهٔ `l.ISDELETED == false` کافی و درست است و شاخهٔ `== null` لازم ندارد.
+
+**Idempotency حفظ شد:** گارد موجود `if (entity.ISDELETED == true) return;` بالای فراخوان cascade ماند، پس سندِ از‌قبل‌حذف‌شده نه سرسند و نه هیچ ردیفی را لمس می‌کند و اصلاً به `SaveChangesAsync` نمی‌رسد. سرسند و همهٔ ردیف‌ها با **یک مقدار زمانی مشترک** (`var now = DateTime.UtcNow` یک‌بار محاسبه) و همان `ICurrentUser.UserId` مهر می‌خورند.
+
+**تست (۱۳ تست جدید، مجموع ۲۷۲/۲۷۲ سبز):**
+- ۲ تست Handler در `Accounting.Application.Tests` (mock): فراخوانی cascade با همان user/timestamp سرسند، و تضمین ترتیب cascade **قبل از** `SaveChangesAsync`.
+- ۱۱ تست **واقعی repository** در `Accounting.Infrastructure.Tests` روی **SQLite in-memory** (نه InMemory provider، چون آن ترجمهٔ SQL را اثبات نمی‌کند). سطح ۲: N ردیف، صفر ردیف، ردیف‌های از‌قبل‌حذف‌شده با audit قبلی byte-identical، ردیف‌های `ISDELETED = NULL`، ایزولاسیون بین اسناد. سطح ۳: cascade کامل سه‌سطحی، ایزولاسیون لینک‌های سند دیگر، لینک از‌قبل‌حذف‌شده که دوباره لمس نمی‌شود، سند با ردیف ولی بدون لینک، صحت مقدار بازگشتی، و **تست invariant «لینک یتیم»** (ردیفِ از‌قبل‌حذف‌شده با لینک‌های فعال → لینک‌ها باز هم حذف می‌شوند، ولی audit خود ردیف دست‌نخورده می‌ماند).
+- همهٔ تست‌ها فاز assert را با یک `LegacyDbContext` تازه انجام می‌دهند، پس **persistence واقعی** اثبات می‌شود نه صرفاً وضعیت change tracker.
+- ⚠️ محدودیت: `EnsureCreated()` روی کل `LegacyDbContext` در SQLite شکست می‌خورد (`SQLite does not support sequences` — به‌خاطر `HasSequence("VOUCHERHEAD_SEQ")`)، پس fixture فقط همان یک جدول را با `CREATE TABLE` دستی می‌سازد. این تست‌ها رفتار Oracle-specific را اثبات **نمی‌کنند**.
+- پکیج جدید فقط در پروژهٔ تست: `Microsoft.EntityFrameworkCore.Sqlite` 10.0.0 (۲ warning جدید NU1903 از وابستگی گذرای `SQLitePCLRaw`، فقط test-only و نه در API منتشرشده → مجموع warning از ۱۶ به ۱۸).
+
+**خارج از دامنه (دست‌نخورده):** `UpdateVoucherHeadCommand` (به ردیف‌ها دست نمی‌زند) و همهٔ مسیرهای `*AccountCode*` — ریسک 🔴 «حذف گرهٔ کدینگ بدون بررسی وابستگی» همچنان کاملاً باز است.
+
+### فاز ۸ — تکمیل CRUD: Update + Delete (۲۰۲۶-۰۸-۱۹، برنچ `changejWT`، commit نشده)
+
+پیش از این فاز فقط Create (فاز ۵) و Read (فاز ۶) وجود داشت. حالا هر دو Entity چرخهٔ کامل CRUD دارند.
+
+**Endpointهای جدید (همگی زیر `SetFallbackPolicy(RequireAuthenticatedUser)`):**
+
+| Verb | Route | موفق | خطاها |
+|---|---|---|---|
+| `POST` | `/api/account-codes/{id:guid}/update` | 200 + `{id}` | 400, 401, 404, 409, 500 |
+| `POST` | `/api/account-codes/{id:guid}/delete` | 200 + `{id}` | 400, 401, 404, 500 |
+| `POST` | `/api/voucher-heads/{id:guid}/update` | 200 + `{id}` | 400, 401, 404, 409, 500 |
+| `POST` | `/api/voucher-heads/{id:guid}/delete` | 200 + `{id}` | 400, 401, 404, 500 |
+
+> ⚠️ **چرا اینجا REST استاندارد رعایت نشده — این یک محدودیت درخواستی صاحب پروژه است، نه انتخاب معماری داخلی.**
+> این ۴ Endpoint ابتدا به‌صورت `PUT /{id}` و `DELETE /{id}` ساخته شدند (و سبز بودند)، ولی **صاحب پروژه صریحاً اعلام کرد که متدهای `PUT` و `DELETE` در این محیط قابل استفاده نیستند و فقط `POST` و `GET` مجازند** (دلیل فنی‌اش را نگفتند؛ احتمالاً محدودیت زیرساخت شبکه/سرور سازمان). پس همگی به `POST` با **فعل صریح در route** تبدیل شدند.
+> - **چرا `/{id}/update` و نه `POST /api/account-codes/{id}` خالی:** چون `POST /api/account-codes` (ساخت) از قبل وجود دارد و `POST /api/account-codes/{id}` در کنارش «ساخت زیرمنبع تحت این id» خوانده می‌شود. حالا که از semantics استاندارد خارج شده‌ایم، صراحت بهتر از ابهام است و مسیر برای Endpointهای بعدی (مثل `/{id}/lines`) باز می‌ماند.
+> - **چرا 200 با بدنه و نه 204:** (الف) همان محدودیت زیرساختی که `PUT`/`DELETE` را ممنوع کرده نشان می‌دهد لایه‌های میانی شبکه در این محیط رفتار غیرمعمول دارند و پاسخ ۲۰۰ با بدنهٔ کوچک کمتر از ۲۰۴ خالی مستعد ابهام است؛ (ب) با `POST` ساخت که از قبل بدنه برمی‌گرداند هم‌خانواده می‌شود، پس هر سه عملیات نوشتنِ هر Controller یک شکل پاسخ دارند؛ (ج) `id` برگشتی تأیید می‌کند دقیقاً کدام رکورد تحت تأثیر قرار گرفته.
+> - **قفل شده با تست:** `HttpVerbConventionTests` با reflection روی کل assembly تأیید می‌کند **هیچ اکشنی در هیچ Controllerی** `[HttpPut]` یا `[HttpDelete]` ندارد — پس بازگشت تصادفی این قاعده تست را قرمز می‌کند.
+> - **`GET` (لیست و by-id) و `POST` ساخت دست‌نخورده ماندند** — محدودیت فقط روی مسیر نوشتن/حذف بود.
+> - این تغییر **فقط لایهٔ Api را لمس کرد**؛ Command/Handler/Validator/Repository دست‌نخورده ماندند (Controller خودش `id` را از route دارد و بدنهٔ پاسخ را می‌سازد).
+
+**تصمیم PUT به‌جای PATCH (تصمیم صریح، نه پیش‌فرض):** تقریباً همهٔ ستون‌های Legacy nullable اند (`bool?`, `Guid?`, `string?`)، بنابراین در PATCH جزئی هیچ راهی نیست که «فیلد ارسال‌نشده» از «فیلد صریحاً `null`» تفکیک شود مگر با wrapper نوع `Optional<T>` روی تک‌تک فیلدها — که هم قانون «Command فقط primitive دارد» را می‌شکند و هم ماشین‌آلات نامتناسبی اضافه می‌کند. PUT ضمناً با شکل `CreateXCommand` موجود قرینه است. **پیامد پذیرفته‌شده:** فراخوان باید همیشه بدنهٔ کامل بفرستد؛ فیلد جاافتاده = `null` شدن آن ستون.
+
+**تصمیم‌های تثبیت‌شدهٔ دیگر:**
+- **`Id` از route می‌آید، نه از بدنه.** برای PUT یک record جدا در لایهٔ Api تعریف شد (`UpdateAccountCodeRequest`/`UpdateVoucherHeadRequest`) که **اصلاً پراپرتی `Id` ندارد**؛ Controller خودش Command را با id مسیر می‌سازد. یعنی کل کلاسِ باگِ «تناقض id مسیر با id بدنه» **ساختاراً** ناممکن است. (این ضمناً اولین اجرای عملی پیشنهاد باز `api-contract` مبنی بر جداکردن Request از Command است — ولی فقط برای PUT؛ POST همچنان بدنه‌اش خود Command است.)
+- **Audit فقط سمت سرور** — `CHANGEUSERID = _currentUser.UserId` و `UPDATEDDATE = DateTime.UtcNow`. دقیقاً همان الگوی فاز ۷؛ هیچ پراپرتی userId در هیچ‌کدام از ۴ Command وجود ندارد، پس بازگشت آسیب‌پذیری جعل Audit **خطای کامپایل** می‌دهد.
+- **ستون‌های تغییرناپذیر در Update:** `ID`، `ADDUSERID`، `CREATEDDATE`، `ISDELETED`، و برای VoucherHead ستون‌های `GLOBALNUMBER` (که `ValueGeneratedOnAdd` است) و `ATTACHFILE`. در Command وجود ندارند و Handler لمسشان نمی‌کند (با تست صریح قفل شد).
+- **`ISDELETED` عمداً در Update نیست** — اگر بود، Update به در پشتیِ delete/undelete تبدیل می‌شد.
+- **404 مرکزی** — `NotFoundException` جدید در `Accounting.Application/Common/Exceptions/` → `GlobalExceptionHandler` → **404** `ProblemDetails` با پیام عمومی. الگو دقیقاً از `DuplicateKeyException` → 409 گرفته شد. پیام خود exception (شامل نام منبع و id) عمداً **به بدنهٔ پاسخ درز نمی‌کند** (با تست اثبات شد).
+- **Repository:** یک متد `GetForUpdateAsync(Guid, CancellationToken)` به هر دو write repository اضافه شد که **عمداً tracked است** (بدون `AsNoTracking()`، برخلاف read repository) تا Handler بتواند در جا mutate کند. Repository همچنان **هرگز** `SaveChangesAsync` صدا نمی‌زند؛ مرز تراکنش در Handler ماند. `IUnitOfWork` **هیچ تغییری نکرد** — همان‌طور که در فاز ۵ طراحی شده بود.
+
+**Soft Delete (نه حذف فیزیکی):** Command حذف فقط `ISDELETED = true` + ستون‌های audit را می‌نویسد. هیچ `Remove`/`ExecuteDelete` در کد نیست — و چون interfaceهای write repository اصلاً متد حذف **ندارند**، حذف فیزیکی از این مسیر ساختاراً ناممکن است (این را `qa-tester` با تست reflection روی interface قفل کرد). دلیل: هر دو جدول ستون `ISDELETED` دارند که Query side از قبل با `Where(x => x.ISDELETED != true)` استفاده می‌کند؛ حذف فیزیکی هم یکپارچگی ارجاعی Legacy را می‌شکند و هم برخلاف رفتار سیستم قدیمی است.
+
+**رفتار مرزی (تصمیم‌گرفته‌شده و تست‌شده):**
+- Update روی رکورد ناموجود **یا** رکورد `ISDELETED == true` → 404 (رکورد soft-deleted «منطقاً غایب» تلقی می‌شود، هم‌راستا با فیلتر Query side).
+- Delete روی رکورد ناموجود → 404.
+- Delete روی رکوردی که از قبل حذف شده → **200 + `{id}` بدون هیچ نوشتنی** (idempotent طبق تعریف HTTP؛ status code خودِ ۲۰۰ است، نه ۲۰۴ — طبق تصمیم «۲۰۰ با بدنه» بالا)؛ `SaveChangesAsync` اصلاً صدا زده نمی‌شود و `CHANGEUSERID`/`UPDATEDDATE` قبلی دست‌نخورده می‌ماند.
+- `ISDELETED` از نوع `bool?` است: هم `false` و هم **`null`** یعنی «حذف‌نشده» — دقیقاً مثل فیلتر read side. رکورد با `ISDELETED == null` واقعاً soft-delete می‌شود و idempotent تلقی نمی‌شود (ظریف‌ترین حالت مرزی این فاز؛ با تست صریح قفل شد).
+- خطای UNIQUE در PUT از همان مسیر موجود عبور می‌کند (`UnitOfWork` → `DuplicateKeyException` → 409)؛ هیچ pre-check دستی اضافه نشد، که برای شرایط رقابتی (race) رفتار درستی است.
+
+**یافتهٔ `api-contract`:** **401 در هیچ‌کدام از Endpointها اعلام نشده بود** — نه در ۴ تای جدید، نه در ۶ تای قبلی — با اینکه همگی زیر FallbackPolicy اند و 401 کاملاً قابل‌تولید است. برای هر ۱۰ Endpoint به‌صورت یکدست اضافه شد. **403 عمداً اعلام نشد** چون هیچ authorization مبتنی بر نقش هنوز وجود ندارد و اعلامش گمانه‌زنی می‌بود.
+
+**تست:** `qa-tester` **۸۰ تست جدید** نوشت (۶۹ Application + ۱۱ Api)، سپس مهاجرت verb (بالا) ۵ تست دیگر اضافه کرد (`HttpVerbConventionTests`) → مجموع ۲۵۵/۲۵۵.
+
+**پاس `/code-review` نهایی (۲۰۲۶-۰۸-۲۰، قبل از commit، به درخواست صریح کاربر):** ۲ باگ واقعی + ۱ شکاف اعتبارسنجی پیدا شد و همان‌جا رفع شد:
+- **باگ در تست محافظ verb:** `HttpVerbConventionTests.AllControllerActions()` به‌جای reflect کردن روی assembly واقعی `Accounting.Api`، روی `typeof(ControllerBase).Assembly` (یعنی خودِ فریم‌ورک ASP.NET Core) reflect می‌کرد — یعنی این تست **هرگز** Controllerهای این پروژه را بررسی نمی‌کرد و اگر کسی بعداً `[HttpPut]`/`[HttpDelete]` اضافه می‌کرد، بازهم سبز می‌ماند. اصلاح شد به `typeof(AccountCodesController).Assembly`.
+- **تناقض مستندسازی:** این فایل (خط مربوط به رفتار مرزی Delete) هنوز می‌گفت idempotent-delete «۲۰۴» برمی‌گرداند، درحالی‌که تصمیم نهایی (بالا) و کد واقعی «۲۰۰ + بدنه» است. اصلاح شد.
+- **شکاف اعتبارسنجی خودارجاعی:** نه `UpdateAccountCodeCommandValidator` و نه `UpdateVoucherHeadCommandValidator` بررسی نمی‌کردند که `ParentId`/`ParentHeadId` برابر `Id` خودِ رکورد باشد. چون Update برخلاف Create می‌تواند `Id` را از قبل بداند (از route می‌آید)، این مسیر یک گرهٔ خودارجاعی (حلقهٔ بی‌نهایت در سلسله‌مراتب) می‌ساخت که Create اصلاً نمی‌توانست تولید کند. یک قانون `Must(x => x.ParentId != x.Id)` به هر دو Validator اضافه شد + ۴ تست جدید (۲ به‌ازای هر Entity).
+- **یافتهٔ چهارم (IDOR روی نوشتن/حذف) دوباره تأیید شد ولی عمداً حل نشد** — طبق تصمیم صریح کاربر، مثل بقیهٔ ریسک‌های امنیتی این فاز، فقط مستند می‌ماند (رجوع به «تصمیمات باز» پایین‌تر).
+
+مجموع نهایی بعد از این سه اصلاح: **۲۵۹/۲۵۹ سبز** (۲۲ Domain + ۱۵۷ Application + ۶۰ Api + ۲۰ Infrastructure)، **صفر رگرسیون**. build ۰ خطا / ۱۶ warning پیش‌موجود NU1903 (هیچ CS). همگی Unit/Mock — **هیچ اتصالی به Oracle زنده**.
+
+### فاز ۷ — Authentication/Authorization + رفع جعل‌پذیری Audit (۲۰۲۶-۰۸-۱۹، برنچ `changejWT`، commit `86e6526`، push شده)
+
+هر دو ریسک 🔴 CRITICAL فاز ۶ حل شدند. طراحی توسط `security-reviewer`، پیاده‌سازی توسط `backend-dotnet`، تأیید توسط `qa-tester`.
+
+#### ۱. جعل‌پذیری `ADDUSERID` — حل شد ✅
+
+- پارامتر `AddUserId` **کاملاً حذف شد** از `CreateAccountCodeCommand` و `CreateVoucherHeadCommand` (و از Validatorهایشان). یعنی دیگر فقط «بی‌اعتماد» نیست — اصلاً بخشی از قرارداد ورودی نیست.
+- هر دو Handler حالا `ADDUSERID = _currentUser.UserId` می‌نویسند؛ دقیقاً مثل `CREATEDDATE`/`ISDELETED` که از قبل درست سمت سرور ست می‌شدند.
+- **این تنها تضمین ✅ باقی‌مانده در جدول Accounting Safety Gate (یعنی Audit Trail) بود که عملاً باطل شده بود؛ حالا واقعاً برقرار است.**
+- ⚠️ **Breaking change در قرارداد API:** فیلد `addUserId` از بدنهٔ هر دو POST حذف شد. چون هنوز هیچ مصرف‌کنندهٔ خارجی وجود ندارد، پذیرفته شد.
+- سمت **خواندن** (`AccountCodeDto`/`VoucherHeadDto`) عمداً `AddUserId` را همچنان برمی‌گرداند — آن جهت خواندن است و خارج از دامنهٔ این تغییر.
+
+#### ۲. `ICurrentUser`
+
+- قرارداد در `Accounting.Application/Common/Interfaces/ICurrentUser.cs` (طبق الگوی موجود `IUnitOfWork` — نه در Domain، تا `Accounting.Domain` صفر وابستگی بماند). پیاده‌سازی `HttpContextCurrentUser` در `Accounting.Api/Security/` بر پایهٔ `IHttpContextAccessor` و Claimها.
+- اعضا: `IsAuthenticated`, `UserId`, `VahedCode`, `IsInRole(role)`.
+- **`UserId` عمداً پرتاب می‌کند (throw) و هرگز truncate نمی‌کند** اگر کاربر احراز نشده باشد، Claim `NameIdentifier` نباشد، یا مقدار بیش از ۱۰ کاراکتر باشد (عرض ستون Legacy `ADDUSERID`). فلسفه: نوشتن یک هویت بریده‌شده در ستون Audit یک سیستم حسابداری، بدتر از خطای بلند است. (همان منطق تصمیم `ParseExact` در `GuidToChar36Converter`.)
+- `VahedCode` صرفاً **در دسترس** قرار گرفت ولی **به هیچ فیلتر Query وصل نشد** — عمداً؛ رجوع به تصمیم باز پایین.
+
+#### ۳. اسکیم احراز هویت **ورودی (inbound)**: IDP واقعی سازمان ✅
+
+> **تاریخچه:** ابتدا (۲۰۲۶-۰۸-۱۹، صبح) یک JWT محلی‌امضا به‌عنوان راه‌حل موقت پیاده شد (گزینهٔ B از `security-reviewer`). سپس **در همان روز** صاحب پروژه پکیج رسمی سازمان را در اختیار گذاشت و مسیر محلی **کاملاً حذف و جایگزین شد**. متن زیر وضعیت نهایی است.
+
+- پکیج `Tamin.Framework.Common.Security` **1.0.9** از feed داخلی سازمان (`https://nexus.tamin.ir/repository/nuget-v2-group/`، تعریف‌شده در `backend/NuGet.Config`).
+- فراخوانی: `builder.Services.AddTaminJWTToken(validAudience, environment)` در `Program.cs`.
+  - `validAudience` از کلید config `Tamin:Idp:Audience` خوانده می‌شود و در نبودش به مقدار پیش‌فرض برمی‌گردد. ⚠️ **مقدار فعلی به‌صراحت درخواست صاحب پروژه با پروژهٔ `Financial_Account` مشترک است** تا وقتی audience اختصاصی این سرویس در IDP سازمان ثبت شود.
+  - `environment` مشروط است: `IsProduction() ? Environments.Production : Environments.Test` (این enum فقط همین دو مقدار را دارد).
+- **رفتار واقعی پکیج که با reflection و اجرای واقعی تأیید شد (نه حدس):**
+  - اسکیم استاندارد `Bearer` را با `JwtBearerHandler` ثبت می‌کند و `DefaultScheme` را هم ست می‌کند → `SetFallbackPolicy(RequireAuthenticatedUser)` واقعاً scheme ای برای authenticate/challenge دارد. **نباید `AddAuthentication(...)` دوم اضافه شود** چون با اسکیم پکیج رقابت می‌کند.
+  - `ValidIssuer = http://idm.tamin.ir`، `IssuerSigningKey` یک **`JsonWebKey` ثابتِ جاسازی‌شده** است — **هیچ Authority/discovery/JWKS fetch ای در startup یا per-request انجام نمی‌شود**.
+  - `ValidateIssuer`/`ValidateAudience`/`ValidateLifetime`/`ValidateIssuerSigningKey` همگی `true`.
+  - `NameClaimType = .../identity/claims/name` و `RoleClaimType = .../identity/claims/role`.
+- **حذف‌شده (فیزیکی، طبق قانون پروژه — نه `[Obsolete]`):** `DevAuthController` + تست‌هایش، `JwtOptions`، `DevAuthOptions`، و بخش‌های `Jwt`/`DevAuth` از `appsettings.json`. دیگر هیچ توکن محلی‌امضایی در پروژه صادر نمی‌شود.
+- **`RolesAllowedAttribute` و `ClaimRequirementFilter`** هم در همین پکیج هستند و برای فاز بعدی (authorization سطح نقش/رکورد — تصمیم باز IDOR) در دسترس‌اند.
+
+- **یافتهٔ تعیین‌کننده:** در **هیچ‌کدام از ۶۵ جدول Legacy هیچ ستون password/hash/salt/token/credential وجود ندارد** → **schema Legacy اصلاً قادر به احراز هویت کسی نیست.** پس تکیه بر Legacy برای authentication ممکن نبود و تکیه بر IDP بیرونی سازمان اجتناب‌ناپذیر بود.
+
+#### ۴. Authorization و خطاها
+
+- `AddAuthorizationBuilder().SetFallbackPolicy(RequireAuthenticatedUser)` — عمداً به‌جای `[Authorize]` روی تک‌تک Controllerها، تا Controller بعدی که کسی یادش برود، دوباره دیتابیس را باز نکند.
+- **`app.UseAuthentication()` اصلاً در pipeline وجود نداشت** (خلأیی که `security-reviewer` کشف کرد) — اضافه شد، **قبل از** `app.UseAuthorization()`. بدون آن `HttpContext.User` هرگز پر نمی‌شد و policy بی‌صدا بی‌اثر می‌ماند.
+- تنها استثنا: `HealthController` با `[AllowAnonymous]` (probeها نمی‌توانند bearer token حمل کنند).
+- 401/403 توسط middleware تولید می‌شوند و **هرگز به `GlobalExceptionHandler` نمی‌رسند** (استثنا نیستند)؛ پس صریحاً به شکل `application/problem+json` با `traceId` و پیام عمومی درآمدند. جزئیات خطای اعتبارسنجی توکن فقط در Development برمی‌گردد.
+- ⚠️ **این shaping با `Configure<JwtBearerOptions>` و به‌صورت زنجیره‌ای (chain) انجام می‌شود، نه جایگزینی.** دلیل: `AddTaminJWTToken` خودش `OnMessageReceived` و `OnAuthenticationFailed` را wire می‌کند؛ اگر `options.Events = new JwtBearerEvents{...}` می‌نوشتیم، **کل آن‌ها بی‌صدا نابود می‌شدند**. پس delegate اصلی اول `await` می‌شود و فقط اگر `!Response.HasStarted && !context.Handled` بود، ProblemDetails ما نوشته می‌شود. `OnAuthenticationFailed`/`OnTokenValidated`/`OnMessageReceived` کاملاً دست‌نخورده‌اند.
+
+#### ۵. `TokenManager` — مسیر **خروجی (outbound)** به IDP واقعی سازمان
+
+صاحب پروژه الگوی `IDP.Services.TokenManager` را از پروژهٔ اصلی خودش (همان سازمان `tamin.org`) فرستاد و خواست «مثل همین» ساخته شود. پورت شد به `Accounting.Infrastructure/Idp/` با namespace `Accounting.Infrastructure.Idp`.
+
+**نکتهٔ کلیدی معماری که باید بدانید:** این `TokenManager` یک **acquirer از نوع outbound `client_credentials`** است — یعنی این API خودش به‌عنوان *client* از IDP توکن می‌گیرد تا به *سرویس‌های دیگر* سازمان زنگ بزند. **این به‌تنهایی CRITICAL #1 (محافظت از Controllerهای خودمان در برابر فراخوان‌های ورودی) را حل نمی‌کند** — آن مسیر جداگانه‌ای است (بخش ۳ بالا).
+
+- `ITokenManager` عمداً **داخلی به Infrastructure** ماند و به `Accounting.Application/Common/Interfaces/` اضافه **نشد**. دلیل: هیچ use case ای در Application امروز مصرف‌کنندهٔ آن نیست؛ وقتی شد، باید به یک interface هدف‌محور (مثلاً `IPersonDirectoryClient`) وابسته شود نه به این plumbing سطح‌پایین. (اجتناب از premature abstraction.)
+- **۶ نقص امنیتی/همزمانی الگوی اصلی حین پورت اصلاح شد** (نه کورکورانه کپی):
+  1. `HttpRequestException` بلعیده‌شده + `Console.WriteLine` → `ILogger` ساختاریافته و **انتشار خطا** با `TokenAcquisitionException`. دیگر هرگز توکن کهنه/`null` را بی‌صدا برنمی‌گرداند.
+  2. `new HttpClient()` در هر refresh (با وجود تزریق بلااستفادهٔ `IHttpClientFactory`) → استفادهٔ واقعی از factory با named client (رفع socket exhaustion / کهنگی DNS).
+  3. `static SemaphoreSlim` روی یک singleton → فیلد نمونه‌ای.
+  4. `Dictionary` با نوشتن بدون محافظت از مسیر خواندن → `ConcurrentDictionary` (باگ واقعی خرابی متناوب زیر بار، نه آرایشی).
+  5. `DateTime.Now` → `DateTime.UtcNow` در همهٔ محاسبات انقضا (drift منطقه‌زمانی/DST می‌توانست توکن منقضی را معتبر بشمارد).
+  6. افشای راز در لاگ → هیچ لاگ/پیام استثنا/`ToString` هرگز `ClientSecret` یا `access_token` خام را شامل نمی‌شود (اعتبارسنجی فقط **نام** پراپرتی‌های ناقص را فهرست می‌کند).
+- **نقص ۷ عمداً اصلاح نشد:** `Resources`/`External_Resources` پیکربندی می‌شود ولی در درخواست توکن **ارسال نمی‌شود** — دقیقاً مثل الگوی اصلی. حدس زده نشد؛ سؤالش برای صاحب پروژه باز است (پایین).
+- **اعتبارسنجی config تنبل (lazy) است، نه در startup** — برخلاف `Jwt:SigningKey` که fail-fast است. دلیل: هنوز هیچ‌چیز در این کدبیس به سرویس دیگری زنگ نمی‌زند، پس نبودِ `Idp:*` نباید بالاآمدن API را برای کار محلی خراب کند. خطای روشن در اولین `GetAccessTokenAsync` پرتاب می‌شود.
+- config با همان الگوی placeholder خالی در `appsettings.json` (`Idp:tamin:*`)؛ مقادیر واقعی فقط در User Secrets.
+
+تست: **۱۷۰/۱۷۰ سبز** (۲۲ Domain + ۸۴ Application + ۴۴ Api + ۲۰ Infrastructure) — `qa-tester` مستقلاً همین عدد را تأیید کرد. build ۰ خطا، بدون هیچ warning نوع CS (۱۶ warning پیش‌موجود NU1903 دست‌نخورده، بدون NU1902 — نسخهٔ transitive `Microsoft.IdentityModel.*` توسط resolver NuGet به ۸.۱۴.۰/۸.۰.۱ ارتقا یافت، فراتر از بازهٔ آسیب‌پذیر). Application از ۸۵ به ۸۴ رسید (حذف تست Validator مربوط به `AddUserId`)، Api از ۲۴ به ۴۴ (تست‌های `HttpContextCurrentUser`، `TaminJwtWiringTests` و مسیر Audit؛ `DevAuthController` و تست‌هایش پس از سوییچ به IDP واقعی فیزیکاً حذف شدند)، و پروژهٔ جدید `Accounting.Infrastructure.Tests` با ۲۰ تست (cache/انقضا/انتشار خطا/عدم افشای راز، همگی با `HttpMessageHandler` mock — **هیچ فراخوان شبکه‌ای واقعی به IDP انجام نشد**). همهٔ تست‌ها همچنان **Unit/Mock**؛ هیچ تست integration روی Oracle یا IDP واقعی اجرا نشد.
 
 ### فاز ۶ — لایهٔ HTTP (۲۰۲۶-۰۸-۱۸، برنچ `GetAccountCode`، commit نشده)
 
@@ -203,13 +354,52 @@ paging: پیش‌فرض `pageNumber=1`, `pageSize=20`؛ سقف `MaxPageSize=200`
 
 با ساخته‌شدن اولین سطح HTTP، این موارد از حالت نظری خارج شدند و **قبل از هرگونه میزبانی خارج از localhost باید تصمیم‌گیری شوند**:
 
-- **🔴 CRITICAL — هیچ Authentication/Authorization ای وجود ندارد.** `Program.cs` فقط `app.UseAuthorization()` را صدا می‌زند بدون هیچ `AddAuthentication()`، هیچ `[Authorize]` و هیچ policy. یعنی **هر کسی که به پورت برسد** می‌تواند بی‌نام‌ونشان در `TB_ACCOUNTCODE`/`TB_VOUCHERSHEAD` واقعی ردیف درج کند و کل کدینگ حساب‌ها و سرفصل اسناد را بخواند. حداقل کنترل لازم: یک scheme احراز هویت + `FallbackPolicy = RequireAuthenticatedUser` (نه `[Authorize]` اختیاری روی هر Controller، تا Controller بعدی که کسی یادش برود دوباره DB را باز نکند). **تا آن زمان این API نباید در هیچ شبکه‌ای در دسترس قرار گیرد.**
-- **🔴 CRITICAL — `ADDUSERID` توسط خود فراخوان قابل جعل است.** `CreateAccountCodeCommand.AddUserId` و `CreateVoucherHeadCommand.AddUserId` مستقیماً از بدنهٔ HTTP گرفته و در ستون `ADDUSERID` نوشته می‌شوند (تنها قید: `MaximumLength(10)`). این دقیقاً همان **تنها تضمین حسابداری‌ای است که در جدول Accounting Safety Gate هنوز ✅ بود** (Audit Trail) — و عملاً باطل می‌شود. راه‌حل: حذف `AddUserId` از هر دو Command و جایگزینی با `ICurrentUser` سمت سرور (مثل `CreatedDate`/`ISDELETED` که همین حالا درست سمت سرور ست می‌شوند).
+- **✅ ~~🔴 CRITICAL — هیچ Authentication/Authorization ای وجود ندارد.~~** — **حل شد در ۲۰۲۶-۰۸-۱۹ (فاز ۷).** IDP واقعی سازمان (`Tamin.Framework.Common.Security`) + `app.UseAuthentication()` (که اصلاً در pipeline نبود) + `SetFallbackPolicy(RequireAuthenticatedUser)` + `[AllowAnonymous]` فقط روی `HealthController`. جزئیات کامل و تصمیم باز باقی‌مانده (نگاشت claim) پایین‌تر.
+- **✅ ~~🔴 CRITICAL — `ADDUSERID` توسط خود فراخوان قابل جعل است.~~** — **حل شد در ۲۰۲۶-۰۸-۱۹ (فاز ۷).** `AddUserId` کاملاً از هر دو Command حذف شد و مقدار از `ICurrentUser.UserId` سمت سرور می‌آید. چون پراپرتی دیگر **اصلاً وجود ندارد**، بازگشت این آسیب‌پذیری خطای کامپایل می‌دهد نه خطای منطقی (تأیید `qa-tester`).
+
+### ✅ ~~تصمیم باز — اتصال inbound به IDP واقعی سازمان~~ — حل شد (۲۰۲۶-۰۸-۱۹)
+
+صاحب پروژه پکیج رسمی `Tamin.Framework.Common.Security` 1.0.9 را در اختیار گذاشت و مسیر inbound به IDP واقعی سازمان وصل شد (فاز ۷ بخش ۳). سؤال‌های قبلی به‌این‌ترتیب منتفی شدند: پکیج خودش `ValidIssuer = http://idm.tamin.ir` و یک `JsonWebKey` ثابتِ جاسازی‌شده دارد، پس **نه discovery URL لازم است نه JWKS fetch**. audience هم به‌صراحت درخواست کاربر فعلاً با `Financial_Account` مشترک است.
+
+پکیج `IDP` (که در کد outbound `TokenManager` استفاده شده بود) روی feed سازمان **پیدا نشد** → یعنی یک پروژهٔ لوکال داخل solution اصلی کاربر بوده، نه پکیج منتشرشده. پس پورت دستی `TokenManager` به `Accounting.Infrastructure/Idp/` تصمیم درستی بوده و باقی می‌ماند.
+
+### 🔴 تصمیم باز جدید — نگاشت claim برای `ADDUSERID` (۲۰۲۶-۰۸-۱۹)
+
+**این تنها سؤال باقی‌مانده از بستهٔ auth است و عمداً حدس زده نشد.**
+
+`HttpContextCurrentUser.UserId` فعلاً `ClaimTypes.NameIdentifier` را می‌خواند و اگر غایب یا **بیش از ۱۰ کاراکتر** باشد throw می‌کند (عرض ستون Legacy `ADDUSERID`). اما:
+
+- **معلوم نیست کدام claim در توکن واقعی IDP سازمان یک شناسهٔ ≤۱۰ کاراکتری قابل‌نگاشت به `ADDUSERID` دارد.** اگر `sub` یک GUID باشد، قطعاً جا نمی‌شود.
+- نکتهٔ مرتبط: پکیج `NameClaimType` را روی `.../identity/claims/name` ست می‌کند (نه `nameidentifier`)، پس `User.Identity.Name` به claim دیگری اشاره می‌کند.
+- معلوم نیست بین کدهای کاربری قدیمی Legacy (که ستون `ADDUSERID` را پر کرده‌اند) و هویت‌های IDP جدید اصلاً نگاشتی وجود دارد یا نه.
+
+**⚠️ این هرگز با یک توکن واقعی IDP تست/تأیید نشده** (هیچ فراخوان شبکه‌ای به IDP انجام نشد).
+
+**چرا فعلاً بی‌خطر است:** طراحی `ICurrentUser` عمداً **fail-loud** است — هر ناسازگاری بلافاصله خطا می‌دهد، نه اینکه بی‌صدا یک مقدار غلط/بریده در ستون Audit یک سیستم حسابداری بنویسد. این رفتار **درست است و باید حفظ شود**؛ فقط باید با اولین توکن واقعی راستی‌آزمایی شود.
+
+### 🟡 تصمیمات باز دیگر که در فاز ۷ عمداً حل نشدند
+
+- **`VahedCode` سمت سرور اعمال نمی‌شود.** `ICurrentUser.VahedCode` ساخته شد ولی **به هیچ فیلتر Query وصل نشد**. یعنی `?vahedCode=` همچنان یک پارامتر اختیاری و غیرقابل‌اعتماد است و هر کاربر احراز‌شده می‌تواند اسناد هر واحد سازمانی دیگری را ببیند. باید تصمیم گرفته شود: اجباری و سمت‌سروری شود، یا دید بین‌واحدی صریحاً عمدی اعلام شود.
+- **IDOR روی `GetById`** — فاز ۷ فقط authentication و جعل Audit را حل کرد، **نه authorization در سطح رکورد**. هر کاربر احراز‌شده می‌تواند هر `ID` ای را بخواند. باید تأیید شود که این برای این مرحله قابل‌قبول است.
+- **محدودکردن Kestrel به `localhost`** — توصیهٔ `security-reviewer` به‌عنوان کاهش‌دهندهٔ ریسک فوری و بدون کد، تا وقتی auth نهایی مستقر نشده. تصمیم عملیاتی با صاحب پروژه.
+- **پوشش تست pipeline احراز هویت** — تست‌های `Accounting.Api.Tests` همگی unit اند (بدون `WebApplicationFactory`)، پس این‌که واقعاً یک درخواست بدون توکن ۴۰۱ می‌گیرد و `FallbackPolicy` عملاً اعمال می‌شود **در هیچ تستی اثبات نشده**. `qa-tester` این را به‌عنوان بزرگ‌ترین شکاف پوشش اعلام کرد و عمداً نبست، چون `AddInfrastructure` هنگام ساخت host یک `UseOracle` ثبت می‌کند و یک تست ساده‌لوحانه ممکن بود ناخواسته به دیتابیس **زندهٔ** واقعی وصل شود.
 - **🟡 چندمستأجری (`VAHEDCODE`) مرز ایزولاسیون نیست.** `vahedCode` یک پارامتر **اختیاری query string** است که فراخوان خودش می‌دهد، نه فیلتری که سرور از هویت استخراج کند؛ یعنی هر کسی می‌تواند اسناد هر واحد سازمانی دیگری را مرور کند. باید صریحاً تصمیم گرفته شود: یا اجباری و سمت‌سروری شود، یا مستند شود که دید بین‌واحدی عمدی است.
 - **🟡 فیلدهای Audit در DTO برای همه قابل خواندن‌اند** — `AddUserId`/`ChangeUserId`/`IsDeleted` در هر دو DTO بی‌قید برگردانده می‌شوند. پس از افزودن نقش‌ها باید تصمیم گرفته شود که آیا این‌ها نیاز به نقش ممتاز دارند.
 - **🟡 هیچ Rate Limiting ای وجود ندارد** — سقف ۲۰۰ ردیف در هر صفحه کار می‌کند، ولی هیچ محدودیتی روی تعداد درخواست نیست، پس پیمایش کامل جدول‌ها با اسکریپت ممکن است.
 - **🟡 بدنهٔ POST همان MediatR Command است** — هر فیلدی که بعداً به Command اضافه شود، بی‌صدا بخشی از قرارداد عمومی API می‌شود. پیشنهاد `api-contract`: افزودن `CreateXRequest` نازک در لایهٔ Api. (اجرا نشد.)
 - **🟡 نسخه‌بندی API وجود ندارد** (`/api/...` بدون `/v1`). افزودن آن بعداً خودش یک breaking change است.
+
+### 🔴 تصمیمات باز جدید — کشف‌شده در فاز ۸ (۲۰۲۶-۰۸-۱۹)
+
+این‌ها **عمداً حل نشدند** چون هرکدام یک تصمیم کسب‌وکاری‌اند، نه یک نقص پیاده‌سازی. طبق Accounting Safety Gate بی‌صدا رد نشدند:
+
+- **🔴 IDOR حالا به مسیر نوشتن هم رسید — تشدید ریسک، نه صرفاً انتقال آن.** تا پیش از این فاز، نبودِ authorization در سطح رکورد فقط روی `GetById` بود یعنی **فقط خواندن**. حالا هر کاربر احراز‌شده می‌تواند **هر** `TB_ACCOUNTCODE` یا `TB_VOUCHERSHEAD` را با دانستن `ID` آن **ویرایش یا حذف کند** — از جمله رکوردهای واحدهای سازمانی دیگر، چون `VAHEDCODE` هنوز سمت سرور اعمال نمی‌شود. این فاز عمداً هیچ قانون IDOR جدیدی اختراع نکرد (طبق دستور صریح)، ولی شدت ریسک موجود از «افشای اطلاعات» به **«تغییر/حذف غیرمجاز دادهٔ حسابداری»** ارتقا یافت. **پیش از هر استقراری باید تصمیم‌گیری شود.**
+- **✅ ~~حذف سند هیچ cascade ای ندارد~~** — **کاملاً حل شد (۲۰۲۶-۰۸-۲۰، فاز ۹).** `DeleteVoucherHeadCommand` حالا cascade **کامل سه‌سطحی** دارد: `TB_VOUCHERSHEAD` → `TB_VOUCHERSDETAIL` → `TB_VOUCHERDETAIL_LINK_TAFSILI`، هر سه سطح در **یک تراکنش/یک `SaveChangesAsync`**. رجوع به «فاز ۹» پایین‌تر.
+- **🟡 سندی که از قبل حذف شده ولی زیرمجموعهٔ فعال دارد، هرگز تمیز نمی‌شود.** پیامد ظریفِ گارد idempotency: چون `if (entity.ISDELETED == true) return;` بالای cascade است، اگر سندی **پیش از فاز ۹** حذف شده باشد (یعنی وقتی هنوز cascade وجود نداشت)، ردیف‌ها و لینک‌های تفصیلی‌اش همچنان `ISDELETED = false` مانده‌اند و فراخوانی دوبارهٔ Delete هم آن‌ها را تمیز **نمی‌کند**. اگر دادهٔ Legacy چنین اسنادی دارد، به یک اسکریپت backfill یک‌بارمصرف نیاز است — **بررسی نشد و حدس زده نشد** (نیازمند کوئری روی دادهٔ زنده).
+- **🔴 حذف گرهٔ کدینگ هیچ بررسی وابستگی ندارد.** `DeleteAccountCodeCommand` یک گره را soft-delete می‌کند بدون اینکه بررسی کند (الف) آیا فرزندی دارد (`PARENTID` خودارجاع، `FK_SELFREFRENCE`) یا (ب) آیا در ردیف‌های سند موجود استفاده شده. پس می‌توان یک گروه را حذف کرد و فرزندان یتیم ولی فعال باقی بمانند. حذف فیزیکی نیست پس FK دیتابیس شکایتی نمی‌کند — یعنی این ناسازگاری **کاملاً بی‌صدا** است.
+- **🔴 سند Post شده حالا واقعاً قابل تغییر است.** `UpdateVoucherHeadCommand` اجازه می‌دهد `DOCLIFE` (وضعیت سند) آزادانه عوض شود. invariant «تغییرناپذیری سند پس از Post» در تصمیم دوم آگاهانه حذف شده بود، ولی تا پیش از این فاز مسیر نوشتن فقط `INSERT` داشت پس عملاً قابل بهره‌برداری نبود. **حالا یک مسیر واقعی و در دسترس برای ویرایش/برگرداندن سند نهایی‌شده وجود دارد.** اگر این تضمین لازم است، باید صریحاً در Application یا به‌صورت DB constraint بازسازی شود.
+- **🟡 هیچ کنترل همزمانی (optimistic concurrency) وجود ندارد.** schema Legacy ستون `rowversion`/`ETag` ندارد و هیچ‌کدام از دو PUT جدید توکن همزمانی نمی‌گیرند، پس رفتار **last-write-wins** است: دو ویرایش هم‌زمان روی یک سند، یکی را بی‌صدا از بین می‌برد. برای سیستم حسابداری باید آگاهانه پذیرفته یا حل شود (مثلاً مقایسهٔ `UPDATEDDATE` به‌عنوان توکن، یا `If-Match`).
+- **🟡 هیچ مسیر undelete/restore وجود ندارد.** چون Update رکورد soft-deleted را 404 می‌دهد و `ISDELETED` در Update نیست، رکورد حذف‌شده از طریق API **قابل بازگردانی نیست**. اگر بازگردانی لازم است، به یک Command صریح (`RestoreXCommand`) نیاز دارد — عمداً در این فاز ساخته نشد.
 
 ## قوانین کاری تیم
 

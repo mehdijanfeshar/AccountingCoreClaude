@@ -19,6 +19,10 @@ namespace Accounting.Api;
 /// <c>UnitOfWork.SaveChangesAsync</c> after translating an Oracle ORA-00001) → 409
 /// <see cref="ProblemDetails"/> with a safe, generic message — never the raw Oracle/SQL
 /// text.</description></item>
+/// <item><description><see cref="NotFoundException"/> (raised by Update/Delete command
+/// handlers when the target row does not exist or is already soft-deleted) → 404
+/// <see cref="ProblemDetails"/> with a safe, generic message — no table/column name
+/// leaked.</description></item>
 /// <item><description>Anything else → 500 generic <see cref="ProblemDetails"/> with no stack
 /// trace in the body. The original exception is still logged via <see cref="ILogger"/>.</description></item>
 /// </list>
@@ -56,6 +60,14 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     StatusCodes.Status409Conflict,
                     "Conflict",
                     "A row with the same unique key already exists.")),
+
+            NotFoundException => (
+                StatusCodes.Status404NotFound,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status404NotFound,
+                    "Not Found",
+                    "The requested resource was not found.")),
 
             _ => (
                 StatusCodes.Status500InternalServerError,
