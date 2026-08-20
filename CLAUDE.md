@@ -127,7 +127,39 @@ docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
 - [x] Controller/Endpoint برای هر ۶ سرویس (۲ Command + ۴ Query) — `AccountCodesController` و `VoucherHeadsController` + `GlobalExceptionHandler` مرکزی. جزئیات در «فاز ۶» پایین‌تر.
 - [x] **فاز ۷ — Authentication/Authorization + رفع جعل‌پذیری `ADDUSERID`** (۲۰۲۶-۰۸-۱۹) — هر دو ریسک 🔴 CRITICAL که `security-reviewer` در Gate فاز ۶ کشف کرده بود حل شدند. اتصال inbound به IDP واقعی سازمان (`Tamin.Framework.Common.Security`) + `FallbackPolicy` + `ICurrentUser`. جزئیات در «فاز ۷» پایین‌تر. **۱۷۰/۱۷۰ تست سبز.**
 - [x] **فاز ۸ — تکمیل CRUD: Update + Delete (Soft Delete)** (۲۰۲۶-۰۸-۱۹) — ۴ Command جدید و ۴ Endpoint جدید، همگی `POST` با فعل صریح در route (`PUT`/`DELETE` به‌درخواست صریح صاحب پروژه ممنوع شدند — رجوع به «فاز ۸» پایین‌تر). جزئیات در «فاز ۸» پایین‌تر. **۲۵۹/۲۵۹ تست سبز** (پس از یک پاس `/code-review` که ۲ باگ واقعی و ۱ شکاف اعتبارسنجی پیدا و رفع کرد).
+- [x] **فاز ۹ — cascade کامل سه‌سطحی حذف نرم سند** (۲۰۲۶-۰۸-۲۰) — ریسک 🔴 «نبود cascade» از فاز ۸ **کاملاً** بسته شد: `TB_VOUCHERSHEAD` → `TB_VOUCHERSDETAIL` → `TB_VOUCHERDETAIL_LINK_TAFSILI`. جزئیات در «فاز ۹» پایین‌تر. **۲۷۲/۲۷۲ تست سبز.**
 - [ ] فرم صدور سند با تفصیلی داینامیک
+
+### فاز ۹ — cascade کامل سه‌سطحی حذف نرم سند (۲۰۲۶-۰۸-۲۰، برنچ `changejWT`، commit نشده)
+
+به درخواست صریح صاحب پروژه، در دو مرحله: اول «وقتی سند از هدر حذف بشه، دیتیل‌هاش هم باید حذف بشن»، سپس افزودن سطح سوم (`TB_VOUCHERDETAIL_LINK_TAFSILI`).
+
+**زنجیرهٔ کامل cascade — هر سه سطح در یک تراکنش/یک `SaveChangesAsync`:**
+`TB_VOUCHERSHEAD` → `TB_VOUCHERSDETAIL` → `TB_VOUCHERDETAIL_LINK_TAFSILI`
+
+**تصمیم ۱ — محل متد: داخل همان `IVoucherHeadRepository`** (نه repository/interface مستقل برای هیچ‌کدام از دو جدول فرزند).
+متد: `Task<int> SoftDeleteDetailTreeAsync(Guid headId, string? changeUserId, DateTime updatedDate, CancellationToken)` — که مجموع ردیف‌های حذف‌شدهٔ هر دو سطح را برمی‌گرداند.
+دلیل: اجتناب از premature abstraction — هیچ Command/Query مستقلی برای `TB_VOUCHERSDETAIL` یا `TB_VOUCHERDETAIL_LINK_TAFSILI` وجود ندارد و هر دو فقط به‌عنوان بخشی از aggregate سند قابل دسترسی‌اند؛ همان قضاوتی که قبلاً برای `ITokenManager` هم اعمال شد. سطح سوم عمداً **داخل همان متد** ادغام شد (نه متد دوم) چون IDهای ردیف‌ها از قبل در حافظه هستند (بدون کوئری اضافه) و این کار ساختاراً غیرممکن می‌کند که کسی سطح ۲ را cascade کند ولی سطح ۳ را فراموش کند. نام متد از `SoftDeleteDetailLinesAsync` به `SoftDeleteDetailTreeAsync` تغییر کرد تا دامنهٔ واقعی‌اش را بیان کند. اگر روزی مسیر نوشتن مستقلی ساخته شد، باید بازبینی و استخراج شود (در XML doc ثبت شد).
+
+**تصمیم ۳ — دامنهٔ سطح سوم عمداً وسیع‌تر از «ردیف‌هایی که همین الان حذف شدند» است.**
+لینک‌های تفصیلی بر اساس **همهٔ** ردیف‌های سند (صرف‌نظر از `ISDELETED` آن‌ها) فیلتر می‌شوند، نه فقط ردیف‌هایی که در همین فراخوان حذف شدند. دلیل: اگر ردیفی قبلاً به‌تنهایی soft-delete شده بود ولی لینک‌های تفصیلی‌اش فعال مانده بودند، محدودکردن دامنه به ردیف‌های تازه‌حذف‌شده باعث می‌شد آن لینک‌های فعالِ یتیم زیر یک سند حذف‌شده باقی بمانند. این تضمین می‌کند «پس از حذف سند، هیچ چیزی زیر آن فعال نمی‌ماند». برای همین هم فقط **یک** کوئری برای ردیف‌ها زده می‌شود (بدون فیلتر `ISDELETED` در SQL) و تفکیک «نیازمند حذف» از «مجموعهٔ کامل ID» در حافظه انجام می‌شود.
+
+**تصمیم ۲ — load+mutate، نه `ExecuteUpdateAsync`.**
+با اینکه EF Core 10 از `ExecuteUpdateAsync` پشتیبانی می‌کند، عمداً استفاده **نشد**: آن متد بلافاصله و خارج از change tracker روی دیتابیس اجرا می‌شود و invariant پروژه («Repository فقط stage می‌کند؛ Handler تنها مالک مرز تراکنش است و یک‌بار `SaveChangesAsync` صدا می‌زند») را می‌شکند. بدون یک `BeginTransactionAsync` صریح، ممکن بود update ردیف‌ها commit شود ولی update سرسند بعداً شکست بخورد — یعنی **cascade نیمه‌کاره**، که برای دادهٔ حسابداری غیرقابل‌قبول است. مقیاس هم کراندار است (ده‌ها ردیف در هر سند) پس load+mutate ارزان است.
+
+**نکتهٔ ظریف NULL — و اینکه چرا در سطح سوم فرق می‌کند:** در `TB_VOUCHERSDETAIL` فیلتر عمداً `d.ISDELETED == null || d.ISDELETED == false` نوشته شد، نه `d.ISDELETED != true`. چون `ISDELETED` آنجا `bool?` است، فرم دوم در منطق سه‌مقداری SQL ردیف‌های `NULL` را حذف می‌کرد — در حالی که Handler سرسند از قبل `null` را «حذف‌نشده» تلقی می‌کند. این با تست واقعی روی SQLite تأیید شد (ترجمهٔ SQL: `"ISDELETED" IS NULL OR NOT ("ISDELETED")`).
+اما در `TB_VOUCHERDETAIL_LINK_TAFSILI` ستون `ISDELETED` از نوع `bool` **غیر-nullable** است (تفاوت واقعی schema بین این جدول و دو جدول بالادست)، پس آنجا فیلتر سادهٔ `l.ISDELETED == false` کافی و درست است و شاخهٔ `== null` لازم ندارد.
+
+**Idempotency حفظ شد:** گارد موجود `if (entity.ISDELETED == true) return;` بالای فراخوان cascade ماند، پس سندِ از‌قبل‌حذف‌شده نه سرسند و نه هیچ ردیفی را لمس می‌کند و اصلاً به `SaveChangesAsync` نمی‌رسد. سرسند و همهٔ ردیف‌ها با **یک مقدار زمانی مشترک** (`var now = DateTime.UtcNow` یک‌بار محاسبه) و همان `ICurrentUser.UserId` مهر می‌خورند.
+
+**تست (۱۳ تست جدید، مجموع ۲۷۲/۲۷۲ سبز):**
+- ۲ تست Handler در `Accounting.Application.Tests` (mock): فراخوانی cascade با همان user/timestamp سرسند، و تضمین ترتیب cascade **قبل از** `SaveChangesAsync`.
+- ۱۱ تست **واقعی repository** در `Accounting.Infrastructure.Tests` روی **SQLite in-memory** (نه InMemory provider، چون آن ترجمهٔ SQL را اثبات نمی‌کند). سطح ۲: N ردیف، صفر ردیف، ردیف‌های از‌قبل‌حذف‌شده با audit قبلی byte-identical، ردیف‌های `ISDELETED = NULL`، ایزولاسیون بین اسناد. سطح ۳: cascade کامل سه‌سطحی، ایزولاسیون لینک‌های سند دیگر، لینک از‌قبل‌حذف‌شده که دوباره لمس نمی‌شود، سند با ردیف ولی بدون لینک، صحت مقدار بازگشتی، و **تست invariant «لینک یتیم»** (ردیفِ از‌قبل‌حذف‌شده با لینک‌های فعال → لینک‌ها باز هم حذف می‌شوند، ولی audit خود ردیف دست‌نخورده می‌ماند).
+- همهٔ تست‌ها فاز assert را با یک `LegacyDbContext` تازه انجام می‌دهند، پس **persistence واقعی** اثبات می‌شود نه صرفاً وضعیت change tracker.
+- ⚠️ محدودیت: `EnsureCreated()` روی کل `LegacyDbContext` در SQLite شکست می‌خورد (`SQLite does not support sequences` — به‌خاطر `HasSequence("VOUCHERHEAD_SEQ")`)، پس fixture فقط همان یک جدول را با `CREATE TABLE` دستی می‌سازد. این تست‌ها رفتار Oracle-specific را اثبات **نمی‌کنند**.
+- پکیج جدید فقط در پروژهٔ تست: `Microsoft.EntityFrameworkCore.Sqlite` 10.0.0 (۲ warning جدید NU1903 از وابستگی گذرای `SQLitePCLRaw`، فقط test-only و نه در API منتشرشده → مجموع warning از ۱۶ به ۱۸).
+
+**خارج از دامنه (دست‌نخورده):** `UpdateVoucherHeadCommand` (به ردیف‌ها دست نمی‌زند) و همهٔ مسیرهای `*AccountCode*` — ریسک 🔴 «حذف گرهٔ کدینگ بدون بررسی وابستگی» همچنان کاملاً باز است.
 
 ### فاز ۸ — تکمیل CRUD: Update + Delete (۲۰۲۶-۰۸-۱۹، برنچ `changejWT`، commit نشده)
 
@@ -362,7 +394,8 @@ paging: پیش‌فرض `pageNumber=1`, `pageSize=20`؛ سقف `MaxPageSize=200`
 این‌ها **عمداً حل نشدند** چون هرکدام یک تصمیم کسب‌وکاری‌اند، نه یک نقص پیاده‌سازی. طبق Accounting Safety Gate بی‌صدا رد نشدند:
 
 - **🔴 IDOR حالا به مسیر نوشتن هم رسید — تشدید ریسک، نه صرفاً انتقال آن.** تا پیش از این فاز، نبودِ authorization در سطح رکورد فقط روی `GetById` بود یعنی **فقط خواندن**. حالا هر کاربر احراز‌شده می‌تواند **هر** `TB_ACCOUNTCODE` یا `TB_VOUCHERSHEAD` را با دانستن `ID` آن **ویرایش یا حذف کند** — از جمله رکوردهای واحدهای سازمانی دیگر، چون `VAHEDCODE` هنوز سمت سرور اعمال نمی‌شود. این فاز عمداً هیچ قانون IDOR جدیدی اختراع نکرد (طبق دستور صریح)، ولی شدت ریسک موجود از «افشای اطلاعات» به **«تغییر/حذف غیرمجاز دادهٔ حسابداری»** ارتقا یافت. **پیش از هر استقراری باید تصمیم‌گیری شود.**
-- **🔴 حذف سند هیچ cascade ای ندارد.** `DeleteVoucherHeadCommand` فقط سرسند (`TB_VOUCHERSHEAD`) را `ISDELETED = true` می‌کند و **به ردیف‌های سند (`TB_VOUCHERSDETAIL`) و تفصیلی‌های زیرشان (`TB_VOUCHERDETAIL_LINK_TAFSILI`) دست نمی‌زند**. یعنی پس از حذف یک سند، ردیف‌هایش همچنان `ISDELETED != true` باقی می‌مانند و از نظر هر گزارشی که مستقیماً روی ردیف‌ها کار کند، سند حذف‌شده هنوز مبلغ دارد. باید تصمیم گرفته شود: cascade در Application، یا فیلتر join در سمت Read، یا trigger/constraint در DB.
+- **✅ ~~حذف سند هیچ cascade ای ندارد~~** — **کاملاً حل شد (۲۰۲۶-۰۸-۲۰، فاز ۹).** `DeleteVoucherHeadCommand` حالا cascade **کامل سه‌سطحی** دارد: `TB_VOUCHERSHEAD` → `TB_VOUCHERSDETAIL` → `TB_VOUCHERDETAIL_LINK_TAFSILI`، هر سه سطح در **یک تراکنش/یک `SaveChangesAsync`**. رجوع به «فاز ۹» پایین‌تر.
+- **🟡 سندی که از قبل حذف شده ولی زیرمجموعهٔ فعال دارد، هرگز تمیز نمی‌شود.** پیامد ظریفِ گارد idempotency: چون `if (entity.ISDELETED == true) return;` بالای cascade است، اگر سندی **پیش از فاز ۹** حذف شده باشد (یعنی وقتی هنوز cascade وجود نداشت)، ردیف‌ها و لینک‌های تفصیلی‌اش همچنان `ISDELETED = false` مانده‌اند و فراخوانی دوبارهٔ Delete هم آن‌ها را تمیز **نمی‌کند**. اگر دادهٔ Legacy چنین اسنادی دارد، به یک اسکریپت backfill یک‌بارمصرف نیاز است — **بررسی نشد و حدس زده نشد** (نیازمند کوئری روی دادهٔ زنده).
 - **🔴 حذف گرهٔ کدینگ هیچ بررسی وابستگی ندارد.** `DeleteAccountCodeCommand` یک گره را soft-delete می‌کند بدون اینکه بررسی کند (الف) آیا فرزندی دارد (`PARENTID` خودارجاع، `FK_SELFREFRENCE`) یا (ب) آیا در ردیف‌های سند موجود استفاده شده. پس می‌توان یک گروه را حذف کرد و فرزندان یتیم ولی فعال باقی بمانند. حذف فیزیکی نیست پس FK دیتابیس شکایتی نمی‌کند — یعنی این ناسازگاری **کاملاً بی‌صدا** است.
 - **🔴 سند Post شده حالا واقعاً قابل تغییر است.** `UpdateVoucherHeadCommand` اجازه می‌دهد `DOCLIFE` (وضعیت سند) آزادانه عوض شود. invariant «تغییرناپذیری سند پس از Post» در تصمیم دوم آگاهانه حذف شده بود، ولی تا پیش از این فاز مسیر نوشتن فقط `INSERT` داشت پس عملاً قابل بهره‌برداری نبود. **حالا یک مسیر واقعی و در دسترس برای ویرایش/برگرداندن سند نهایی‌شده وجود دارد.** اگر این تضمین لازم است، باید صریحاً در Application یا به‌صورت DB constraint بازسازی شود.
 - **🟡 هیچ کنترل همزمانی (optimistic concurrency) وجود ندارد.** schema Legacy ستون `rowversion`/`ETag` ندارد و هیچ‌کدام از دو PUT جدید توکن همزمانی نمی‌گیرند، پس رفتار **last-write-wins** است: دو ویرایش هم‌زمان روی یک سند، یکی را بی‌صدا از بین می‌برد. برای سیستم حسابداری باید آگاهانه پذیرفته یا حل شود (مثلاً مقایسهٔ `UPDATEDDATE` به‌عنوان توکن، یا `If-Match`).
