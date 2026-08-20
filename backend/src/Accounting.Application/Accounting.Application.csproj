@@ -14,6 +14,16 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Feeds Swagger (see IncludeXmlComments in Accounting.Api/Program.cs) with the XML
+         summaries already written on Commands/Queries/DTOs (CreateVoucherDetailCommand,
+         VoucherDetailDto, CreateVoucherHeadDetailInput, ...). Without this, those request/
+         response schemas render in Swagger UI with property names only, no descriptions, even
+         though the XML doc comments exist in source. Missing-XML-comment warnings (CS1591) are
+         suppressed for the same reason as Accounting.Api.csproj: coverage is intentionally
+         partial (e.g. repository/handler internals do not each need their own summary) and this
+         project does not otherwise track/enforce full public-API doc coverage. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
 </Project>

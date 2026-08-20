@@ -102,6 +102,6 @@ Legacy data نباید Business Rule جدید را تعیین کند.
 ## هماهنگی
 
 - Domain meaning → `accounting-domain`
-- Persistence → `database-oracle`
+- Persistence (Fluent Mapping/EF) → `backend-dotnet`
 - Integration → `backend-dotnet`
 - Tests → `qa-tester`

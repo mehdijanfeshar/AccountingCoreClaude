@@ -72,7 +72,6 @@ Rule اصلی باید در Domain/Application قابل تست و مستقل ا�
 
 - قبل از تغییر مدل مهم، `CLAUDE.md` (بخش تصمیمات معماری) را بخوان. ⚠️ `docs/chart-of-accounts.md` از ۲۰۲۶-۰۸-۱۷ **منسوخ (SUPERSEDED)** است و فقط سابقهٔ طراحی است — آن را به‌عنوان مرجع وضعیت فعلی استفاده نکن.
 - منبع حقیقت «کدام نوع تفصیلی برای کدام حساب مجاز است» = `TB_ACCOUNT_LINK_TAFSILGROUP` (کلید یکتا روی `ACCOUNT_ID, LEVEL_ID, TAFSILGROUP_ID`). دقت کن `TB_ACCOUNT_LINK_TAFSILI` علی‌رغم نامش به حساب **بانکی** (`TB_ACCOUNT`) وصل است، نه به گره کدینگ.
-- تغییر Schema را با `database-oracle` هماهنگ کن.
 - تغییر Use Case را به `backend-dotnet` منتقل کن.
 - تغییر API-facing behavior را به `api-contract` اعلام کن.
 

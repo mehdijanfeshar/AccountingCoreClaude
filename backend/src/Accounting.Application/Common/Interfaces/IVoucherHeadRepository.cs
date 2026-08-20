@@ -41,11 +41,25 @@ public interface IVoucherHeadRepository
     /// <item>Keeping both levels in one method makes it structurally impossible for a caller to
     /// cascade level 2 (details) without also cascading level 3 (tafsili links) — there is no
     /// separate entry point to forget to call.</item>
-    /// <item>There is still no independent Command/Query for either <c>TB_VOUCHERSDETAIL</c> or
-    /// <c>TB_VOUCHERDETAIL_LINK_TAFSILI</c> — both are only ever reachable as part of the voucher
-    /// aggregate, so a dedicated per-table repository would be premature abstraction (same call
-    /// already made for <c>ITokenManager</c>). If a standalone write path for either child table
-    /// is ever introduced, this should be revisited/extracted.</item>
+    /// <item>
+    /// <b>Update (2026-08-20):</b> a standalone write path for <c>TB_VOUCHERSDETAIL</c> now
+    /// exists — see <see cref="IVoucherDetailRepository"/>, <c>CreateVoucherDetailCommand</c>,
+    /// <c>UpdateVoucherDetailCommand</c> and <c>DeleteVoucherDetailCommand</c> — following the
+    /// 2026-08-20 project-owner decision recorded in
+    /// <c>docs/tamin-core-entity-reference.md</c> بخش ۵ that <c>TB_VOUCHERSDETAIL</c> is an
+    /// independent aggregate root with its own CRUD, while composite create-with-a-new-head
+    /// still goes through <c>CreateVoucherHeadCommand.InitialDetails</c>. This method is
+    /// intentionally left in place, functionally unchanged, by explicit project-owner mandate:
+    /// the phase-9 cascade (head delete → detail lines → tafsili links) must keep working exactly
+    /// as before regardless of the new standalone path. <c>TB_VOUCHERDETAIL_LINK_TAFSILI</c>
+    /// still has no independent Command/Query of its own — and per the team rule confirmed
+    /// alongside the same 2026-08-20 decision, every <c>*_LINK_TAFSIL*</c>/<c>*_LINK_LEVEL*</c>
+    /// table stays permanently embedded, so that will not change later either.
+    /// Extraction/de-duplication of the now-overlapping logic between this method and
+    /// <see cref="IVoucherDetailRepository.SoftDeleteTafsiliLinksAsync"/> (both soft-delete
+    /// <c>TB_VOUCHERDETAIL_LINK_TAFSILI</c> rows, from two different scopes/entry points) is
+    /// recorded as a follow-up, not done here.
+    /// </item>
     /// </list>
     ///
     /// Implementations MUST load-and-mutate (never <c>ExecuteUpdateAsync</c>) for BOTH levels:

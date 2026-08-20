@@ -26,8 +26,10 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAccountCodeRepository, AccountCodeRepository>();
         services.AddScoped<IVoucherHeadRepository, VoucherHeadRepository>();
+        services.AddScoped<IVoucherDetailRepository, VoucherDetailRepository>();
         services.AddScoped<IAccountCodeReadRepository, AccountCodeReadRepository>();
         services.AddScoped<IVoucherHeadReadRepository, VoucherHeadReadRepository>();
+        services.AddScoped<IVoucherDetailReadRepository, VoucherDetailReadRepository>();
 
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 

@@ -34,6 +34,7 @@ public sealed class CreateVoucherHeadCommandHandlerTests
     public async Task Handle_MapsCommandFieldsOntoStagedEntity()
     {
         var repository = new Mock<IVoucherHeadRepository>();
+        var voucherDetailRepository = new Mock<IVoucherDetailRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         TB_VOUCHERSHEAD? staged = null;
@@ -42,7 +43,7 @@ public sealed class CreateVoucherHeadCommandHandlerTests
             .Callback<TB_VOUCHERSHEAD, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
         var command = ValidCommand();
 
         await handler.Handle(command, CancellationToken.None);
@@ -68,6 +69,7 @@ public sealed class CreateVoucherHeadCommandHandlerTests
     public async Task Handle_SetsAddUserIdFromCurrentUser_NeverFromRequest()
     {
         var repository = new Mock<IVoucherHeadRepository>();
+        var voucherDetailRepository = new Mock<IVoucherDetailRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("srvusr01");
         TB_VOUCHERSHEAD? staged = null;
@@ -76,7 +78,7 @@ public sealed class CreateVoucherHeadCommandHandlerTests
             .Callback<TB_VOUCHERSHEAD, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -89,6 +91,7 @@ public sealed class CreateVoucherHeadCommandHandlerTests
     public async Task Handle_SetsIsDeletedFalseAndNonNullCreatedDate()
     {
         var repository = new Mock<IVoucherHeadRepository>();
+        var voucherDetailRepository = new Mock<IVoucherDetailRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         TB_VOUCHERSHEAD? staged = null;
@@ -97,7 +100,7 @@ public sealed class CreateVoucherHeadCommandHandlerTests
             .Callback<TB_VOUCHERSHEAD, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -110,6 +113,7 @@ public sealed class CreateVoucherHeadCommandHandlerTests
     public async Task Handle_ReturnsSameGuidAssignedToStagedEntity_AndItIsNonEmpty()
     {
         var repository = new Mock<IVoucherHeadRepository>();
+        var voucherDetailRepository = new Mock<IVoucherDetailRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         TB_VOUCHERSHEAD? staged = null;
@@ -118,7 +122,7 @@ public sealed class CreateVoucherHeadCommandHandlerTests
             .Callback<TB_VOUCHERSHEAD, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
 
         var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -131,10 +135,11 @@ public sealed class CreateVoucherHeadCommandHandlerTests
     public async Task Handle_CallsAddAsyncExactlyOnceAndSaveChangesExactlyOnce()
     {
         var repository = new Mock<IVoucherHeadRepository>();
+        var voucherDetailRepository = new Mock<IVoucherDetailRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -148,6 +153,7 @@ public sealed class CreateVoucherHeadCommandHandlerTests
     public async Task Handle_CallsAddAsyncBeforeSaveChanges()
     {
         var repository = new Mock<IVoucherHeadRepository>();
+        var voucherDetailRepository = new Mock<IVoucherDetailRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         var callOrder = new List<string>();
@@ -161,7 +167,7 @@ public sealed class CreateVoucherHeadCommandHandlerTests
             .Callback(() => callOrder.Add("SaveChangesAsync"))
             .ReturnsAsync(1);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -172,12 +178,13 @@ public sealed class CreateVoucherHeadCommandHandlerTests
     public async Task Handle_PropagatesCancellationTokenToBothDependencies()
     {
         var repository = new Mock<IVoucherHeadRepository>();
+        var voucherDetailRepository = new Mock<IVoucherDetailRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(), token);
 

@@ -70,7 +70,6 @@ model: opus
 
 ### Core
 - `accounting-domain`: مدل و قوانین کسب‌وکار حسابداری
-- `database-oracle`: طراحی و نگهداری Schema جدید Oracle، Migration، Index، MV و Performance دیتابیس
 - `database-reverse-engineer`: کشف دیتابیس Legacy و تولید Legacy Entity/Mapping
 - `entity-mapper`: ادغام کنترل‌شدهٔ Legacy Entity در Domain و reconcile مفاهیم هم‌پوشان
 - `backend-dotnet`: Application/API/Infrastructure و CQRS
@@ -88,7 +87,7 @@ model: opus
 - کشف جدول‌های موجود Oracle → `database-reverse-engineer`
 - تولید Entity از جدول Legacy → `database-reverse-engineer`
 - ادغام Legacy Entity در Domain / تشخیص هم‌پوشانی با مدل Rich → `entity-mapper`
-- Schema جدید/Migration/Index/MV → `database-oracle`
+- Index/MV/Execution Plan/گزارش سنگین → `performance-reviewer` (این پروژه schema/جدول جدید نمی‌سازد؛ ایجنت جدای دیتابیس نداریم)
 - Command/Query/Handler/API → `backend-dotnet`
 - OpenAPI/DTO/Error Contract/TypeScript client → `api-contract`
 - UI/React/Form → `frontend-react`
@@ -106,7 +105,7 @@ model: opus
 `database-reverse-engineer → entity-mapper (ادغام در Domain) → accounting-domain (در صورت هم‌پوشانی) → backend-dotnet → api-contract → frontend-react → qa-tester`
 
 نمونه Feature جدید:
-`accounting-domain → database-oracle → backend-dotnet → api-contract → frontend-react → qa-tester`
+`accounting-domain → backend-dotnet → api-contract → frontend-react → qa-tester`
 
 در صورت نیاز:
 `security-reviewer` و `performance-reviewer` به‌صورت Gate قبل از Release اجرا می‌شوند.
