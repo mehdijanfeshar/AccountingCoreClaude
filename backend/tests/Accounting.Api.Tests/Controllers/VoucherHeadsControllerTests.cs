@@ -1,6 +1,8 @@
 using Accounting.Api.Controllers;
 using Accounting.Application.Common;
 using Accounting.Application.Vouchers.Commands.CreateVoucherHead;
+using Accounting.Application.Vouchers.Commands.DeleteVoucherHead;
+using Accounting.Application.Vouchers.Commands.UpdateVoucherHead;
 using Accounting.Application.Vouchers.Queries;
 using Accounting.Application.Vouchers.Queries.GetVoucherHeadById;
 using Accounting.Application.Vouchers.Queries.GetVoucherHeads;
@@ -238,6 +240,127 @@ public sealed class VoucherHeadsControllerTests
 
         mediator.Verify(
             m => m.Send(It.Is<GetVoucherHeadByIdQuery>(q => q.Id == id), cts.Token),
+            Times.Once);
+    }
+
+    private static UpdateVoucherHeadRequest ValidUpdateRequest() => new(
+        DocNum: "000002",
+        DateDoc: "14030202",
+        DocLife: true,
+        HeadDesc: "سند اصلاحی",
+        Apendix: null,
+        SystemTypeId: null,
+        FlagState: null,
+        VahedCode: "0002",
+        Year: "1404",
+        IsAutomatic: true,
+        SndVahedCode: null,
+        ParentHeadId: null,
+        AttachFileName: null,
+        AtfNum: null);
+
+    [Fact]
+    public async Task Update_ReturnsOkWithId_AndSendsCommandThroughMediator()
+    {
+        var mediator = new Mock<IMediator>();
+        var id = Guid.NewGuid();
+        mediator
+            .Setup(m => m.Send(It.IsAny<UpdateVoucherHeadCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var controller = new VoucherHeadsController(mediator.Object);
+
+        var actionResult = await controller.Update(id, ValidUpdateRequest(), CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult);
+        var response = Assert.IsType<UpdateVoucherHeadResponse>(ok.Value);
+        Assert.Equal(id, response.Id);
+
+        mediator.Verify(
+            m => m.Send(It.Is<UpdateVoucherHeadCommand>(c => c.Id == id), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// The single most important security assertion for this controller's Update action: the
+    /// command sent to the handler must always carry the route id, never any id embedded in the
+    /// request body (the body's DTO does not even have an Id property — this test proves the
+    /// route value is what actually reaches MediatR).
+    /// </summary>
+    [Fact]
+    public async Task Update_BuildsCommandFromRouteId_NotFromAnyBodyValue()
+    {
+        var mediator = new Mock<IMediator>();
+        var routeId = Guid.NewGuid();
+        UpdateVoucherHeadCommand? capturedCommand = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<UpdateVoucherHeadCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest, CancellationToken>((request, _) => capturedCommand = (UpdateVoucherHeadCommand)request)
+            .Returns(Task.CompletedTask);
+
+        var controller = new VoucherHeadsController(mediator.Object);
+
+        await controller.Update(routeId, ValidUpdateRequest(), CancellationToken.None);
+
+        Assert.NotNull(capturedCommand);
+        Assert.Equal(routeId, capturedCommand!.Id);
+    }
+
+    [Fact]
+    public async Task Update_ForwardsCancellationTokenToMediator()
+    {
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(It.IsAny<UpdateVoucherHeadCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var controller = new VoucherHeadsController(mediator.Object);
+        using var cts = new CancellationTokenSource();
+
+        await controller.Update(Guid.NewGuid(), ValidUpdateRequest(), cts.Token);
+
+        mediator.Verify(
+            m => m.Send(It.IsAny<UpdateVoucherHeadCommand>(), cts.Token),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsOkWithId_AndSendsCommandWithRouteId()
+    {
+        var mediator = new Mock<IMediator>();
+        var id = Guid.NewGuid();
+        mediator
+            .Setup(m => m.Send(It.IsAny<DeleteVoucherHeadCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var controller = new VoucherHeadsController(mediator.Object);
+
+        var actionResult = await controller.Delete(id, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult);
+        var response = Assert.IsType<DeleteVoucherHeadResponse>(ok.Value);
+        Assert.Equal(id, response.Id);
+
+        mediator.Verify(
+            m => m.Send(It.Is<DeleteVoucherHeadCommand>(c => c.Id == id), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Delete_ForwardsCancellationTokenToMediator()
+    {
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(It.IsAny<DeleteVoucherHeadCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var controller = new VoucherHeadsController(mediator.Object);
+        using var cts = new CancellationTokenSource();
+
+        await controller.Delete(Guid.NewGuid(), cts.Token);
+
+        mediator.Verify(
+            m => m.Send(It.IsAny<DeleteVoucherHeadCommand>(), cts.Token),
             Times.Once);
     }
 }

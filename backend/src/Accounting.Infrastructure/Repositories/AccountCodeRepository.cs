@@ -1,6 +1,7 @@
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using Accounting.Infrastructure.Legacy;
+using Microsoft.EntityFrameworkCore;
 
 namespace Accounting.Infrastructure.Repositories;
 
@@ -22,5 +23,11 @@ public sealed class AccountCodeRepository : IAccountCodeRepository
     public async Task AddAsync(TB_ACCOUNTCODE accountCode, CancellationToken cancellationToken = default)
     {
         await _dbContext.TB_ACCOUNTCODEs.AddAsync(accountCode, cancellationToken);
+    }
+
+    public async Task<TB_ACCOUNTCODE?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.TB_ACCOUNTCODEs
+            .FirstOrDefaultAsync(a => a.ID == id, cancellationToken);
     }
 }

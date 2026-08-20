@@ -1,5 +1,7 @@
 using Accounting.Api.Controllers;
 using Accounting.Application.Accounts.Commands.CreateAccountCode;
+using Accounting.Application.Accounts.Commands.DeleteAccountCode;
+using Accounting.Application.Accounts.Commands.UpdateAccountCode;
 using Accounting.Application.Accounts.Queries;
 using Accounting.Application.Accounts.Queries.GetAccountCodeById;
 using Accounting.Application.Accounts.Queries.GetAccountCodes;
@@ -220,6 +222,123 @@ public sealed class AccountCodesControllerTests
 
         mediator.Verify(
             m => m.Send(It.Is<GetAccountCodeByIdQuery>(q => q.Id == id), cts.Token),
+            Times.Once);
+    }
+
+    private static UpdateAccountCodeRequest ValidUpdateRequest() => new(
+        TypeCode: true,
+        ParentId: null,
+        AccCode: "100200",
+        AccCodeName: "بانک ملت",
+        TypeActivity: true,
+        SourceAndConsumeId: null,
+        IdentyGroupsId: null,
+        TypeAccCode: true,
+        MoInforClose: null,
+        TypeAction: null);
+
+    [Fact]
+    public async Task Update_ReturnsOkWithId_AndSendsCommandThroughMediator()
+    {
+        var mediator = new Mock<IMediator>();
+        var id = Guid.NewGuid();
+        mediator
+            .Setup(m => m.Send(It.IsAny<UpdateAccountCodeCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var controller = new AccountCodesController(mediator.Object);
+
+        var actionResult = await controller.Update(id, ValidUpdateRequest(), CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult);
+        var response = Assert.IsType<UpdateAccountCodeResponse>(ok.Value);
+        Assert.Equal(id, response.Id);
+
+        mediator.Verify(
+            m => m.Send(It.Is<UpdateAccountCodeCommand>(c => c.Id == id), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// The single most important security assertion for this controller's Update action: the
+    /// command sent to the handler must always carry the route id, never any id embedded in the
+    /// request body (the body's DTO does not even have an Id property — this test proves the
+    /// route value is what actually reaches MediatR).
+    /// </summary>
+    [Fact]
+    public async Task Update_BuildsCommandFromRouteId_NotFromAnyBodyValue()
+    {
+        var mediator = new Mock<IMediator>();
+        var routeId = Guid.NewGuid();
+        UpdateAccountCodeCommand? capturedCommand = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<UpdateAccountCodeCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest, CancellationToken>((request, _) => capturedCommand = (UpdateAccountCodeCommand)request)
+            .Returns(Task.CompletedTask);
+
+        var controller = new AccountCodesController(mediator.Object);
+
+        await controller.Update(routeId, ValidUpdateRequest(), CancellationToken.None);
+
+        Assert.NotNull(capturedCommand);
+        Assert.Equal(routeId, capturedCommand!.Id);
+    }
+
+    [Fact]
+    public async Task Update_ForwardsCancellationTokenToMediator()
+    {
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(It.IsAny<UpdateAccountCodeCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var controller = new AccountCodesController(mediator.Object);
+        using var cts = new CancellationTokenSource();
+
+        await controller.Update(Guid.NewGuid(), ValidUpdateRequest(), cts.Token);
+
+        mediator.Verify(
+            m => m.Send(It.IsAny<UpdateAccountCodeCommand>(), cts.Token),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsOkWithId_AndSendsCommandWithRouteId()
+    {
+        var mediator = new Mock<IMediator>();
+        var id = Guid.NewGuid();
+        mediator
+            .Setup(m => m.Send(It.IsAny<DeleteAccountCodeCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var controller = new AccountCodesController(mediator.Object);
+
+        var actionResult = await controller.Delete(id, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult);
+        var response = Assert.IsType<DeleteAccountCodeResponse>(ok.Value);
+        Assert.Equal(id, response.Id);
+
+        mediator.Verify(
+            m => m.Send(It.Is<DeleteAccountCodeCommand>(c => c.Id == id), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Delete_ForwardsCancellationTokenToMediator()
+    {
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(It.IsAny<DeleteAccountCodeCommand>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var controller = new AccountCodesController(mediator.Object);
+        using var cts = new CancellationTokenSource();
+
+        await controller.Delete(Guid.NewGuid(), cts.Token);
+
+        mediator.Verify(
+            m => m.Send(It.IsAny<DeleteAccountCodeCommand>(), cts.Token),
             Times.Once);
     }
 }

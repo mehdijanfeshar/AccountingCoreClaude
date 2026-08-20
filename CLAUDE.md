@@ -126,9 +126,62 @@ docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
 - [x] Query side (خواندن) روی `Accounting.Domain.Entity` — چهار Query با paging: `GetAccountCodes`/`GetAccountCodeById`/`GetVoucherHeads`/`GetVoucherHeadById` با `PagedResult<T>` و Read Repositoryهای مجزا.
 - [x] Controller/Endpoint برای هر ۶ سرویس (۲ Command + ۴ Query) — `AccountCodesController` و `VoucherHeadsController` + `GlobalExceptionHandler` مرکزی. جزئیات در «فاز ۶» پایین‌تر.
 - [x] **فاز ۷ — Authentication/Authorization + رفع جعل‌پذیری `ADDUSERID`** (۲۰۲۶-۰۸-۱۹) — هر دو ریسک 🔴 CRITICAL که `security-reviewer` در Gate فاز ۶ کشف کرده بود حل شدند. اتصال inbound به IDP واقعی سازمان (`Tamin.Framework.Common.Security`) + `FallbackPolicy` + `ICurrentUser`. جزئیات در «فاز ۷» پایین‌تر. **۱۷۰/۱۷۰ تست سبز.**
+- [x] **فاز ۸ — تکمیل CRUD: Update + Delete (Soft Delete)** (۲۰۲۶-۰۸-۱۹) — ۴ Command جدید و ۴ Endpoint جدید، همگی `POST` با فعل صریح در route (`PUT`/`DELETE` به‌درخواست صریح صاحب پروژه ممنوع شدند — رجوع به «فاز ۸» پایین‌تر). جزئیات در «فاز ۸» پایین‌تر. **۲۵۹/۲۵۹ تست سبز** (پس از یک پاس `/code-review` که ۲ باگ واقعی و ۱ شکاف اعتبارسنجی پیدا و رفع کرد).
 - [ ] فرم صدور سند با تفصیلی داینامیک
 
-### فاز ۷ — Authentication/Authorization + رفع جعل‌پذیری Audit (۲۰۲۶-۰۸-۱۹، برنچ `GetAccountCode`، commit نشده)
+### فاز ۸ — تکمیل CRUD: Update + Delete (۲۰۲۶-۰۸-۱۹، برنچ `changejWT`، commit نشده)
+
+پیش از این فاز فقط Create (فاز ۵) و Read (فاز ۶) وجود داشت. حالا هر دو Entity چرخهٔ کامل CRUD دارند.
+
+**Endpointهای جدید (همگی زیر `SetFallbackPolicy(RequireAuthenticatedUser)`):**
+
+| Verb | Route | موفق | خطاها |
+|---|---|---|---|
+| `POST` | `/api/account-codes/{id:guid}/update` | 200 + `{id}` | 400, 401, 404, 409, 500 |
+| `POST` | `/api/account-codes/{id:guid}/delete` | 200 + `{id}` | 400, 401, 404, 500 |
+| `POST` | `/api/voucher-heads/{id:guid}/update` | 200 + `{id}` | 400, 401, 404, 409, 500 |
+| `POST` | `/api/voucher-heads/{id:guid}/delete` | 200 + `{id}` | 400, 401, 404, 500 |
+
+> ⚠️ **چرا اینجا REST استاندارد رعایت نشده — این یک محدودیت درخواستی صاحب پروژه است، نه انتخاب معماری داخلی.**
+> این ۴ Endpoint ابتدا به‌صورت `PUT /{id}` و `DELETE /{id}` ساخته شدند (و سبز بودند)، ولی **صاحب پروژه صریحاً اعلام کرد که متدهای `PUT` و `DELETE` در این محیط قابل استفاده نیستند و فقط `POST` و `GET` مجازند** (دلیل فنی‌اش را نگفتند؛ احتمالاً محدودیت زیرساخت شبکه/سرور سازمان). پس همگی به `POST` با **فعل صریح در route** تبدیل شدند.
+> - **چرا `/{id}/update` و نه `POST /api/account-codes/{id}` خالی:** چون `POST /api/account-codes` (ساخت) از قبل وجود دارد و `POST /api/account-codes/{id}` در کنارش «ساخت زیرمنبع تحت این id» خوانده می‌شود. حالا که از semantics استاندارد خارج شده‌ایم، صراحت بهتر از ابهام است و مسیر برای Endpointهای بعدی (مثل `/{id}/lines`) باز می‌ماند.
+> - **چرا 200 با بدنه و نه 204:** (الف) همان محدودیت زیرساختی که `PUT`/`DELETE` را ممنوع کرده نشان می‌دهد لایه‌های میانی شبکه در این محیط رفتار غیرمعمول دارند و پاسخ ۲۰۰ با بدنهٔ کوچک کمتر از ۲۰۴ خالی مستعد ابهام است؛ (ب) با `POST` ساخت که از قبل بدنه برمی‌گرداند هم‌خانواده می‌شود، پس هر سه عملیات نوشتنِ هر Controller یک شکل پاسخ دارند؛ (ج) `id` برگشتی تأیید می‌کند دقیقاً کدام رکورد تحت تأثیر قرار گرفته.
+> - **قفل شده با تست:** `HttpVerbConventionTests` با reflection روی کل assembly تأیید می‌کند **هیچ اکشنی در هیچ Controllerی** `[HttpPut]` یا `[HttpDelete]` ندارد — پس بازگشت تصادفی این قاعده تست را قرمز می‌کند.
+> - **`GET` (لیست و by-id) و `POST` ساخت دست‌نخورده ماندند** — محدودیت فقط روی مسیر نوشتن/حذف بود.
+> - این تغییر **فقط لایهٔ Api را لمس کرد**؛ Command/Handler/Validator/Repository دست‌نخورده ماندند (Controller خودش `id` را از route دارد و بدنهٔ پاسخ را می‌سازد).
+
+**تصمیم PUT به‌جای PATCH (تصمیم صریح، نه پیش‌فرض):** تقریباً همهٔ ستون‌های Legacy nullable اند (`bool?`, `Guid?`, `string?`)، بنابراین در PATCH جزئی هیچ راهی نیست که «فیلد ارسال‌نشده» از «فیلد صریحاً `null`» تفکیک شود مگر با wrapper نوع `Optional<T>` روی تک‌تک فیلدها — که هم قانون «Command فقط primitive دارد» را می‌شکند و هم ماشین‌آلات نامتناسبی اضافه می‌کند. PUT ضمناً با شکل `CreateXCommand` موجود قرینه است. **پیامد پذیرفته‌شده:** فراخوان باید همیشه بدنهٔ کامل بفرستد؛ فیلد جاافتاده = `null` شدن آن ستون.
+
+**تصمیم‌های تثبیت‌شدهٔ دیگر:**
+- **`Id` از route می‌آید، نه از بدنه.** برای PUT یک record جدا در لایهٔ Api تعریف شد (`UpdateAccountCodeRequest`/`UpdateVoucherHeadRequest`) که **اصلاً پراپرتی `Id` ندارد**؛ Controller خودش Command را با id مسیر می‌سازد. یعنی کل کلاسِ باگِ «تناقض id مسیر با id بدنه» **ساختاراً** ناممکن است. (این ضمناً اولین اجرای عملی پیشنهاد باز `api-contract` مبنی بر جداکردن Request از Command است — ولی فقط برای PUT؛ POST همچنان بدنه‌اش خود Command است.)
+- **Audit فقط سمت سرور** — `CHANGEUSERID = _currentUser.UserId` و `UPDATEDDATE = DateTime.UtcNow`. دقیقاً همان الگوی فاز ۷؛ هیچ پراپرتی userId در هیچ‌کدام از ۴ Command وجود ندارد، پس بازگشت آسیب‌پذیری جعل Audit **خطای کامپایل** می‌دهد.
+- **ستون‌های تغییرناپذیر در Update:** `ID`، `ADDUSERID`، `CREATEDDATE`، `ISDELETED`، و برای VoucherHead ستون‌های `GLOBALNUMBER` (که `ValueGeneratedOnAdd` است) و `ATTACHFILE`. در Command وجود ندارند و Handler لمسشان نمی‌کند (با تست صریح قفل شد).
+- **`ISDELETED` عمداً در Update نیست** — اگر بود، Update به در پشتیِ delete/undelete تبدیل می‌شد.
+- **404 مرکزی** — `NotFoundException` جدید در `Accounting.Application/Common/Exceptions/` → `GlobalExceptionHandler` → **404** `ProblemDetails` با پیام عمومی. الگو دقیقاً از `DuplicateKeyException` → 409 گرفته شد. پیام خود exception (شامل نام منبع و id) عمداً **به بدنهٔ پاسخ درز نمی‌کند** (با تست اثبات شد).
+- **Repository:** یک متد `GetForUpdateAsync(Guid, CancellationToken)` به هر دو write repository اضافه شد که **عمداً tracked است** (بدون `AsNoTracking()`، برخلاف read repository) تا Handler بتواند در جا mutate کند. Repository همچنان **هرگز** `SaveChangesAsync` صدا نمی‌زند؛ مرز تراکنش در Handler ماند. `IUnitOfWork` **هیچ تغییری نکرد** — همان‌طور که در فاز ۵ طراحی شده بود.
+
+**Soft Delete (نه حذف فیزیکی):** Command حذف فقط `ISDELETED = true` + ستون‌های audit را می‌نویسد. هیچ `Remove`/`ExecuteDelete` در کد نیست — و چون interfaceهای write repository اصلاً متد حذف **ندارند**، حذف فیزیکی از این مسیر ساختاراً ناممکن است (این را `qa-tester` با تست reflection روی interface قفل کرد). دلیل: هر دو جدول ستون `ISDELETED` دارند که Query side از قبل با `Where(x => x.ISDELETED != true)` استفاده می‌کند؛ حذف فیزیکی هم یکپارچگی ارجاعی Legacy را می‌شکند و هم برخلاف رفتار سیستم قدیمی است.
+
+**رفتار مرزی (تصمیم‌گرفته‌شده و تست‌شده):**
+- Update روی رکورد ناموجود **یا** رکورد `ISDELETED == true` → 404 (رکورد soft-deleted «منطقاً غایب» تلقی می‌شود، هم‌راستا با فیلتر Query side).
+- Delete روی رکورد ناموجود → 404.
+- Delete روی رکوردی که از قبل حذف شده → **200 + `{id}` بدون هیچ نوشتنی** (idempotent طبق تعریف HTTP؛ status code خودِ ۲۰۰ است، نه ۲۰۴ — طبق تصمیم «۲۰۰ با بدنه» بالا)؛ `SaveChangesAsync` اصلاً صدا زده نمی‌شود و `CHANGEUSERID`/`UPDATEDDATE` قبلی دست‌نخورده می‌ماند.
+- `ISDELETED` از نوع `bool?` است: هم `false` و هم **`null`** یعنی «حذف‌نشده» — دقیقاً مثل فیلتر read side. رکورد با `ISDELETED == null` واقعاً soft-delete می‌شود و idempotent تلقی نمی‌شود (ظریف‌ترین حالت مرزی این فاز؛ با تست صریح قفل شد).
+- خطای UNIQUE در PUT از همان مسیر موجود عبور می‌کند (`UnitOfWork` → `DuplicateKeyException` → 409)؛ هیچ pre-check دستی اضافه نشد، که برای شرایط رقابتی (race) رفتار درستی است.
+
+**یافتهٔ `api-contract`:** **401 در هیچ‌کدام از Endpointها اعلام نشده بود** — نه در ۴ تای جدید، نه در ۶ تای قبلی — با اینکه همگی زیر FallbackPolicy اند و 401 کاملاً قابل‌تولید است. برای هر ۱۰ Endpoint به‌صورت یکدست اضافه شد. **403 عمداً اعلام نشد** چون هیچ authorization مبتنی بر نقش هنوز وجود ندارد و اعلامش گمانه‌زنی می‌بود.
+
+**تست:** `qa-tester` **۸۰ تست جدید** نوشت (۶۹ Application + ۱۱ Api)، سپس مهاجرت verb (بالا) ۵ تست دیگر اضافه کرد (`HttpVerbConventionTests`) → مجموع ۲۵۵/۲۵۵.
+
+**پاس `/code-review` نهایی (۲۰۲۶-۰۸-۲۰، قبل از commit، به درخواست صریح کاربر):** ۲ باگ واقعی + ۱ شکاف اعتبارسنجی پیدا شد و همان‌جا رفع شد:
+- **باگ در تست محافظ verb:** `HttpVerbConventionTests.AllControllerActions()` به‌جای reflect کردن روی assembly واقعی `Accounting.Api`، روی `typeof(ControllerBase).Assembly` (یعنی خودِ فریم‌ورک ASP.NET Core) reflect می‌کرد — یعنی این تست **هرگز** Controllerهای این پروژه را بررسی نمی‌کرد و اگر کسی بعداً `[HttpPut]`/`[HttpDelete]` اضافه می‌کرد، بازهم سبز می‌ماند. اصلاح شد به `typeof(AccountCodesController).Assembly`.
+- **تناقض مستندسازی:** این فایل (خط مربوط به رفتار مرزی Delete) هنوز می‌گفت idempotent-delete «۲۰۴» برمی‌گرداند، درحالی‌که تصمیم نهایی (بالا) و کد واقعی «۲۰۰ + بدنه» است. اصلاح شد.
+- **شکاف اعتبارسنجی خودارجاعی:** نه `UpdateAccountCodeCommandValidator` و نه `UpdateVoucherHeadCommandValidator` بررسی نمی‌کردند که `ParentId`/`ParentHeadId` برابر `Id` خودِ رکورد باشد. چون Update برخلاف Create می‌تواند `Id` را از قبل بداند (از route می‌آید)، این مسیر یک گرهٔ خودارجاعی (حلقهٔ بی‌نهایت در سلسله‌مراتب) می‌ساخت که Create اصلاً نمی‌توانست تولید کند. یک قانون `Must(x => x.ParentId != x.Id)` به هر دو Validator اضافه شد + ۴ تست جدید (۲ به‌ازای هر Entity).
+- **یافتهٔ چهارم (IDOR روی نوشتن/حذف) دوباره تأیید شد ولی عمداً حل نشد** — طبق تصمیم صریح کاربر، مثل بقیهٔ ریسک‌های امنیتی این فاز، فقط مستند می‌ماند (رجوع به «تصمیمات باز» پایین‌تر).
+
+مجموع نهایی بعد از این سه اصلاح: **۲۵۹/۲۵۹ سبز** (۲۲ Domain + ۱۵۷ Application + ۶۰ Api + ۲۰ Infrastructure)، **صفر رگرسیون**. build ۰ خطا / ۱۶ warning پیش‌موجود NU1903 (هیچ CS). همگی Unit/Mock — **هیچ اتصالی به Oracle زنده**.
+
+### فاز ۷ — Authentication/Authorization + رفع جعل‌پذیری Audit (۲۰۲۶-۰۸-۱۹، برنچ `changejWT`، commit `86e6526`، push شده)
 
 هر دو ریسک 🔴 CRITICAL فاز ۶ حل شدند. طراحی توسط `security-reviewer`، پیاده‌سازی توسط `backend-dotnet`، تأیید توسط `qa-tester`.
 
@@ -298,12 +351,22 @@ paging: پیش‌فرض `pageNumber=1`, `pageSize=20`؛ سقف `MaxPageSize=200`
 - **IDOR روی `GetById`** — فاز ۷ فقط authentication و جعل Audit را حل کرد، **نه authorization در سطح رکورد**. هر کاربر احراز‌شده می‌تواند هر `ID` ای را بخواند. باید تأیید شود که این برای این مرحله قابل‌قبول است.
 - **محدودکردن Kestrel به `localhost`** — توصیهٔ `security-reviewer` به‌عنوان کاهش‌دهندهٔ ریسک فوری و بدون کد، تا وقتی auth نهایی مستقر نشده. تصمیم عملیاتی با صاحب پروژه.
 - **پوشش تست pipeline احراز هویت** — تست‌های `Accounting.Api.Tests` همگی unit اند (بدون `WebApplicationFactory`)، پس این‌که واقعاً یک درخواست بدون توکن ۴۰۱ می‌گیرد و `FallbackPolicy` عملاً اعمال می‌شود **در هیچ تستی اثبات نشده**. `qa-tester` این را به‌عنوان بزرگ‌ترین شکاف پوشش اعلام کرد و عمداً نبست، چون `AddInfrastructure` هنگام ساخت host یک `UseOracle` ثبت می‌کند و یک تست ساده‌لوحانه ممکن بود ناخواسته به دیتابیس **زندهٔ** واقعی وصل شود.
-- **`DevAuthController.Roles` allowlist ندارد** — فقط `UserId` در برابر allowlist سنجیده می‌شود؛ نقش‌ها آزادانه در توکن dev درج می‌شوند. ریسک پایین (این endpoint خارج از Development مقدار 404 می‌دهد).
 - **🟡 چندمستأجری (`VAHEDCODE`) مرز ایزولاسیون نیست.** `vahedCode` یک پارامتر **اختیاری query string** است که فراخوان خودش می‌دهد، نه فیلتری که سرور از هویت استخراج کند؛ یعنی هر کسی می‌تواند اسناد هر واحد سازمانی دیگری را مرور کند. باید صریحاً تصمیم گرفته شود: یا اجباری و سمت‌سروری شود، یا مستند شود که دید بین‌واحدی عمدی است.
 - **🟡 فیلدهای Audit در DTO برای همه قابل خواندن‌اند** — `AddUserId`/`ChangeUserId`/`IsDeleted` در هر دو DTO بی‌قید برگردانده می‌شوند. پس از افزودن نقش‌ها باید تصمیم گرفته شود که آیا این‌ها نیاز به نقش ممتاز دارند.
 - **🟡 هیچ Rate Limiting ای وجود ندارد** — سقف ۲۰۰ ردیف در هر صفحه کار می‌کند، ولی هیچ محدودیتی روی تعداد درخواست نیست، پس پیمایش کامل جدول‌ها با اسکریپت ممکن است.
 - **🟡 بدنهٔ POST همان MediatR Command است** — هر فیلدی که بعداً به Command اضافه شود، بی‌صدا بخشی از قرارداد عمومی API می‌شود. پیشنهاد `api-contract`: افزودن `CreateXRequest` نازک در لایهٔ Api. (اجرا نشد.)
 - **🟡 نسخه‌بندی API وجود ندارد** (`/api/...` بدون `/v1`). افزودن آن بعداً خودش یک breaking change است.
+
+### 🔴 تصمیمات باز جدید — کشف‌شده در فاز ۸ (۲۰۲۶-۰۸-۱۹)
+
+این‌ها **عمداً حل نشدند** چون هرکدام یک تصمیم کسب‌وکاری‌اند، نه یک نقص پیاده‌سازی. طبق Accounting Safety Gate بی‌صدا رد نشدند:
+
+- **🔴 IDOR حالا به مسیر نوشتن هم رسید — تشدید ریسک، نه صرفاً انتقال آن.** تا پیش از این فاز، نبودِ authorization در سطح رکورد فقط روی `GetById` بود یعنی **فقط خواندن**. حالا هر کاربر احراز‌شده می‌تواند **هر** `TB_ACCOUNTCODE` یا `TB_VOUCHERSHEAD` را با دانستن `ID` آن **ویرایش یا حذف کند** — از جمله رکوردهای واحدهای سازمانی دیگر، چون `VAHEDCODE` هنوز سمت سرور اعمال نمی‌شود. این فاز عمداً هیچ قانون IDOR جدیدی اختراع نکرد (طبق دستور صریح)، ولی شدت ریسک موجود از «افشای اطلاعات» به **«تغییر/حذف غیرمجاز دادهٔ حسابداری»** ارتقا یافت. **پیش از هر استقراری باید تصمیم‌گیری شود.**
+- **🔴 حذف سند هیچ cascade ای ندارد.** `DeleteVoucherHeadCommand` فقط سرسند (`TB_VOUCHERSHEAD`) را `ISDELETED = true` می‌کند و **به ردیف‌های سند (`TB_VOUCHERSDETAIL`) و تفصیلی‌های زیرشان (`TB_VOUCHERDETAIL_LINK_TAFSILI`) دست نمی‌زند**. یعنی پس از حذف یک سند، ردیف‌هایش همچنان `ISDELETED != true` باقی می‌مانند و از نظر هر گزارشی که مستقیماً روی ردیف‌ها کار کند، سند حذف‌شده هنوز مبلغ دارد. باید تصمیم گرفته شود: cascade در Application، یا فیلتر join در سمت Read، یا trigger/constraint در DB.
+- **🔴 حذف گرهٔ کدینگ هیچ بررسی وابستگی ندارد.** `DeleteAccountCodeCommand` یک گره را soft-delete می‌کند بدون اینکه بررسی کند (الف) آیا فرزندی دارد (`PARENTID` خودارجاع، `FK_SELFREFRENCE`) یا (ب) آیا در ردیف‌های سند موجود استفاده شده. پس می‌توان یک گروه را حذف کرد و فرزندان یتیم ولی فعال باقی بمانند. حذف فیزیکی نیست پس FK دیتابیس شکایتی نمی‌کند — یعنی این ناسازگاری **کاملاً بی‌صدا** است.
+- **🔴 سند Post شده حالا واقعاً قابل تغییر است.** `UpdateVoucherHeadCommand` اجازه می‌دهد `DOCLIFE` (وضعیت سند) آزادانه عوض شود. invariant «تغییرناپذیری سند پس از Post» در تصمیم دوم آگاهانه حذف شده بود، ولی تا پیش از این فاز مسیر نوشتن فقط `INSERT` داشت پس عملاً قابل بهره‌برداری نبود. **حالا یک مسیر واقعی و در دسترس برای ویرایش/برگرداندن سند نهایی‌شده وجود دارد.** اگر این تضمین لازم است، باید صریحاً در Application یا به‌صورت DB constraint بازسازی شود.
+- **🟡 هیچ کنترل همزمانی (optimistic concurrency) وجود ندارد.** schema Legacy ستون `rowversion`/`ETag` ندارد و هیچ‌کدام از دو PUT جدید توکن همزمانی نمی‌گیرند، پس رفتار **last-write-wins** است: دو ویرایش هم‌زمان روی یک سند، یکی را بی‌صدا از بین می‌برد. برای سیستم حسابداری باید آگاهانه پذیرفته یا حل شود (مثلاً مقایسهٔ `UPDATEDDATE` به‌عنوان توکن، یا `If-Match`).
+- **🟡 هیچ مسیر undelete/restore وجود ندارد.** چون Update رکورد soft-deleted را 404 می‌دهد و `ISDELETED` در Update نیست، رکورد حذف‌شده از طریق API **قابل بازگردانی نیست**. اگر بازگردانی لازم است، به یک Command صریح (`RestoreXCommand`) نیاز دارد — عمداً در این فاز ساخته نشد.
 
 ## قوانین کاری تیم
 

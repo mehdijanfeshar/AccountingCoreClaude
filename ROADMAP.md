@@ -13,7 +13,8 @@
 | ۵. مدل نوشتن روی `Accounting.Domain.Entity` (اتصال Oracle + اولین Command/Query) | ✅ انجام شد — ۲ Command + ۴ Query با paging؛ ریسک `PARENTID DEFAULT '0'` حل شد. ⚠️ اتصال واقعی (integration test روی Oracle) هنوز انجام نشده. |
 | ۶. لایهٔ HTTP (Controller/Endpoint + نگاشت مرکزی خطا) | ✅ انجام شد — ۶ Endpoint روی ۲ Controller، خطای UNIQUE → 409، ۱۳۱/۱۳۱ تست سبز. |
 | ۷. Authentication/Authorization + رفع جعل `ADDUSERID` | ✅ انجام شد — هر دو ریسک 🔴 CRITICAL بسته شد؛ `ICurrentUser` + `FallbackPolicy`. auth ورودی به **IDP واقعی سازمان** (`Tamin.Framework.Common.Security` 1.0.9) وصل شد و مسیر JWT محلی کاملاً حذف شد. **۱۷۰/۱۷۰ تست سبز.** ⚠️ نگاشت claim برای `ADDUSERID` هنوز با توکن واقعی تأیید نشده. |
-| ۸. فرم صدور سند با تفصیلی داینامیک (Frontend) | ⬜ متوقف |
+| ۸. تکمیل CRUD — Update + Delete (Soft Delete) | ✅ انجام شد — ۴ Endpoint جدید روی هر دو Entity، جایگزینی کامل (نه PATCH)، حذف نرم با `ISDELETED`، 404 مرکزی. **به درخواست صریح صاحب پروژه همگی `POST` اند نه `PUT`/`DELETE`** (این دو متد در محیط سازمان مجاز نیستند). **۲۵۵/۲۵۵ تست سبز.** ⚠️ ۴ ریسک 🔴 جدید کشف شد (IDOR روی نوشتن، نبود cascade، قابل‌تغییر شدن سند Post شده). |
+| ۹. فرم صدور سند با تفصیلی داینامیک (Frontend) | ⬜ متوقف |
 
 ## Milestone Checklist
 
@@ -36,6 +37,12 @@
 - [x] **رفع جعل‌پذیری `ADDUSERID`** — `AddUserId` کاملاً از هر دو Command حذف شد؛ مقدار از `ICurrentUser` سمت سرور می‌آید. بازگشت آسیب‌پذیری حالا خطای کامپایل است، نه خطای منطقی.
 - [x] **پورت `TokenManager` سازمان** (`Accounting.Infrastructure/Idp/`) با ۶ نقص امنیتی/همزمانی اصلاح‌شده. ⚠️ این مسیر **outbound** است و به‌تنهایی محافظت inbound را حل نمی‌کند.
 - [x] **اتصال inbound به IDP واقعی سازمان** — پکیج رسمی `Tamin.Framework.Common.Security` 1.0.9 از feed داخلی؛ `AddTaminJWTToken` با audience از config. رفتار پکیج با reflection راستی‌آزمایی شد (اسکیم `Bearer`، `ValidIssuer=http://idm.tamin.ir`، `JsonWebKey` ثابت، بدون discovery). زیرساخت JWT محلی (`DevAuthController`/`JwtOptions`/`DevAuthOptions`) **فیزیکاً حذف شد**.
+- [x] **فقط `GET` و `POST`** — به درخواست صریح صاحب پروژه، `PUT` و `DELETE` در این محیط قابل استفاده نیستند. ۴ Endpoint نوشتن به `POST /{id}/update` و `POST /{id}/delete` تبدیل شدند (فعل صریح در route، چون `POST /{id}` خالی با `POST` ساخت مبهم می‌شد) و موفقیت → **200 + `{id}`** به‌جای 204. قاعده با `HttpVerbConventionTests` (reflection روی کل assembly) قفل شد تا بازگشت تصادفی تست را قرمز کند. **این یک محدودیت درخواستی است، نه انتخاب معماری REST داخلی.**
+- [x] **تکمیل CRUD — Update + Delete** — ۴ Command جدید (`UpdateAccountCode`/`DeleteAccountCode`/`UpdateVoucherHead`/`DeleteVoucherHead`) + ۴ Endpoint. **جایگزینی کامل انتخاب شد نه PATCH جزئی** (چون تقریباً همهٔ ستون‌های Legacy nullable اند و «ارسال‌نشده» از «صریحاً null» تفکیک‌پذیر نیست). `Id` از route می‌آید نه بدنه (`UpdateXRequest` پراپرتی `Id` **ندارد**). `CHANGEUSERID`/`UPDATEDDATE` فقط از `ICurrentUser` و ساعت سرور. (برنچ `changejWT`)
+- [x] **Soft Delete** — `ISDELETED = true`، هرگز حذف فیزیکی؛ write repository اصلاً متد حذف **ندارد** (تضمین ساختاری، با تست reflection قفل شد). DELETE ایدمپوتنت است (رکورد از قبل حذف‌شده → 204 بدون نوشتن). `ISDELETED == null` هم «حذف‌نشده» تلقی می‌شود.
+- [x] **`NotFoundException` → 404 مرکزی** در `GlobalExceptionHandler` (الگو از `DuplicateKeyException` → 409)؛ پیام حاوی id/نام منبع به بدنهٔ پاسخ درز نمی‌کند.
+- [x] **اعلام 401 روی هر ۱۰ Endpoint** — یافتهٔ `api-contract`: 401 در هیچ Endpointی (حتی ۶ تای قبلی) اعلام نشده بود با اینکه همگی زیر FallbackPolicy اند. 403 عمداً اعلام نشد (هنوز authorization مبتنی بر نقش وجود ندارد).
+- [x] پوشش تست فاز ۸ — **۸۵ تست جدید** (۶۹ Application + ۱۶ Api، شامل `HttpVerbConventionTests`)؛ مجموع **۲۵۵/۲۵۵ سبز** (۲۲ Domain + ۱۵۳ Application + ۶۰ Api + ۲۰ Infrastructure)، صفر رگرسیون.
 - [ ] تست pipeline احراز هویت (`WebApplicationFactory`) — عمداً ساخته نشد تا ناخواسته به Oracle زنده وصل نشود
 - [ ] تست integration واقعی روی Oracle
 - [x] حل ریسک `PARENTID DEFAULT '0'` — حذف `HasDefaultValueSql` از Mapping (۲۰۲۶-۰۸-۱۸)
@@ -72,10 +79,14 @@
 | ✅ | ~~**اتصال inbound به IDP واقعی سازمان**~~ | حل شد (۲۰۲۶-۰۸-۱۹): پکیج رسمی `Tamin.Framework.Common.Security` 1.0.9 از feed داخلی سازمان. سؤال‌های قبلی منتفی شدند — پکیج خودش `ValidIssuer=http://idm.tamin.ir` و یک `JsonWebKey` **ثابتِ جاسازی‌شده** دارد، پس نه discovery URL لازم است نه JWKS fetch. پکیج `IDP` روی feed **پیدا نشد** → پروژهٔ لوکال solution اصلی کاربر بوده، پس پورت دستی `TokenManager` درست بوده. |
 | 🔴 | **نگاشت claim برای `ADDUSERID` تأییدنشده** | معلوم نیست کدام claim توکن واقعی IDP یک شناسهٔ **≤۱۰ کاراکتری** قابل‌نگاشت به `ADDUSERID` دارد (اگر `sub` یک GUID باشد جا نمی‌شود). پکیج `NameClaimType` را روی `.../claims/name` ست می‌کند نه `nameidentifier`. نگاشت بین کدهای کاربری قدیمی Legacy و هویت‌های IDP جدید نامشخص است. **هرگز با توکن واقعی تست نشده.** بی‌خطر است چون `ICurrentUser.UserId` عمداً **fail-loud** است (throw به‌جای truncate) — خطای بلند، نه خرابی خاموش دادهٔ Audit. |
 | 🟡 | audience مشترک با `Financial_Account` | به‌صراحت درخواست صاحب پروژه، فعلاً audience پروژهٔ `Financial_Account` استفاده می‌شود تا audience اختصاصی این سرویس در IDP سازمان ثبت شود. از طریق `Tamin:Idp:Audience` قابل override است. |
-| 🟡 | IDOR روی `GetById` | فاز ۷ فقط authentication و جعل Audit را حل کرد، نه authorization در سطح رکورد؛ هر کاربر احراز‌شده می‌تواند هر `ID` ای را بخواند. |
+| 🔴 | **IDOR حالا روی نوشتن هم هست** (تشدید‌شده در فاز ۸) | تا فاز ۷ نبودِ authorization سطح رکورد فقط روی `GetById` یعنی **خواندن** بود. با افزودن `PUT`/`DELETE` در فاز ۸، هر کاربر احراز‌شده می‌تواند **هر** حساب یا سندی را با دانستن `ID` **ویرایش یا حذف کند** — از جمله رکوردهای واحدهای دیگر (چون `VAHEDCODE` سمت سرور اعمال نمی‌شود). شدت از «افشای اطلاعات» به **«تغییر/حذف غیرمجاز دادهٔ حسابداری»** ارتقا یافت. فاز ۸ عمداً قانون جدیدی اختراع نکرد. **مسدودکنندهٔ استقرار.** |
+| 🔴 | حذف سند بدون cascade (فاز ۸) | `DeleteVoucherHeadCommand` فقط سرسند را `ISDELETED=true` می‌کند و به `TB_VOUCHERSDETAIL` و `TB_VOUCHERDETAIL_LINK_TAFSILI` دست نمی‌زند؛ ردیف‌های سند حذف‌شده همچنان فعال می‌مانند. باید cascade در Application یا فیلتر join در Read یا constraint در DB تصمیم‌گیری شود. |
+| 🔴 | حذف گرهٔ کدینگ بدون بررسی وابستگی (فاز ۸) | `DeleteAccountCodeCommand` بررسی نمی‌کند که گره فرزند دارد (`PARENTID` خودارجاع) یا در ردیف‌های سند استفاده شده. چون حذف نرم است، FK دیتابیس شکایت نمی‌کند — ناسازگاری کاملاً بی‌صدا می‌ماند. |
+| 🔴 | سند Post شده حالا واقعاً قابل تغییر است (فاز ۸) | `UpdateVoucherHeadCommand` اجازه می‌دهد `DOCLIFE` آزادانه عوض شود. invariant تغییرناپذیری در تصمیم دوم آگاهانه حذف شده بود، ولی تا فاز ۷ مسیر نوشتن فقط `INSERT` داشت پس قابل بهره‌برداری نبود؛ حالا مسیر واقعی ویرایش/برگرداندن سند نهایی‌شده وجود دارد. |
+| 🟡 | نبود کنترل همزمانی (فاز ۸) | schema Legacy ستون `rowversion` ندارد و PUTها توکن همزمانی نمی‌گیرند → **last-write-wins**؛ دو ویرایش هم‌زمان یکی را بی‌صدا از بین می‌برد. گزینه‌ها: `UPDATEDDATE` به‌عنوان توکن، یا `If-Match`. |
+| 🟡 | نبود مسیر undelete/restore (فاز ۸) | Update روی رکورد soft-deleted عمداً 404 می‌دهد و `ISDELETED` در Update نیست، پس رکورد حذف‌شده از طریق API قابل بازگردانی نیست. نیازمند `RestoreXCommand` صریح در صورت لزوم. |
 | 🟡 | نبود تست pipeline احراز هویت | تست‌های Api همگی unit اند (بدون `WebApplicationFactory`)، پس اعمال واقعی `FallbackPolicy` و ۴۰۱ شدن درخواست بدون توکن **در هیچ تستی اثبات نشده**. عمداً بسته نشد چون `AddInfrastructure` هنگام ساخت host یک `UseOracle` ثبت می‌کند و تست ساده‌لوحانه ممکن بود به دیتابیس **زنده** وصل شود. |
 | 🟡 | محدودکردن Kestrel به `localhost` | توصیهٔ `security-reviewer` به‌عنوان کاهش ریسک فوری و بدون کد تا استقرار auth نهایی — تصمیم عملیاتی با صاحب پروژه. |
-| 🟡 | `DevAuthController.Roles` بدون allowlist | فقط `UserId` در برابر allowlist سنجیده می‌شود؛ نقش‌ها آزادانه در توکن dev درج می‌شوند. ریسک پایین (خارج از Development مقدار 404 می‌دهد). |
 | 🟡 | `VAHEDCODE` مرز ایزولاسیون نیست | `vahedCode` پارامتر اختیاری query string است که فراخوان می‌دهد، نه فیلتر سمت‌سروری برخاسته از هویت؛ مرور اسناد واحدهای دیگر آزاد است. `ICurrentUser.VahedCode` در فاز ۷ ساخته شد ولی **عمداً به هیچ فیلتر Query وصل نشد**. باید یا اجباری/سمت‌سروری شود یا صریحاً مستند شود که عمدی است. |
 | 🟡 | فیلدهای Audit در DTO عمومی‌اند | `AddUserId`/`ChangeUserId`/`IsDeleted` بی‌قید برگردانده می‌شوند؛ پس از افزودن نقش‌ها باید تصمیم گرفته شود. |
 | 🟡 | بدون Rate Limiting | سقف ۲۰۰ ردیف در هر صفحه کار می‌کند ولی تعداد درخواست محدود نیست. |
@@ -103,7 +114,9 @@
 
 ## گام بعدی پیشنهادی
 
-1. **تصمیم دربارهٔ Authentication/Authorization** — مسدودکنندهٔ هر نوع میزبانی. شامل تصمیم دربارهٔ `ICurrentUser` و حذف `AddUserId` از Commandها تا Audit Trail دوباره معتبر شود.
-2. اولین تست integration واقعی روی Oracle (با احتیاط و روی دادهٔ یک‌بارمصرف) تا صحت Fluent Mapping اثبات شود — شامل ساخت حساب ریشه (`ParentId = null`) و تأیید عملی نگاشت ORA-00001 → 409.
-3. تصمیم دربارهٔ چندمستأجری `VAHEDCODE` (مرز ایزولاسیون یا اطلاعاتی).
-4. جداسازی `CreateXRequest` از MediatR Command + نسخه‌بندی API، پیش از آنکه مصرف‌کنندهٔ واقعی (فرانت‌اند) شروع کند.
+1. **🔴 Authorization در سطح رکورد (IDOR) + اعمال سمت‌سروری `VAHEDCODE`** — با آمدن `PUT`/`DELETE` در فاز ۸ این دیگر فقط مسئلهٔ افشای اطلاعات نیست؛ الان **تغییر و حذف غیرمجاز دادهٔ حسابداری** ممکن است. مسدودکنندهٔ استقرار. (پکیج سازمان `RolesAllowedAttribute`/`ClaimRequirementFilter` دارد و آماده است.)
+2. **🔴 تصمیم دربارهٔ cascade حذف** — سرسند vs ردیف‌های سند، و گرهٔ کدینگ vs فرزندان/ارجاعات. الان هر دو بی‌صدا ناسازگاری تولید می‌کنند.
+3. **🔴 تصمیم دربارهٔ تغییرناپذیری سند Post شده** — آیا `DOCLIFE` باید در `PUT` قفل شود؟
+4. اولین تست integration واقعی روی Oracle (با احتیاط و روی دادهٔ یک‌بارمصرف) تا صحت Fluent Mapping اثبات شود — شامل ساخت حساب ریشه (`ParentId = null`)، تأیید عملی نگاشت ORA-00001 → 409، و صحت `UPDATE` مسیرهای جدید فاز ۸.
+5. تصمیم دربارهٔ کنترل همزمانی (last-write-wins فعلی) برای مسیرهای `PUT`.
+6. جداسازی `CreateXRequest` از MediatR Command (در فاز ۸ فقط برای PUT انجام شد) + نسخه‌بندی API، پیش از آنکه مصرف‌کنندهٔ واقعی (فرانت‌اند) شروع کند.

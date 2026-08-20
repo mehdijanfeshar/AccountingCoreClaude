@@ -106,6 +106,36 @@ public sealed class GlobalExceptionHandlerTests
     }
 
     [Fact]
+    public async Task TryHandleAsync_NotFoundException_Returns404_WithGenericSafeMessage_AndDoesNotLeakResourceNameOrId()
+    {
+        var (handler, httpContext, body) = CreateHandler();
+        var id = Guid.NewGuid();
+        var exception = new NotFoundException("AccountCode", id);
+
+        var handled = await handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
+
+        Assert.True(handled);
+        Assert.Equal(StatusCodes.Status404NotFound, httpContext.Response.StatusCode);
+
+        using var doc = await ReadBodyAsJsonAsync(body);
+        Assert.Equal(404, doc.RootElement.GetProperty("status").GetInt32());
+        Assert.Equal(
+            "The requested resource was not found.",
+            doc.RootElement.GetProperty("detail").GetString());
+
+        var text = await ReadBodyAsTextAsync(body);
+        // NotFoundException.Message embeds the resource name and id (e.g. "AccountCode with id
+        // '...' was not found.") — GlobalExceptionHandler must write its own generic message
+        // instead of exception.Message, so neither the table/resource name nor the raw guid
+        // string may leak into the response body. ("was not found" is deliberately NOT asserted
+        // against here — it is a substring of the intentional generic detail text itself
+        // ("The requested resource was not found."), not a sign of a leak.)
+        Assert.DoesNotContain("AccountCode", text);
+        Assert.DoesNotContain(id.ToString(), text);
+        Assert.DoesNotContain("with id", text);
+    }
+
+    [Fact]
     public async Task TryHandleAsync_ArbitraryException_Returns500_AndBodyContainsNoStackTraceAndNoOracleSqlText()
     {
         var (handler, httpContext, body) = CreateHandler();
