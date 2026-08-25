@@ -1,4 +1,5 @@
 using Accounting.Application.Common;
+using Accounting.Application.Vouchers.Commands.Common;
 using Accounting.Application.Vouchers.Commands.CreateVoucherDetail;
 using Accounting.Application.Vouchers.Commands.DeleteVoucherDetail;
 using Accounting.Application.Vouchers.Commands.UpdateVoucherDetail;
@@ -48,6 +49,19 @@ namespace Accounting.Api.Controllers;
 /// <b>404</b> instead — a genuine contract difference from the other two controllers' create
 /// actions — because creating a detail line requires an already-existing parent voucher head;
 /// see <see cref="CreateVoucherDetailCommandHandler"/> XML doc.
+///
+/// <b>The declared 400 on the write actions now covers two distinct causes.</b> Besides
+/// FluentValidation failures (which return an <see cref="HttpValidationProblemDetails"/> with a
+/// per-field <c>errors</c> dictionary), a well-formed request whose <c>AccountId</c>/<c>ReceiptId</c>
+/// references a row that does not exist violates an Oracle FK (<c>FK_VOUCHERDETAIL_ACCOUNCODE</c>,
+/// <c>FK_VOUCHERDETAIL_RECEIP</c>) and is translated centrally by <c>UnitOfWork.SaveChangesAsync</c>
+/// into a <c>ForeignKeyViolationException</c> → 400 with a plain <see cref="ProblemDetails"/> (no
+/// <c>errors</c> dictionary, because naming the offending field would mean leaking the Oracle
+/// constraint name). Before that translation existed these surfaced as an unhelpful raw 500.
+/// Note that no such protection exists for the تفصیلی assignments described below:
+/// <c>TB_VOUCHERDETAIL_LINK_TAFSILI.TAFSILI_ID</c>/<c>LEVEL_ID</c> carry no FK constraint at all in
+/// the Legacy schema, so a bad id there is accepted silently — a pre-existing open item in
+/// <c>CLAUDE.md</c>, not introduced here.
 /// </summary>
 [ApiController]
 [Route("api/voucher-details")]
@@ -159,7 +173,8 @@ public sealed class VoucherDetailsController : ControllerBase
             request.Debtor,
             request.Creditor,
             request.VahedCode,
-            request.Year);
+            request.Year,
+            request.TafsiliLinks);
 
         await _mediator.Send(command, cancellationToken);
 
@@ -212,6 +227,11 @@ public sealed record DeleteVoucherDetailResponse(Guid Id);
 /// <see cref="UpdateVoucherDetailCommand"/> except <c>Id</c> (bound from the route instead) and
 /// except <c>VoucherHeadId</c>, which is not updatable at all — see
 /// <see cref="UpdateVoucherDetailCommand"/> XML doc for the "no reparenting" rationale.
+///
+/// <c>TafsiliLinks</c> carries the complete desired set of تفصیلی assignments for this line.
+/// Omitting the property (or sending <c>null</c>) leaves the existing assignments untouched;
+/// sending an empty array removes them all. See <see cref="UpdateVoucherDetailCommand.TafsiliLinks"/>
+/// for the full replace-semantics contract and why null and empty deliberately differ.
 /// </summary>
 public sealed record UpdateVoucherDetailRequest(
     Guid? AccountId,
@@ -224,4 +244,5 @@ public sealed record UpdateVoucherDetailRequest(
     decimal? Debtor,
     decimal? Creditor,
     string? VahedCode,
-    string? Year);
+    string? Year,
+    IReadOnlyList<VoucherDetailTafsiliLinkInput>? TafsiliLinks = null);

@@ -55,4 +55,24 @@ public sealed class VoucherDetailRepository : IVoucherDetailRepository
 
         return linkRowsToSoftDelete.Count;
     }
+
+    public async Task AddTafsiliLinkAsync(
+        TB_VOUCHERDETAIL_LINK_TAFSILI tafsiliLink,
+        CancellationToken cancellationToken = default)
+    {
+        await _dbContext.TB_VOUCHERDETAIL_LINK_TAFSILIs.AddAsync(tafsiliLink, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TB_VOUCHERDETAIL_LINK_TAFSILI>> GetActiveTafsiliLinksAsync(
+        Guid detailId,
+        CancellationToken cancellationToken = default)
+    {
+        // Change-tracked on purpose (no AsNoTracking): the update handler mutates the returned
+        // rows in place to soft-delete the links the caller dropped, and relies on the handler's
+        // single SaveChangesAsync to persist them alongside the detail row itself.
+        // ISDELETED is a non-nullable bool here, so `== false` needs no NULL branch.
+        return await _dbContext.TB_VOUCHERDETAIL_LINK_TAFSILIs
+            .Where(l => l.VOUCHERSDETAIL_ID == detailId && l.ISDELETED == false)
+            .ToListAsync(cancellationToken);
+    }
 }

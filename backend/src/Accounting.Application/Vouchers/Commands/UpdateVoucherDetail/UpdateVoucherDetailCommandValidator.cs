@@ -1,3 +1,4 @@
+using Accounting.Application.Vouchers.Commands.Common;
 using FluentValidation;
 
 namespace Accounting.Application.Vouchers.Commands.UpdateVoucherDetail;
@@ -23,5 +24,12 @@ public sealed class UpdateVoucherDetailCommandValidator : AbstractValidator<Upda
 
         RuleFor(x => x.Year)
             .MaximumLength(4);
+
+        // No-op when TafsiliLinks is null ("leave existing links untouched" — see the command's
+        // XML doc for why null and empty differ here). An EMPTY list is still valid and is NOT a
+        // validation failure: it is the caller explicitly asking for "no links on this line".
+        RuleForEach(x => x.TafsiliLinks)
+            .SetValidator(new VoucherDetailTafsiliLinkInputValidator())
+            .When(x => x.TafsiliLinks is not null);
     }
 }

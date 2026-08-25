@@ -21,6 +21,17 @@ namespace Accounting.Application.Vouchers.Commands.CreateVoucherDetail;
 /// <c>DbUpdateException</c>/ORA-02291 (FK violation on <c>FK_VOUCHERHEAD</c>) surfacing as an
 /// unhelpful 500.
 ///
+/// When <see cref="CreateVoucherDetailCommand.TafsiliLinks"/> is supplied, one
+/// <see cref="TB_VOUCHERDETAIL_LINK_TAFSILI"/> row per distinct <c>(TafsiliId, LevelId)</c> pair is
+/// staged via <see cref="IVoucherDetailRepository.AddTafsiliLinkAsync"/> BEFORE that same single
+/// <see cref="IUnitOfWork.SaveChangesAsync"/>, so the line and its تفصیلی are persisted atomically —
+/// a line can never be observed without the تفصیلی it was created with. Each link's
+/// <c>VOUCHERSDETAIL_ID</c>/<c>VAHEDCODE</c>/<c>YEAR</c> are wired from the line just built, never
+/// taken from the link input (see <see cref="Accounting.Application.Vouchers.Commands.Common.VoucherDetailTafsiliLinkInput"/>),
+/// and every link shares the line's single <c>CREATEDDATE</c> value rather than re-reading the
+/// clock per row — the same rule <c>CreateVoucherHeadCommandHandler</c> applies to a head and its
+/// initial lines.
+///
 /// <b>Known, documented gap (open item):</b> this is a check-then-act pattern, not a
 /// transactional guarantee — a race where the head is soft-deleted by a concurrent request
 /// between this check and the later <see cref="IUnitOfWork.SaveChangesAsync"/> call still falls
@@ -55,6 +66,8 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
             throw new NotFoundException("VoucherHead", request.VoucherHeadId);
         }
 
+        var now = DateTime.UtcNow;
+
         var entity = new TB_VOUCHERSDETAIL
         {
             ID = Guid.NewGuid(),
@@ -71,11 +84,43 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
             VAHEDCODE = request.VahedCode,
             YEAR = request.Year,
             ADDUSERID = _currentUser.UserId,
-            CREATEDDATE = DateTime.UtcNow,
+            CREATEDDATE = now,
             ISDELETED = false,
         };
 
         await _voucherDetailRepository.AddAsync(entity, cancellationToken);
+
+        if (request.TafsiliLinks is { Count: > 0 } tafsiliLinks)
+        {
+            // Collapse duplicate (TafsiliId, LevelId) pairs: the same تفصیلی assigned twice to one
+            // line is one assignment, and TB_VOUCHERDETAIL_LINK_TAFSILI has no UNIQUE constraint
+            // to reject the second row, so writing both would leave duplicate data behind.
+            var stagedKeys = new HashSet<(Guid TafsiliId, Guid LevelId)>();
+
+            foreach (var linkInput in tafsiliLinks)
+            {
+                if (!stagedKeys.Add((linkInput.TafsiliId, linkInput.LevelId)))
+                {
+                    continue;
+                }
+
+                var linkEntity = new TB_VOUCHERDETAIL_LINK_TAFSILI
+                {
+                    ID = Guid.NewGuid(),
+                    VOUCHERSDETAIL_ID = entity.ID,
+                    TAFSILI_ID = linkInput.TafsiliId,
+                    LEVEL_ID = linkInput.LevelId,
+                    VAHEDCODE = entity.VAHEDCODE,
+                    YEAR = entity.YEAR,
+                    ADDUSERID = _currentUser.UserId,
+                    CREATEDDATE = now,
+                    ISDELETED = false,
+                };
+
+                await _voucherDetailRepository.AddTafsiliLinkAsync(linkEntity, cancellationToken);
+            }
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return entity.ID;

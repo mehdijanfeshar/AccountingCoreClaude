@@ -63,4 +63,40 @@ public interface IVoucherDetailRepository
         string? changeUserId,
         DateTime updatedDate,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stages a new <see cref="TB_VOUCHERDETAIL_LINK_TAFSILI"/> row for insert as part of its
+    /// parent detail line's write. Only stages — the handler still owns the single
+    /// <see cref="IUnitOfWork.SaveChangesAsync"/>, so a detail line and its tafsili links are
+    /// always persisted atomically.
+    ///
+    /// <b>Deliberately named <c>AddTafsiliLinkAsync</c>, not <c>AddAsync</c>.</b> The name is not
+    /// cosmetic: <c>AddAsync</c>/<c>GetForUpdateAsync</c> are this project's aggregate-root-shaped
+    /// method names, and <c>NoIndependentLinkTableWritePathTests</c> asserts no method of that
+    /// shape ever accepts or returns a <c>*_LINK_TAFSIL*</c>/<c>*_LINK_LEVEL*</c> entity. A
+    /// parent-scoped, explicitly-named method on the PARENT aggregate's repository is the
+    /// sanctioned way to mutate an embedded table — the same shape as the pre-existing
+    /// <see cref="SoftDeleteTafsiliLinksAsync"/>. There is deliberately no
+    /// <c>ITafsiliLinkRepository</c>, no controller, and no MediatR request for this table.
+    /// </summary>
+    Task AddTafsiliLinkAsync(
+        TB_VOUCHERDETAIL_LINK_TAFSILI tafsiliLink,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Loads every non-soft-deleted <see cref="TB_VOUCHERDETAIL_LINK_TAFSILI"/> row belonging to
+    /// <paramref name="detailId"/> as change-tracked entities (deliberately no
+    /// <c>AsNoTracking()</c>), so that <c>UpdateVoucherDetailCommandHandler</c> can reconcile the
+    /// caller's requested set against them and soft-delete the ones that were dropped, in place,
+    /// within the handler's single <see cref="IUnitOfWork.SaveChangesAsync"/>.
+    ///
+    /// Filter is a plain <c>ISDELETED == false</c> — <see cref="TB_VOUCHERDETAIL_LINK_TAFSILI.ISDELETED"/>
+    /// is a non-nullable <see cref="bool"/>, so unlike the two upstream voucher tables there is no
+    /// NULL branch to account for (same note as on <see cref="SoftDeleteTafsiliLinksAsync"/>).
+    ///
+    /// Returns an empty list — never <see langword="null"/> — when the line has no active links.
+    /// </summary>
+    Task<IReadOnlyList<TB_VOUCHERDETAIL_LINK_TAFSILI>> GetActiveTafsiliLinksAsync(
+        Guid detailId,
+        CancellationToken cancellationToken = default);
 }

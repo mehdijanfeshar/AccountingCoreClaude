@@ -1,3 +1,4 @@
+using Accounting.Application.Vouchers.Commands.Common;
 using FluentValidation;
 
 namespace Accounting.Application.Vouchers.Commands.CreateVoucherDetail;
@@ -24,5 +25,13 @@ public sealed class CreateVoucherDetailCommandValidator : AbstractValidator<Crea
 
         RuleFor(x => x.Year)
             .MaximumLength(4);
+
+        // No-op when TafsiliLinks is null (attaching تفصیلی is opt-in) — the explicit `.When`
+        // guard, rather than relying on RuleForEach's own null-tolerance, documents that
+        // behaviour at the call site, matching CreateVoucherHeadCommandValidator's treatment of
+        // InitialDetails.
+        RuleForEach(x => x.TafsiliLinks)
+            .SetValidator(new VoucherDetailTafsiliLinkInputValidator())
+            .When(x => x.TafsiliLinks is not null);
     }
 }

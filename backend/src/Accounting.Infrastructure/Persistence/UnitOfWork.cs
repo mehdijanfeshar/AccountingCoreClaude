@@ -23,12 +23,41 @@ public sealed class UnitOfWork : IUnitOfWork, IAsyncDisposable
     }
 
     /// <summary>
-    /// Persists staged changes. Oracle-specific unique-constraint violations (ORA-00001, e.g.
-    /// <c>UK_ACCOUNTCODE</c> or <c>UK_VOUCHERHEAD_NUMBER</c>) are detected here — the only
-    /// place in the solution allowed to know about <see cref="OracleException"/> — and
-    /// translated into an Application-level <see cref="DuplicateKeyException"/> so that
-    /// <c>Accounting.Api</c> never has to reference Oracle types. Any other
-    /// <see cref="DbUpdateException"/> is rethrown as-is.
+    /// Oracle error number for ORA-00001, "unique constraint violated".
+    /// </summary>
+    private const int OracleUniqueConstraintViolated = 1;
+
+    /// <summary>
+    /// Oracle error number for ORA-02291, "integrity constraint violated - parent key not found".
+    /// Its sibling ORA-02292 ("child record found") is deliberately not handled — see
+    /// <see cref="ForeignKeyViolationException"/> XML doc: this project performs no hard deletes,
+    /// so that error is unreachable and mapping it would be speculation.
+    /// </summary>
+    private const int OracleParentKeyNotFound = 2291;
+
+    /// <summary>
+    /// Persists staged changes. Oracle-specific constraint violations are detected here — this is
+    /// the only place in the solution allowed to know about <see cref="OracleException"/> — and
+    /// translated into Application-level exceptions so that <c>Accounting.Api</c> never has to
+    /// reference Oracle types:
+    /// <list type="bullet">
+    /// <item><description>ORA-00001 (unique constraint, e.g. <c>UK_ACCOUNTCODE</c> or
+    /// <c>UK_VOUCHERHEAD_NUMBER</c>) → <see cref="DuplicateKeyException"/> → 409.</description></item>
+    /// <item><description>ORA-02291 (parent key not found, e.g. <c>FK_VOUCHERDETAIL_ACCOUNCODE</c>
+    /// when <c>ACCOUNT_ID</c> references a non-existent <c>TB_ACCOUNTCODE</c> row) →
+    /// <see cref="ForeignKeyViolationException"/> → 400.</description></item>
+    /// </list>
+    /// Any other <see cref="DbUpdateException"/> is rethrown as-is.
+    ///
+    /// Because this translation lives in the single central <see cref="IUnitOfWork"/>
+    /// implementation rather than in any individual handler, EVERY write path gets it uniformly —
+    /// create/update on <c>TB_ACCOUNTCODE</c>, <c>TB_VOUCHERSHEAD</c> and <c>TB_VOUCHERSDETAIL</c>
+    /// alike, including the composite head+lines create and the embedded tafsili-link writes —
+    /// with no per-command opt-in to forget.
+    ///
+    /// The generic messages below are intentional: the raw Oracle text names the violated
+    /// constraint, table and column, which must never reach an HTTP response body. The original
+    /// exception is preserved as <c>InnerException</c> for logging only.
     /// </summary>
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -36,10 +65,17 @@ public sealed class UnitOfWork : IUnitOfWork, IAsyncDisposable
         {
             return await _dbContext.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateException ex) when (ex.InnerException is OracleException { Number: 1 })
+        catch (DbUpdateException ex)
+            when (ex.InnerException is OracleException { Number: OracleUniqueConstraintViolated })
         {
             throw new DuplicateKeyException(
                 "A row with the same unique key already exists.", ex);
+        }
+        catch (DbUpdateException ex)
+            when (ex.InnerException is OracleException { Number: OracleParentKeyNotFound })
+        {
+            throw new ForeignKeyViolationException(
+                "One or more referenced records do not exist.", ex);
         }
     }
 

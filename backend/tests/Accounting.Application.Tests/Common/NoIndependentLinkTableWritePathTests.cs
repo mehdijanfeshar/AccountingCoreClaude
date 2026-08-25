@@ -9,12 +9,26 @@ namespace Accounting.Application.Tests.Common;
 /// Locks in the team rule confirmed alongside the 2026-08-20 project-owner decision (recorded in
 /// <c>docs/tamin-core-entity-reference.md</c> بخش ۵): every <c>*_LINK_TAFSIL*</c>/<c>*_LINK_LEVEL*</c>
 /// Legacy table is permanently embedded — it is only ever mutated as a side effect of its parent
-/// aggregate's own write path (e.g. <c>TB_VOUCHERDETAIL_LINK_TAFSILI</c> only via
-/// <see cref="IVoucherDetailRepository.SoftDeleteTafsiliLinksAsync"/> /
-/// <see cref="IVoucherHeadRepository.SoftDeleteDetailTreeAsync"/>) — and must never get its own
-/// independent Create/Read/Update/Delete use case. A regression here would mean somebody started
-/// building a standalone CRUD surface for a table the project owner explicitly decided must stay
-/// embedded forever.
+/// aggregate's own write path — and must never get its own independent Create/Read/Update/Delete
+/// use case. A regression here would mean somebody started building a standalone CRUD surface for
+/// a table the project owner explicitly decided must stay embedded forever.
+///
+/// <b>Updated in phase 11.</b> <c>TB_VOUCHERDETAIL_LINK_TAFSILI</c> now has a genuine WRITE path
+/// (<see cref="IVoucherDetailRepository.AddTafsiliLinkAsync"/> /
+/// <see cref="IVoucherDetailRepository.GetActiveTafsiliLinksAsync"/>) in addition to the
+/// pre-existing cascade-delete paths
+/// (<see cref="IVoucherDetailRepository.SoftDeleteTafsiliLinksAsync"/> /
+/// <see cref="IVoucherHeadRepository.SoftDeleteDetailTreeAsync"/>) — this closed the phase-10 open
+/// item that a تفصیلی could be deleted but never assigned. <b>That does not weaken this rule</b>,
+/// and the distinction being enforced here is precise:
+/// <list type="bullet">
+/// <item><description>ALLOWED — explicitly-named, parent-scoped methods on the PARENT aggregate's
+/// repository, reachable only through <c>Create/UpdateVoucherDetailCommand</c>.</description></item>
+/// <item><description>FORBIDDEN — the aggregate-root-shaped <c>AddAsync</c>/<c>GetForUpdateAsync</c>
+/// pair taking or returning a link entity, a repository interface dedicated to a link table, or a
+/// MediatR request named for one. Any of those would mean the table had been promoted to an
+/// aggregate root of its own.</description></item>
+/// </list>
 /// </summary>
 public sealed class NoIndependentLinkTableWritePathTests
 {
@@ -98,6 +112,64 @@ public sealed class NoIndependentLinkTableWritePathTests
             "Found independent AddAsync/GetForUpdateAsync write path(s) for a *_LINK_TAFSIL*/*_LINK_LEVEL* "
                 + $"entity: {string.Join(", ", offendingMethods)}. Every such table must stay embedded — "
                 + "mutate it only via its parent aggregate's own cascade method (e.g. SoftDeleteTafsiliLinksAsync).");
+    }
+
+    /// <summary>
+    /// No repository interface may be dedicated to a link table. Without this, the assertion above
+    /// could be trivially bypassed by moving the link entity onto its own
+    /// <c>ITafsiliLinkRepository</c> — which is exactly what "promoting an embedded table to an
+    /// aggregate root" would look like in this codebase. Scans the whole Application assembly, so
+    /// it also catches an interface nobody remembered to add to
+    /// <see cref="RepositoryInterfacesUnderTest"/>.
+    /// </summary>
+    [Fact]
+    public void NoRepositoryInterface_InApplicationAssembly_IsDedicatedToALinkTable()
+    {
+        var applicationAssembly = typeof(IVoucherDetailRepository).Assembly;
+
+        var repositoryInterfaces = applicationAssembly.GetTypes()
+            .Where(t => t.IsInterface && t.Name.EndsWith("Repository", StringComparison.Ordinal))
+            .ToList();
+
+        var offendingInterfaces = repositoryInterfaces
+            .Where(t =>
+                t.Name.Contains("LinkTafsili", StringComparison.OrdinalIgnoreCase) ||
+                t.Name.Contains("TafsiliLink", StringComparison.OrdinalIgnoreCase) ||
+                t.Name.Contains("LinkLevel", StringComparison.OrdinalIgnoreCase))
+            .Select(t => t.FullName)
+            .ToList();
+
+        Assert.True(
+            offendingInterfaces.Count == 0,
+            $"Found repository interface(s) dedicated to an embedded link table: {string.Join(", ", offendingInterfaces)}. "
+                + "Mutate those tables only through their parent aggregate's repository "
+                + "(e.g. IVoucherDetailRepository.AddTafsiliLinkAsync).");
+
+        // Not vacuous: the assembly must genuinely contain repository interfaces.
+        Assert.NotEmpty(repositoryInterfaces);
+    }
+
+    /// <summary>
+    /// The positive half of this guard, added in phase 11: the sanctioned parent-scoped write path
+    /// must actually exist on the PARENT aggregate's repository. Without this, someone "fixing" a
+    /// failure of the negative assertions by simply deleting the تفصیلی write path would turn this
+    /// file green while silently reopening the phase-10 gap (links deletable but never assignable).
+    /// </summary>
+    [Fact]
+    public void VoucherDetailRepository_OwnsTheTafsiliLinkWritePath_OnTheParentAggregate()
+    {
+        var repository = typeof(IVoucherDetailRepository);
+
+        var add = repository.GetMethod("AddTafsiliLinkAsync");
+        Assert.NotNull(add);
+        Assert.Equal(
+            typeof(TB_VOUCHERDETAIL_LINK_TAFSILI),
+            add!.GetParameters()[0].ParameterType);
+
+        var read = repository.GetMethod("GetActiveTafsiliLinksAsync");
+        Assert.NotNull(read);
+        // Scoped by the PARENT's id — the caller cannot address link rows directly.
+        Assert.Equal(typeof(Guid), read!.GetParameters()[0].ParameterType);
     }
 
     /// <summary>
