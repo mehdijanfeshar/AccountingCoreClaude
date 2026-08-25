@@ -12,8 +12,20 @@ namespace Accounting.Api.Controllers;
 
 /// <summary>
 /// Thin HTTP surface over the <c>TB_VOUCHERSHEAD</c> (Legacy voucher header) write and read
-/// use cases. Named "voucher heads" (not "vouchers") to match the underlying resource, so
-/// voucher lines can later be exposed at <c>/api/voucher-heads/{id}/lines</c> without a rename.
+/// use cases. Named "voucher heads" (not "vouchers") to match the underlying resource.
+///
+/// <b>Superseded (2026-08-20):</b> this class previously expected voucher lines to later be
+/// exposed at <c>/api/voucher-heads/{id}/lines</c>. That expectation did not hold — the project
+/// owner instead declared <c>TB_VOUCHERSDETAIL</c> an independent aggregate root with its OWN
+/// standalone CRUD (recorded in <c>docs/tamin-core-entity-reference.md</c> بخش ۵), so voucher
+/// detail lines are exposed at the top-level <c>api/voucher-details</c> route by
+/// <see cref="VoucherDetailsController"/> instead — never nested under this controller. The one
+/// remaining tie to this controller is purely additive: <see cref="Create"/>'s
+/// <c>CreateVoucherHeadCommand.InitialDetails</c> lets a caller create a head together with its
+/// opening detail lines in one atomic call, for the specific case of a brand-new voucher; see
+/// <see cref="VoucherDetailsController"/> XML doc for the full rationale of why the two
+/// controllers stayed separate regardless.
+///
 /// Every action does nothing but: build a request → send it through MediatR → map the result
 /// to an <see cref="IActionResult"/>.
 ///

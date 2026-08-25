@@ -34,6 +34,30 @@ public sealed class HttpVerbConventionTests
     }
 
     /// <summary>
+    /// QA regression lock (phase-10 code review finding): <see cref="AllControllerActions"/> is
+    /// the whole basis of <see cref="NoActionInTheApiAssembly_UsesHttpPutOrHttpDelete"/> below —
+    /// if it ever returned an empty set (e.g. because the assembly reference silently stopped
+    /// resolving <see cref="VoucherDetailsController"/>, or a future refactor moved controllers to
+    /// a different assembly), that test would still pass vacuously and the guard would be
+    /// worthless without anyone noticing. This test asserts the scan is non-empty AND specifically
+    /// contains <see cref="VoucherDetailsController"/>'s actions, proving the newest controller is
+    /// actually covered.
+    /// </summary>
+    [Fact]
+    public void AllControllerActions_IsNonEmpty_AndIncludesVoucherDetailsController()
+    {
+        var actions = AllControllerActions().ToList();
+
+        Assert.NotEmpty(actions);
+        Assert.Contains(actions, m => m.DeclaringType == typeof(VoucherDetailsController));
+        Assert.Contains(actions, m => m.DeclaringType == typeof(VoucherDetailsController) && m.Name == nameof(VoucherDetailsController.Create));
+        Assert.Contains(actions, m => m.DeclaringType == typeof(VoucherDetailsController) && m.Name == nameof(VoucherDetailsController.GetList));
+        Assert.Contains(actions, m => m.DeclaringType == typeof(VoucherDetailsController) && m.Name == nameof(VoucherDetailsController.GetById));
+        Assert.Contains(actions, m => m.DeclaringType == typeof(VoucherDetailsController) && m.Name == nameof(VoucherDetailsController.Update));
+        Assert.Contains(actions, m => m.DeclaringType == typeof(VoucherDetailsController) && m.Name == nameof(VoucherDetailsController.Delete));
+    }
+
+    /// <summary>
     /// No action anywhere in the API may be attributed with <c>[HttpPut]</c> or
     /// <c>[HttpDelete]</c> — the project owner's network infrastructure does not allow either
     /// verb. This is a whole-assembly reflection scan, not a per-controller check, so it also
@@ -69,6 +93,14 @@ public sealed class HttpVerbConventionTests
     public void VoucherHeadsController_UpdateAndDelete_AreHttpPost(string methodName)
     {
         AssertActionIsHttpPost(typeof(VoucherHeadsController), methodName);
+    }
+
+    [Theory]
+    [InlineData(nameof(VoucherDetailsController.Update))]
+    [InlineData(nameof(VoucherDetailsController.Delete))]
+    public void VoucherDetailsController_UpdateAndDelete_AreHttpPost(string methodName)
+    {
+        AssertActionIsHttpPost(typeof(VoucherDetailsController), methodName);
     }
 
     private static void AssertActionIsHttpPost(Type controllerType, string methodName)

@@ -19,6 +19,17 @@ namespace Accounting.Api;
 /// <c>UnitOfWork.SaveChangesAsync</c> after translating an Oracle ORA-00001) → 409
 /// <see cref="ProblemDetails"/> with a safe, generic message — never the raw Oracle/SQL
 /// text.</description></item>
+/// <item><description><see cref="ForeignKeyViolationException"/> (raised by
+/// <c>UnitOfWork.SaveChangesAsync</c> after translating an Oracle ORA-02291) → 400
+/// <see cref="ProblemDetails"/> with a safe, generic message — never the raw Oracle/SQL text,
+/// which would name the violated constraint, table and column. 400 rather than 409 because a
+/// missing parent key means the caller sent an identifier that references nothing (an invalid
+/// payload), not a conflict with existing state — see <see cref="ForeignKeyViolationException"/>
+/// XML doc for the full rationale, including why 404 was rejected. Note this is the one 400
+/// response on the API that carries a plain <see cref="ProblemDetails"/> rather than an
+/// <see cref="HttpValidationProblemDetails"/> with an <c>errors</c> dictionary, since there is no
+/// request field to attribute the failure to without leaking the Oracle constraint
+/// name.</description></item>
 /// <item><description><see cref="NotFoundException"/> (raised by Update/Delete command
 /// handlers when the target row does not exist or is already soft-deleted) → 404
 /// <see cref="ProblemDetails"/> with a safe, generic message — no table/column name
@@ -60,6 +71,14 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     StatusCodes.Status409Conflict,
                     "Conflict",
                     "A row with the same unique key already exists.")),
+
+            ForeignKeyViolationException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    "One or more referenced records do not exist.")),
 
             NotFoundException => (
                 StatusCodes.Status404NotFound,

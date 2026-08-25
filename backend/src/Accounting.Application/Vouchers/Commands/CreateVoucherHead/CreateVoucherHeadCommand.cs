@@ -26,6 +26,32 @@ namespace Accounting.Application.Vouchers.Commands.CreateVoucherHead;
 /// <param name="ParentHeadId">Optional self-referencing parent voucher head.</param>
 /// <param name="AttachFileName">ATTACHFILE_NAME column (max 100 chars).</param>
 /// <param name="AtfNum">ATF_NUM column (max 15 chars, fixed length).</param>
+/// <param name="InitialDetails">
+/// Optional initial <c>TB_VOUCHERSDETAIL</c> lines to create together with this head, in the
+/// SAME <see cref="Accounting.Application.Common.Interfaces.IUnitOfWork.SaveChangesAsync"/>
+/// call (composite create — option "الف" of the 2026-08-20 project-owner decision recorded in
+/// <c>docs/tamin-core-entity-reference.md</c> بخش ۵: <c>TB_VOUCHERSDETAIL</c> is an independent
+/// aggregate with its own standalone CRUD, but the very first write for a brand-new voucher must
+/// still be able to persist header + lines atomically). <see langword="null"/> or an empty list
+/// behaves byte-identically to a plain header-only create — no behavioural change for any
+/// existing caller.
+///
+/// <b>Documented, deliberate exception to the phase-5 "Command carries only primitives" rule:</b>
+/// that rule exists so a Command can never smuggle a Domain entity across the API/Application
+/// boundary (a Domain entity carries EF Core change-tracking semantics, navigation properties,
+/// and identity that a transport object must never have). <see cref="CreateVoucherHeadDetailInput"/>
+/// is a nested <c>sealed record</c> of primitives only — not a Domain entity, not
+/// <see cref="Accounting.Domain.Entity.TB_VOUCHERSDETAIL"/> — so nesting it here is compliant
+/// with the rule's actual purpose, and this exception is recorded explicitly rather than
+/// silently bent.
+///
+/// The response type of this command intentionally stays <c>Guid</c> (the head's <c>ID</c>
+/// only) — deliberate, to keep this change strictly non-breaking for every existing caller of
+/// <see cref="CreateVoucherHeadCommand"/>. The generated detail line IDs are not returned here;
+/// they are discoverable via <c>GET /api/voucher-details?voucherHeadId={id}</c>
+/// (<see cref="Accounting.Application.Vouchers.Queries.GetVoucherDetails.GetVoucherDetailsQuery"/>)
+/// after this command completes.
+/// </param>
 public sealed record CreateVoucherHeadCommand(
     string DocNum,
     string DateDoc,
@@ -40,4 +66,5 @@ public sealed record CreateVoucherHeadCommand(
     string? SndVahedCode,
     Guid? ParentHeadId,
     string? AttachFileName,
-    string? AtfNum) : IRequest<Guid>;
+    string? AtfNum,
+    IReadOnlyList<CreateVoucherHeadDetailInput>? InitialDetails = null) : IRequest<Guid>;

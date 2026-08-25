@@ -76,7 +76,6 @@
 |---|---|
 | `team-lead` | مدیریت و تقسیم وظایف بین سایر ایجنت‌ها؛ همیشه اول این را صدا بزن |
 | `accounting-domain` | مدل دامنه و قوانین کسب‌وکار کدینگ شناور |
-| `database-oracle` | schema **جدید**، migration، ایندکس، Materialized View در Oracle |
 | `database-reverse-engineer` | کشف Read-Only دیتابیس Legacy و Scaffold جدول‌ها به Entity + Fluent Mapping |
 | `entity-mapper` | ادغام کنترل‌شدهٔ Legacy Entity در Domain و reconcile مفاهیم هم‌پوشان |
 | `backend-dotnet` | Commands/Queries/Handlers، API |
@@ -84,8 +83,9 @@
 | `frontend-react` | UI، فرم صدور سند با فیلدهای تفصیلی داینامیک |
 | `qa-tester` | تست و بررسی کیفیت قبل از commit |
 | `security-reviewer` | Gate امنیتی: Auth، دسترسی، داده‌های حساس، Audit |
-| `performance-reviewer` | Gate عملکرد: Query Plan، ایندکس، N+1، گزارش‌های حجیم |
+| `performance-reviewer` | Gate عملکرد: Query Plan، ایندکس، Materialized View، N+1، گزارش‌های حجیم |
 
+> **✅ `database-oracle` حذف شد (۲۰۲۶-۰۸-۲۰، تصمیم صریح صاحب پروژه).** طبق «Legacy جایگزین کامل»، این پروژه هرگز schema/جدول جدید نمی‌سازد؛ با این قید، تنها مسئولیت‌های واقعی باقی‌ماندهٔ آن (Index، Materialized View، Execution Plan، گزارش‌های سنگین) از قبل عیناً در `performance-reviewer` هم بودند. برای جلوگیری از ایجنت تکراری/بلااستفاده، حذف شد.
 **قاعدهٔ کار:** برای هر درخواست جدید، ابتدا `team-lead` را صدا بزن؛ او وظیفه را بین سایر ایجنت‌ها تقسیم می‌کند.
 
 ## ساختار پوشه‌ها
@@ -100,9 +100,22 @@ backend/src/Accounting.Api             # Controllers
 backend/tests/Accounting.Domain.Tests  # تست واحد قوانین دامنه (xUnit)
 frontend/src/features/chart-of-accounts
 frontend/src/features/vouchers
-docs/chart-of-accounts.md              # مستندسازی کامل منطق کدینگ شناور
+docs/chart-of-accounts.md              # مستندسازی کامل منطق کدینگ شناور (SUPERSEDED)
 docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
+docs/tamin-core-entity-reference.md    # مرجع «مستقل vs تعبیه‌شده» استخراج‌شده از پروژهٔ خارجی Tamin.Core
 ```
+
+## 📌 مرجع دامنه — قبل از ساخت هر CRUD این را بخوان
+
+`docs/tamin-core-entity-reference.md` (ایجادشده ۲۰۲۶-۰۸-۲۰) نگاشت کامل ۱۳۰ فایل Entity پروژهٔ خارجی `D:\CentralAccount\Tamin.Core\Entities` به ۶۵ Entity `TB_XXX` ماست. آن پروژه **روی همان schema اوراکل `CENTRALACCOUNT`** کار می‌کند، پس تصمیم‌های aggregate آن یک سیگنال طراحی معتبر و آزموده است.
+
+**قاعدهٔ الزامی:** `backend-dotnet` (و هر ایجنتی که CRUD می‌سازد) باید **پیش از ساخت Command/Query برای هر `TB_XXX`** این سند را چک کند:
+1. اگر Entity در **بخش ۲** سند است (۱۳ مورد تعبیه‌شده) → **CRUD مستقل نساز**؛ عملیات را از طریق Aggregate Root پیاده کن.
+2. اگر در **بخش ۴** است (`RabetClosing`, `ChargeLinkCost` — مبهم) → قبل از تصمیم از کاربر بپرس.
+3. اگر در **بخش ۵** است (الگوی Head/Detail) → مرز Aggregate هنوز **تصمیم‌گیری نشده**؛ رجوع به تصمیم باز پایین‌تر.
+4. بقیه (بخش ۳، ۴۲ مورد) → CRUD مستقل معقول است.
+
+⚠️ **این سند sync خودکار ندارد.** از یک پروژهٔ خارجی READ-ONLY استخراج شده و scope خواندنش عمداً فقط به پوشهٔ `Entities/` محدود بوده (نه `ApplicationUseCases`/`Domain.Common`). اگر آن پروژه تغییر کرد یا به بخش‌های دیگرش دسترسی داده شد، سند باید **دستی** بازبینی شود. بخش ۱۰ سند فهرست مواردی است که بدون خروج از scope قطعی نشد.
 
 ## وضعیت فعلی پروژه
 
@@ -128,7 +141,108 @@ docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
 - [x] **فاز ۷ — Authentication/Authorization + رفع جعل‌پذیری `ADDUSERID`** (۲۰۲۶-۰۸-۱۹) — هر دو ریسک 🔴 CRITICAL که `security-reviewer` در Gate فاز ۶ کشف کرده بود حل شدند. اتصال inbound به IDP واقعی سازمان (`Tamin.Framework.Common.Security`) + `FallbackPolicy` + `ICurrentUser`. جزئیات در «فاز ۷» پایین‌تر. **۱۷۰/۱۷۰ تست سبز.**
 - [x] **فاز ۸ — تکمیل CRUD: Update + Delete (Soft Delete)** (۲۰۲۶-۰۸-۱۹) — ۴ Command جدید و ۴ Endpoint جدید، همگی `POST` با فعل صریح در route (`PUT`/`DELETE` به‌درخواست صریح صاحب پروژه ممنوع شدند — رجوع به «فاز ۸» پایین‌تر). جزئیات در «فاز ۸» پایین‌تر. **۲۵۹/۲۵۹ تست سبز** (پس از یک پاس `/code-review` که ۲ باگ واقعی و ۱ شکاف اعتبارسنجی پیدا و رفع کرد).
 - [x] **فاز ۹ — cascade کامل سه‌سطحی حذف نرم سند** (۲۰۲۶-۰۸-۲۰) — ریسک 🔴 «نبود cascade» از فاز ۸ **کاملاً** بسته شد: `TB_VOUCHERSHEAD` → `TB_VOUCHERSDETAIL` → `TB_VOUCHERDETAIL_LINK_TAFSILI`. جزئیات در «فاز ۹» پایین‌تر. **۲۷۲/۲۷۲ تست سبز.**
+- [x] **فاز ۱۰ — CRUD مستقل `TB_VOUCHERSDETAIL` + composite create سند** (۲۰۲۶-۰۸-۲۰) — اجرای تصمیم «مرز Aggregate ترکیبی» صاحب پروژه. ۵ Endpoint جدید روی `VoucherDetailsController` + گسترش `CreateVoucherHeadCommand` برای ثبت هدر و دیتیل‌ها در **یک تراکنش**. جزئیات در «فاز ۱۰» پایین‌تر. **۳۷۹/۳۷۹ تست سبز.**
+- [x] **فاز ۱۱ — نگاشت خطای FK + مسیر نوشتن تفصیلی ردیف سند** (۲۰۲۶-۰۸-۲۵) — دو ریسک باز فاز ۱۰ بسته شدند: 🔴 «نقض FK → 500 خام» و 🟡 «هیچ مسیر نوشتنی برای تفصیلی ردیف سند نیست». جزئیات در «فاز ۱۱» پایین‌تر. **۴۱۷/۴۱۷ تست سبز** (پس از یک پاس `/code-review` که ۱ باگ واقعی در sync لینک تفصیلیِ مشترک پیدا و رفع کرد).
 - [ ] فرم صدور سند با تفصیلی داینامیک
+
+### فاز ۱۱ — نگاشت خطای FK + مسیر نوشتن تفصیلی ردیف سند (۲۰۲۶-۰۸-۲۵، برنچ `EntityCRUD`، commit نشده)
+
+دو کار مکانیکی و طبق الگوی از‌قبل‌تثبیت‌شده، هر دو از فهرست تصمیمات باز فاز ۱۰. **هیچ تصمیم معماری جدیدی گرفته نشد و هیچ ریسک باز دیگری (IDOR، تراز بدهکار/بستانکار، نوع دادهٔ مبلغ) لمس نشد.**
+
+#### ۱. نگاشت ORA-02291 → `ForeignKeyViolationException` → **400 Bad Request** ✅
+
+ریسک 🔴 «نقض FK به‌جز UNIQUE هیچ نگاشتی ندارد → 500 خام» بسته شد.
+
+- `ForeignKeyViolationException` جدید در `Accounting.Application/Common/Exceptions/` — **خواهر ساختاری دقیق `DuplicateKeyException`** (بدون هیچ تایپ Oracle/EF، تا `Accounting.Api` وابستگی به Oracle نگیرد).
+- `UnitOfWork.SaveChangesAsync` حالا دو `catch` دارد. شماره‌های Oracle به دو ثابت نام‌دار تبدیل شدند (`OracleUniqueConstraintViolated = 1`، `OracleParentKeyNotFound = 2291`) تا عدد جادویی در کد نماند.
+- **چرا 400 و نه 409 (تصمیم صریح، نه پیش‌فرض):** ORA-00001 یک *تعارض با state موجود* است — رکوردی که می‌خواهی بسازی از قبل هست و فراخوان می‌تواند آن را reconcile کند و دوباره بفرستد؛ این دقیقاً معنای 409 است. ORA-02291 از جنس دیگری است: فراخوان شناسه‌ای فرستاده که به **هیچ چیز** اشاره نمی‌کند — یعنی *ورودی نامعتبر*، نه تعارض. **404 هم بررسی و رد شد:** منبع هدفِ درخواست (خودِ endpoint) وجود دارد، و 404 روی این routeها از قبل معنای باریک و متفاوتی دارد (سرسند ناموجود، از pre-check صریح فاز ۱۰) — دوگانه‌کردن آن معنا، تشخیص علت را برای فراخوان غیرممکن می‌کرد.
+- **دامنه عمداً فقط ORA-02291.** خواهرش ORA-02292 («child record found»، هنگام حذف فیزیکی والدی که فرزند دارد) نگاشت **نشد** چون این پروژه اصلاً حذف فیزیکی ندارد — همهٔ مسیرهای حذف soft delete اند و هیچ FK ای به آن‌ها اعتراض نمی‌کند. نگاشتش گمانه‌زنی روی مسیری می‌بود که وجود ندارد (با تست قفل شد).
+- **چون `UnitOfWork` مرکزی است، این نگاشت به‌صورت یکسان روی همهٔ مسیرهای نوشتن اعمال می‌شود** — Create/Update هر سه Entity، composite create، و نوشتن تفصیلی — بدون هیچ opt-in per-command که کسی یادش برود.
+- **نکتهٔ ظریف قرارداد:** این تنها 400 در کل API است که بدنه‌اش `ProblemDetails` ساده است نه `HttpValidationProblemDetails` با دیکشنری `errors` — چون نسبت‌دادن خطا به یک فیلد مشخص بدون افشای نام constraint اوراکل ممکن نیست. با تست قفل شد و در XML doc ثبت شد.
+- پیام کاملاً عمومی («One or more referenced records do not exist.»)؛ با تست اثبات شد که `ORA-02291`، نام constraint و نام schema به بدنهٔ پاسخ درز نمی‌کنند.
+
+⚠️ **همچنان باز:** `TB_VOUCHERDETAIL_LINK_TAFSILI.TAFSILI_ID`/`LEVEL_ID` اصلاً FK ندارند، پس تفصیلی نامعتبر **هیچ** خطایی نمی‌دهد و بی‌صدا نوشته می‌شود. این نگاشت آن شکاف را پوشش نمی‌دهد (ریسک باز از قبل، نه چیز جدید).
+
+#### ۲. مسیر نوشتن تفصیلی روی ردیف سند ✅
+
+ریسک 🟡 «می‌توان ردیف سند ساخت ولی نمی‌توان به آن تفصیلی نسبت داد» بسته شد.
+
+- record ترابری مشترک `VoucherDetailTafsiliLinkInput(Guid TafsiliId, Guid LevelId)` در `Vouchers/Commands/Common/` (پوشهٔ مشترک، چون برخلاف `CreateVoucherHeadDetailInput` دو مصرف‌کننده دارد).
+- به `CreateVoucherDetailCommand` و `UpdateVoucherDetailCommand` یک پارامتر **پایانیِ اختیاری** `TafsiliLinks = null` اضافه شد → کاملاً **غیر‌breaking**.
+- **`TAFSILI_ID`/`LEVEL_ID` تنها فیلدهای ورودی‌اند.** `VOUCHERSDETAIL_ID`/`VAHEDCODE`/`YEAR` همگی از **خودِ ردیف** مشتق می‌شوند — یعنی لینکی که با والدش دربارهٔ واحد/سال اختلاف داشته باشد **ساختاراً** غیرقابل‌بیان است (همان الگوی تصمیم ۳ فاز ۱۰).
+- **این هنوز CRUD مستقل نیست.** قاعدهٔ تیمی «هر جدول `*_LINK_TAFSIL*`/`*_LINK_LEVEL*` برای همیشه تعبیه‌شده است» دست‌نخورده ماند: نه Controller، نه MediatR request، نه repository اختصاصی. متدهای جدید (`AddTafsiliLinkAsync`, `GetActiveTafsiliLinksAsync`) روی **repository والد** (`IVoucherDetailRepository`) و parent-scoped اند — دقیقاً همان شکل `SoftDeleteTafsiliLinksAsync` موجود. عمداً `AddAsync`/`GetForUpdateAsync` نام‌گذاری **نشدند**، چون آن دو نام در این پروژه شکل «Aggregate Root» را دارند و `NoIndependentLinkTableWritePathTests` آن‌ها را ممنوع می‌کند.
+- **`NoIndependentLinkTableWritePathTests` گسترش یافت** (نه دور زده شد): دو تست جدید — یکی ممنوع می‌کند که هیچ repository interface ای مختص جدول لینک باشد (وگرنه گارد با ساختن `ITafsiliLinkRepository` قابل دور زدن بود)، و یکی **مثبت** است و تأیید می‌کند مسیر نوشتن parent-scoped واقعاً وجود دارد — تا کسی با حذف آن، این فایل را سبز نکند و بی‌صدا شکاف فاز ۱۰ را دوباره باز کند.
+
+**تصمیم رفتار Update — جایگزینی کامل، با تفکیک عمدی `null` از `[]`:**
+
+| ورودی | رفتار |
+|---|---|
+| `null` (یا اصلاً ارسال نشود) | **لینک‌ها اصلاً لمس نمی‌شوند** — نه کوئری، نه نوشتن |
+| `[]` (آرایهٔ خالی) | همهٔ لینک‌های فعال soft-delete می‌شوند |
+| لیست پر | diff سه‌طرفه: نبوده→insert، حذف‌شده→soft-delete، مشترک→**کاملاً دست‌نخورده** |
+
+- **چرا جایگزینی کامل و نه append-only:** چون جدول عمداً CRUD مستقل ندارد، اگر Update فقط «افزودن» می‌بود، **حذف یک تفصیلی از یک ردیف برای همیشه از طریق API غیرممکن می‌شد**. ضمناً بقیهٔ این Command از قبل PUT کامل است.
+- **چرا `null` و `[]` عمداً یکی نشدند** (تنها انحراف از PUT سختگیرانه، و دلیلش مشخص است نه سلیقه‌ای): سمت **خواندن** اصلاً تفصیلی را برنمی‌گرداند (`VoucherDetailDto` فیلد لینک ندارد)، پس فراخوان **فیزیکاً قادر به round-trip خواندن-ویرایش-نوشتن روی لینک‌ها نیست**. اگر «ارسال‌نشده» به معنی «پاک کن» بود، هر فراخوان قدیمیِ درست‌رفتار — که اصلاً از وجود این فیلد خبر ندارد — در اولین ویرایش نامرتبطِ ردیف، دادهٔ تفصیلی را بی‌صدا نابود می‌کرد. با این تفکیک، تخریب فقط **صریح** ممکن است.
+- **مشترک‌ها عمداً re-stamp نمی‌شوند** (`CHANGEUSERID`/`UPDATEDDATE` دست‌نخورده) — وگرنه سیگنال Audit «چه کسی اولین بار این تفصیلی را نسبت داد» در هر ویرایش نامرتبط از بین می‌رفت.
+- زوج تکراری `(TafsiliId, LevelId)` در ورودی به یک ردیف جمع می‌شود (این جدول هیچ UNIQUE ندارد، پس DB جلوی ردیف دوم را نمی‌گیرد). ولی همان تفصیلی در **دو سطح متفاوت** تکراری نیست و هر دو نوشته می‌شوند (با تست قفل شد).
+- زوجی که فقط به‌صورت soft-deleted وجود دارد، **ردیف تازه** می‌گیرد نه resurrect — ردیف قدیمی با Audit اصلی خودش حذف‌شده می‌ماند.
+- Audit (`ADDUSERID`/`CHANGEUSERID`) فقط از `ICurrentUser`؛ همهٔ لینک‌ها همان تک‌مقدار زمانی ردیف را می‌گیرند (یک بار `DateTime.UtcNow`).
+- همه‌چیز در **یک `SaveChangesAsync`** — Repository فقط stage می‌کند، مرز تراکنش در Handler ماند.
+
+**تست: ۳۸ تست جدید، مجموع ۴۱۷/۴۱۷ سبز** (۲۲ Domain + ۲۷۱ Application + ۸۲ Api + ۴۲ Infrastructure)، صفر رگرسیون. build ۰ خطا / ۱۸ warning پیش‌موجود NU1903 (هیچ CS). شامل ۵ تست جدید `UnitOfWorkTests` (ORA-02291 واقعی از طریق reflection روی constructor داخلی درایور، تفکیک از ORA-00001، عدم افشای نام constraint، و رد‌نشدن ORA-02292)، ۲ تست `GlobalExceptionHandlerTests` (400 + نبودِ دیکشنری `errors`)، و ۵ تست **واقعی repository روی SQLite in-memory** برای مسیر نوشتن تفصیلی (شامل اثبات اینکه repository فقط stage می‌کند و entityهای برگشتی tracked اند). ⚠️ همگی Unit/Mock یا SQLite — **هیچ اتصالی به Oracle زنده**.
+
+**پاس `/code-review` (۲۰۲۶-۰۸-۲۵، قبل از commit):** یک باگ واقعی پیدا و همان‌جا رفع شد — لینک تفصیلیِ **مشترک** (هم در DB هم در درخواست) هنگام Update هرگز `VAHEDCODE`/`YEAR` را با مقدار جدید ردیف sync نمی‌کرد، یعنی اگر فراخوان همزمان `VahedCode`/`Year` ردیف را عوض می‌کرد، لینکِ نگه‌داشته‌شده بی‌صدا با والدش ناسازگار می‌ماند — دقیقاً برخلاف invariant مستندشده در `VoucherDetailTafsiliLinkInput` («لینک هرگز نباید با والدش دربارهٔ واحد/سال اختلاف داشته باشد»). اصلاح شد: لینک‌های مشترک حالا `VAHEDCODE`/`YEAR` را از ردیف (پس از overwrite) می‌گیرند، ولی ستون‌های Audit (`ADDUSERID`/`CREATEDDATE`/`CHANGEUSERID`/`UPDATEDDATE`) همچنان دست‌نخورده می‌مانند (تصمیم قبلی «عدم re-stamp» فقط دربارهٔ Audit بود، نه دربارهٔ فیلدهای مشتق‌شده). ۱ تست رگرسیون جدید اضافه شد (`Handle_KeptLink_ResyncsVahedCodeAndYear_ButLeavesAuditColumnsUntouched`) → مجموع از ۴۱۶ به ۴۱۷ رسید.
+
+سه یافتهٔ دیگر بررسی و **عمداً رفع نشدند** (مستندسازی به‌جای حدس، طبق قاعدهٔ تیمی):
+- **ناهماهنگی `[ProducesResponseType]` برای ۴۰۰:** همهٔ Endpointهای نوشتن (نه فقط `VoucherDetailsController`) فقط `HttpValidationProblemDetails` را برای ۴۰۰ اعلام می‌کنند، در حالی‌که از فاز ۱۱ به بعد `ForeignKeyViolationException` یک بدنهٔ ۴۰۰ متفاوت (`ProblemDetails` ساده، بدون دیکشنری `errors`) هم تولید می‌کند. این یک شکاف مستندسازی OpenAPI در **کل API** است (از قبلِ این Session هم بود، چون FK mapping مرکزی روی همهٔ Commandها اعمال می‌شود)، نه فقط این Controller. رفع کامل نیاز به تصمیم دارد که آیا دو `[ProducesResponseType]` با یک status code متفاوت در Swashbuckle درست render می‌شود یا باید در سطح schema به شکل دیگری مدل شود — به‌عنوان یک follow-up مستقل ثبت شد.
+- تکرار منطق collapse زوج تکراری `(TafsiliId, LevelId)` بین `CreateVoucherDetailCommandHandler` و `UpdateVoucherDetailCommandHandler.ReconcileTafsiliLinksAsync` — هم‌راستا با تکرار پذیرفته‌شدهٔ مشابه بین `VoucherHeadRepository`/`VoucherDetailRepository` در فاز ۹/۱۰، همان تصمیم اعمال شد: مستند شد، رفع نشد.
+- یک تست (`Handle_EmptyTafsiliLinks_SoftDeletesEveryExistingLink`) فقط audit stamp لینک اول را assert می‌کند نه دوم را — شکاف پوشش جزئی، بدون ریسک واقعی فعلی.
+
+### فاز ۱۰ — CRUD مستقل `TB_VOUCHERSDETAIL` + composite create سند (۲۰۲۶-۰۸-۲۰، برنچ `EntityCRUD`، commit نشده)
+
+اجرای مستقیم تصمیم صریح صاحب پروژه دربارهٔ **مرز Aggregate ترکیبی** (رجوع به «تصمیمات باز» و `docs/tamin-core-entity-reference.md` بخش ۵). نقل مستقیم: «VouchersDetail مستقل هم می‌تونه باشه ولی وقتی سندی ثبت میشه هدر و دیتیل باید با هم ذخیره بشه، و بعداً جهت ویرایش سند و اضافه کردن دیتیل جدید به‌صورت مستقل هم قابل‌فراخوانیه.»
+
+**دو مسیر نوشتن برای یک Entity — هر دو معتبر و هم‌زیست:**
+
+| Endpoint | Verb | موفق | خطاها |
+|---|---|---|---|
+| `/api/voucher-details` | `POST` | 201 + `Location` + `{id}` | 400, 401, **404**, 500 |
+| `/api/voucher-details?pageNumber=&pageSize=&voucherHeadId=&year=&vahedCode=` | `GET` | 200 `PagedResult<VoucherDetailDto>` | 400, 401, 500 |
+| `/api/voucher-details/{id:guid}` | `GET` | 200 `VoucherDetailDto` | 400, 401, 404, 500 |
+| `/api/voucher-details/{id:guid}/update` | `POST` | 200 + `{id}` | 400, 401, 404, 500 |
+| `/api/voucher-details/{id:guid}/delete` | `POST` | 200 + `{id}` | 400, 401, 404, 500 |
+| `/api/voucher-heads` (گسترش‌یافته) | `POST` | 201 + `Location` + `{id}` | 400, 401, 409, 500 |
+
+محدودیت «فقط `GET`/`POST`» فاز ۸ کاملاً رعایت شد؛ `HttpVerbConventionTests` حالا صریحاً تأیید می‌کند که مجموعهٔ اسکن‌شده **خالی نیست و شامل `VoucherDetailsController` است** (محافظ در برابر همان باگی که در `/code-review` فاز ۸ پیدا شد).
+
+**تصمیم ۱ — Controller مستقل (`/api/voucher-details`)، نه `/api/voucher-heads/{id}/lines`.** چون صاحب پروژه `TB_VOUCHERSDETAIL` را Aggregate Root **مستقل** اعلام کرد و هر Entity در این پروژه Controller خودش را دارد. ⚠️ در نتیجه ادعای قبلی در XML doc خودِ `VoucherHeadsController` («ردیف‌های سند بعداً زیر `/{id}/lines` می‌آیند») **منسوخ شد** و با یادداشت صریح «Superseded (۲۰۲۶-۰۸-۲۰)» اصلاح شد.
+
+**تصمیم ۲ — composite create با گزینهٔ (الف): پراپرتی اختیاری روی همان `CreateVoucherHeadCommand`**، نه یک `CreateVoucherHeadWithDetailsCommand` جدا. دلیل:
+- گزینهٔ (ب) اجباراً منطق ساخت سرسند را **دو بار** می‌نوشت (یک Handler نمی‌تواند Handler دیگر را از طریق MediatR صدا بزند بدون اینکه دومی `SaveChangesAsync` خودش را بزند و invariant «یک تراکنش» را بشکند) → خطر drift بین دو نسخه.
+- گزینهٔ (ب) دو route ساخت برای یک منبع می‌ساخت، که برای مصرف‌کننده مبهم است.
+- گزینهٔ (الف) با پارامتر **پایانیِ دارای مقدار پیش‌فرض** (`IReadOnlyList<CreateVoucherHeadDetailInput>? InitialDetails = null`) کاملاً **غیر‌breaking** است: بدنهٔ JSON بدون `initialDetails` دقیقاً مثل قبل رفتار می‌کند (با تست قفل شد و در schema تولیدشدهٔ OpenAPI هم `nullable` و غیر‌`required` است).
+
+**استثنای صریح و مستندِ قانون «Command فقط primitive»:** `CreateVoucherHeadDetailInput` یک record تودرتو است. قانون فاز ۵ در اصل می‌گوید «Command هرگز **Entity** نیست»؛ یک record ترابری با فیلدهای صرفاً primitive، Entity دامنه نیست — پس روحِ قانون رعایت شده. این اولین لیست تودرتو در یک Command پروژه است و استثنا **آگاهانه** ثبت شد.
+
+**تصمیم ۳ — `CreateVoucherHeadDetailInput` عمداً `VoucherHeadId`, `VahedCode`, `Year` ندارد.** سرسند هنوز وجود ندارد (ID را Handler تولید می‌کند) و `VAHEDCODE`/`YEAR` از **خودِ سرسندِ در حال ساخت** مشتق می‌شوند. یعنی ناسازگاری هدر/ردیف **ساختاراً** ناممکن است — همان الگوی `UpdateXRequest` که `Id` ندارد.
+
+**تصمیم ۴ — `VOUCHERSHEAD_ID` در Update تغییرناپذیر است.** جابه‌جایی یک ردیف بین دو سند یک *move* است نه یک *edit*، و هیچ تصمیم کسب‌وکاری آن را مجاز نکرده. کنار `ID`/`ADDUSERID`/`CREATEDDATE`/`ISDELETED` قفل شد (با تست).
+
+**تصمیم ۵ — `CreateVoucherDetailCommand` وجود سرسند را pre-check می‌کند** (نبود یا `ISDELETED == true` → `NotFoundException` → 404). دلیل: کل معنای این عملیات «افزودن ردیف به سند **موجود**» است، پس بررسی وجودش خودِ semantics عملیات است نه قانون اختراعی؛ ضمناً بدون آن، FK اوراکل `FK_VOUCHERHEAD` (ORA-02291) به‌صورت خام **500** می‌داد. ⚠️ شرایط رقابتی (حذف سرسند بین check و insert) همچنان به 500 می‌رسد — ثبت‌شده به‌عنوان مورد باز.
+
+**تصمیم ۶ — حذف ردیف سند به لینک‌های تفصیلی خودش cascade می‌کند** (`SoftDeleteTafsiliLinksAsync` روی `IVoucherDetailRepository`، در همان تک `SaveChangesAsync`). این قانون جدیدی نیست: صرفاً اعمال یک‌سطح‌پایین‌ترِ invariant فاز ۹ («پس از حذف، هیچ چیزی زیر آن فعال نمی‌ماند») به‌همراه قاعدهٔ تیمی «جدول‌های `*_LINK_TAFSIL*` همیشه تعبیه‌شده‌اند». نکتهٔ ظریف schema: `TB_VOUCHERDETAIL_LINK_TAFSILI.ISDELETED` از نوع `bool` **غیر-nullable** است، پس فیلتر سادهٔ `== false` درست است و شاخهٔ `== null` لازم ندارد (برخلاف دو جدول بالادست).
+
+**فاز ۹ دست‌نخورده ماند** (به دستور صریح کاربر): `SoftDeleteDetailTreeAsync` و هر ۱۱ تست SQLite آن **از نظر رفتاری تغییر نکردند**؛ فقط XML doc آن به‌روز شد چون شرطی که خودش نوشته بود («اگر روزی مسیر نوشتن مستقلی ساخته شد، باید بازبینی/استخراج شود») حالا برقرار شده. استخراج/رفع تکرار به‌عنوان follow-up ثبت شد.
+
+**۴۰۹ عمداً روی هیچ‌کدام از Endpointهای ردیف سند اعلام نشد** — `TB_VOUCHERSDETAIL` هیچ UNIQUE constraint ندارد (فقط ایندکس‌های غیریکتا `IDX_VDETAIL_ACC_VHEAD_ISDEL`, `IDX_VOUCHERSDETAIL_HEADID`, `IDX_YEAR_VAHED`). اعلامش گمانه‌زنی می‌بود. قرینه‌اش: `POST /api/voucher-heads` برعکس 409 دارد ولی 404 ندارد.
+
+**یافتهٔ `api-contract` (شکاف واقعی، رفع شد):** پروژهٔ `Accounting.Application` اصلاً `GenerateDocumentationFile` نداشت و `Program.cs` فقط فایل XML پروژهٔ `Api` را به Swagger می‌داد — یعنی **همهٔ** XML docهای Command/DTO/Query (که در لایهٔ Application زندگی می‌کنند) در Swagger **نامرئی** بودند. با افزودن `GenerateDocumentationFile` + `NoWarn CS1591` به csproj و بارگذاری `Accounting.Application.xml` در Swagger رفع شد؛ با اجرای واقعی API و fetch کردن `/swagger/v1/swagger.json` راستی‌آزمایی شد.
+
+**تست: ۱۰۷ تست جدید، مجموع ۳۷۹/۳۷۹ سبز** (۲۲ Domain + ۲۴۴ Application + ۷۶ Api + ۳۷ Infrastructure)، صفر رگرسیون. build ۰ خطا / ۱۸ warning پیش‌موجود NU1903 (هیچ CS). شامل:
+- composite create: تک بودن `SaveChangesAsync`، ترتیب همهٔ `AddAsync` قبل از آن، اشتراک یک `CREATEDDATE`/`ADDUSERID` بین هدر و همهٔ ردیف‌ها، مشتق‌شدن `VAHEDCODE`/`YEAR` از هدر، و رفتار byte-identical وقتی `InitialDetails` غایب/خالی است.
+- ۶ تست واقعی repository روی **SQLite in-memory** برای `SoftDeleteTafsiliLinksAsync` (با `LegacyDbContext` تازه در فاز assert، پس persistence واقعی اثبات می‌شود).
+- ۲ محافظ رگرسیون جدید: تأیید غیرخالی‌بودن مجموعهٔ اسکن `HttpVerbConventionTests`، و یک تست reflection که قفل می‌کند **هیچ** جدول `*_LINK_TAFSIL*`/`*_LINK_LEVEL` مسیر نوشتن مستقل ندارد.
+- ⚠️ همگی Unit/Mock یا SQLite — **هیچ اتصالی به Oracle زنده**.
 
 ### فاز ۹ — cascade کامل سه‌سطحی حذف نرم سند (۲۰۲۶-۰۸-۲۰، برنچ `changejWT`، commit نشده)
 
@@ -329,6 +443,15 @@ paging: پیش‌فرض `pageNumber=1`, `pageSize=20`؛ سقف `MaxPageSize=200`
 
 ### تصمیمات باز
 
+- **✅ ~~مرز Aggregate برای Head/Detail~~ — حل شد (۲۰۲۶-۰۸-۲۰، تصمیم صریح صاحب پروژه).** در پروژهٔ خارجی `Tamin.Core`، هیچ‌کدام از ۶ رابطهٔ Head→Detail کپسوله نبودند (`VouchersDetail` به‌عنوان Aggregate Root مستقل مدل شده بود)، که با cascade soft-delete فاز ۹ ما (`TB_VOUCHERSHEAD → TB_VOUCHERSDETAIL → TB_VOUCHERDETAIL_LINK_TAFSILI`) در تضاد بود. **تصمیم نهایی — مدل ترکیبی، نه یکی از آن دو حالت:**
+  - `TB_VOUCHERSDETAIL` **مستقل** است و CRUD خودش را می‌گیرد (`CreateVoucherDetailCommand`/`UpdateVoucherDetailCommand`/`DeleteVoucherDetailCommand`) — قابل‌فراخوانی مستقل برای افزودن/ویرایش دیتیل به سند **موجود**.
+  - **اما** ثبت اولیهٔ سند باید هدر+دیتیل(ها) را **با هم، در یک تراکنش** ذخیره کند — یعنی `CreateVoucherHeadCommand` باید توانایی گرفتن یک لیست دیتیل اولیه را هم داشته باشد (composite create).
+  - **cascade soft-delete فاز ۹ دست‌نخورده و همچنان معتبر است** — این تصمیم فقط دربارهٔ Create/Update است، نه Delete.
+  - جزئیات کامل در `docs/tamin-core-entity-reference.md` بخش ۵ (بلوک «✅ حل شد»).
+  - **✅ پیاده‌سازی شد در «فاز ۱۰» (۲۰۲۶-۰۸-۲۰)** — رجوع به بخش «فاز ۱۰» بالاتر برای Endpointها، تصمیم composite-create (گزینهٔ الف) و دلایلش. این تصمیم دیگر فقط ثبت‌شده نیست؛ در کد زنده است و با ۱۰۷ تست پوشش دارد.
+  - **همچنین تثبیت شد:** هر جدولی که نامش با `_LINK_TAFSIL*`/`_LINK_LEVEL` تمام می‌شود (هر ۱۰ مورد — فهرست کامل در سند مرجع) **همیشه تعبیه‌شده می‌ماند**، هیچ‌وقت CRUD مستقل نمی‌گیرد. این قاعدهٔ کلی تیم است، نه فقط برای `VouchersDetailLinkTafsili`.
+- **🟡 دو Entity مبهم بدون طبقه‌بندی قطعی** (`TB_RABET_CLOSING`, `TB_CHARGE_LINK_COST`) — در `Tamin.Core` سیگنال کپسولگی‌شان نیمه‌کاره/متروک است (بخش ۴ سند مرجع). قبل از ساخت CRUD برایشان از کاربر بپرس.
+- **🟡 نوع دادهٔ مبلغ: `long` در برابر `decimal?`** — در سراسر `Tamin.Core` مبالغ (`Debtor`/`Creditor` و مشابه در ۶ Entity) از نوع `long` غیرnullable‌اند، در حالی‌که ما `decimal?` مدل کرده‌ایم. یا واحد پول ریال بدون اعشار ذخیره می‌شده، یا ما داریم دقتی اضافه می‌کنیم که Legacy ندارد. قبل از ساخت Command روی سند باید روشن شود.
 - **🔴 «الزامی بودن تفصیلی» در Legacy اصلاً مدل شده یا نه؟** در `TB_ACCOUNT_LINK_TAFSILGROUP`, `TB_TAFSIL_GROUP`, `TB_LEVEL_TAFSIL`, `TB_ACCOUNT_LINK_LEVEL` هیچ ستون معادل `DetailRequirement` (الزامی/اختیاری) پیدا نشد. برای قطعی‌شدن نیاز است: (۱) جست‌وجوی ستون‌هایی با نام `MUST`/`ISREQUIRED`/`OBLIGATORY` در سایر جدول‌ها، (۲) کوئری روی دادهٔ واقعی برای فهمیدن اینکه آیا این قاعده در Application/UI سیستم قدیمی enforce می‌شده. **حدس زده نشد.**
 - **🟡 نقش واقعی `TB_ACCOUNT_LINK_LEVEL`** — مشخص نیست فعال است یا artifact قدیمی. نیاز به کوئری روی داده (تعداد ردیف‌های `ISDELETED=0` و هم‌پوشانی با `TB_ACCOUNT_LINK_TAFSILGROUP`).
 - **🟡 یکپارچگی ارجاعی تفصیلی در سند** — `TB_VOUCHERDETAIL_LINK_TAFSILI` فقط **یک** FK دارد (به `TB_VOUCHERSDETAIL`)؛ `TAFSILI_ID` و `LEVEL_ID` هیچ FK ای ندارند. یعنی در سطح دیتابیس هیچ تضمینی نیست که تفصیلی ثبت‌شده روی ردیف سند اصلاً وجود داشته باشد یا مجاز باشد. اگر این تضمین لازم است باید صریحاً ساخته شود.
@@ -400,6 +523,21 @@ paging: پیش‌فرض `pageNumber=1`, `pageSize=20`؛ سقف `MaxPageSize=200`
 - **🔴 سند Post شده حالا واقعاً قابل تغییر است.** `UpdateVoucherHeadCommand` اجازه می‌دهد `DOCLIFE` (وضعیت سند) آزادانه عوض شود. invariant «تغییرناپذیری سند پس از Post» در تصمیم دوم آگاهانه حذف شده بود، ولی تا پیش از این فاز مسیر نوشتن فقط `INSERT` داشت پس عملاً قابل بهره‌برداری نبود. **حالا یک مسیر واقعی و در دسترس برای ویرایش/برگرداندن سند نهایی‌شده وجود دارد.** اگر این تضمین لازم است، باید صریحاً در Application یا به‌صورت DB constraint بازسازی شود.
 - **🟡 هیچ کنترل همزمانی (optimistic concurrency) وجود ندارد.** schema Legacy ستون `rowversion`/`ETag` ندارد و هیچ‌کدام از دو PUT جدید توکن همزمانی نمی‌گیرند، پس رفتار **last-write-wins** است: دو ویرایش هم‌زمان روی یک سند، یکی را بی‌صدا از بین می‌برد. برای سیستم حسابداری باید آگاهانه پذیرفته یا حل شود (مثلاً مقایسهٔ `UPDATEDDATE` به‌عنوان توکن، یا `If-Match`).
 - **🟡 هیچ مسیر undelete/restore وجود ندارد.** چون Update رکورد soft-deleted را 404 می‌دهد و `ISDELETED` در Update نیست، رکورد حذف‌شده از طریق API **قابل بازگردانی نیست**. اگر بازگردانی لازم است، به یک Command صریح (`RestoreXCommand`) نیاز دارد — عمداً در این فاز ساخته نشد.
+
+### 🔴 تصمیمات باز جدید — کشف‌شده در فاز ۱۰ (۲۰۲۶-۰۸-۲۰)
+
+طبق Accounting Safety Gate، این‌ها **بی‌صدا رد نشدند** و هیچ‌کدام حدس زده نشد:
+
+- **🔴 حالا برای اولین بار یک عملیات واحد وجود دارد که می‌توانست تراز را تضمین کند — و نمی‌کند.** پیش از این فاز، سرسند و ردیف‌ها هرگز در یک درخواست ساخته نمی‌شدند، پس «بدهکار = بستانکار» عملاً قابل بررسی نبود. با composite create، کل سند (هدر + همهٔ ردیف‌ها) در **یک تراکنش** می‌آید — یعنی تنها نقطه‌ای که چنین تضمینی طبیعتاً جا می‌گیرد، حالا وجود دارد. طبق «تصمیم معماری دوم» عمداً پیاده **نشد**. اگر لازم است، باید صریحاً به‌صورت validation در `CreateVoucherHeadCommandValidator` یا DB constraint بازسازی شود. ضمناً هیچ چیز مانع نمی‌شود که یک ردیف هم‌زمان `DEBTOR` و `CREDITOR` غیرصفر داشته باشد.
+- **🔴 نوع دادهٔ مبلغ هنوز حل نشده و حالا در مسیر نوشتن است.** تصمیم باز 🟡 «`long` در برابر `decimal?`» (از سند مرجع `Tamin.Core`) تا این فاز نظری بود؛ حالا `DEBTOR`/`CREDITOR` واقعاً از API پذیرفته و نوشته می‌شوند. فعلاً `decimal?` نگه داشته شد چون با Fluent Mapping فعلی (`NUMBER(25)`) می‌خواند، ولی **تأیید نشده** که Legacy اعشار را می‌پذیرد یا ریال صحیح ذخیره می‌کند. **قبل از هر داده‌ای که واقعاً روی Oracle نوشته شود باید روشن شود.**
+- **✅ ~~🔴 نقض FK به‌جز UNIQUE هیچ نگاشتی ندارد → 500 خام~~ — حل شد (۲۰۲۶-۰۸-۲۵، فاز ۱۱).** گزینهٔ «نگاشت مرکزی در `UnitOfWork`» انتخاب شد (نه pre-check صریح، تا قانون کسب‌وکاری اختراع نشود و شرایط رقابتی هم درست مدیریت شود — همان قضاوتی که قبلاً برای UNIQUE اعمال شده بود). ORA-02291 → `ForeignKeyViolationException` → **400 Bad Request** با پیام عمومی. جزئیات و دلیل انتخاب 400 به‌جای 409/404 در «فاز ۱۱» بالاتر. ⚠️ **زیرمجموعه‌ای که همچنان باز است:** `TB_VOUCHERDETAIL_LINK_TAFSILI.TAFSILI_ID`/`LEVEL_ID` اصلاً FK ندارند، پس تفصیلی نامعتبر بی‌صدا نوشته می‌شود و این نگاشت کمکی نمی‌کند (رجوع به مورد «یکپارچگی ارجاعی تفصیلی در سند» بالاتر).
+- **🟡 عدم تقارن `VahedCode`/`Year` بین دو مسیر ساخت.** در composite create از سرسند مشتق می‌شوند؛ در `CreateVoucherDetailCommand` مستقل، فراخوان خودش می‌دهد و **هیچ اعتبارسنجی متقاطعی با سرسند انجام نمی‌شود**. یعنی می‌توان ردیفی با `YEAR` متفاوت از سند والدش ساخت. آیا باید مشتق/اعتبارسنجی شود؟
+- **🟡 `RADIF` (شمارهٔ ردیف) هیچ مدیریتی ندارد** — نه تولید خودکار، نه تضمین یکتایی در محدودهٔ یک سند، نه پیوستگی. کاملاً ورودی فراخوان است. مرتب‌سازی خواندن `OrderBy(RADIF).ThenBy(ID)` است و چون `int?` است، `NULL`ها در Oracle آخر می‌آیند.
+- **✅ ~~🟡 هیچ مسیر نوشتنی برای تفصیلیِ ردیف سند وجود ندارد~~ — حل شد (۲۰۲۶-۰۸-۲۵، فاز ۱۱).** گزینهٔ «لیست تودرتو روی `CreateVoucherDetailCommand`» انتخاب و به `UpdateVoucherDetailCommand` هم تعمیم داده شد (`TafsiliLinks`، پارامتر پایانیِ اختیاری، غیر‌breaking). قاعدهٔ تیمی «تعبیه‌شده برای همیشه» دست‌نخورده ماند — نه Controller، نه MediatR request، نه repository اختصاصی؛ متدها parent-scoped روی `IVoucherDetailRepository` اند و گارد `NoIndependentLinkTableWritePathTests` **گسترش یافت** (نه دور زده شد). رفتار Update = جایگزینی کامل، با `null` = «دست نزن» و `[]` = «همه را پاک کن». جزئیات کامل و دلایل در «فاز ۱۱» بالاتر.
+  - ⚠️ **دو شکاف باقی‌مانده که عمداً حدس زده نشد:** (۱) **سمت خواندن هنوز تفصیلی را برنمی‌گرداند** — `VoucherDetailDto` فیلد لینک ندارد، پس فراخوان نمی‌تواند لینک‌های فعلی یک ردیف را ببیند (دقیقاً همین محدودیت، دلیل تفکیک `null` از `[]` شد). برای «فرم صدور سند با تفصیلی داینامیک» این لازم خواهد بود. (۲) **مسیر composite create سند (`CreateVoucherHeadCommand.InitialDetails`) هنوز تفصیلی نمی‌پذیرد** — یعنی ثبت یک‌مرحله‌ای سند کامل با تفصیلی هنوز ممکن نیست و باید در دو مرحله انجام شود. هر دو خارج از دامنهٔ صریح فاز ۱۱ بودند.
+- **🟡 تکرار منطق cascade در دو repository.** `IVoucherHeadRepository.SoftDeleteDetailTreeAsync` (سطح ۲+۳) و `IVoucherDetailRepository.SoftDeleteTafsiliLinksAsync` (سطح ۳) حالا هم‌پوشانی دارند. به دستور صریح کاربر فاز ۹ دست‌نخورده ماند، ولی XML doc خودِ فاز ۹ گفته بود در این حالت باید بازبینی/استخراج شود. **follow-up ثبت‌شده، انجام نشده.**
+- **🟡 (یافتهٔ `/code-review`) race شرطی روی وجود سرسند → 500 خام به‌جای 404.** بررسی «آیا سرسند وجود دارد/حذف نشده» در `CreateVoucherDetailCommandHandler` از نوع check-then-act است، نه تراکنشی. اگر بین این چک و `SaveChangesAsync` یک `DeleteVoucherHeadCommand` هم‌زمان روی همون سرسند commit بشه، insert روی FK ناموجود می‌خوره و به‌جای 404 تمیز، 500 خام از `GlobalExceptionHandler` برمی‌گرده. هم‌راستا با تصمیم قبلی پروژه (race روی UNIQUE هم عمداً به constraint سطح DB سپرده شده)، **عمداً حل نشد**.
+- **🔴 IDOR حالا به ردیف سند هم رسید.** همهٔ ریسک‌های authorization فاز ۷/۸ عیناً روی ۵ Endpoint جدید هم برقرارند: هر کاربر احراز‌شده می‌تواند ردیف هر سندی از هر واحد سازمانی را بخواند/بسازد/ویرایش/حذف کند. سطح حمله بزرگ‌تر شد، ماهیت ریسک تغییر نکرد. **مسدودکنندهٔ استقرار.**
 
 ## قوانین کاری تیم
 

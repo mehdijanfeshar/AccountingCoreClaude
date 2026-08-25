@@ -42,5 +42,12 @@ public sealed class CreateVoucherHeadCommandValidator : AbstractValidator<Create
 
         RuleFor(x => x.AtfNum)
             .MaximumLength(15);
+
+        // No-op when InitialDetails is null (composite-create is opt-in) — the explicit
+        // `.When` guard, rather than relying on RuleForEach's own null-tolerance, documents
+        // that behaviour at the call site per the acceptance criteria for this rule.
+        RuleForEach(x => x.InitialDetails)
+            .SetValidator(new CreateVoucherHeadDetailInputValidator())
+            .When(x => x.InitialDetails is not null);
     }
 }

@@ -106,6 +106,55 @@ public sealed class GlobalExceptionHandlerTests
     }
 
     [Fact]
+    public async Task TryHandleAsync_ForeignKeyViolationException_Returns400_WithGenericSafeMessage()
+    {
+        var (handler, httpContext, body) = CreateHandler();
+        var exception = new ForeignKeyViolationException(
+            "One or more referenced records do not exist.",
+            new InvalidOperationException(
+                "ORA-02291: integrity constraint (CENTRALACCOUNT.FK_VOUCHERDETAIL_ACCOUNCODE) violated - parent key not found"));
+
+        var handled = await handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
+
+        Assert.True(handled);
+        Assert.Equal(StatusCodes.Status400BadRequest, httpContext.Response.StatusCode);
+
+        using var doc = await ReadBodyAsJsonAsync(body);
+        Assert.Equal(400, doc.RootElement.GetProperty("status").GetInt32());
+        Assert.Equal(
+            "One or more referenced records do not exist.",
+            doc.RootElement.GetProperty("detail").GetString());
+
+        var text = await ReadBodyAsTextAsync(body);
+        // Same rule as the 409 path: the raw Oracle text names the constraint, its schema and the
+        // table/column, and must never reach the response body even though the inner exception
+        // carries it for logging.
+        Assert.DoesNotContain("ORA-02291", text);
+        Assert.DoesNotContain("FK_VOUCHERDETAIL_ACCOUNCODE", text);
+        Assert.DoesNotContain("CENTRALACCOUNT", text);
+    }
+
+    /// <summary>
+    /// A foreign-key 400 is NOT a FluentValidation 400: it must not carry an <c>errors</c>
+    /// dictionary, because there is no way to attribute the failure to a request field without
+    /// leaking the Oracle constraint name. Locks in the deliberate contract difference documented
+    /// on <see cref="GlobalExceptionHandler"/>.
+    /// </summary>
+    [Fact]
+    public async Task TryHandleAsync_ForeignKeyViolationException_Returns400_WithoutValidationErrorsDictionary()
+    {
+        var (handler, httpContext, body) = CreateHandler();
+
+        await handler.TryHandleAsync(
+            httpContext,
+            new ForeignKeyViolationException("One or more referenced records do not exist.", new InvalidOperationException("inner")),
+            CancellationToken.None);
+
+        using var doc = await ReadBodyAsJsonAsync(body);
+        Assert.False(doc.RootElement.TryGetProperty("errors", out _));
+    }
+
+    [Fact]
     public async Task TryHandleAsync_NotFoundException_Returns404_WithGenericSafeMessage_AndDoesNotLeakResourceNameOrId()
     {
         var (handler, httpContext, body) = CreateHandler();
