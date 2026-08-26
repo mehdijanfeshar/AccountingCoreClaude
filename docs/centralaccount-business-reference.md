@@ -214,7 +214,7 @@ public enum TypeActivity
 
 > **⚠️ توصیهٔ صریح: پیش از هر migration یا مقداردهی مجدد، این تناقض باید با کوئری روی دادهٔ زندهٔ `CENTRALACCOUNT` حل شود.**
 > یک روش قطعی و Read-Only: چند حساب معین با ماهیت بدیهی (مثلاً «بانک» یا «صندوق» که قطعاً بدهکار است، در برابر «حساب‌های پرداختنی» که قطعاً بستانکار است) را انتخاب و مقدار `TYPEACTIVITY` آن‌ها را بخوانید. اگر بانک `TYPEACTIVITY = 1` داشت، enum درست است و کامنت غلط.
-> **این کوئری در این کار اجرا نشد** (دسترسی به دیتابیس زنده در scope این تحقیق نبود).
+> **این کوئری در این کار اجرا نشد** (دسترسی به دیتابیس زنده در scope این تحقیق نبود). ⚠️ **به‌روزرسانی ۲۰۲۶-۰۸-۲۶:** اجرا شد و تناقض حل شد — رجوع به بخش ۲۳-۱. نتیجه: `TYPEACTIVITY=1` = **بدهکار** (enum `Tamin.Core` درست است، کامنت ستون Oracle نادرست/کهنه است).
 
 ### `TypeActivityGroup` — یک enum دوم که فقط زیرمجموعه است
 
@@ -803,7 +803,7 @@ if (item.identityDetailDtos != null)
 6. **`GetVouchersDocLife`** (قاعدهٔ بستن ماه) و **`GetTuroverByIdAsync`** (بررسی گردش) — فقط محل فراخوانی‌شان را دیدم، نه پیاده‌سازی‌شان.
 7. **`ChargeLinkCostRepository.cs`** و مصرف‌کنندگانش.
 8. **`Account.Tests`** — فقط در فهرست فایل‌ها دیده شد.
-9. **دادهٔ زندهٔ Oracle** — هیچ کوئری‌ای اجرا نشد. تناقض `TYPEACTIVITY` (۱/۲) **حل‌نشده باقی است.**
+9. **دادهٔ زندهٔ Oracle** — هیچ کوئری‌ای اجرا نشد. تناقض `TYPEACTIVITY` (۱/۲) **حل‌نشده باقی است.** ⚠️ **به‌روزرسانی ۲۰۲۶-۰۸-۲۶:** حل شد — رجوع به بخش ۲۳.
 10. **`businessUserAccessRepository`** — آیا ایزولاسیون `VAHEDCODE` را اعمال می‌کند؟ بررسی نشد.
 
 ---
@@ -844,12 +844,12 @@ if (item.identityDetailDtos != null)
 | # | ستون ما | نوع Oracle | کامنت Oracle | enum واقعی در `Tamin.Core` | مقادیر | حکم |
 |---|---|---|---|---|---|---|
 | ۱ | `TB_ACCOUNTCODE.TYPECODE` | `NUMBER(1)` | — | `TypeCodes` | ۱گروه ۲کل ۳معین | 🔴 **غلط** |
-| ۲ | `TB_ACCOUNTCODE.TYPEACTIVITY` | `NUMBER(1)` | «۱بستانکار۲بدهکار۳بد-بس» | `TypeActivity` | **۱..۷** | 🔴 **غلط + تناقض** |
+| ۲ | `TB_ACCOUNTCODE.TYPEACTIVITY` | `NUMBER(1)` | «۱بستانکار۲بدهکار۳بد-بس» | `TypeActivity` | **۱..۷** | 🔴 **غلط + تناقض — ✅ تناقض با دادهٔ زنده حل شد (بخش ۲۳): ۱=بدهکار، کامنت Oracle نادرست است** |
 | ۳ | `TB_ACCOUNTCODE.TYPEACCCODE` | `NUMBER(1)` | «۱موقت۲دائم» | `TypeAccCode` | ۱موقت ۲دائم | 🔴 **غلط** |
 | ۴ | `TB_ACCOUNTCODE.TYPEACTION` | `NUMBER(1)` | «کنترل‌نشود-اخطار-ثبت‌نشود» | `TypeAction` | ۱،۲،۳ | 🔴 **غلط** |
 | ۵ | **`TB_VOUCHERSHEAD.DOCLIFE`** | `NUMBER(1)` **DEFAULT 0** | «وضعيت سند» | **`DocLife`** | **۱یادداشت ۲موقت ۳بررسی‌شده ۴تایید‌دائم** | 🔴 **غلط — تأیید حدس پاس اول** |
-| ۶ | `TB_TAFSILI.VAHEDTYPE` | `NUMBER(1)` | — | `TypeVahed`؟ | **۱..۱۷** | 🔴 **غلط + ناسازگاری عرض ستون** |
-| ۷ | `TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE` | `NUMBER(1)` | — | `TypeVahed`؟ | **۱..۱۷** | 🔴 **غلط + ناسازگاری عرض** |
+| ۶ | `TB_TAFSILI.VAHEDTYPE` | `NUMBER(1)` | — | `TypeVahed`؟ | **۱..۱۷** | 🔴 **غلط + ناسازگاری عرض ستون — ⚠️ بخش ۲۳: عرض فیزیکی (`DATA_PRECISION=1`) تأیید شد، ولی داده فقط مقادیر {۱,۳} دارد؛ تطبیق با `TypeVahed` هنوز قطعی نیست** |
+| ۷ | `TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE` | `NUMBER(1)` | — | `TypeVahed`؟ | **۱..۱۷** | 🔴 **غلط + ناسازگاری عرض — ⚠️ بخش ۲۳: همان وضعیت ردیف ۶** |
 | ۸ | `TB_TAFSILI.PERSONTYPE` | `NUMBER(1)` **DEFAULT 0** | — | `PersonTypes` | ۱حقیقی ۲حقوقی ۳سایر | 🔴 **غلط** |
 | ۹ | `TB_TAFSIL_GROUP.PERSONTYPE` | `NUMBER(1)` | — | `PersonTypes` | ۱،۲،۳ | 🔴 **غلط** |
 | ۱۰ | `TB_TAFSILI.ISACTIVE` | `NUMBER(1)` **DEFAULT 1** | — | **`Active`** | **۱فعال ۲غیرفعال** | 🔴 **غلط — خطرناک‌ترین مورد** |
@@ -863,7 +863,7 @@ if (item.identityDetailDtos != null)
 | ۱۸ | `TB_BANKCARTDETAIL.CHECKRECEIPTTYPE` | `NUMBER(1)` | «نوع مدرك بانكي (فيش يا حواله)» | `CheckReceiptType` | ۱صوری ۲واقعی ۳فیش ۴حواله | 🔴 **غلط + تناقض** |
 | ۱۹ | `TB_CHECKBOOK.CHECKBOOK_TYPE` | `NUMBER(1)` | — | `CheckType` | ۱صوری ۲واقعی | 🔴 **غلط** |
 | ۲۰ | `TB_ATTRIBFORACCOUNTCODE.CONTROLID` | `NUMBER(1)` **NOT NULL** | — | `ControlEnum`؟ | ۱غیرصفر ۲تاریخ | 🟡 **مشکوک** |
-| ۲۱ | `TB_VOUCHERSHEAD.ISAUTOMATIC` | `NUMBER(1)` | **«0دستي و 1 مکانيزه»** | `IsAutomatic` | ۰،۱ | ✅ **`bool?` قابل‌قبول** |
+| ۲۱ | `TB_VOUCHERSHEAD.ISAUTOMATIC` | `NUMBER(1)` | **«0دستي و 1 مکانيزه»** | `IsAutomatic` | ۰،۱ | ✅ **`bool?` قابل‌قبول — ⚠️ بخش ۲۳: باگ محتمل ۱۰-۷ با دادهٔ زنده تأیید شد (همبستگی قوی با `SYSTEM_TYPE`)** |
 | ۲۲ | `TB_PREDESCRIB.FLAGVOUCHER` | `NUMBER(1)` | **«head=0 Detail=1»** | `Flag` | ۰،۱ | ✅ **`bool?` قابل‌قبول** |
 | ۲۳ | `TB_PERSON_ACTION.STATUS` | `NUMBER(1)` | — | **در خودشان هم `bool?` است** | — | ✅ **درست** |
 | ۲۴ | `TB_YEAR.ISCURRENT` | `NUMBER(1)` DEFAULT 0 | — | ❓ معادل پیدا نشد | — | 🟡 **احتمالاً درست** |
@@ -903,12 +903,16 @@ if (item.identityDetailDtos != null)
 
 ⚠️ **همچنان حدس نزدم:** پیش از migration، مقدار `TYPEACTIVITY` چند حساب با ماهیت بدیهی روی دادهٔ زنده خوانده شود. هزینهٔ اشتباه = **وارونه‌شدن ماهیت همهٔ حساب‌ها**.
 
+> ✅ **حل شد (۲۰۲۶-۰۸-۲۶، بخش ۲۳):** با کوئری روی دادهٔ زندهٔ `CENTRALACCOUNT`، مشخص شد **enum `Tamin.Core` درست است و کامنت ستون Oracle نادرست/کهنه است** — `TYPEACTIVITY=1` یعنی **بدهکار**، `TYPEACTIVITY=2` یعنی **بستانکار**. قوی‌ترین شاهد: حساب‌های سطح گروه با نام بدیهی حسابداری (`دارايي هاي جاري`, `هزينه ها` = `TYPEACTIVITY=1`؛ `بدهي هاي جاري`, `بدهي هاي غيرجاري` = `TYPEACTIVITY=2`) دقیقاً با enum هم‌راستایند، نه با کامنت. جزئیات کامل در بخش ۲۳.
+
 ## ۱۰-۵. 🔴 ناسازگاری عرض ستون: `VAHEDTYPE`
 
 `TB_TAFSILI.VAHEDTYPE` و `TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE` هر دو `NUMBER(1)` (حداکثر یک رقم)، ولی `TypeVahed` **۱۷ مقدار** دارد.
 
 سه احتمال، **هیچ‌کدام حدس زده نشد:** (۱) این ستون‌ها از `TypeVahed` استفاده نمی‌کنند؛ (۲) عرض واقعی ستون بزرگ‌تر است؛ (۳) فقط ۱..۹ استفاده می‌شوند.
 ❓ نیاز به `SELECT DISTINCT VAHEDTYPE FROM TB_TAFSILI` + بررسی DDL. **قبل از هر CRUD روی `TB_TAFSILI` باید روشن شود.**
+
+> ⚠️ **تا حدی حل شد (۲۰۲۶-۰۸-۲۶، بخش ۲۳):** DDL تأیید کرد عرض فیزیکی واقعاً `NUMBER(1)` با `DATA_PRECISION=1` است (احتمال ۲ رد شد؛ Fluent Mapping فعلی ما از نظر عرض درست است). دادهٔ زنده نشان می‌دهد مقدار واقعی فقط در `{1, 3}` است (نه ۱..۹ کامل) — یعنی احتمال ۳ هم به‌طور دقیق تأیید نشد (باریک‌تر از پیش‌بینی). **هنوز حدس نزدم:** با این حجم کم داده (۲۶ ردیف غیر-NULL در `TB_TAFSILI`، محیط توسعه) نمی‌توان قطعی گفت این ستون واقعاً زیرمجموعه‌ای از `TypeVahed` (۱۷‌مقداری) است یا یک enum کاملاً متفاوت و باریک‌تر — چون معنای دقیق مقادیر ۱ و ۳ در `TypeVahed` در دامنهٔ این تحقیق (فقط DB) بررسی نشد. جزئیات در بخش ۲۳.
 
 ⚠️ دام نام‌گذاری: `TB_VAHED_TYPE.TYPECODE` (با UNIQUE `UK_VAHEDTYPE`) **با `TB_ACCOUNTCODE.TYPECODE` هم‌نام ولی کاملاً بی‌ربط است**.
 
@@ -934,6 +938,8 @@ public enum IsAutomatic {
 
 **پیامد:** `AddVoucherCommandHandler.cs:113` → `add.SetIsAutomatic(IsAutomatic.manual);` در Endpoint **ثبت دستی** فراخوانی می‌شود، ولی مقدارش **`1`** یعنی «مکانيزه». یعنی احتمالاً **هر سند دستی به‌اشتباه «اتوماتیک» علامت خورده است.**
 ❓ **قطعی نیست، حدس نزدم** — اگر این ستون را مصرف کردیم باید روی دادهٔ زنده راستی‌آزمایی شود.
+
+> ✅ **راستی‌آزمایی شد (۲۰۲۶-۰۸-۲۶، بخش ۲۳):** فرضیهٔ باگ با دادهٔ زنده **تأیید** شد. ۹۴٫۷٪ اسناد (`۵۴` از `۵۷`) مقدار `ISAUTOMATIC=1` دارند و این دقیقاً و به‌طور کامل با اسنادی هم‌بسته است که از `SYSTEM_TYPE` عمومی «حسابداري» (`SYS_COD=1`، ماژول کلی که منطقاً محل ثبت دستی است) می‌آیند؛ در مقابل، فقط اسناد زیرسیستم تخصصی «دريافت و پرداخت» (`SYS_COD=4`) مقدار `ISAUTOMATIC=0` دارند. این دقیقاً برعکسِ انتظار منطقی است (ماژول عمومی/دستی باید ۰ و زیرسیستم خودکار باید ۱ باشد) و با معیار تفسیر خودِ این کار («اگر تقریباً ۱۰۰٪ مقدار ۱ باشد، باگ تأیید می‌شود») همخوانی دارد. جزئیات در بخش ۲۳.
 
 ## ۱۰-۸. فهرست کامل ۴۴ enum
 
@@ -1405,7 +1411,7 @@ if (!validDateDoc)
 7. **DTOها و ViewModelها** (~۲۰۰ فایل) — شکل دقیق قرارداد API استخراج نشد.
 8. **`OracleExpressionToSqlConverter`** — امنیت فیلتر پویا.
 9. **`IElamDrmdWebService`** و سرویس‌های بیرونی (`NationalCodeService`, `CompanyService` که کامنت‌اند).
-10. **دادهٔ زندهٔ Oracle** — هیچ کوئری‌ای اجرا نشد. پس **همچنان حل‌نشده:** تناقض `TYPEACTIVITY` (۱=بدهکار؟)، عرض `VAHEDTYPE`، باگ محتمل `IsAutomatic`، و اینکه آیا مقادیر خارج از دامنهٔ enum در داده وجود دارند.
+10. **دادهٔ زندهٔ Oracle** — هیچ کوئری‌ای اجرا نشد. پس **همچنان حل‌نشده:** تناقض `TYPEACTIVITY` (۱=بدهکار؟)، عرض `VAHEDTYPE`، باگ محتمل `IsAutomatic`، و اینکه آیا مقادیر خارج از دامنهٔ enum در داده وجود دارند. ⚠️ **به‌روزرسانی ۲۰۲۶-۰۸-۲۶:** اولین اتصال واقعی به Oracle زنده انجام شد — رجوع به بخش ۲۳ (`TYPEACTIVITY` و `IsAutomatic` حل شدند؛ `VAHEDTYPE` تا حدی).
 
 ---
 ---
@@ -1707,4 +1713,175 @@ FirstDebtor    = TotDebtor - CurDebtor
 5. **`Tamin.Core\Services\` و `Common\`**.
 6. **`OracleExpressionToSqlConverter`** — امنیت فیلتر پویا.
 7. **`ElamDrmdWebService`** (SOAP) و بدنهٔ کامل Kafka consumer.
-8. **دادهٔ زندهٔ Oracle** — پس **همچنان حل‌نشده:** تناقض `TYPEACTIVITY`، عرض `VAHEDTYPE`، باگ محتمل `IsAutomatic`، و وجود مقادیر خارج از دامنهٔ enum.
+8. **دادهٔ زندهٔ Oracle** — پس **همچنان حل‌نشده:** تناقض `TYPEACTIVITY`، عرض `VAHEDTYPE`، باگ محتمل `IsAutomatic`، و وجود مقادیر خارج از دامنهٔ enum. ⚠️ **به‌روزرسانی ۲۰۲۶-۰۸-۲۶:** اولین اتصال واقعی به Oracle زنده انجام شد — رجوع به بخش ۲۳ (`TYPEACTIVITY` و `IsAutomatic` حل شدند؛ `VAHEDTYPE` تا حدی؛ ضمناً یک یافتهٔ جدید دربارهٔ مقادیر خارج از دامنهٔ enum کشف شد).
+
+---
+---
+
+# بخش ۲۳ — تأیید با دادهٔ زندهٔ Oracle ما (۲۰۲۶-۰۸-۲۶)
+
+> **این اولین اتصال واقعی پروژهٔ ما (نه پروژهٔ مرجع `D:\CentralAccount`) به دیتابیس زندهٔ `CENTRALACCOUNT` است.**
+> **فقط `SELECT` اجرا شد.** هیچ `INSERT`/`UPDATE`/`DELETE`/`MERGE`/DDL/`ALTER SESSION`ای اجرا نشد. کوئری‌ها با یک پروژهٔ کنسول یک‌بارمصرف (`Oracle.ManagedDataAccess.Core` 23.26.300، خروجی `UTF-8`) در scratchpad اجرا شدند تا مشکل شناخته‌شدهٔ خرابی encoding فارسی در `sqlplus` روی ویندوز دور زده شود؛ متن فارسی صحیح خوانده شد (تأیید بصری در خروجی خام پایین). پروژهٔ کنسول و خروجی خام پس از این کار از scratchpad پاک شدند؛ **connection string در هیچ فایلی نوشته نشد** (فقط از طریق متغیر محیطی shell که خودش هرگز echo/log نشد).
+> Connection: `Data Source=db3rh:1521/setadidevdb.tamin.org` (بدون کاربر/رمز در این سند). `ServerVersion=19.4.0.0.0`.
+> نام ستون FK در `TB_VOUCHERSDETAIL` قبل از هر کوئری از Entity (`Accounting.Domain/Entity/TB_VOUCHERSDETAIL.cs`) تأیید شد: `ACCOUNT_ID` (نه `ACCOUNTCODE_ID`). عنوان `TB_SYSTYPE` هم از Entity تأیید شد: `SYS_NAME`.
+
+## ۲۳-۱. ✅ ابهام ۱ — `TB_ACCOUNTCODE.TYPEACTIVITY` — **حل شد قطعی: enum `Tamin.Core` درست است، کامنت ستون Oracle نادرست/کهنه است**
+
+**نتیجه‌گیری:** `TYPEACTIVITY = 1` یعنی **بدهکار**، `TYPEACTIVITY = 2` یعنی **بستانکار** — دقیقاً مطابق enum `TypeActivity` در `Tamin.Core` (`Debit=1, Credit=2`)، و **برخلاف** کامنت ستون Oracle در schema ما («۱بستانکار۲بدهکار»).
+
+**شاهد قطعی‌کننده (روش ب، سطح گروه):** قوی‌ترین و تمیزترین شاهد از حساب‌های **سطح گروه** (`TYPECODE=1`) با نام‌های بدیهی حسابداری آمد — این‌ها تنها ردیف‌هایی بودند که هم نام فارسی روشن داشتند و هم مستقیماً enum را آزمایش می‌کردند (بدون واسطهٔ گردش سند):
+
+```sql
+SELECT ACCCODE, ACCCODENAME, TYPEACTIVITY FROM TB_ACCOUNTCODE
+WHERE TYPECODE=1 AND TYPEACTIVITY IN (1,2) ORDER BY TYPEACTIVITY, ACCCODE;
+```
+
+| `TYPEACTIVITY` | نام حساب | ماهیت واقعی حسابداری |
+|---|---|---|
+| **۱** | `دارايي هاي جاري` (دارایی جاری) | **بدهکار** ✅ |
+| **۱** | `داراريي هاي غير جاري` (دارایی غیرجاری) | **بدهکار** ✅ |
+| **۱** | `دارايي هاي غيرجاري` (دارایی غیرجاری) | **بدهکار** ✅ |
+| **۱** | `هزينه ها` (هزینه‌ها) | **بدهکار** ✅ |
+| **۲** | `بدهي هاي جاري` (بدهی جاری) — دو ردیف | **بستانکار** ✅ |
+| **۲** | `بدهي هاي غيرجاري` (بدهی غیرجاری) | **بستانکار** ✅ |
+
+هر ۶ حساب معنادار (غیرتستی) در این کوئری **۱۰۰٪** با enum سازگارند: دارایی/هزینه (که در حسابداری متعارف قطعاً بدهکارند) دقیقاً `TYPEACTIVITY=1` دارند، و بدهی (که قطعاً بستانکار است) دقیقاً `TYPEACTIVITY=2` دارد. مابقی ردیف‌های همان کوئری نام‌های تستی/بی‌معنی داشتند (`test1`, `تست`, `hdsgd`, ...) و در نتیجه‌گیری لحاظ نشدند.
+
+**شاهد تأییدی دوم (روش الف، رفتار گردش سند):**
+```sql
+SELECT a.ACCCODE, a.ACCCODENAME, a.TYPEACTIVITY,
+       SUM(NVL(d.DEBTOR,0)) AS SUM_DEBTOR, SUM(NVL(d.CREDITOR,0)) AS SUM_CREDITOR, COUNT(*) AS LINES
+FROM TB_ACCOUNTCODE a JOIN TB_VOUCHERSDETAIL d ON d.ACCOUNT_ID = a.ID
+WHERE a.TYPEACTIVITY IN (1,2) GROUP BY a.ACCCODE, a.ACCCODENAME, a.TYPEACTIVITY;
+```
+تنها ردیف با گردش سند واقعی: `بانک ملت` (حساب معین بانکی — دارایی، قطعاً بدهکار) با `TYPEACTIVITY=1` و `SUM_DEBTOR=10, SUM_CREDITOR=0`. جهت گردش ۱۰۰٪ بدهکار است — سازگار با enum. (دادهٔ محیط توسعه محدود است؛ این تنها یک نمونه است، ولی جهت‌دار و بدون تناقض.)
+
+**شاهد تأییدی سوم (روش ج، ساختار سلسله‌مراتبی):**
+```
+TYPECODE=2 (کل) → TYPEACTIVITY همیشه NULL   (۶۲/۶۲ ردیف)   ✅ مطابق قاعدهٔ استخراج‌شده از Validator مرجع
+TYPECODE=1 (گروه) → TYPEACTIVITY در {۱..۶} یافت شد
+TYPECODE=3 (معین) → TYPEACTIVITY در {۱..۵} یافت شد
+```
+تأیید مستقل پنجم برای نگاشت `TYPECODE` (۱گروه/۲کل/۳معین؛ رجوع به بخش ۱-۱) — کل هیچ‌وقت `TYPEACTIVITY` ندارد، دقیقاً همان‌طور که مرجع می‌گفت.
+
+### خروجی خام (کامل، بدون ویرایش)
+
+```
+TYPEACTIVITY | COUNT(*)
+1 | 16
+2 | 13
+3 | 54
+4 | 2
+5 | 2
+6 | 1
+NULL | 62
+(7 rows)
+
+TYPECODE | TYPEACTIVITY | COUNT(*)
+1 | 1 | 10
+1 | 2 | 10
+1 | 3 | 5
+1 | 4 | 1
+1 | 5 | 1
+1 | 6 | 1
+2 | NULL | 62
+3 | 1 | 6
+3 | 2 | 3
+3 | 3 | 49
+3 | 4 | 1
+3 | 5 | 1
+(12 rows)
+```
+
+⚠️ رجوع به «۲۳-۴ یافتهٔ جدید» پایین‌تر — همین جدول یک ناسازگاری غیرمنتظره با قاعدهٔ Validator گروه (۱..۳) نشان می‌دهد.
+
+## ۲۳-۲. ⚠️ ابهام ۲ — عرض `VAHEDTYPE` — **تا حدی حل شد**
+
+**آنچه قطعی شد:** عرض فیزیکی ستون واقعاً `NUMBER(1)` با `DATA_PRECISION=1` است — Fluent Mapping فعلی ما از نظر عرض **درست** است (احتمال «۲: عرض واقعی بزرگ‌تر است» رد شد).
+
+```sql
+SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, DATA_PRECISION, DATA_SCALE, DATA_LENGTH, NULLABLE
+FROM ALL_TAB_COLUMNS WHERE OWNER='CENTRALACCOUNT' AND COLUMN_NAME LIKE '%VAHEDTYPE%' ORDER BY TABLE_NAME;
+```
+```
+TABLE_NAME                  | COLUMN_NAME  | DATA_TYPE | DATA_PRECISION | DATA_SCALE | DATA_LENGTH | NULLABLE
+TB_ACCOUNTEXCEPTION         | VAHEDTYPE_ID | CHAR      | NULL           | NULL       | 36          | N
+TB_RABET_CLOSING            | VAHEDTYPE_ID | CHAR      | NULL           | NULL       | 36          | N
+TB_TAFSILI                  | VAHEDTYPE    | NUMBER    | 1              | 0          | 22          | Y
+TB_TAFSIL_LINK_TAFSILGROUP  | VAHEDTYPE    | NUMBER    | 1              | 0          | 22          | Y
+TB_VAHED_INFO               | VAHEDTYPE_ID | CHAR      | NULL           | NULL       | 36          | N
+TB_WHITEANDBLACKLIST        | VAHEDTYPE_ID | CHAR      | NULL           | NULL       | 36          | Y
+TB_WHITELIST                | VAHEDTYPE_ID | CHAR      | NULL           | NULL       | 36          | Y
+VWTAFSILILIST                | VAHEDTYPE    | NUMBER    | 1              | 0          | 22          | Y
+(8 rows)
+```
+
+نکتهٔ جانبی مهم: پنج ستون دیگر با نام مشابه (`VAHEDTYPE_ID`) اصلاً همین ستون نیستند — `CHAR(36)` یعنی FK از نوع GUID به یک جدول دیگر، کاملاً بی‌ربط به این ابهام. فقط `TB_TAFSILI.VAHEDTYPE` و `TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE` (به‌علاوهٔ View `VWTAFSILILIST`) واقعاً `NUMBER(1)` هستند.
+
+**آنچه همچنان حل‌نشده — حدس زده نشد:** توزیع مقدار واقعی:
+```sql
+SELECT VAHEDTYPE, COUNT(*) FROM TB_TAFSILI GROUP BY VAHEDTYPE ORDER BY VAHEDTYPE;
+```
+```
+VAHEDTYPE | COUNT(*)
+1 | 1
+3 | 25
+NULL | 4
+(3 rows)          -- TB_TAFSIL_LINK_TAFSILGROUP تقریباً یکسان: 1→1, 3→27, NULL→4
+```
+`MIN=1, MAX=3`. یعنی دادهٔ زنده (۲۶ ردیف غیر-NULL، یک محیط توسعه با حجم کم) فقط دو مقدار `{1, 3}` را نشان می‌دهد — نه بازهٔ کامل ۱..۱۷ که `TypeVahed` دارد، و نه حتی ۱..۹ که احتمال سوم پیش‌بینی کرده بود. **این را حدس نمی‌زنم که ستون واقعاً همان `TypeVahed` باریک‌شده است یا یک enum کاملاً متفاوت** — چون تعیین اینکه مقادیر ۱ و ۳ در `TypeVahed` به چه معنایی‌اند نیازمند خواندن فایل enum در `D:\CentralAccount` است که خارج از scope این کار (فقط دادهٔ زنده) بود. **پیشنهاد صریح برای Task بعدی:** اگر `entity-mapper`/`backend-dotnet` بخواهد این ستون را enum کند، باید یا (الف) این خواندن تکمیلی روی enum مرجع انجام شود، یا (ب) به‌جای enum کامل `TypeVahed`، فقط یک enum باریک با دو مقدار مشاهده‌شده تعریف شود — با آگاهی از اینکه ممکن است دادهٔ Production مقادیر بیشتری داشته باشد.
+
+## ۲۳-۳. ✅ ابهام ۳ — `TB_VOUCHERSHEAD.ISAUTOMATIC` — **باگ محتمل تأیید شد**
+
+```sql
+SELECT ISAUTOMATIC, COUNT(*) FROM TB_VOUCHERSHEAD GROUP BY ISAUTOMATIC ORDER BY ISAUTOMATIC;
+```
+```
+ISAUTOMATIC | COUNT(*)
+0 | 3
+1 | 54
+(2 rows)
+```
+۹۴٫۷٪ (۵۴ از ۵۷) اسناد `ISAUTOMATIC=1` دارند — طبق معیار تفسیر همین تحقیق («اگر تقریباً ۱۰۰٪ مقدار ۱ باشد، فرضیهٔ باگ تأیید می‌شود»)، **این معیار برآورده شده است.**
+
+**آزمون متقاطع (قوی‌تر):**
+```sql
+SELECT h.ISAUTOMATIC, h.SYSTEM_TYPE, s.SYS_COD, s.SYS_NAME, COUNT(*)
+FROM TB_VOUCHERSHEAD h LEFT JOIN TB_SYSTYPE s ON s.ID = h.SYSTEM_TYPE
+GROUP BY h.ISAUTOMATIC, h.SYSTEM_TYPE, s.SYS_COD, s.SYS_NAME ORDER BY 1,2;
+```
+```
+ISAUTOMATIC | SYSTEM_TYPE                          | SYS_COD | SYS_NAME          | COUNT(*)
+0           | 2675b98a-f9fa-2a68-e063-0100007fe971 | 4       | دريافت و پرداخت   | 3
+1           | f4968f6b-3e7d-4976-88cd-f1ce0b023482 | 1       | حسابداري          | 54
+(2 rows)
+```
+
+**تفسیر:** همبستگی **کامل و یک‌به‌یک** بین `ISAUTOMATIC` و `SYSTEM_TYPE` است — هیچ همپوشانی‌ای نیست. اسناد ماژول عمومی «حسابداري» (`SYS_COD=1`، ماژولی که منطقاً محل ثبت **دستی** سند است) همگی `ISAUTOMATIC=1` دارند؛ اسناد زیرسیستم تخصصی «دريافت و پرداخت» (`SYS_COD=4`، که منطقاً یک زیرسیستم **خودکارتر/تخصصی‌تر** برای تولید سند از تراکنش مالی است) همگی `ISAUTOMATIC=0` دارند. این دقیقاً **برعکس** انتظار ساده (ماژول عمومی/دستی = ۰، زیرسیستم تخصصی = ۱) است و مستقیماً با فرضیهٔ بخش ۱۰-۷ («نام‌های `IsAutomatic` وارونه‌اند و `AddVoucherCommandHandler` در مسیر ثبت دستی به‌اشتباه مقدار ۱ می‌نویسد») همخوانی دارد.
+
+⚠️ **صادقانه، این شاهد هم‌بستگی است نه اثبات مستقیم کد.** من مستقیماً کد `AddVoucherCommandHandler` یا کاربری که این ۵۷ سند را در محیط توسعه ثبت کرده را ندیدم (خارج از scope این کار، که فقط دیتابیس بود). ولی الگوی داده دقیقاً همان چیزی است که فرضیهٔ باگ پیش‌بینی می‌کرد، و هیچ تفسیر جایگزین محکمی (مثلاً توزیع متعادل و صرفاً هم‌بسته با ماژول بدون وارونگی) دیده نشد. **نتیجه‌گیری: فرضیهٔ باگ با دادهٔ زنده تأیید شد، نه رد.**
+
+## ۲۳-۴. 🆕 یافتهٔ جدید و پیش‌بینی‌نشده — تناقض دادهٔ زنده با قاعدهٔ Validator سطح گروه
+
+بخش ۱۰-۴ (بر پایهٔ خواندن Validator مرجع) قاعده‌ای استخراج کرده بود: «سطح **گروه** فقط `TYPEACTIVITY` در بازهٔ ۱ تا ۳ را می‌پذیرد» (`AddGroupCodeValidator.cs:26-29` → `.Must(value => (int)value >= 1 && (int)value <= 3)`).
+
+ولی دادهٔ زندهٔ ما نشان می‌دهد **سه حساب سطح گروه واقعی** (`TYPECODE=1`) مقادیر **۴، ۵، ۶** دارند (هرکدام دقیقاً یک ردیف — رجوع به جدول خام در ۲۳-۱، ردیف‌های `TYPECODE=1`):
+```
+TYPECODE | TYPEACTIVITY | COUNT(*)
+1 | 4 | 1
+1 | 5 | 1
+1 | 6 | 1
+```
+
+**این را حدس نمی‌زنم که چرا.** چند تفسیر ممکن، هیچ‌کدام تأیید نشد:
+- این ردیف‌ها ممکن است از **قبل از استقرار** برنامهٔ وب `Tamin.Core` در دیتابیس ثبت شده باشند (یعنی از یک سیستم قدیمی‌تر که این Validator را نداشته).
+- ممکن است این قاعدهٔ Validator به‌مرور **اضافه شده باشد** و این سه ردیف از دوره‌ای قبل از آن باقی مانده‌اند.
+- ممکن است این‌ها دادهٔ تستی/خرابِ محیط توسعه باشند (بسیاری از ردیف‌های همین محیط نام‌های آشکارا تستی دارند مثل `test1`, `تست`).
+
+**پیامد برای پروژهٔ ما:** اگر بخواهیم این Validator (بازهٔ ۱..۳ برای گروه) را در `Accounting.Application` بازسازی کنیم، باید توجه داشت که **دادهٔ Legacy موجود ممکن است از قبل این قاعده را نقض کند** — پس اعمال این Validator روی داده‌های موجود (نه فقط ورودی جدید) می‌تواند رکوردهای معتبر تاریخی را نامعتبر نشان دهد. این یک تصمیم باز جدید است، نه یک اشتباه در کار فعلی.
+
+## ۲۳-۵. محدودیت‌های این کار
+
+- تمام دادهٔ بررسی‌شده از یک **دیتابیس محیط توسعه** (`setadidevdb.tamin.org`) آمد که حجم کم و ردیف‌های آشکارا تستی (`test1`, `تست`, `hdsgd`, ...) فراوان دارد. نتیجه‌گیری‌های بالا بر پایهٔ **جهت‌داری الگو** است، نه حجم آماری بزرگ. برای `TYPEACTIVITY` این مشکلی ایجاد نکرد چون شواهد سطح گروه ۱۰۰٪ بدون استثنا بودند؛ برای `VAHEDTYPE` دقیقاً همین محدودیت باعث شد نتیجه‌گیری «تا حدی» باقی بماند.
+- فقط سه ابهام مشخص‌شده در این Task بررسی شد؛ بقیهٔ enumهای فهرست‌شده در بخش ۱۰-۲ (`DOCLIFE`, `PERSONTYPE`, `ISACTIVE`, `OWNER`, ...) **در این کار لمس نشدند** و همچنان بر پایهٔ تحلیل کد مرجع (نه دادهٔ زنده) هستند.
+- کوئری‌ها روی یک اسکیمای تک‌مستأجر اجرا شدند (بدون فیلتر `VAHEDCODE`)؛ چون این کار صرفاً برای رفع ابهام نوع/enum بود، نه بررسی ایزولاسیون داده.
