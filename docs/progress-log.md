@@ -2,6 +2,364 @@
 
 هر روز یک خط جدید (تاریخ + خلاصه کوتاه کار انجام‌شده) به این فایل اضافه کن.
 
+---
+
+## 2026-08-26 — پاس چهارم تحلیل `D:\CentralAccount`: مرجع per-Module (عملیات هر Entity)
+
+> هدف صریح کاربر: «به ازای هر Entity بدونیم دقیقاً چه عملیاتی روش انجام شده و چه چیزی لازمه». خروجی: **بخش‌های ۲۱ و ۲۲** در `docs/centralaccount-business-reference.md` (سند از ۱۴۰۵ به **۱۷۰۹ خط**). Read-Only؛ `backend/` دست‌نخورده.
+
+### 🔴 کشف اول — مکانیزم چندمستأجری **وجود دارد ولی فقط در ۱۲ Handler از ۳۷۲ اعمال شده**
+
+`ApplicationUseCases\Common\BusinessUserAcceess\BusinessUserAccess.cs` → `HaveAccessToUnit(targetUnitCode)`: واحد کاربر از **توکن IDP** (`CurrentUserDto.data.organization.code`) خوانده می‌شود، همهٔ **زیرواحدهایش** واکشی می‌شوند، و اگر واحد هدف در آن نبود `UserNotAccessToUnitException` پرتاب می‌شود (fail-loud، نه فیلتر خاموش).
+
+**اعمال می‌شود:** هر ۴ مسیر نوشتن `BankCartDetails` + ۶ Query (لیست اسناد، لیست معین، حساب‌ها).
+**اعمال نمی‌شود:** کل `AccountCodes`، **کل مسیر نوشتن سند**، `Tafsili`، `PayAndRecive`، `ChargeAndCost`، `Elms`، و همهٔ `GetById`ها.
+⚠️ `HaveAccessToProvince` و `HaveAccessToUnitType` هر دو `throw new NotImplementedException()`.
+> **درس برای ما:** الگوی خوبی است ولی **اعمال دستی per-handler دقیقاً همان چیزی است که باعث فراموشی می‌شود**. اگر پیاده کردیم باید از طریق `Behavior` سراسری یا Global Query Filter باشد. این مستقیماً به دو تصمیم باز ما («`VahedCode` سمت سرور اعمال نمی‌شود» و «IDOR») پاسخ می‌دهد.
+
+### 🔴 کشف دوم — مسیر ورود سند از **Kafka**
+
+`Infrastructure.Service\Messaging\Kafka\KafkaVoucherConsumerService.cs` (۲۳۵ خط، `BackgroundService`): به `Kafka:Topic` گوش می‌دهد، پیام را به `VoucherMessageDto` دیسریالایز و **`AddTmpVoucherHeadCommand`** می‌سازد (یعنی به **سند موقت** می‌رود نه سند اصلی)؛ خطا→DLQ، موفق→Processed topic.
+⚠️ دو نکتهٔ مهم: (۱) DTO با **کد** کار می‌کند (`MoinCode`, `TafsiliCode1..7`) نه `Guid` → یک لایهٔ resolution لازم دارد. (۲) **`AddUserId` در خودِ پیام Kafka می‌آید** — یعنی در این مسیر هویت از بیرون گرفته می‌شود، برخلاف مسیر HTTP که از توکن می‌آید. ❓ حدس نزدم که اعتبارسنجی می‌شود یا نه.
+
+### ✅ کشف سوم — شکل کامل گزارش تراز آزمایشی (مهم‌ترین بخش گزارش‌ها)
+
+سه نوع، هرکدام با `TrialBalanceGridShowType` (۱گروه ۲کل ۳معین ۴تفصیلی) و drill-down:
+- **۴ ستونه:** `Debtor`, `Creditor`, `DebtorBalance`, `CreditorBalance`
+- **۶ ستونه:** + `FirstDebtor`, `FirstCreditor` (مانده اول دوره)
+- **۸ ستونه:** + `TotDebtor`, `TotCreditor` (گردش تجمعی)
+
+فرمول‌ها (از کامنت خودِ DTO): `DebtorBalance = TotDebtor > TotCreditor ? TotDebtor - TotCreditor : 0`؛ `FirstDebtor = TotDebtor - CurDebtor`. در SQL با `greatest(nvl(sum(debtor),0) - nvl(sum(creditor),0), 0)`.
+**منبع داده: دو View اوراکل** `VWTRIALREPORTWRAPPER` و `VWTRIALREPORTWRAPPERTAFSILI` — تنها تفاوت چهار سطح، **ستون `GROUP BY`** است. `TrialBalanceFilterDto` ۱۸ فیلد فیلتر دارد.
+
+### 🔴 کشف چهارم — `Cartable` یک Entity نیست، یک façade است
+
+`CartableController` (۲۰ Endpoint) **همان Commandهای `VoucherController` را دوباره expose می‌کند** (`ChangeState`, `Merg`, `Sort`, `Revers`, `Update*`, `Delete*`) + Queryهای مخصوص میز کار که از View اوراکل `VWCARTABLE` می‌خوانند. یعنی **دو Controller روی یک مجموعه Command**: یکی ورود داده، یکی بازبینی/تأیید. الگوی قابل‌توجه برای فاز UI ما.
+
+### ✅ کشف پنجم — زیرپروژه‌های باقی‌مانده
+
+`Shared` (تاریخ شمسی، `ToDescription()`، **Export به Excel/PDF**، و **`NationalCodeService`/`CompanyService`** = استعلام کد ملی و ثبت شرکت‌ها که در `AddTafsiliHandler` کامنت شده‌اند)؛ `IDP` (مبدأ `TokenManager` که فاز ۷ پورت کردیم)؛ `Infrastructure.Logging` (Serilog + ۳ Enricher)؛ `Infrastructure.Service` (SOAP `ElamDrmdWebService` + Kafka)؛ `Utility.Exception` (سلسله‌مراتب استثنا + ۹ کلاس `ACL*`).
+⚠️ **`Presentation.Worker` و `Payments` کاملاً خالی‌اند** (هیچ فایل `.cs`).
+
+### 📌 خروجی اصلی — بخش ۲۱: مرجع per-Module
+
+به‌ازای **هر ماژول/Entity** یک جدول: فهرست کامل Command/Query + منطق هرکدام + قوانین enforce‌شده. ۱۷ زیربخش: کدینگ حساب، سند (۲۲ Command)، تفصیلی، چک/دسته‌چک، دریافت‌پرداخت، اعلامیه، شارژ/هزینهٔ تنخواه، شناسه (Identity)، رابط، صفت (Attrib)، بانک، سال مالی، سایر ماژول‌ها، گزارش‌ها، کارتابل، زیرپروژه‌ها.
+**این دقیقاً همان ورودی‌ای است که برای تصمیم «این Entity در پروژهٔ ما چه CRUD/عملیاتی لازم دارد» استفاده می‌شود.**
+
+چند قانون تازه‌کشف‌شده: دسته‌چک → «طول اولین برگ با آخرین برگ برابر نیست»؛ `PersonAction` → **یک نقش فعال به‌ازای هر شخص** (`HasActiveRoleAsync`/`HasActiveUserAsync`/`HasActiveRoleExceptAsync`)؛ `RabetClosing` → «کد حساب و کد رابط نمی‌توانند یکسان باشند»؛ `Tafsili` حذف/ویرایش با `GetByIdIcludVoucherAsync` محدود می‌شود؛ تفصیلی حداکثر **۲ فایل پیوست**؛ حذف آخرین ردیف در `PayRecive`/`ElamDetail` → **سرسند هم حذف می‌شود**؛ `AddUnitFinancialYearCommand` → افتتاح سال در سطح واحد (انتقال حساب بانکی + دسته‌چک + مانده اول دوره).
+⚠️ **ناسازگاری واقعی کشف شد:** `AddVoucherListCommand` (مسیر چندردیفی) اعتبارسنجی تفصیلی (`ValidateTafsiliLevels`) را **کامنت کرده** در حالی که `AddVoucherCommand` آن را دارد.
+
+### وضعیت پوشش پس از پاس چهارم
+
+**۱۰۰٪:** ۴۴ enum؛ ۱۵۶ Command و ۲۲۱ Query با منطق و قوانین؛ هر ۳۷۲ Handler (استخراج مکانیکی repository-calls + هر `throw new`)؛ هر ۴۲ Controller؛ هر ۱۰ پروژهٔ solution؛ شکل کامل گزارش‌های تراز؛ مکانیزم چندمستأجری.
+**جزئی:** ~۴۰ Handler از ۳۷۲ خط‌به‌خط (بقیه با ⚙️ علامت خورده‌اند)؛ ~۱۵ DTO از ~۲۰۰؛ ۶ Repository از ۴۰+.
+**باقی‌مانده:** SQL کامل ~۲۵ گزارش در `VouchersDetailRepository.cs` (۲٬۷۶۶ خط)؛ ~۱۸۵ DTO؛ `Behaviors`/`Registration.cs`؛ تست‌ها؛ `Tamin.Core\Services`؛ `OracleExpressionToSqlConverter`؛ بدنهٔ SOAP/Kafka؛ و **دادهٔ زندهٔ Oracle** (پس تناقض `TYPEACTIVITY`، عرض `VAHEDTYPE` و باگ `IsAutomatic` همچنان حل‌نشده).
+
+---
+
+## 2026-08-25/26 — پاس دوم و سوم تحلیل `D:\CentralAccount` (پوشش کل solution)
+
+> ادامهٔ همان کار Read-Only. خروجی در `docs/centralaccount-business-reference.md` **گسترش یافت** (بخش‌های ۱۰ تا ۲۰؛ سند از ~۴۰۰ به **۱۴۰۵ خط**). هیچ فایلی در `D:\CentralAccount` و هیچ کدی در `backend/` تغییر نکرد.
+
+### 🔴 یافتهٔ اول — باگ `bool?` بسیار بزرگ‌تر از `TB_ACCOUNTCODE` است
+
+ممیزی کامل **هر ۴۴ فایل enum** در `Tamin.Core` و تطبیق یک‌به‌یک با **هر ۴۲ پراپرتی `bool?`** در `Accounting.Domain/Entity/` ما: **۱۹ ستون در ۱۳ جدول به‌غلط `bool?` اسکفولد شده‌اند.**
+
+جدول‌های درگیر: `TB_ACCOUNTCODE`, **`TB_VOUCHERSHEAD`**, `TB_TAFSILI`, `TB_TAFSIL_GROUP`, `TB_TAFSIL_LINK_TAFSILGROUP`, `TB_WHITEANDBLACKLIST`, `TB_RABET_CLOSING`, `TB_PAYRECIVHEAD`, `TB_ELAMHEAD`, `TB_IDENTITYSUBGRP`, `TB_BANKCARTDETAIL`, `TB_CHECKBOOK`, `TB_ATTRIBFORACCOUNTCODE`.
+
+- **`TB_VOUCHERSHEAD.DOCLIFE` تأیید شد** (حدس پاس اول درست بود): `DocLife` = ۱یادداشت ۲موقت ۳بررسی‌شده ۴تایید‌دائم. ⚠️ **این ستون همین الان در مسیر نوشتن فعال ماست** و Commandهای ما آن را `bool?` می‌پذیرند.
+- **خطرناک‌ترین مورد `TB_TAFSILI.ISACTIVE`:** `enum Active { IsActive=1, DeActive=2 }` — نام ستون و `DEFAULT 1` شبیه بولین‌اند ولی **`0` اصلاً در enum نیست**؛ «غیرفعال» با `2` بیان می‌شود. یعنی تفصیلی غیرفعال (مقدار ۲) توسط تبدیل `bool` احتمالاً `true` خوانده می‌شود → **باگ خاموش صحت داده**.
+- **`TB_RABET_CLOSING.TYPEACCOUNTCODE`** از `TypeAccountCode { KolCode=2, Moincode=3 }` استفاده می‌کند — **از ۲ شروع می‌شود**، عمداً با `TypeCodes` هم‌تراز. (شاهد پنجم مستقل برای نگاشت `TYPECODE`.)
+- **ناسازگاری عرض ستون:** `VAHEDTYPE` در دو جدول `NUMBER(1)` است ولی `TypeVahed` **۱۷ مقدار** دارد. ❓ **حدس نزدم** — نیاز به `SELECT DISTINCT` روی دادهٔ زنده قبل از هر CRUD روی `TB_TAFSILI`.
+- **الگوی سیستماتیک کشف‌شده:** **کامنت‌های ستون Oracle در این schema قابل‌اعتماد نیستند** — حداقل ۵ مورد با کد اجراشونده در تناقض یا ناقص‌اند (`TYPEACTIVITY`، `OWNER`، `ELAMHDRAMAD_TYPE`، `SUBGRPS_TYPE`، `CHECKRECEIPTTYPE`).
+- **تناقض `TYPEACTIVITY` — وزن شواهد سنگین‌تر شد ولی همچنان حدس نزدم:** حالا **چهار enum مستقل** (`TypeActivity`, `TypeActivityGroup`, `DebCredType`, `ElamCase`) همگی `Debtor=1` می‌گویند، و **خودِ schema ما در ستون `TB_ELAMHEAD.ELAMH_CASE` کامنت «1بد 2بس» دارد** — یعنی درون همان schema دو ستون با قرارداد متضاد کامنت خورده‌اند. **همچنان باید با کوئری Read-Only روی دادهٔ زنده حل شود** (هزینهٔ اشتباه = وارونه‌شدن ماهیت همهٔ حساب‌ها).
+- **باگ محتمل در سیستم قدیمی:** نام‌های `enum IsAutomatic` وارونه‌اند (`auto=0` توضیحش «دستی»، `manual=1` توضیحش «اتوماتیک»)؛ و `AddVoucherCommandHandler.cs:113` در Endpoint **ثبت دستی** مقدار `IsAutomatic.manual` (=۱=مکانیزه) می‌نویسد. ❓ قطعی نیست.
+
+### 🔴 یافتهٔ دوم — دو تصحیح مهم بر نتیجه‌گیری‌های پاس اول
+
+با اسکن **هر ۳۷۲ Handler** (نه فقط مسیر سند)، دو نتیجه‌گیری پاس اول **نادرست از آب درآمد**:
+
+**۱. تراز بدهکار/بستانکار در یک مسیر واقعاً enforce می‌شود.** `AddVoucherByPayAndReciveCommandHandler.cs:28-31` → `if (Sum(Debtor) != Sum(Creditor)) throw new VouchersException("ردیف انتخابی تراز نمی باشد.")`. الگوی واقعی: **مسیرهای خودکار تراز را تضمین می‌کنند؛ مسیر ورود دستی به کاربر اعتماد می‌کند** و در عوض اختلاف را در UI نمایش می‌دهد. سند اختتامیه و سند برگشتی هم ذاتاً متراز ساخته می‌شوند.
+
+**۲. تغییرناپذیری سند تا حد زیادی enforce می‌شود** — ولی در **خودِ عملیات‌ها**، نه در تغییر وضعیت: حذف سرسند در `reviewed`/`accepted` ممنوع؛ ویرایش در `accepted` ممنوع؛ ادغام در `reviewed`/`accepted` ممنوع؛ مرتب‌سازی فقط وقتی همه `temporary` باشند. **عدم‌تقارن عمدی:** سند `reviewed` قابل ویرایش هست ولی قابل حذف نیست.
+🔴 **و مهم‌تر برای ما:** `UpdateVoucherHeadAcommandHandler` **اصلاً `DOCLIFE` را تغییر نمی‌دهد** — فقط `DateDoc`/`HeadDesc`/`DocNumber`. تغییر وضعیت فقط از مسیر اختصاصی `ChangeStateCommand` ممکن است. **`UpdateVoucherHeadCommand` ما برعکس اجازه می‌دهد `DOCLIFE` آزادانه از بدنهٔ PUT عوض شود** — یعنی مسیر ویرایش سرسند ما دو نقص هم‌زمان دارد: نوع دادهٔ غلط (`bool?`) و عملیات نامتمایز.
+⚠️ ولی `ChangeStateCommand` خودش **هیچ گارد گذاری ندارد** (می‌توان `accepted` را به `draft` برگرداند و بعد حذف کرد) — شکاف واقعی سیستم قدیمی، نه چیزی برای کپی.
+
+### ✅ یافتهٔ سوم — مکانیزم کامل «دورهٔ بسته» پیدا شد
+
+`InvoiceConfirmationCommand` (صورتحساب ماهانه): بازهٔ ماه → گروه‌بندی بر حسب `VahedCode` → واحدهایی که سند `reviewed` دارند همه به `accepted` می‌روند؛ واحدهای مشکل‌دار در `TB_BILL_LOG` لاگ می‌شوند و کل عملیات fail می‌کند. سپس `GetVouchersDocLife` از آن پس ثبت/ویرایش سند در آن ماه را مسدود می‌کند (در **هر سه** مسیر نوشتن سند تکرار شده). `InvoiceReturnCommand` عملیات معکوس است.
+> این تصمیم باز 🟡 «Period بسته — هرگز در دامنه پیاده نشده بود» را با یک الگوی مرجع کامل پاسخ می‌دهد.
+
+### ✅ یافتهٔ چهارم — کاتالوگ کامل قوانین کسب‌وکار (۱۸ قانون «قابل حذف نیست»)
+
+از اسکن هر `throw new` در ۳۷۲ Handler. الگوی ثابت: **هیچ چیزی که «گردش مالی» یا «مصرف پایین‌دستی» دارد حذف نمی‌شود** — کد معین (گردش/لینک تفصیلی)، کد کل/گروه (فرزند)، سرسند (وضعیت/مغایرت بانکی)، دریافت‌پرداخت (سند صادرشده)، دسته چک (اوراق استفاده‌شده)، صفت حساب (استفاده در اسناد)، تنخواه، رابط، اعلامیهٔ ارسال‌شده و … . **ما فعلاً هیچ‌کدام از این ۱۸ بررسی را نداریم.**
+همچنین: ۷ قانون یکتایی، ۵ قانون «قابل ویرایش نیست»، قواعد سال مالی، و مشخصات کامل ورود دیسکت بانک رفاه (نام فایل `STM001`، طول ردیف دقیقاً ۱۳۹ کاراکتر).
+
+### ✅ یافتهٔ پنجم — ابهام `TB_RABET_CLOSING` حل شد + مفاهیم جدید
+
+`RabetClosing` = **حساب واسط اختتامیه**؛ در `AddClosingVoucherCommand` مانده‌های حساب‌ها معکوس می‌شوند و یک ردیف نهایی روی حساب رابط سند را متراز می‌کند. (ابهام بخش ۴ سند `tamin-core-entity-reference.md` بسته شد.)
+مفاهیم کاملاً جدید برای ما: `Rabet` (نگاشت «نوع رابط → کد حساب» = حساب‌های سیستمی قابل‌پیکربندی به‌جای hardcode)، `AccountException` (حساب‌هایی که به سال بعد منتقل **نمی‌شوند**)، `WhiteAndBlackList` (ماتریس مجوز «کد حساب × نوع واحد» با بازهٔ تاریخ)، `Attrib*` (صفت سفارشی روی معین)، `Identity*` (فرا-دادهٔ ردیف سند)، `PreDescrib`، `BillLog`، `CheckBook`، `BankCartDetail` (مغایرت‌گیری).
+
+### 🔴 یافتهٔ ششم — دو کنترل که ذخیره می‌شوند ولی **هرگز اعمال نمی‌شوند**
+
+`TYPEACTION` (خلاف ماهیت) و **کل `WhiteAndBlackList`** — جست‌وجوی `whiteListRepository`/`whiteAndBlackListRepository` در کل `ApplicationUseCases\Commands` **خارج از ماژول خودشان صفر نتیجه** داد. یعنی Entity + CRUD + Controller + Query کامل ساخته شده ولی به هیچ مسیر نوشتنی وصل نیست.
+> **هشدار:** اگر این‌ها را از سیستم قدیمی کپی کنیم، ممکن است ماشین‌آلاتی بسازیم که هیچ اثری ندارد. ❓ حدس نزدم که آیا در UI/تریگر اعمال می‌شوند.
+
+### 🟢 یافتهٔ هفتم — «صفر `PUT`» در کل سیستم
+
+اسکن هر ۴۲ Controller: **هیچ `[HttpPut]` وجود ندارد**؛ فقط ۶ `[HttpDelete]` که سه‌تایشان صرفاً حذف فایل پیوست است. **هیچ Entity اصلی‌ای منبع خودش را با `DELETE` حذف نمی‌کند.**
+> **تأیید مستقل و قوی برای تصمیم فاز ۸ ما.** محدودیت «فقط GET/POST» صاحب پروژه نه یک انحراف موقتی، بلکه **قرارداد جاافتادهٔ همین سازمان** است. `HttpVerbConventionTests` ما حالا توجیه بیرونی هم دارد.
+
+### فهرست‌های کامل استخراج‌شده (در سند مرجع)
+
+**۱۵۶ Command** در ۳۵ ماژول و **۲۲۱ Query** — نقشهٔ راه دامنه. بزرگ‌ترین بخش سمت خواندن: `Vouchers/Reports` با **۳۱ Query** شامل **تراز آزمایشی ۴/۶/۸ ستونه با drill-down** (استاندارد گزارش‌های حسابداری ایران؛ ما هیچ‌کدام را نداریم). **۴۲ Controller** با شمارش verb و مسئولیت.
+🟢 الگوی قابل‌کپی: `CommonController` یک Endpoint واحد دارد که enumها را با `[Description]`های فارسی به فرانت می‌دهد — یک منبع حقیقت برای برچسب‌ها.
+
+### وضعیت پوشش (صریح)
+
+**۱۰۰٪:** هر ۴۴ enum، هر ۴۲ پراپرتی `bool?` ما، فهرست کامل ۱۵۶ Command / ۲۲۱ Query / ۴۲ Controller، و کاتالوگ کامل قوانین (هر `throw new` در ۳۷۲ Handler).
+**جزئی:** ~۲۵ Handler از ۳۷۲ عمیق خوانده شد؛ ۵ Repository از ۴۰+؛ فقط `AccountCodeController` خط‌به‌خط.
+**پوشش داده نشد (حدس زده نشد):** بدنهٔ ۴۱ Endpoint `ReportController` و ۳۱ Query گزارشی (منطق تراز ۴/۶/۸ ستونه)؛ `CartableController` (۲۰ Endpoint)؛ پروژه‌های `Shared`/`IDP`/`Infrastructure.Logging`/`Infrastructure.Service`/`Presentation.Worker`/`Payments`؛ `Behaviors`/`Abstractions`/`Registration.cs`؛ `Tamin.Core\Services`; تست‌ها؛ ~۲۰۰ فایل DTO؛ `OracleExpressionToSqlConverter`؛ سرویس‌های بیرونی؛ و **دادهٔ زندهٔ Oracle** (پس تناقض `TYPEACTIVITY`، عرض `VAHEDTYPE` و باگ `IsAutomatic` همچنان حل‌نشده‌اند).
+
+---
+
+## 2026-08-25 — تحلیل Read-Only پروژهٔ خارجی `D:\CentralAccount` (ورودی جامع، به‌درخواست صریح صاحب پروژه)
+
+> ⚠️ این ورودی عمداً بلندتر از روال معمول این فایل است، چون صاحب پروژه صریحاً خواست محتوای مرجع بیزینس **در همین فایل** درج شود. تفصیل کامل در دو سند جداگانه هم هست:
+> - `docs/centralaccount-business-reference.md` — منطق کسب‌وکار استخراج‌شده
+> - `docs/centralaccount-improvement-opportunities.md` — نقد معماری/کارایی و backlog بهبود
+>
+> **قیدهای رعایت‌شده:** هیچ فایلی در `D:\CentralAccount` تغییر نکرد (فقط Read/Grep/Glob)؛ هیچ build/run آنجا اجرا نشد؛ **هیچ کدی در `backend/` ما لمس نشد** (این کار صرفاً تحقیق و مستندسازی بود)؛ هرجا چیزی پیدا نشد یا مبهم بود، صریحاً «پیدا نشد / حدس نزدم» ثبت شد.
+>
+> **تفاوت با فاز ۹.۵:** آن‌بار scope عمداً فقط `Tamin.Core\Entities\` بود. این‌بار **کل solution** خوانده شد (Domain + Application/UseCases + Infrastructure/Persistence + API) — یعنی برای اولین بار به **منطق واقعی اجراشونده** دسترسی داشتیم، نه فقط ساختار جدول.
+
+### ۱. ساختار solution کشف‌شده
+
+`D:\CentralAccount\Tamin.BaseTemplate.sln` — ۱۰ پروژه، **دقیقاً همان الگوی معماری ما** (Clean Architecture + CQRS + MediatR + FluentValidation + Repository/UnitOfWork):
+
+| پروژه | مسیر | نقش |
+|---|---|---|
+| `Domain` | `Tamin.Core\Domain.csproj` | Entityها، enumها، Exceptionها (namespace: `Domain.*`) |
+| `ApplicationUseCases` | `ApplicationUseCases\` | Commands/Queries/Validators/Dtos/Behaviors/Abstractions |
+| `Persistance.EF` | `Infrastructure.Persistance.EF\` | `ApplicationDbContext`، Repositories، `UnitOfWork` |
+| `Web.API` | `Presentaion.Web.API\` | ۴۲ Controller، Filter، Middlewares، Roles |
+| `Shared` | `Shared\` | `Result<T>` |
+| `IDP` | `IDP\` | **مبدأ همان `TokenManager` که ما در فاز ۷ پورت کردیم** |
+| `Infrastructure.Logging` / `Infrastructure.Service` / `Accounts.Tests` | — | لاگ، سرویس جانبی، تست |
+
+پوشه‌های خارج از `.sln`: `Presentation.Worker`, `Payments`, `SeriLog`, `Logging`, `Utility.Exception`.
+۳۵ ماژول در `Commands\` (از `AccountCodes` و `Vouchers` تا `Tafsilis`, `Elms`, `ChargeAndCosts`, `PayAndRecive`, `RabetClosings`, …).
+
+### ۲. 🔴 جواب قطعی سؤال مسدودکننده — چهار ستون `NUMBER(1)` در `TB_ACCOUNTCODE`
+
+**هر چهار ستون enum چندمقداری‌اند؛ اسکفولد ما (`bool?`) در هر چهار مورد غلط است.** EF Core در پروژهٔ آن‌ها **بدون هیچ ValueConverter** این‌ها را به `int` زیرین نگاشت می‌کند (تأیید شد: هیچ `HasConversion` برایشان در `Infrastructure.Persistance.EF\Contexts\` نیست) — یعنی مقدار فیزیکی در Oracle دقیقاً همان عدد enum است.
+
+**`TYPECODE` → `TypeCodes`** (`Tamin.Core\Entities\AccountCodes\TypeCodes..cs` — نام فایل واقعاً دو نقطه دارد):
+```
+Group = 1  (گروه)  |  Kol = 2  (کل)  |  Moin = 3  (معین)
+```
+سه شاهد مستقل: (الف) تعریف enum؛ (ب) استفادهٔ مستقیم در کوئری EF — `Infrastructure.Persistance.EF\Repositories\AccountCodeRepository.cs` خطوط ۳۷، ۲۱۷، ۲۲۵، ۲۳۴، ۲۵۴، ۲۸۲، ۲۹۲ مثل `Where(a => a.TypeCode == TypeCodes.Kol)` که در SQL به `TYPECODE = 2` ترجمه می‌شود؛ (ج) hardcode در Handlerها.
+
+> **نکتهٔ طراحی:** `TYPECODE` هرگز از ورودی کاربر نمی‌آید. **سه Endpoint مجزا** (`AddGroupCodeAsync`/`AddKolCodeAsync`/`AddMoinCodeAsync`) وجود دارد و هرکدام سطحش را در Handler ثابت می‌کند (`AddGroupCodeCommandHandler.cs:29`, `AddKolCodeCommandHandler.cs:29`, `AddMoinCodeCommandHandler.cs:29`).
+
+**`TYPEACCCODE` → `TypeAccCode?`**: `temporary = 1 (موقت)`, `permanent = 2 (دائم)` — ✅ **دقیقاً منطبق بر کامنت ستون ما**. فقط روی **گروه** ست می‌شود؛ در Handler معین عمداً کامنت شده (`AddMoinCodeCommandHandler.cs:26`).
+
+**`TYPEACTION` → `TypeAction?`**: `NotControlled = 1 (کنترل نشود)`, `Warning = 2 (اخطار دهد)`, `NotAdded = 3 (ثبت نشود)` — ✅ **ترتیب عددی دقیقاً همان ترتیب کامنت ستون ما**. فقط روی **معین** ست می‌شود.
+⚠️ **ولی هرگز مصرف نمی‌شود** — جست‌وجوی کامل نشان داد فقط نوشته، خوانده و نمایش داده می‌شود؛ در هیچ اعتبارسنجی سندی خوانده نمی‌شود. ❓ ممکن است در UI یا تریگر Oracle باشد — **بررسی نشد، حدس نزدم.**
+
+**`TYPEACTIVITY` → `TypeActivity?`** — 🔴 **دو یافتهٔ مهم:**
+1. **۷ مقدار دارد، نه ۳:** `Debit=1, Credit=2, DebitCredit=3, DebitPer=4, CreditPer=5, DebitFin=6, CreditFin=7` (طی‌دوره/پایان‌دوره در کامنت ستون ما اصلاً نیامده).
+2. 🔴 **۱ و ۲ نسبت به کامنت ستون ما جابه‌جا هستند:** کامنت Oracle ما می‌گوید «۱بستانکار۲بدهکار»، ولی **دو enum مستقل** در `Tamin.Core` (`TypeActivity` و `TypeActivityGroup`) هر دو `Debit = 1` می‌گویند. **این تناقض قبل از هر migration باید با کوئری Read-Only روی دادهٔ زنده حل شود** (روش پیشنهادی: مقدار `TYPEACTIVITY` چند حساب با ماهیت بدیهی مثل «بانک» را بخوانیم). **این کوئری اجرا نشد و حدس نزدم.**
+
+بازهٔ مجاز بر اساس سطح (از Validatorها): **گروه ۱-۳** (`AddGroupCodeValidator.cs:26-29`)، **معین ۱-۷** (`AddMoinCodeCommandValidator.cs:39-42`)، **کل: اصلاً ست نمی‌شود**.
+
+✅ **`TypeActivity` در محاسبهٔ مانده یا اعتبارسنجی سند استفاده نمی‌شود** — مانده همیشه `Debtor - Creditor` است بدون توجه به ماهیت (`ConsolidateMoeinQueryHandler.cs:36`, `ConsolidatesKolQueryHandler.cs:41`, `ConsolidatesGroupQueryHandler.cs:42`)؛ تنها مصرفش `ToDescription()` برای نمایش است. **یعنی تصمیم فعلی ما («`AccountNature` فقط برچسب گزارشی است») توسط سیستم قدیمی تأیید می‌شود.**
+
+### ۳. سلسله‌مراتب گروه→کل→معین — نیمه enforce شده
+
+✅ **طول/ساختار `ACCCODE` enforce می‌شود:**
+
+| سطح | Validator | قاعده |
+|---|---|---|
+| گروه | `AddGroupCodeValidator.cs:19-22` | `^\d{2}$` + نمی‌تواند `00` باشد |
+| کل | `AddKolCodeCommandValidator.cs:18-21` | `^(?!00)\d{2}(?!00)\d{2}$` — ۴ رقم، هیچ نیم‌بخشی `00` نباشد |
+| معین | `AddMoinCodeCommandValidator.cs:25-34` | `^\d{6}$` + هیچ‌کدام از **سه** بخش دورقمی `00` نباشد |
+
+> این دقیقاً همان ساختار ۲/۴/۶ رقمی است که صاحب پروژه در ۲۰۲۶-۰۸-۱۸ تأیید کرده بود (`11` → `1101` → `110101`).
+
+❌ **رابطهٔ والد-فرزند enforce نمی‌شود:** هیچ بررسی‌ای وجود ندارد که والدِ «کل» از نوع Group باشد، یا والدِ «معین» از نوع Kol، یا اینکه **کد فرزند با کد والد شروع شود**. Handlerها فقط `SetParent(command.ParentId)` می‌زنند. تنها جایی که رابطهٔ پیشوند دیده می‌شود سمت **گزارش** است (`GeneralBalanceSheetQueryHandler.cs:57` → `AccCode.Substring(0, 4)`) — که خودش شاهد قوی است که قاعده در **داده** برقرار است حتی اگر در **کد** نباشد.
+
+🐛 **دو باگ واقعی در پروژهٔ آن‌ها (ثبت شد تا ما تکرارش نکنیم):**
+- بلوک‌های `When(a => a.TypeCode.Equals(TypeCodes.Moin), ...)` که `ParentId` را اجباری می‌کنند **هرگز اجرا نمی‌شوند**، چون `TypeCode` روی Command هیچ‌وقت مقداردهی نمی‌شود (Controller خط ۱۹۱ پاسش نمی‌دهد) و `default` یعنی `0` می‌ماند.
+- `UpdateMoinCodeValidator` و `DeleteAccountCodeValidator` روی **`AccountCode` (خود Entity)** تعریف شده‌اند نه روی Command متناظر → pipeline هرگز پیدایشان نمی‌کند → **مسیر ویرایش/حذف معین عملاً بدون اعتبارسنجی است.**
+
+### ۴. ✅ 🔴 حل یکی از تصمیمات باز 🔴 ما — «الزامی بودن تفصیلی» **مدل شده است**
+
+> این مهم‌ترین یافتهٔ این تحقیق بعد از `TYPECODE` است.
+
+منبع حقیقت **`TB_ACCOUNT_LINK_LEVEL`** است — و مکانیزم **«ستون الزامی/اختیاری» نیست، بلکه «وجود یا نبودِ ردیف» است.** برای همین هیچ ستون `MUST`/`ISREQUIRED` در schema پیدا نکردیم: **لازم نبوده.**
+
+`ApplicationUseCases\Commands\Vouchers\Voucher\Create\AddVoucherCommandHandler.cs:159-176`:
+```csharp
+private void ValidateTafsiliLevels(VoucherDetailViewModel item, List<object> levels)
+{
+    for (int i = 1; i <= 7; i++)
+    {
+        var value = typeof(VoucherDetailViewModel).GetProperty($"Tafsili{i}Id").GetValue(item);
+        if (levels.Contains(i.ToString()) && value == null)
+            throw new LevelNotProvidedException($"برای کد معین  {item.AccountId}  سطح  {i}  اجباری است");
+        if (value != null && !levels.Contains(i.ToString()))
+            throw new UnauthorizedLevelException($"سطح {i} کد معین  {item.AccountId}  غیرمجاز پر شده است.");
+    }
+}
+```
+منبع `levels` — `Infrastructure.Persistance.EF\Repositories\TbAccountLinkLevelRepository.cs:73-81` (`GetLevelIdByMoein`).
+
+**قاعدهٔ دوطرفه و سختگیرانه:** وجود ردیف = **هم مجاز هم اجباری**؛ نبود ردیف = **ممنوع**. هیچ حالت «مجاز ولی اختیاری» وجود ندارد. حداکثر **۷ سطح** تفصیلی؛ نگاشت شماره به `LEVEL_ID` از `TB_LEVEL_TAFSIL.CODELEVEL`.
+
+**پیامد برای تصمیمات باز ما:**
+- 🔴 «الزامی بودن تفصیلی در Legacy مدل شده یا نه؟» → ✅ **بله، حل شد.**
+- 🟡 «نقش واقعی `TB_ACCOUNT_LINK_LEVEL` — فعال است یا artifact؟» → ✅ **کاملاً فعال؛ قلب اعتبارسنجی تفصیلی سند.**
+- ⚠️ **نتیجه‌گیری ۲۰۲۶-۰۸-۱۷ ما دربارهٔ `TB_ACCOUNT_LINK_TAFSILGROUP` باطل نمی‌شود، ولی ناقص بود.** هر دو جدول نقش دارند و نقششان متفاوت است: `TB_ACCOUNT_LINK_LEVEL` = کدام سطوح اجباری/مجازند (هنگام ثبت سند)؛ `TB_ACCOUNT_LINK_TAFSILGROUP` = کدام گروه تفصیلی وصل است (به‌عنوان مانع حذف در `DeleteAccountCodeHandler.cs:38-41`).
+
+### ۵. invariantهای حسابداری — چه چیزی واقعاً enforce می‌شود
+
+| invariant | وضعیت در `CentralAccount` | شاهد |
+|---|---|---|
+| **تراز بدهکار = بستانکار** | ❌ **کد نوشته شده ولی کاملاً کامنت است** | `AddVoucherValidator.cs:53-69` |
+| **یک‌طرفه بودن بدهکار/بستانکار** | ✅ **enforce می‌شود** | `AddVoucherDetailValidator.cs:39-49` |
+| **الزامی بودن تفصیلی** | ✅ **enforce می‌شود** | بخش ۴ بالا |
+| **تغییرناپذیری سند پس از Post** | ❌ **enforce نمی‌شود** | `ChangeStateCommandhandler.cs:17-32` |
+| **یکتایی شمارهٔ سند** | ✅ pre-check روی (شماره + واحد + سال) | `AddVoucherCommandHandler.cs:86-95` |
+| **دورهٔ بسته** | ⚠️ نسخهٔ محدود: منع ثبت در ماهی که «سند صورتحساب» دارد | `AddVoucherCommandHandler.cs:67-84` |
+
+**دو نکتهٔ ظریف و مهم دربارهٔ تراز:**
+1. کد کامنت‌شده نشان می‌دهد **قصد طراحی** این بوده که تراز فقط وقتی بررسی شود که `DocLife != draft` — یعنی سند در حالت «یادداشت» می‌تواند نامتراز باشد. اگر روزی خواستیم این تضمین را بازسازی کنیم، **نقطهٔ درست از نظر سیستم قدیمی، گذار وضعیت است نه لحظهٔ ساخت.**
+2. **چرا کامنت شده:** در `AddVoucherCommandHandler.cs:134-139` حلقهٔ `foreach` روی ردیف‌ها هم کامنت شده و به **یک ردیف تکی** تقلیل یافته. با ورودی تک‌ردیفی، تراز اصلاً معنا ندارد. یعنی **سیستم قدیمی سند را ردیف‌به‌ردیف می‌سازد** — که دقیقاً مدل ترکیبی فاز ۱۰ ما را توجیه می‌کند، ولی نسخهٔ ما (composite create واقعی با لیست) بهتر است.
+
+**`DocLife`:** `draft=1 (یادداشت)`, `temporary=2 (موقت)`, `reviewed=3 (بررسی شده)`, `accepted=4 (تایید دائم)`.
+⚠️ ستون `TB_VOUCHERSHEAD.DOCLIFE` در schema ما `DEFAULT 0` دارد ولی **`0` در این enum نیست**. ❓ **بررسی نشد، حدس نزدم.** احتمالاً `DOCLIFE` هم مثل چهار ستون بالا در مدل ما بد اسکفولد شده.
+
+`ChangeStateCommand` **هیچ گارد گذار وضعیتی ندارد** — می‌توان سند `accepted` را مستقیماً به `draft` برگرداند، بدون بررسی تراز یا نقش. **یعنی سیستم قدیمی هم ریسک باز 🔴 ما («سند Post شده قابل تغییر است») را حل نکرده و الگویی برای کپی نداریم.**
+
+### ۶. ✅ حذف گرهٔ کدینگ — الگوی مرجع برای ریسک باز 🔴 ما
+
+`ApplicationUseCases\Commands\AccountCodes\Delete\DeleteAccountCodeHandler.cs:24-53` سه قاعدهٔ متمایز بر اساس سطح دارد:
+
+| سطح | شرط منع حذف |
+|---|---|
+| **معین** | (الف) در ردیف‌های سند **گردش دارد** (`GetTuroverByIdAsync`)، یا (ب) به **گروه تفصیلی** لینک دارد |
+| **کل** | حداقل یک فرزند (معین) دارد |
+| **گروه** | حداقل یک فرزند (کل) دارد |
+
+> این دقیقاً همان چیزی است که ریسک باز 🔴 ما («حذف گرهٔ کدینگ هیچ بررسی وابستگی ندارد») پیشنهاد می‌کرد. **حالا یک پیاده‌سازی مرجع آزموده داریم.**
+
+### ۷. ✅ مرزهای Aggregate — ۵ جفت Head/Detail و ۲ Entity مبهم **حل شدند**
+
+با دسترسی به لایهٔ Application، **پوشهٔ `Commands` شاهد قطعی است** (Detail با CRUD مستقل = Aggregate Root مستقل):
+
+| جفت | نتیجه |
+|---|---|
+| `VoucherHead` / `VouchersDetail` | ✅ **مدل ترکیبی** (`VoucherHeads\*` + `VoucherDetails\*` + `Voucher\Create` ترکیبی) |
+| `ElamHead` / `ElamDetail` | ✅ **مستقل** (`Elms\OtherElamHead\*` + `Elms\OtherElamDetail\{Create,Update,Delete}`) |
+| `PayReciveHead` / `PayReciveDetail` | ✅ **مستقل** (`PayAndRecive\*` + `PayAndreciveDetails\{Created,Update,Delete}etailSingle`) |
+| `ChargeAndCostHead` / `ChargeAndCostDetail` | ✅ **مدل ترکیبی** (`Head\*` + `Detail\*` + `ChargeAndCost\Create`) |
+| `TmpVoucherHead` / `TmpVoucherDetail` | ❌ **تعبیه‌شده** (هیچ پوشهٔ Detail مستقلی نیست؛ `AddTmpVoucherHeadCommandHandler.cs:32-58`) |
+| `IdentityHead` / `IdentityDetail` | ⚠️ **تعبیه‌شده با روزنهٔ Update** (فقط `IdentityDetails\Update` وجود دارد؛ ساخت از طریق ردیف سند در `AddVoucherCommandHandler.cs:203-209`) |
+
+**دو Entity مبهم:**
+- **`RabetClosing`** → ✅ **Aggregate Root مستقل** (`Commands\RabetClosings\{Create,Update,Delete}` کامل دارد).
+- **`ChargeLinkCost`** → ⚠️ **هیچ Command/Controller ندارد**؛ فقط repository + ثبت در DI. ❓ محتوای repository و مصرف‌کنندگانش را نخواندم — **این یافته ابهام را کم می‌کند ولی قطعی‌اش نمی‌کند**؛ طبق قاعدهٔ `CLAUDE.md` هنوز باید از صاحب پروژه پرسیده شود.
+
+> ✅ **تأیید مهم:** الگوی غالب سیستم قدیمی همان **مدل ترکیبی** است که صاحب پروژه در ۲۰۲۶-۰۸-۲۰ انتخاب کرد. **فاز ۱۰ ما با پروژهٔ اصلی هم‌راستاست.**
+
+### ۸. سایر یافته‌های هم‌راستا با تصمیمات ما
+
+- **`Debtor`/`Creditor` در سراسر solution `long` غیر-nullable اند** → تصمیم باز 🟡 ما («`long` در برابر `decimal?`») **تقویت شد**. `RADIF` هم `long` است (ما `int?` داریم).
+- **هویت کاربر:** الگوی ثابت `var userid = _unitOfWork.businessUserAccessRepository.UserId;` — ✅ **دقیقاً همان `ICurrentUser.UserId` ما**. جالب اینکه در `AddVoucherCommandHandler.cs:119` نسخهٔ قدیمیِ «گرفتن از ورودی» کامنت شده (`// add.SetAddUserId(request...AddUserId);`) — یعنی **آن‌ها هم همین مسیر اصلاحی فاز ۷ ما را طی کرده‌اند.**
+- **همهٔ Endpointهای نوشتن `[HttpPost]` اند** (`AddMoinCodeAsync`, `UpdateMoinCodeAsync`, `DeleteAccountCodeAsync`) → **محدودیت «فقط GET/POST» صاحب پروژه در فاز ۸ ما با پروژهٔ اصلی خودشان هم‌راستاست.**
+- **Authorization مبتنی بر نقش:** از **همان پکیج `Tamin.Framework.Common.Security`** که ما در فاز ۷ به‌کار بردیم. تفکیک صریح: **خواندن → هر ۶ نقش؛ نوشتن/حذف کدینگ → فقط `FINANCIAL_CORE_SETAD_ADMIN`** (`AccountCodeController.cs` خطوط ۱۸۵، ۱۹۵، ۲۰۴، ۲۱۳، ۲۲۲، ۲۳۱، ۲۴۰). ⚠️ ولی این **role-based** است نه record-based؛ حتی آن‌ها هم ایزولاسیون `VAHEDCODE` را در این Controller اعمال نمی‌کنند.
+
+---
+
+## یافته‌های معماری / فرصت‌های بهبود کارایی
+
+> نقد از دید معمار/سنیور. هدف **اصلاح `D:\CentralAccount` نیست** — backlogی است تا هنگام پیاده‌سازی معادلش در پروژهٔ خودمان همان ضعف‌ها را تکرار نکنیم. فهرست کامل با ارجاع فایل/خط در `docs/centralaccount-improvement-opportunities.md`.
+
+### 🔴 ضعف‌های جدی که نباید تکرار کنیم
+
+1. **Sync-over-async گسترده — ۷۱ مورد `.Result` مسدودکننده** روی `Task` (مثلاً `AddVoucherCommandHandler.cs:102,179`، `DeleteVouchersHeadCommandHandler.cs:19`، `GetMoinCodeByIdQueryHandler.cs:23`). باعث thread-pool starvation زیر بار. **پیشنهاد: تست/analyzer که `.Result`/`.Wait()` را در لایه‌های ما ممنوع کند** — هم‌خانواده با `HttpVerbConventionTests` موجود.
+
+2. **`IUnitOfWork` با ۶۳ Repository، همه eagerly در سازنده** از طریق `_serviceProvider.GetRequiredService<T>()` (`IUnitOfWork.cs` ۱۲۰ خط / ۶۳ پراپرتی؛ `UnitOfWork.cs:180-187`). سه مشکل هم‌زمان: هزینهٔ ساخت ۶۳ شیء در هر درخواست، ضدالگوی Service Locator، و coupling کامل هر Handler به همهٔ repositoryها. → **تصمیم فاز ۵ ما («`IUnitOfWork` عمداً باریک و entity-agnostic») شاهد عینی گرفت. وقتی به ۶۵ Entity رسیدیم، مقاومت کنیم.**
+
+3. **`ChangeTracker.Clear()` بعد از هر `SaveChangesAsync`** (`UnitOfWork.cs:190-194`) — entityها detach می‌شوند، الگوی Unit-of-Work می‌شکند، و احتمالاً **علتِ** مشکل بعدی است.
+
+4. **مرز تراکنش شکسته — چند `Commit` تودرتو** در ثبت یک سند: `BeginTransaction` (خط ۲۴)، `CommitAsync` بعد از سرسند (خط ۱۲۱)، `CommitAsync` بعد از هر ردیف (خط ۱۵۶)، `Commit()` نهایی (خط ۵۶) — یعنی **N+1 رفت‌وبرگشت** به Oracle به‌جای ۱، و مسیر commit **synchronous**. → **invariant ما («Repository فقط stage می‌کند؛ Handler یک‌بار `SaveChangesAsync`») غیرقابل‌مذاکره بماند.**
+
+5. **متدهای تراکنش synchronous اند** (`UnitOfWork.cs:203-219`) — `BeginTransaction`/`Commit`/`Rollback` بدون نسخهٔ async، در حالی که EF Core دارد. ✅ `IUnitOfWork` ما از قبل async است.
+
+6. **`Domain` آلوده به attributeهای Persistence** — `AccountCode.cs` هم‌زمان `[Column]`, `[MaxLength]`, `[ForeignKey]` و **پیام‌های اعتبارسنجی فارسی سطح UI** دارد. → **قید «`Accounting.Domain` صفر وابستگی؛ فقط POCO» ما دقیقاً همین را پیشگیری می‌کند.**
+
+7. **Validatorهایی که هرگز اجرا نمی‌شوند** (بخش ۳ بالا). **پیشنهاد مشخص: تست reflection که تأیید کند هر `IRequest` یک `IValidator<T>` با تایپ دقیقاً منطبق دارد.**
+
+### 🟡 بهبودهای ارزشمند
+
+8. **متدهای `async` بدون `await` که `IQueryable` را به‌عنوان `IEnumerable` برمی‌گردانند** (`VouchersDetailRepository.cs:574-621, 671, 726`) — deferred execution از repository فرار می‌کند (خطر dispose شدن DbContext، اجرای دوباره). ضمناً `var script = query.ToQueryString();` یک فراخوانی debug جامانده است که در **هر درخواست** SQL کامل را تولید و دور می‌ریزد.
+
+9. **Repositoryهای غول‌پیکر:** `VouchersDetailRepository.cs` **۲٬۷۶۶ خط** (۲۹٪ کل Infrastructure، ۵۸ فراخوانی `.Include(`)، `VouchersHeadRepository.cs` ۱٬۱۸۹ خط. علت: منطق **خواندن/گزارش** و **نوشتن** در یک کلاس. → **قانون ۲ `CLAUDE.md` ما همین را پیشگیری می‌کند؛ گزارش‌ها را در پوشه/کلاس مجزا نگه داریم.**
+
+10. **`.Include()` چندلایه بدون `AsSplitQuery()`** — `VouchersHeadRepository.cs:210-212` سه `Include` موازی روی همان collection (`DocsDetails`) → کارتزین explosion. **`AsSplitQuery` در هیچ‌کجای پروژه استفاده نشده.**
+
+11. **بارگذاری کامل جدول‌های مرجع در حلقه** — `AddVoucherCommandHandler.cs:179` کل `TB_LEVEL_TAFSIL` را **به‌ازای هر ردیف سند** می‌خواند (همین الگو در ۶ فایل دیگر)؛ `:102` کل `TB_SYSTYPE` را می‌خواند تا با `FirstOrDefault` در حافظه یک ردیف پیدا کند. → **کاندیدای `IMemoryCache`.**
+
+12. **`DateTime.Now` به‌جای `UtcNow`** در سراسر Handlerها. ✅ ما حل کرده‌ایم (و دقیقاً همین را در فاز ۷ حین پورت `TokenManager` اصلاح کردیم — یعنی الگو در کل کدبیس آن‌هاست).
+
+13. **تکرار کد + reflection:** حلقهٔ `Tafsili{i}Id` با `GetProperty($"Tafsili{i}Id")` در حداقل ۴ Handler تکرار شده. ✅ **طراحی فاز ۱۱ ما (لیست `VoucherDetailTafsiliLinkInput` به‌جای ۷ پراپرتی) درست بوده.** ⚠️ ولی مدل ما تعداد سطوح را محدود نمی‌کند در حالی که سیستم قدیمی **دقیقاً ۷ سطح** دارد — ❓ تصمیمش با صاحب پروژه.
+
+14. **نشت پیام خام استثنا** — `AddVoucherCommandHandler.cs:59-63` → `throw new CustomException(ex.Message)`. ✅ `GlobalExceptionHandler` ما این را حل و با تست اثبات کرده.
+
+15. **ناسازگاری نام‌گذاری گسترده:** `Presentaion.Web.API`, `Infrastructure.Persistance.EF`, `TypeCodes..cs`, `UodateMoinCodeDto.cs`, `AddReversVoucherCommandHabdler.cs`, `SetCreditorr`, و سه املای متفاوت از یک namespace (`ApplicationUseCase.*` / `ApplicationUseCases.*` / `ApplictionUseCases.*`) که در **همان فایل** `UnitOfWork.cs:24-30` کنار هم `using` شده‌اند.
+
+16. **versioning ظاهری:** پوشهٔ `Controllers\AccountCode\V1\` وجود دارد ولی route واقعی `api/[controller]/[action]` است — **`V1` در URL نیست.** ⚠️ ما هم همین تصمیم باز 🟡 را داریم.
+
+### 🟢 الگوهای خوب آن‌ها که **باید کپی کنیم**
+
+17. **Global Query Filter برای soft delete** — `ApplicationDbContext.cs:76-89`، **۱۴ Entity**. بهتر از روش فعلی ماست که `Where(x => x.ISDELETED != true)` را دستی در هر Query تکرار می‌کند (خطر باگ خاموش نشت رکورد حذف‌شده).
+    ⚠️ **تفاوت schema حیاتی:** `IsDeleted` آن‌ها `bool` غیر-nullable است؛ مال ما `bool?` است و **`null` هم یعنی حذف‌نشده** (در فاز ۹ با تست SQLite اثبات شد). پس فیلتر ما باید `== null || == false` باشد، **نه** `!x.ISDELETED` و **نه** `!= true`. ضمناً مسیرهای soft-delete/idempotency فاز ۸ باید بتوانند رکورد حذف‌شده را ببینند → `IgnoreQueryFilters()` لازم می‌شود. **تغییر ظریفی است؛ باید با `qa-tester` بررسی شود نه مکانیکی.**
+
+18. **گزارش‌ها از View های Oracle خوانده می‌شوند** با aggregation سمت DB (`VW_TAFSILIREPORT`, `vwcartable`, و Entityهای `Tamin.Core\Entities\ViewEntity\`). ✅ **دقیقاً قانون ۲ `CLAUDE.md` ما** — و تأییدی عملی. وقتی به گزارش‌ها رسیدیم، از همین View های موجود (۲۸ View کشف‌شده در reverse engineering) استفاده کنیم.
+
+19. **SQL خام پارامتری‌شده** با `OracleParameter` نه الحاق رشته (`VouchersDetailRepository.cs:606-617`). ⚠️ امنیتش کاملاً به `OracleExpressionToSqlConverter` وابسته است — ❓ **آن را نخواندم؛ اگر فیلتر پویا ساختیم باید با `security-reviewer` بررسی شود.**
+
+20. **`AddAsync` روی graph کامل** به‌جای درج جداگانه (`AddTmpVoucherHeadCommandHandler.cs:32-58`) — ✅ همان الگوی composite create فاز ۱۰ ما. (جالب اینکه در مسیر سند اصلی خودشان رعایت **نشده** — یعنی ناسازگارند و ما نسخهٔ بهترشان را داریم.)
+
+### backlog پیشنهادی برای ما (اولویت‌دار)
+
+| # | اقدام | اولویت |
+|---|---|---|
+| ۱ | Global Query Filter برای `ISDELETED` (با مدیریت درست `NULL` + `IgnoreQueryFilters` در مسیرهای soft-delete) | 🔴 |
+| ۲ | تست reflection: هر `IRequest` باید `IValidator<T>` منطبق داشته باشد | 🔴 |
+| ۳ | Authorization مبتنی بر نقش با `RolesAllowedAttribute` (تفکیک خواندن/نوشتن) | 🔴 |
+| ۴ | تست/analyzer ممنوعیت `.Result`/`.Wait()` | 🟡 |
+| ۵ | محافظت از باریک ماندن `IUnitOfWork` | 🟡 |
+| ۶ | Cache برای جدول‌های مرجع (`TB_LEVEL_TAFSIL`, `TB_SYSTYPE`) | 🟡 |
+| ۷ | گزارش‌ها از View، در پوشه/کلاس مجزا از Write Repository | 🟡 |
+| ۸ | بررسی آگاهانهٔ `AsSplitQuery()` هرجا چند collection `Include` شد | 🟡 |
+| ۹ | Repository همیشه نتیجهٔ materialized برگرداند نه `IQueryable` پنهان | 🟡 |
+| ۱۰ | قرارداد نام‌گذاری + versioning API (`/v1`) قبل از اولین مصرف‌کنندهٔ خارجی | 🟡 |
+
+### ⚠️ آنچه بررسی نشد (صریح — حدس زده نشد)
+
+فرانت‌اند (خارج از solution)؛ تریگر/پکیج سمت Oracle؛ پوشه‌های خارج از `.sln` (`Presentation.Worker`, `Payments`, …)؛ ۳۳ ماژول از ۳۵ ماژول `Commands` (فقط `AccountCodes` و `Vouchers` عمیق خوانده شد)؛ `ApplicationUseCases\Behaviors\`; `Program.cs`/`Middlewares`/`Filter`; `Account.Tests`; `OracleExpressionToSqlConverter`; `GetVouchersDocLife` و `GetTuroverByIdAsync`; `ChargeLinkCostRepository`; `businessUserAccessRepository` (آیا ایزولاسیون `VAHEDCODE` دارد؟)؛ **ایندکس‌های واقعی دیتابیس و execution plan** (ارزیابی «عدم ایندکس‌گذاری» نیازمند Oracle زنده بود — انجام نشد)؛ و **دادهٔ زندهٔ Oracle** (پس تناقض `TYPEACTIVITY` ۱/۲ همچنان **حل‌نشده** است).
+
+### 🔴 اقدام بعدی پیشنهادی (تصمیم با صاحب پروژه)
+
+1. **اصلاح چهار پراپرتی `bool?` در `backend/src/Accounting.Domain/Entity/TB_ACCOUNTCODE.cs`** — ⚠️ **پیش‌نیاز:** حل تناقض `TYPEACTIVITY` با کوئری Read-Only روی دادهٔ زنده. ⚠️ **بررسی داده:** آیا مقداری خارج از بازهٔ enum وجود دارد؟ (چون `bool?` فعلی احتمالاً هر مقدار غیرصفر را `true` می‌خواند، ممکن است تا الان داده را غلط خوانده باشیم.)
+2. **بررسی همین باگ در بقیهٔ ۶۴ Entity** — هر `NUMBER(1)` که به `bool?` اسکفولد شده مشکوک است؛ `TB_VOUCHERSHEAD.DOCLIFE` قطعاً یکی از آن‌هاست.
+3. **هیچ کدی در `backend/` در این جلسه تغییر نکرد** — تصمیم نحوهٔ اصلاح (enum واقعی؟ `byte?`؟ migration دادهٔ موجود؟) با صاحب پروژه است.
+
+---
+
 - 2026-08-25 (ادامهٔ همان جلسه، پیش از commit): **پاس `/code-review` روی فاز ۱۱، طبق روال ثابت پروژه.** ۱ باگ واقعی پیدا و رفع شد: در `UpdateVoucherDetailCommandHandler.ReconcileTafsiliLinksAsync`، لینک تفصیلیِ **مشترک** (هم در DB هم در درخواست) هرگز `VAHEDCODE`/`YEAR` را با مقدار جدید ردیف sync نمی‌کرد — یعنی اگر همان Update، `VahedCode`/`Year` ردیف را هم عوض می‌کرد، لینک نگه‌داشته‌شده بی‌صدا با والدش ناسازگار می‌ماند، دقیقاً برخلاف invariant مستندشده روی `VoucherDetailTafsiliLinkInput`. رفع شد: لینک مشترک حالا `VAHEDCODE`/`YEAR` را از ردیف (پس از overwrite) می‌گیرد؛ ستون‌های Audit (`ADDUSERID`/`CREATEDDATE`/`CHANGEUSERID`/`UPDATEDDATE`) دست‌نخورده ماندند (تصمیم «عدم re-stamp» فقط دربارهٔ Audit بود). ۱ تست رگرسیون اضافه شد. سه یافتهٔ دیگر (ناهماهنگی `[ProducesResponseType]` ۴۰۰ در کل API، تکرار منطق collapse زوج تکراری بین دو Handler، پوشش تست ناقص یک assertion) بررسی و **مستند شدند، رفع نشدند** — جزئیات در «فاز ۱۱» بالاتر. **۴۱۷/۴۱۷ تست سبز**، صفر رگرسیون، build ۰ خطا.
 
 - 2026-08-25 (فاز ۱۱، برنچ `EntityCRUD`، **commit نشده — به‌خواست صریح کاربر**): **بستن دو ریسک باز فاز ۱۰ که هر دو مکانیکی و طبق الگوی از‌قبل‌تثبیت‌شده بودند.** (۱) **نگاشت خطای FK**: `ForeignKeyViolationException` جدید (خواهر ساختاری دقیق `DuplicateKeyException`) + `UnitOfWork.SaveChangesAsync` حالا ORA-02291 را هم می‌شناسد و به **400 Bad Request** نگاشت می‌شود. **۴۰۰ به‌جای ۴۰۹ یک تصمیم صریح بود:** ORA-00001 یک تعارض با state موجود است (رکورد از قبل هست، فراخوان می‌تواند reconcile کند) که دقیقاً معنای 409 است؛ ولی ORA-02291 یعنی فراخوان شناسه‌ای فرستاده که به **هیچ چیز** اشاره نمی‌کند — ورودی نامعتبر، نه تعارض. **404 هم بررسی و رد شد** چون منبع هدفِ درخواست وجود دارد و 404 روی این routeها از قبل معنای باریک «سرسند ناموجود» (از pre-check فاز ۱۰) را دارد و دوگانه‌کردنش تشخیص علت را غیرممکن می‌کرد. ORA-02292 («child record found») عمداً نگاشت **نشد** چون این پروژه اصلاً حذف فیزیکی ندارد و مسیرش وجود ندارد. شماره‌های Oracle به ثابت‌های نام‌دار تبدیل شدند. چون `UnitOfWork` مرکزی است، نگاشت روی **همهٔ** مسیرهای نوشتن (هر سه Entity + composite create + تفصیلی) یکسان اعمال می‌شود بدون opt-in per-command. نکتهٔ قرارداد: این تنها 400 پروژه است که بدنه‌اش `ProblemDetails` ساده است نه `HttpValidationProblemDetails` با دیکشنری `errors` — چون نسبت‌دادن خطا به یک فیلد بدون افشای نام constraint اوراکل ممکن نیست (با تست قفل شد). (۲) **مسیر نوشتن تفصیلی ردیف سند**: record مشترک `VoucherDetailTafsiliLinkInput(TafsiliId, LevelId)` در `Vouchers/Commands/Common/` + پارامتر پایانیِ اختیاری `TafsiliLinks = null` روی `CreateVoucherDetailCommand` و `UpdateVoucherDetailCommand` (کاملاً غیر‌breaking). `VOUCHERSDETAIL_ID`/`VAHEDCODE`/`YEAR` همگی از **خودِ ردیف** مشتق می‌شوند پس لینکِ ناسازگار با والدش ساختاراً غیرقابل‌بیان است. **رفتار Update = جایگزینی کامل** (نبوده→insert، حذف‌شده→soft-delete، مشترک→کاملاً دست‌نخورده و **بدون re-stamp** تا سیگنال Audit «چه کسی اولین بار نسبت داد» از بین نرود)؛ append-only انتخاب **نشد** چون حذف تفصیلی را برای همیشه از طریق API ناممکن می‌کرد. **`null` و `[]` عمداً تفکیک شدند** (تنها انحراف از PUT سختگیرانه، با دلیل مشخص): سمت خواندن اصلاً تفصیلی برنمی‌گرداند، پس فراخوان فیزیکاً قادر به round-trip نیست و اگر «ارسال‌نشده» یعنی «پاک کن» بود، هر فراخوان قدیمیِ درست‌رفتار در اولین ویرایش نامرتبط داده را بی‌صدا نابود می‌کرد. **قاعدهٔ تیمی «هر جدول `*_LINK_TAFSIL*` برای همیشه تعبیه‌شده» دست‌نخورده ماند** — نه Controller، نه MediatR request، نه repository اختصاصی؛ متدهای جدید parent-scoped روی `IVoucherDetailRepository` اند و عمداً `AddAsync`/`GetForUpdateAsync` نام‌گذاری نشدند. **`NoIndependentLinkTableWritePathTests` گسترش یافت نه دور زده شد**: یک تست ممنوعیت repository اختصاصی (وگرنه گارد با `ITafsiliLinkRepository` قابل دور زدن بود) و یک تست **مثبت** که وجود مسیر parent-scoped را قفل می‌کند تا کسی با حذفش فایل را سبز نکند. **۳۷ تست جدید، مجموع ۴۱۶/۴۱۶ سبز** (۲۲ Domain + ۲۷۰ Application + ۸۲ Api + ۴۲ Infrastructure)، صفر رگرسیون، build ۰ خطا و **۰ warning نوع CS** (۱۸ NU1903 پیش‌موجود). شامل ۵ تست repository واقعی روی SQLite in-memory. ⚠️ **دو شکاف باقی‌مانده که حدس زده نشد:** سمت خواندن (`VoucherDetailDto`) هنوز تفصیلی برنمی‌گرداند، و `CreateVoucherHeadCommand.InitialDetails` هنوز تفصیلی نمی‌پذیرد (پس ثبت یک‌مرحله‌ای سند کامل با تفصیلی ممکن نیست). هیچ ریسک باز دیگری (IDOR، تراز بدهکار/بستانکار، نوع دادهٔ مبلغ) لمس نشد.

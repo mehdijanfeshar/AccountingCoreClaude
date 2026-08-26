@@ -83,10 +83,12 @@ model: opus
 
 ## قواعد انتخاب Agent
 
+⚠️ **Discovery/Scaffold دیتابیس از ۲۰۲۶-۰۸ کامل و بسته است — این را در هر Task جدید فرض بگیر.**
+هر ۶۵ جدول `TB_XXX` schema `CENTRALACCOUNT` از قبل Discover و Scaffold شده‌اند: Entity در `Accounting.Domain/Entity/` و Fluent Mapping در `Accounting.Infrastructure/Legacy/LegacyDbContext.cs` **از قبل وجود دارند**. طبق تصمیم معماری «Legacy جایگزین کامل»، این پروژه **هرگز** schema/جدول جدید در Oracle نمی‌سازد و دیتابیس قرار نیست چیزی بهش اضافه بشه. پس:
+- **برای CRUD روی هر Entity‌ای که در `Accounting.Domain/Entity/` از قبل هست (یعنی همهٔ ۶۵ تا) هرگز `database-reverse-engineer` را صدا نزن** — Entity و Mapping آماده‌اند، مستقیم برو سراغ `backend-dotnet`.
+- `database-reverse-engineer` را **فقط** در دو حالت نادر صدا بزن: (۱) اگر واقعاً یک جدول/View جدید در Oracle پیدا شد که در `docs/tamin-core-entity-reference.md`/`Accounting.Domain/Entity/` هیچ معادلی ندارد (بعید، ولی ممکن)، (۲) یک کوئری Read-Only روی **دادهٔ زندهٔ** Oracle لازم است (نه Scaffold ساختار، بلکه چک‌کردن مقدار واقعی ستون‌ها — مثل ابهام `TYPEACTIVITY`/`VAHEDTYPE` که در `docs/centralaccount-business-reference.md` ثبت شده).
 - مدل یا قانون حسابداری جدید → اول `accounting-domain`
-- کشف جدول‌های موجود Oracle → `database-reverse-engineer`
-- تولید Entity از جدول Legacy → `database-reverse-engineer`
-- ادغام Legacy Entity در Domain / تشخیص هم‌پوشانی با مدل Rich → `entity-mapper`
+- ادغام Legacy Entity در Domain / تشخیص هم‌پوشانی با مدل Rich → `entity-mapper` (به‌ندرت لازم می‌شود، چون همهٔ ۶۵ Entity از قبل ادغام شده‌اند)
 - Index/MV/Execution Plan/گزارش سنگین → `performance-reviewer` (این پروژه schema/جدول جدید نمی‌سازد؛ ایجنت جدای دیتابیس نداریم)
 - Command/Query/Handler/API → `backend-dotnet`
 - OpenAPI/DTO/Error Contract/TypeScript client → `api-contract`
@@ -95,17 +97,21 @@ model: opus
 - Auth/Authorization/Sensitive Data/Audit Security → `security-reviewer`
 - Oracle/EF/Dapper/Query performance → `performance-reviewer`
 
+## مرجع دوم دانش کسب‌وکار — `D:\CentralAccount` (۲۰۲۶-۰۸-۲۶)
+
+علاوه بر `docs/tamin-core-entity-reference.md` (که فقط پوشهٔ `Entities/` یک پروژهٔ خارجی را خواند)، حالا `docs/centralaccount-business-reference.md` (۱۷۰۰+ خط) و `docs/centralaccount-improvement-opportunities.md` هم موجودند — از خواندن Read-Only **کامل** یک پروژهٔ حسابداری متمرکز واقعی دیگر (تمام لایه‌ها: Domain/ApplicationUseCases/Infrastructure/API) که روی **همان** schema اوراکل `CENTRALACCOUNT` کار می‌کند. برخلاف `Tamin.Core` (که فقط Entity داشت)، این سند شامل منطق واقعی Command/Query/Handler است — سیگنالش قوی‌تر است. **پیش از هر Task جدید روی یک Entity، اول این سند را چک کن** ببین آیا معادلش آنجا مستند شده. باز هم: این سند مرجع طراحی است نه منبع قانون کسب‌وکار پروژهٔ ما — `accounting-domain` مالک نهایی Business Meaning ما می‌ماند، ولی وقتی سند مرجع با یک ریسک باز ما هم‌راستا شد (مثل «الزامی بودن تفصیلی» پایین‌تر)، آن را به‌عنوان شاهد قوی (نه اثبات قطعی روی دادهٔ خودمان) در نظر بگیر.
+
 ## Dependency Rules
 
 کارهای مستقل را موازی اجرا کن.
 
 کارهای وابسته را ترتیبی اجرا کن.
 
-نمونه Legacy:
-`database-reverse-engineer → entity-mapper (ادغام در Domain) → accounting-domain (در صورت هم‌پوشانی) → backend-dotnet → api-contract → frontend-react → qa-tester`
+نمونه CRUD روی Entity موجود (حالت غالب — همهٔ ۶۵ جدول از قبل Scaffold شده‌اند):
+`accounting-domain (در صورت ابهام کسب‌وکار) → backend-dotnet → api-contract → frontend-react → qa-tester`
 
-نمونه Feature جدید:
-`accounting-domain → backend-dotnet → api-contract → frontend-react → qa-tester`
+نمونه Legacy نادر (فقط اگر واقعاً جدول/View کشف‌نشده‌ای پیدا شد):
+`database-reverse-engineer → entity-mapper (ادغام در Domain) → accounting-domain (در صورت هم‌پوشانی) → backend-dotnet → api-contract → frontend-react → qa-tester`
 
 در صورت نیاز:
 `security-reviewer` و `performance-reviewer` به‌صورت Gate قبل از Release اجرا می‌شوند.
@@ -162,7 +168,7 @@ Agent باید برگرداند:
 |---|---|
 | Debit == Credit | ❌ حذف شد. در Legacy، `DEBTOR`/`CREDITOR` دو `decimal?` مستقل‌اند؛ هیچ constraint ای تراز را تضمین نمی‌کند. |
 | سند Post شده غیرقابل تغییر | ❌ حذف شد. `DOCLIFE`/`ISDELETED` صرفاً داده‌اند، نه invariant. |
-| Required Detail | ❌ حذف شد — در schema Legacy هیچ ستون معادل `Requirement` کشف نشد (رجوع به تصمیم باز در `CLAUDE.md`). |
+| Required Detail | ⚠️ **در سطح کد ما هنوز پیاده نشده، ولی مکانیزمش دیگر ناشناخته نیست (۲۰۲۶-۰۸-۲۶).** طبق `docs/centralaccount-business-reference.md`، در پروژهٔ مرجع `D:\CentralAccount` این قانون enforce می‌شود و مکانیزمش **ستون نیست، وجود/عدم‌وجود ردیف در `TB_ACCOUNT_LINK_LEVEL`** است: وجود ردیف = هم مجاز هم اجباری، نبودش = ممنوع (`AddVoucherCommandHandler.cs:159-176` در پروژهٔ مرجع). برای همین هیچ ستون `MUST`/`ISREQUIRED` در schema ما پیدا نشده بود — لازم نبوده. اگر این invariant بخواهیم بازسازی کنیم، این الگو باید در Application ما پیاده شود، نه جست‌وجوی یک ستون که وجود ندارد. |
 | Detail نامعتبر رد شود | ❌ حذف شد — `TB_VOUCHERDETAIL_LINK_TAFSILI.TAFSILI_ID` و `LEVEL_ID` **هیچ FK ای ندارند** (تنها FK این جدول به `TB_VOUCHERSDETAIL` است). |
 | سلسله‌مراتب ثابت گروه/کل/معین | ❌ حذف شد — Legacy یک جدول خودارجاع تخت است (`TB_ACCOUNTCODE.PARENTID`, `FK_SELFREFRENCE`). |
 | Period بسته | ⚠️ هرگز در دامنه پیاده نشده بود. |
