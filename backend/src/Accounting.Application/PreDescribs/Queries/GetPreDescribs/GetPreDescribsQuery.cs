@@ -1,0 +1,13 @@
+using Accounting.Application.Common;
+using MediatR;
+
+namespace Accounting.Application.PreDescribs.Queries.GetPreDescribs;
+
+/// <summary>
+/// Returns a page of <c>TB_PREDESCRIB</c> rows projected to <see cref="PreDescribDto"/>. No
+/// logical-delete filter is applied — the table has no <c>ISDELETED</c> column, so every row
+/// is included.
+/// </summary>
+/// <param name="PageNumber">1-based page number.</param>
+/// <param name="PageSize">Page size, capped by <see cref="GetPreDescribsQueryValidator.MaxPageSize"/>.</param>
+public sealed record GetPreDescribsQuery(int PageNumber, int PageSize) : IRequest<PagedResult<PreDescribDto>>;

@@ -144,8 +144,83 @@ docs/tamin-core-entity-reference.md    # مرجع «مستقل vs تعبیه‌�
 - [x] **فاز ۱۰ — CRUD مستقل `TB_VOUCHERSDETAIL` + composite create سند** (۲۰۲۶-۰۸-۲۰) — اجرای تصمیم «مرز Aggregate ترکیبی» صاحب پروژه. ۵ Endpoint جدید روی `VoucherDetailsController` + گسترش `CreateVoucherHeadCommand` برای ثبت هدر و دیتیل‌ها در **یک تراکنش**. جزئیات در «فاز ۱۰» پایین‌تر. **۳۷۹/۳۷۹ تست سبز.**
 - [x] **فاز ۱۱ — نگاشت خطای FK + مسیر نوشتن تفصیلی ردیف سند** (۲۰۲۶-۰۸-۲۵) — دو ریسک باز فاز ۱۰ بسته شدند: 🔴 «نقض FK → 500 خام» و 🟡 «هیچ مسیر نوشتنی برای تفصیلی ردیف سند نیست». جزئیات در «فاز ۱۱» پایین‌تر. **۴۱۷/۴۱۷ تست سبز** (پس از یک پاس `/code-review` که ۱ باگ واقعی در sync لینک تفصیلیِ مشترک پیدا و رفع کرد).
 - [x] **فاز ۱۲ — تحلیل کسب‌وکار پروژهٔ مرجع `D:\CentralAccount` + اولین اتصال Oracle زنده** (۲۰۲۶-۰۸-۲۵/۲۶) — خواندن Read-Only کامل یک پروژهٔ حسابداری متمرکز واقعی دیگر (همان schema `CENTRALACCOUNT`)، کشف یک الگوی باگ سیستماتیک (`bool?` روی ستون‌های چندمقداری `NUMBER(1)`) و حل سه ابهام با اولین کوئری Read-Only واقعی روی Oracle زنده. جزئیات در «فاز ۱۲» پایین‌تر.
-- [ ] رفع باگ‌های تأییدشدهٔ `bool?`→enum (`TB_ACCOUNTCODE.TYPECODE`, `TB_VOUCHERSHEAD.DOCLIFE`) — هر دو در مسیر نوشتن فعال‌اند، هنوز اصلاح نشده‌اند.
+- [x] **فاز ۱۳ — CRUD دستهٔ دوم: ۸ Entity مستقل** (۲۰۲۶-۰۸-۲۷) — `AccountCodeInterface`, `AccountException`, `BillLog`, `PersonAction`, `PreDescrib`, `Rabet`, `WhiteAndBlackList`, `WhiteList`. **۳۹ Endpoint روی ۸ Controller** (۷ تا CRUD کامل + `PreDescrib` فقط CRU). **۸۶۹/۸۶۹ تست سبز** (از ۴۱۷). جزئیات در «فاز ۱۳» پایین‌تر.
+- [ ] رفع باگ‌های تأییدشدهٔ `bool?`→enum (`TB_ACCOUNTCODE.TYPECODE`, `TB_VOUCHERSHEAD.DOCLIFE`) — هر دو در مسیر نوشتن فعال‌اند، هنوز اصلاح نشده‌اند. **فاز ۱۳ سه مورد جدید به این فهرست اضافه کرد** (`TB_WHITEANDBLACKLIST.STATE` تأییدشده، `TB_ACCOUNTCODE_INTERFACE.TYPE` و `TB_PERSON_ACTION.OPERATORROLE` مشکوک) — رجوع به «فاز ۱۳».
 - [ ] فرم صدور سند با تفصیلی داینامیک
+
+### فاز ۱۳ — CRUD دستهٔ دوم: ۸ Entity مستقل (۲۰۲۶-۰۸-۲۷، برنچ `EntityCRUD`، commit نشده)
+
+ادامهٔ backlog «۴۲ Entity مستقل» از `docs/tamin-core-entity-reference.md` بخش ۳. دستهٔ اول (۹ Entity لوکاپ ساده) به **تصمیم صریح صاحب پروژه اصلاً CRUD نگرفت** — دادهٔ آن‌ها مستقیم در Oracle مدیریت می‌شود. این فاز دستهٔ دوم است: ۸ Entity.
+
+**هیچ تصمیم معماری جدیدی گرفته نشد.** کل فاز اجرای مکانیکی الگوی تثبیت‌شدهٔ فازهای ۵ تا ۱۱ است. هیچ فایلی در `Accounting.Domain/Entity/`, `LegacyDbContext.cs`, `Program.cs`, `GlobalExceptionHandler.cs`, `Accounts/` و `Vouchers/` لمس نشد.
+
+#### 🔴 درس فاز ۱۲ دوباره اعتبارسنجی شد — و دوباره جواب داد
+
+طبق درس دستهٔ اول («هیچ فرضی دربارهٔ وجود `ISDELETED`/Audit درست نیست»)، schema هر ۸ Entity **جداگانه** از روی فایل Entity و Fluent Mapping واقعی بررسی شد (نه از روی سند مرجع). نتیجه: **۷ تا یکسان بودند، یکی نبود.**
+
+| Entity | `ISDELETED` | ستون‌های Audit | خروجی | UNIQUE → ۴۰۹؟ |
+|---|---|---|---|---|
+| `TB_ACCOUNTCODE_INTERFACE` | `bool` | کامل | CRUD (۵ Endpoint) | ندارد |
+| `TB_ACCOUNTEXCEPTION` | `bool` | کامل | CRUD (۵) | ندارد |
+| `TB_BILL_LOG` | `bool` | کامل | CRUD (۵) | ندارد |
+| `TB_PERSON_ACTION` | `bool` | کامل | CRUD (۵) | ✅ `UK_PERSON_ACTION` |
+| **`TB_PREDESCRIB`** | **❌ ندارد** | **فقط `ADDUSERID` (nullable)** | **CRU (۴) — بدون Delete** | ندارد |
+| `TB_RABET` | `bool?` | همه nullable | CRUD (۵) | ✅ `UK_RABET` |
+| `TB_WHITEANDBLACKLIST` | `bool?` | کامل | CRUD (۵) | ✅ `UK_WHITEANDBLACKLIST` |
+| `TB_WHITELIST` | `bool?` | کامل | CRUD (۵) | ندارد |
+
+**`TB_PREDESCRIB` دقیقاً همان استثنایی بود که درس فاز ۱۲ پیش‌بینی‌اش را می‌کرد.** نه `ISDELETED` دارد، نه `CREATEDDATE`/`UPDATEDDATE`/`CHANGEUSERID`؛ تنها ستون Audit آن یک `ADDUSERID` **nullable** است. پیامدها (همگی مستند در XML doc، نه ضمنی):
+- **هیچ Delete ساخته نشد** — نه Command، نه Handler، نه Endpoint. دلیل: بدون `ISDELETED` تنها گزینه‌ها حذف فیزیکی (که یکپارچگی ارجاعی Legacy را می‌شکند و برخلاف رفتار سیستم قدیمی است) یا تغییر schema اوراکل (که این پروژه هرگز انجام نمی‌دهد) بودند.
+- **Update اصلاً `ICurrentUser` را تزریق نمی‌کند** — چون هیچ ستونی برای مهر زدن ندارد. این در XML doc صریحاً توضیح داده شد تا شبیه یک فراموشی به‌نظر نرسد.
+- Update به `ADDUSERID` **دست نمی‌زند** (Audit ساخت، تغییرناپذیر). فقط Create آن را از `ICurrentUser` می‌نویسد.
+- سمت خواندن هیچ فیلتر `ISDELETED` ندارد و `PreDescribDto` فیلد `IsDeleted` ندارد.
+- شرط ۴۰۴ در Update فقط «رکورد وجود ندارد» است — حالت soft-deleted اصلاً وجود ندارد.
+- ⚠️ **تلهٔ نام‌گذاری:** کلاس CLR اسمش `TB_PREDESCRIB` (مفرد) است ولی به جدول اوراکل **`TB_PREDESCRIBS` (جمع)** نگاشت می‌شود.
+
+**گارد ساختاری برای غیبتِ عمدی Delete** (`PreDescribSchemaAssumptionsTests` + یک تست در `HttpVerbConventionTests`): با reflection قفل می‌کند که (۱) `TB_PREDESCRIB` هیچ پراپرتی `ISDELETED`/`CREATEDDATE`/`UPDATEDDATE`/`CHANGEUSERID` ندارد، (۲) هیچ تایپی به نام `DeletePreDescribCommand` وجود ندارد، (۳) `IPreDescribRepository` هیچ متدی با «Delete» در نامش ندارد، (۴) `PreDescribsController` اکشن `Delete` ندارد. **هدف: اگر روزی کسی Delete اضافه کند، تست قرمز می‌شود و او را مجبور می‌کند سؤال schema را دوباره جواب دهد، نه اینکه بی‌صدا فرض کند.**
+
+#### Endpointها — ۳۹ عدد روی ۸ Controller
+
+الگو برای هر Entity (همگی زیر `SetFallbackPolicy(RequireAuthenticatedUser)`):
+
+| Verb | Route | موفق | خطاها |
+|---|---|---|---|
+| `POST` | `/api/{entity}` | 201 + `Location` + `{id}` | 400, 401, [409], 500 |
+| `GET` | `/api/{entity}?pageNumber=&pageSize=` | 200 `PagedResult<TDto>` | 400, 401, 500 |
+| `GET` | `/api/{entity}/{id:guid}` | 200 `TDto` | 400, 401, 404, 500 |
+| `POST` | `/api/{entity}/{id:guid}/update` | 200 + `{id}` | 400, 401, 404, [409], 500 |
+| `POST` | `/api/{entity}/{id:guid}/delete` | 200 + `{id}` | 400, 401, 404, 500 |
+
+routeها: `/api/account-code-interfaces`, `/api/account-exceptions`, `/api/bill-logs`, `/api/person-actions`, `/api/pre-describs`, `/api/rabets`, `/api/white-and-black-lists`, `/api/white-lists`.
+
+- **محدودیت «فقط `GET`/`POST`» فاز ۸ کاملاً رعایت شد** — صفر `[HttpPut]`/`[HttpDelete]` در کل solution (با اسکن reflection روی کل assembly قفل شده). `HttpVerbConventionTests` گسترش یافت و حالا صریحاً تأیید می‌کند مجموعهٔ اسکن‌شده **شامل هر ۸ Controller جدید** است (محافظ در برابر پاس‌شدن vacuous).
+- **۴۰۹ فقط روی سه Entity ای اعلام شد که واقعاً UNIQUE index دارند** (`PersonAction`, `Rabet`, `WhiteAndBlackList`). برای پنج تای دیگر عمداً اعلام **نشد** — دقیقاً همان قضاوت فاز ۱۰ دربارهٔ `TB_VOUCHERSDETAIL`: اعلام ۴۰۹ بدون constraint متناظر، گمانه‌زنی است.
+- **۴۰۱ روی هر ۳۹ اکشن** اعلام شد. **۴۰۳ عمداً هیچ‌جا اعلام نشد** (هنوز هیچ authorization مبتنی بر نقش وجود ندارد).
+- **نقض FK هیچ کد جدیدی لازم نداشت** — `AccountCodeInterface`/`AccountException`/`PreDescrib`/`Rabet`/`WhiteAndBlackList`/`WhiteList` همگی FK دارند، ولی نگاشت مرکزی ORA-02291 → `ForeignKeyViolationException` → **400** در `UnitOfWork` (فاز ۱۱) به‌صورت خودکار روی همهٔ مسیرهای نوشتن جدید هم اعمال می‌شود. **هیچ pre-check دستی اضافه نشد** — که عمدی است: pre-check یک قانون کسب‌وکاری اختراع می‌کرد و شرایط رقابتی را هم درست مدیریت نمی‌کرد.
+
+#### تصمیم‌های اجرایی (همگی تکرار الگوی موجود، نه تصمیم جدید)
+
+- Command فقط primitive؛ `ID = Guid.NewGuid()` در Handler. **هرگز به Oracle DEFAULT تکیه نشد** — این ضمناً ریسک باز 🔴 `sys_guid()` را برای `TB_RABET`/`TB_WHITELIST`/`TB_WHITEANDBLACKLIST` (که هر سه `ID DEFAULT sys_guid()` دارند) **عملاً خنثی می‌کند**، چون آن DEFAULT هرگز اجرا نمی‌شود. در XML doc هر Create Handler ثبت شد.
+- Audit فقط سمت سرور از `ICurrentUser` + `DateTime.UtcNow`؛ هیچ Command پراپرتی `AddUserId`/`ChangeUserId`/`CreatedDate`/`UpdatedDate` ندارد (با grep روی کل لایهٔ Application تأیید شد).
+- Update = جایگزینی کامل (PUT semantics)؛ `Id` از route نه بدنه (یک record جدای `Update{X}Request` در لایهٔ Api که اصلاً `Id` ندارد) → تناقض id مسیر/بدنه **ساختاراً** ناممکن.
+- ستون‌های تغییرناپذیر در Update: `ID`, `ADDUSERID`, `CREATEDDATE`, `ISDELETED` (با تست صریح روی هر ۸ Entity قفل شد).
+- Repository فقط stage می‌کند و **هرگز** `SaveChangesAsync` صدا نمی‌زند؛ مرز تراکنش در Handler، یک‌بار. write repositoryها اصلاً متد حذف ندارند.
+- `ISDELETED` سه‌مقداری: برای `Rabet`/`WhiteList`/`WhiteAndBlackList` که `bool?` اند، هم `false` و هم **`null`** یعنی «حذف‌نشده» — با تست صریح قفل شد که رکورد `ISDELETED == null` واقعاً قابل ویرایش است و واقعاً soft-delete می‌شود.
+- Delete ایدمپوتنت: رکورد از قبل حذف‌شده → ۲۰۰ + `{id}` **بدون هیچ نوشتنی** و بدون `SaveChangesAsync`؛ Audit قبلی دست‌نخورده می‌ماند.
+
+#### 🔴 گارد جدید DI — شکافی که هیچ تست دیگری نمی‌دید
+
+`RepositoryRegistrationTests` (جدید، در `Accounting.Infrastructure.Tests`) اضافه شد. دلیل: یک repository که interface دارد، compile می‌شود، به Handler تزریق شده و **تست unit کاملش با Moq سبز است** ولی در `AddInfrastructure` ثبت نشده، توسط **هیچ‌کدام** از ۸۶۹ تست دیگر گرفته نمی‌شد — چون تست‌های Application همگی mock می‌دهند و تست‌های Api مستقیماً Controller می‌سازند. اولین نشانهٔ چنین اشتباهی، خطای runtime روی یک Endpoint زنده می‌بود.
+- روی `ServiceDescriptor`ها assert می‌کند و سرویس‌ها را **resolve نمی‌کند** — عمدی، چون resolve کردن باعث ساخت `LegacyDbContext` می‌شد و این suite هرگز نباید به Oracle زنده نزدیک شود. بازرسی descriptor صفر I/O و صفر instantiation دارد.
+- هم ثبت‌بودن + `Scoped` بودن هر ۲۳ سرویس را چک می‌کند، هم نگاشت هر interface به **implementation درست خودش** (تا اشتباه کپی/پیست مثل ثبت `IWhiteListRepository` روی `WhiteAndBlackListRepository` گرفته شود — محتمل‌ترین جفت اشتباه این دسته).
+
+#### تست
+
+**۴۵۲ تست جدید، مجموع ۸۶۹/۸۶۹ سبز** (۲۲ Domain + **۶۶۷** Application + **۹۹** Api + **۸۱** Infrastructure)، از ۴۱۷ قبلی. **صفر رگرسیون.** build ۰ خطا / ۱۸ warning پیش‌موجود NU1903 (هیچ warning نوع CS).
+- Application: از ۲۷۱ به ۶۶۷ (+۳۹۶) — برای هر Entity: Handlerهای Create/Update/Delete و همهٔ Validatorها و Query Handlerها.
+- Api: از ۸۲ به ۹۹ (+۱۷) — گسترش `HttpVerbConventionTests`.
+- Infrastructure: از ۴۲ به ۸۱ (+۳۹) — `RepositoryRegistrationTests`.
+- ⚠️ همگی Unit/Mock — **هیچ اتصالی به Oracle زنده**، و هیچ تست repository روی SQLite برای این ۸ Entity نوشته نشد (برخلاف فازهای ۹/۱۰/۱۱ که برای cascade داشتند). یعنی صحت Fluent Mapping و رفتار واقعی INSERT/UPDATE این ۸ جدول همچنان **اثبات‌نشده** است.
 
 ### فاز ۱۲ — تحلیل کسب‌وکار پروژهٔ مرجع `D:\CentralAccount` + اولین اتصال Oracle زنده (۲۰۲۶-۰۸-۲۵/۲۶، برنچ `EntityCRUD`، commit `b224db2`، push شده)
 
@@ -593,6 +668,22 @@ paging: پیش‌فرض `pageNumber=1`, `pageSize=20`؛ سقف `MaxPageSize=200`
 - **🔴 دادهٔ Legacy موجود از قبل با یک قاعدهٔ محتمل در تناقض است.** ۳ حساب سطح گروه واقعی `TYPEACTIVITY ∈ {4,5,6}` دارند، در حالی که پروژهٔ مرجع برای سطح گروه فقط ۱..۳ را مجاز می‌داند. اگر بخواهیم این Validator را پیاده کنیم، باید تصمیم بگیریم با این ۳ رکورد تاریخی چه کنیم (نادیده گرفتن؟ استثنا؟ اصلاح داده؟) — **حدس زده نشد.**
 - **🟡 عرض/معنای `VAHEDTYPE` هنوز قطعی نیست** — نیازمند کوئری روی دیتابیس عملیاتی (نه dev) یا خواندن مجدد بخش `TypeVahed` در `D:\CentralAccount`.
 - **🟡 چندمستأجری اگر پیاده شود، باید `Behavior` سراسری باشد.** پروژهٔ مرجع نشان داد اعمال per-handler (فقط ۱۲ از ۳۷۲ Handler) عملاً یعنی فراموش‌شدن. این درسی برای ریسک باز خودمان («چندمستأجری مرز ایزولاسیون نیست») است، نه یک تصمیم جدید.
+
+### 🔴 تصمیمات باز جدید — کشف‌شده در فاز ۱۳ (۲۰۲۶-۰۸-۲۷)
+
+طبق Accounting Safety Gate، هیچ‌کدام بی‌صدا رد نشد و هیچ‌کدام حدس زده نشد:
+
+- **🔴 سه ستون `bool?`/`bool` مشکوک حالا در مسیر نوشتن *فعال* قرار گرفتند.** تا پیش از این فاز، فهرست ۱۹ ستونیِ «`bool?` که واقعاً enum است» (فاز ۱۲) فقط روی `TB_ACCOUNTCODE`/`TB_VOUCHERSHEAD` عملیاتی بود. حالا سه مورد دیگر از طریق API قابل نوشتن‌اند:
+  - **`TB_WHITEANDBLACKLIST.STATE` — تأییدشده غلط.** طبق `docs/centralaccount-business-reference.md` بخش ۱۰-۲ ردیف ۱۲، واقعاً `StateEnum` سه‌مقداری است (۱=مجاز، ۲=فقط‌سیستمی، ۳=غیرمجاز). ما آن را `bool?` می‌پذیریم و می‌نویسیم. **یعنی مقدار «۳=غیرمجاز» از طریق API فعلی اصلاً قابل بیان نیست** و مقدار ۲ احتمالاً به‌غلط `true` خوانده می‌شود.
+  - **`TB_ACCOUNTCODE_INTERFACE.TYPE` — مشکوک** (`InterfaceType` در پروژهٔ مرجع ۱..۲ است؛ اگر واقعاً دومقداری باشد `bool` بی‌خطر است، ولی تأیید نشد).
+  - **`TB_PERSON_ACTION.OPERATORROLE` — مشکوک و احتمالاً غلط** (`OperatorRole` در پروژهٔ مرجع **۱..۴** است، یعنی چهارمقداری، در حالی که ما `bool` غیر-nullable مدل کرده‌ایم). ⚠️ توجه: `TB_PERSON_ACTION.STATUS` که کنارش است **واقعاً بولین است و تأیید مثبت شده** — این دو نباید با هم اشتباه شوند.
+  - در XML doc هر Command/DTO متأثر، هشدار صریح ثبت شد که ستون زیرین `NUMBER(1)` است و ممکن است چندمقداری باشد. **رفع نشد چون خارج از دامنهٔ صریح این فاز بود** (Taskی جداست) و چون نوع CLR عوض‌کردن یک breaking change در قرارداد API است.
+- **🔴 IDOR حالا به ۸ Entity دیگر هم رسید.** همهٔ ریسک‌های authorization فازهای ۷/۸/۱۰ عیناً روی هر ۳۹ Endpoint جدید برقرارند: هر کاربر احراز‌شده می‌تواند هر رکوردی از هر واحد سازمانی را بخواند/بسازد/ویرایش/حذف کند. `VAHEDCODE` همچنان سمت سرور اعمال نمی‌شود — و توجه کنید که `TB_BILL_LOG` و `TB_PERSON_ACTION` هر دو ستون `VAHEDCODE` دارند که کاملاً ورودی فراخوان است. **سطح حمله بزرگ‌تر شد، ماهیت ریسک تغییر نکرد. مسدودکنندهٔ استقرار.**
+- **🟡 هیچ تست repository واقعی (SQLite) برای این ۸ Entity نوشته نشد.** فازهای ۹/۱۰/۱۱ برای منطق cascade تست واقعی repository داشتند؛ این فاز ندارد چون منطق repositoryها تماماً CRUD ساده است. پیامد: **صحت Fluent Mapping و ترجمهٔ فیلتر `ISDELETED != true` برای این ۸ جدول اثبات‌نشده است** — به‌ویژه برای سه جدولی که `ISDELETED` آن‌ها `bool?` است و منطق سه‌مقداری SQL دارند.
+- **🟡 `PersonAction` قاعدهٔ «یک نقش فعال به‌ازای هر شخص» را ندارد.** طبق `docs/centralaccount-business-reference.md`، پروژهٔ مرجع برای این Entity گاردهای `HasActiveRoleAsync`/`HasActiveUserAsync`/`HasActiveRoleExceptAsync` دارد که تضمین می‌کنند هر شخص فقط یک نقش فعال داشته باشد. **ما این را عمداً پیاده نکردیم** (طبق تصمیم «Legacy جایگزین کامل»، هیچ invariant بازسازی نمی‌شود مگر تصمیم صریح). UNIQUE موجود `UK_PERSON_ACTION(USERID, FROMDATE, TODATE)` این قاعده را **پوشش نمی‌دهد** — دو نقش فعال با بازهٔ تاریخ متفاوت کاملاً مجازند. اگر این قاعده لازم است، باید صریحاً در Application بازسازی شود.
+- **🟡 `WhiteAndBlackList`/`WhiteList` در پروژهٔ مرجع هرگز در مسیر نوشتن اعمال نمی‌شوند.** سند مرجع صریحاً می‌گوید جست‌وجوی `whiteListRepository`/`whiteAndBlackListRepository` در کل `Commands` آن پروژه **صفر نتیجه** خارج از ماژول خودش داد — یعنی این ماتریس مجوز آنجا داده‌ای است که نوشته می‌شود ولی هیچ‌جا چک نمی‌شود. ما هم فقط CRUD ساختیم و هیچ enforcement ای اضافه نکردیم. **اگر انتظار می‌رود این لیست‌ها واقعاً دسترسی را محدود کنند، آن منطق هنوز هیچ‌جا وجود ندارد.**
+- **🟡 `PreDescrib` هیچ مسیر حذفی ندارد و این دائمی است، نه موقت.** رکورد اشتباه ثبت‌شده از طریق API **قابل حذف نیست** (فقط قابل ویرایش). اگر حذف لازم باشد، تصمیم صریح می‌خواهد: افزودن ستون `ISDELETED` به schema (که این پروژه هرگز انجام نمی‌دهد)، یا مجازکردن حذف فیزیکی فقط برای این جدول (که استثنای معماری است).
+- **🟡 `TB_BILL_LOG` در پروژهٔ مرجع فقط `Add` دارد، ما CRUD کامل دادیم.** آنجا یک **لاگ** است (لاگ شکست صورتحساب ماهانه) که فقط از `InvoiceConfirmation` نوشته می‌شود و بعد فقط گزارش گرفته می‌شود. ما Update/Delete هم ساختیم چون ستون‌هایش اجازه می‌دادند. **آیا قابل‌ویرایش‌بودن یک ردیف لاگ درست است؟** حدس زده نشد — اگر ماهیتش append-only است، باید Update/Delete حذف شود.
 
 ## قوانین کاری تیم
 

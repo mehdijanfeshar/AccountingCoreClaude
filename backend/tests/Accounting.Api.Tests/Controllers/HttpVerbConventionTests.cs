@@ -103,6 +103,80 @@ public sealed class HttpVerbConventionTests
         AssertActionIsHttpPost(typeof(VoucherDetailsController), methodName);
     }
 
+    /// <summary>
+    /// Phase 13 (batch 2) controllers. All eight expose <c>Update</c> as <c>POST {id}/update</c>;
+    /// the seven that own an <c>ISDELETED</c> column also expose <c>Delete</c> as
+    /// <c>POST {id}/delete</c>. <see cref="PreDescribsController"/> is absent from the delete
+    /// theory on purpose — see
+    /// <see cref="NoDeleteActionExistsOnPreDescribsController_BecauseTheTableHasNoIsDeletedColumn"/>.
+    /// </summary>
+    [Theory]
+    [InlineData(typeof(AccountCodeInterfacesController), "Update")]
+    [InlineData(typeof(AccountCodeInterfacesController), "Delete")]
+    [InlineData(typeof(AccountExceptionsController), "Update")]
+    [InlineData(typeof(AccountExceptionsController), "Delete")]
+    [InlineData(typeof(BillLogsController), "Update")]
+    [InlineData(typeof(BillLogsController), "Delete")]
+    [InlineData(typeof(PersonActionsController), "Update")]
+    [InlineData(typeof(PersonActionsController), "Delete")]
+    [InlineData(typeof(PreDescribsController), "Update")]
+    [InlineData(typeof(RabetsController), "Update")]
+    [InlineData(typeof(RabetsController), "Delete")]
+    [InlineData(typeof(WhiteAndBlackListsController), "Update")]
+    [InlineData(typeof(WhiteAndBlackListsController), "Delete")]
+    [InlineData(typeof(WhiteListsController), "Update")]
+    [InlineData(typeof(WhiteListsController), "Delete")]
+    public void Phase13Controllers_UpdateAndDelete_AreHttpPost(Type controllerType, string methodName)
+    {
+        AssertActionIsHttpPost(controllerType, methodName);
+    }
+
+    /// <summary>
+    /// Companion to <see cref="AllControllerActions_IsNonEmpty_AndIncludesVoucherDetailsController"/>:
+    /// proves the whole-assembly scan actually reaches every phase-13 controller, so the
+    /// <c>[HttpPut]</c>/<c>[HttpDelete]</c> guard above cannot pass vacuously for them.
+    /// </summary>
+    [Fact]
+    public void AllControllerActions_IncludesEveryPhase13Controller()
+    {
+        var actions = AllControllerActions().ToList();
+
+        Type[] phase13Controllers =
+        [
+            typeof(AccountCodeInterfacesController),
+            typeof(AccountExceptionsController),
+            typeof(BillLogsController),
+            typeof(PersonActionsController),
+            typeof(PreDescribsController),
+            typeof(RabetsController),
+            typeof(WhiteAndBlackListsController),
+            typeof(WhiteListsController),
+        ];
+
+        foreach (var controllerType in phase13Controllers)
+        {
+            Assert.Contains(actions, m => m.DeclaringType == controllerType);
+        }
+    }
+
+    /// <summary>
+    /// Intentional-absence guard, deliberately living next to the verb convention it qualifies.
+    /// <c>TB_PREDESCRIB</c> (Oracle table <c>TB_PREDESCRIBS</c>) has no <c>ISDELETED</c> column, and
+    /// this project never issues physical deletes, so there is no safe delete path to expose:
+    /// a physical DELETE would break Legacy referential integrity and diverge from the original
+    /// application's behaviour, and adding the column would mean altering the Oracle schema, which
+    /// this project never does. If someone later adds a <c>Delete</c> action here, this test fails
+    /// and forces that schema question to be re-answered rather than silently assumed.
+    /// </summary>
+    [Fact]
+    public void NoDeleteActionExistsOnPreDescribsController_BecauseTheTableHasNoIsDeletedColumn()
+    {
+        var deleteAction = typeof(PreDescribsController)
+            .GetMethod("Delete", BindingFlags.Public | BindingFlags.Instance);
+
+        Assert.Null(deleteAction);
+    }
+
     private static void AssertActionIsHttpPost(Type controllerType, string methodName)
     {
         var method = controllerType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);

@@ -31,6 +31,29 @@ public static class DependencyInjection
         services.AddScoped<IVoucherHeadReadRepository, VoucherHeadReadRepository>();
         services.AddScoped<IVoucherDetailReadRepository, VoucherDetailReadRepository>();
 
+        // Phase 13 (batch 2) independent entities. Each follows the exact same write/read
+        // repository split as the entities above: the write repository only stages changes and
+        // never calls SaveChanges, while the read repository is AsNoTracking + DTO-projecting.
+        // PreDescrib deliberately has no delete path at all — TB_PREDESCRIBS has no ISDELETED
+        // column and this project never issues physical deletes; see PreDescribSchemaAssumptionsTests.
+        services.AddScoped<IAccountCodeInterfaceRepository, AccountCodeInterfaceRepository>();
+        services.AddScoped<IAccountExceptionRepository, AccountExceptionRepository>();
+        services.AddScoped<IBillLogRepository, BillLogRepository>();
+        services.AddScoped<IPersonActionRepository, PersonActionRepository>();
+        services.AddScoped<IPreDescribRepository, PreDescribRepository>();
+        services.AddScoped<IRabetRepository, RabetRepository>();
+        services.AddScoped<IWhiteAndBlackListRepository, WhiteAndBlackListRepository>();
+        services.AddScoped<IWhiteListRepository, WhiteListRepository>();
+
+        services.AddScoped<IAccountCodeInterfaceReadRepository, AccountCodeInterfaceReadRepository>();
+        services.AddScoped<IAccountExceptionReadRepository, AccountExceptionReadRepository>();
+        services.AddScoped<IBillLogReadRepository, BillLogReadRepository>();
+        services.AddScoped<IPersonActionReadRepository, PersonActionReadRepository>();
+        services.AddScoped<IPreDescribReadRepository, PreDescribReadRepository>();
+        services.AddScoped<IRabetReadRepository, RabetReadRepository>();
+        services.AddScoped<IWhiteAndBlackListReadRepository, WhiteAndBlackListReadRepository>();
+        services.AddScoped<IWhiteListReadRepository, WhiteListReadRepository>();
+
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 
         return services;
