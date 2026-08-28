@@ -145,8 +145,47 @@ docs/tamin-core-entity-reference.md    # مرجع «مستقل vs تعبیه‌�
 - [x] **فاز ۱۱ — نگاشت خطای FK + مسیر نوشتن تفصیلی ردیف سند** (۲۰۲۶-۰۸-۲۵) — دو ریسک باز فاز ۱۰ بسته شدند: 🔴 «نقض FK → 500 خام» و 🟡 «هیچ مسیر نوشتنی برای تفصیلی ردیف سند نیست». جزئیات در «فاز ۱۱» پایین‌تر. **۴۱۷/۴۱۷ تست سبز** (پس از یک پاس `/code-review` که ۱ باگ واقعی در sync لینک تفصیلیِ مشترک پیدا و رفع کرد).
 - [x] **فاز ۱۲ — تحلیل کسب‌وکار پروژهٔ مرجع `D:\CentralAccount` + اولین اتصال Oracle زنده** (۲۰۲۶-۰۸-۲۵/۲۶) — خواندن Read-Only کامل یک پروژهٔ حسابداری متمرکز واقعی دیگر (همان schema `CENTRALACCOUNT`)، کشف یک الگوی باگ سیستماتیک (`bool?` روی ستون‌های چندمقداری `NUMBER(1)`) و حل سه ابهام با اولین کوئری Read-Only واقعی روی Oracle زنده. جزئیات در «فاز ۱۲» پایین‌تر.
 - [x] **فاز ۱۳ — CRUD دستهٔ دوم: ۸ Entity مستقل** (۲۰۲۶-۰۸-۲۷) — `AccountCodeInterface`, `AccountException`, `BillLog`, `PersonAction`, `PreDescrib`, `Rabet`, `WhiteAndBlackList`, `WhiteList`. **۳۹ Endpoint روی ۸ Controller** (۷ تا CRUD کامل + `PreDescrib` فقط CRU). **۸۶۹/۸۶۹ تست سبز** (از ۴۱۷). جزئیات در «فاز ۱۳» پایین‌تر.
-- [ ] رفع باگ‌های تأییدشدهٔ `bool?`→enum (`TB_ACCOUNTCODE.TYPECODE`, `TB_VOUCHERSHEAD.DOCLIFE`) — هر دو در مسیر نوشتن فعال‌اند، هنوز اصلاح نشده‌اند. **فاز ۱۳ سه مورد جدید به این فهرست اضافه کرد** (`TB_WHITEANDBLACKLIST.STATE` تأییدشده، `TB_ACCOUNTCODE_INTERFACE.TYPE` و `TB_PERSON_ACTION.OPERATORROLE` مشکوک) — رجوع به «فاز ۱۳».
+- [ ] رفع باگ‌های تأییدشدهٔ `bool?`→enum (`TB_ACCOUNTCODE.TYPECODE`, `TB_VOUCHERSHEAD.DOCLIFE`) — هر دو در مسیر نوشتن فعال‌اند، هنوز اصلاح نشده‌اند. **فاز ۱۳ سه مورد جدید به این فهرست اضافه کرد** (`TB_WHITEANDBLACKLIST.STATE` تأییدشده، `TB_ACCOUNTCODE_INTERFACE.TYPE` و `TB_PERSON_ACTION.OPERATORROLE` مشکوک) — رجوع به «فاز ۱۳». **فاز ۱۴ هفت مورد دیگر اضافه کرد** (`TB_IDENTITYSUBGRPS.SUBGRPS_TYPE` که کامنت خود اوراکل سه‌مقداری بودنش را می‌گوید، `TB_WORKSHOP.ISACTIVE` خواهرِ موردِ خطرناکِ تأییدشدهٔ `TB_TAFSILI.ISACTIVE`، و ۵ مورد دیگر) — رجوع به «فاز ۱۴». **فهرست انباشته حالا ~۱۲ ستون در مسیر نوشتن فعال است.**
+- [x] **فاز ۱۴ — CRUD دستهٔ سوم: ۸ Entity مستقل** (۲۰۲۶-۰۸-۲۸) — `AttribForAccountCode`, `LevelTafsil`, `TafsilGroup`, `IdentityGroup`, `IdentitySubGroup`, `ChequeType`, `VahedInfo`, `WorkShop`. **۳۹ Endpoint روی ۸ Controller** (۷ تا CRUD کامل + `VahedInfo` فقط CRU). **۱۳۱۷/۱۳۱۷ تست سبز** (از ۸۶۹؛ پس از یک پاس `/code-review` ۸-Agent که ۱ باگ واقعی در `IdentitySubGroup.SubgrpsLen` پیدا و رفع کرد). جزئیات در «فاز ۱۴» پایین‌تر.
 - [ ] فرم صدور سند با تفصیلی داینامیک
+
+### فاز ۱۴ — CRUD دستهٔ سوم: ۸ Entity مستقل (۲۰۲۶-۰۸-۲۸، برنچ `EntityCRUD`، commit نشده)
+
+اجرای مکانیکی همان الگوی فازهای ۵–۱۳ روی ۸ Entity بعدی از بخش ۳ سند `docs/tamin-core-entity-reference.md`. **هیچ تصمیم معماری جدیدی گرفته نشد.** کار بین سه ایجنت موازی `backend-dotnet` تقسیم شد (روی مجموعه‌فایل‌های مجزا)، و سه فایل مشترک (`DependencyInjection.cs`, `RepositoryRegistrationTests.cs`, `HttpVerbConventionTests.cs`) عمداً برای `team-lead` رزرو شد تا نوشتن موازی روی آن‌ها تداخل نسازد.
+
+| Entity | جدول | Endpoint | `ISDELETED` | ۴۰۹ |
+|---|---|---|---|---|
+| AttribForAccountCode | `TB_ATTRIBFORACCOUNTCODE` | ۵ | `bool` | ✅ `AK_AK_ATTRIBFORMAINCO_ATTRIBFO` |
+| LevelTafsil | `TB_LEVEL_TAFSIL` | ۵ | `bool` | ❌ UNIQUE ندارد |
+| TafsilGroup | `TB_TAFSIL_GROUP` | ۵ | `bool` | ✅ `UK_TBTAFSILGROUP` |
+| IdentityGroup | `TB_IDENTITYGROUPS` | ۵ | `bool` | ✅ `UK_IDENTITYGROUPCODE` |
+| IdentitySubGroup | `TB_IDENTITYSUBGRPS` | ۵ | `bool` | ✅ `AK_AK_IDENTYSUBGRPS_IDENTYSU` |
+| ChequeType | `TB_CHECK_TYPE` | ۵ | `bool` | ❌ UNIQUE ندارد |
+| **VahedInfo** | `TB_VAHED_INFO` | **۴ (CRU)** | **ندارد** | ✅ `UK_VAHEDINFO` |
+| WorkShop | `TB_WORKSHOP` | ۵ | **`bool?`** | ✅ `UK_WORKSHOP` |
+
+**درس فاز ۱۲/۱۳ برای سومین بار جواب داد — هر ۸ Entity جداگانه verify شد، نه با فرض یکسان:**
+
+- **`TB_VAHED_INFO` شدیدترین مورد تا امروز است:** نه `ISDELETED` دارد، نه **هیچ** ستون Audit ای (`ADDUSERID`/`CHANGEUSERID`/`CREATEDDATE`/`UPDATEDDATE` هیچ‌کدام وجود ندارند). پس (۱) Delete ساخته نشد، و (۲) **Handlerهایش اصلاً `ICurrentUser` را تزریق نمی‌کنند** — جایی برای مهر زدن نیست. این از `TB_PREDESCRIB` فاز ۱۳ هم یک قدم جلوتر است (آن دست‌کم یک `ADDUSERID` داشت). ⚠️ **پیامد ثبت‌شده: نوشتن روی جدول ریشهٔ سلسله‌مراتب واحد سازمانی هیچ ردّ Audit ای به‌جا نمی‌گذارد.** این یک واقعیت schema است، نه چیزی که در لایهٔ Application قابل جبران باشد؛ اختراع ستون نشد.
+- **`TB_WORKSHOP.ISDELETED` از نوع `bool?` است** (مثل `TB_RABET`، برخلاف ۶ Entity دیگر این دسته)، پس هم `false` و هم `null` یعنی «حذف‌نشده» و فقط `true` صریح یعنی حذف‌شده. ردیف با `ISDELETED == null` واقعاً soft-delete می‌شود و idempotent تلقی **نمی‌شود** — با تست صریح قفل شد.
+- ستون‌های Audit `TB_WORKSHOP` همگی **nullable** اند (برخلاف بقیه)، ولی همچنان فقط از `ICurrentUser` نوشته می‌شوند.
+
+**گارد «غیاب عمدی» برای `VahedInfo` (الگوی `PreDescrib` فاز ۱۳):** دو تست جدید — `VahedInfoSchemaAssumptionsTests` (reflection: تأیید نبودِ هر ۵ ستون `ISDELETED`/`ADDUSERID`/`CHANGEUSERID`/`CREATEDDATE`/`UPDATEDDATE`) و `NoDeleteActionExistsOnVahedInfosController_...`. دلیلش در XML doc ثبت شد که چرا این جدول از `TB_PREDESCRIB` هم حساس‌تر است: ریشهٔ سلسله‌مراتب واحد سازمانی است، هم self-reference دارد (`PARENT_ID`) و هم جدول‌های دیگر (`TB_WORKSHOP.BRANCH_ID`, `TB_TAFSILI`, `TB_WHITELIST`) به آن اشاره می‌کنند — پس حذفش هم فرزندان و هم وابسته‌ها را یتیم می‌کرد.
+
+**ریسک `sys_guid()` — رویهٔ فاز ۱۳ عیناً تکرار شد، نه رویکرد دوم.** `TB_VAHED_INFO.ID` یکی از ۸ ستون دارای `HasDefaultValueSql("sys_guid() ")` است (ریسک 🔴 ثبت‌شده: مقدار ۳۲کاراکتری بدون dash و UPPERCASE که `GuidToChar36Converter` سخت‌گیر ما هنگام خواندن رد می‌کند). **Fluent Mapping دست نخورد**؛ به‌جایش مثل `CreateRabetCommandHandler` همیشه `ID = Guid.NewGuid()` سمت Application تولید می‌شود تا DEFAULT اوراکل هرگز فعال نشود. گزینهٔ «حذف `HasDefaultValueSql`» عمداً انتخاب **نشد** تا دو رویهٔ رقیب برای یک مسئله در پروژه وجود نداشته باشد.
+
+**self-reference:** `UpdateVahedInfoCommandValidator` قانون `Must(x => x.ParentId != x.Id)` را دارد (قاعدهٔ فاز ۸ — Update برخلاف Create می‌تواند `Id` را از قبل بداند، پس فقط این مسیر می‌تواند گرهٔ خودارجاع بسازد).
+
+**سه فایل مشترک که `team-lead` مرکزی سیم‌کشی کرد:**
+- `DependencyInjection.cs` — ۱۶ ثبت جدید (۸ write + ۸ read).
+- `RepositoryRegistrationTests` — ۳۲ InlineData جدید. ضمناً تست دوم از `...MapsPhase13InterfaceToItsOwnImplementation` به `...MapsInterfaceToItsOwnImplementation` تعمیم یافت (نه یک تست موازی جدید) و XML docش توضیح می‌دهد که تست اول **جابه‌جایی** ثبت را نمی‌گیرد (descriptor وجود دارد و Scoped هم هست، فقط به repository جدول اشتباه اشاره می‌کند). جفت‌های مستعد اشتباه این دسته: `IdentityGroup`/`IdentitySubGroup` و `LevelTafsil`/`TafsilGroup`.
+- `HttpVerbConventionTests` — `Phase14Controllers_UpdateAndDelete_AreHttpPost` + `AllControllerActions_IncludesEveryPhase14Controller` (محافظ در برابر سبز شدن توخالی گارد `HttpPut`/`HttpDelete`).
+
+**نگاشت FK باز هم بدون یک خط کد جدید** — ۴ Entity این دسته FK دارند (`AttribForAccountCode`→`TB_ACCOUNTCODE`، `IdentityGroup`→`TB_TAFSILI`، `IdentitySubGroup`→`TB_IDENTITYGROUPS`، `WorkShop`→`TB_ACCOUNTCODE`/`TB_VAHED_INFO`)؛ نگاشت مرکزی ORA-02291 → 400 در `UnitOfWork` (فاز ۱۱) خودکار اعمال شد. هیچ pre-check دستی اضافه نشد.
+
+**تست: ۴۴۴ تست جدید، مجموع ۱۳۱۳/۱۳۱۳ سبز** (۲۲ Domain + ۱۰۶۲ Application + ۱۱۶ Api + ۱۱۳ Infrastructure)، صفر رگرسیون. build ۰ خطا / ۱۸ warning پیش‌موجود NU1903 (هیچ CS). ⚠️ همگی Unit/Mock — **هیچ اتصالی به Oracle زنده و هیچ تست repository واقعی (SQLite) برای این ۸ Entity نوشته نشد** (همان شکاف باز فاز ۱۳).
+
+**پاس `/code-review` (۲۰۲۶-۰۸-۲۸، قبل از commit، ۸ Agent موازی روی جفت‌های مختلف Entity):** ۱ باگ واقعی پیدا و رفع شد — `IdentitySubGroup.SubgrpsLen` (ستون Oracle `SUBGRPS_LEN`, `NUMBER(2)`, حداکثر ۹۹) هیچ محدودیت بالایی در Validator نداشت با اینکه نوع CLR‌ش `byte` (تا ۲۵۵) بود؛ یعنی مقدار مثلاً ۱۵۰ از FluentValidation رد می‌شد و فقط موقع `SaveChangesAsync` با یک خطای خام Oracle (`ORA-01438`) به ۵۰۰ می‌رسید، نه ۴۰۰ تمیز. یک قانون `LessThanOrEqualTo(99)` به Create و Update Validator اضافه شد + ۴ تست رگرسیون (مجموع از ۱۳۱۳ به ۱۳۱۷ رسید). بقیهٔ ۷ Agent هیچ باگ واقعی پیدا نکردند؛ فقط نکات ساختاری (تکرار الگوی repository/paging/validation در ۱۹ فایل، بدون base class مشترک — عمداً رفع نشد، هم‌راستا با تصمیم‌های قبلی پروژه دربارهٔ تکرار پذیرفته‌شده به‌جای انتزاع زودرس) و یک یادداشت دربارهٔ `UK_TBTAFSILGROUP` (شامل `ISDELETED`، یعنی soft-delete یک کد `TafsilGroup` آن کد را برای همیشه غیرقابل‌استفاده می‌کند — از قبل در XML doc همان Command مستند بود).
 
 ### فاز ۱۳ — CRUD دستهٔ دوم: ۸ Entity مستقل (۲۰۲۶-۰۸-۲۷، برنچ `EntityCRUD`، commit نشده)
 
@@ -684,6 +723,19 @@ paging: پیش‌فرض `pageNumber=1`, `pageSize=20`؛ سقف `MaxPageSize=200`
 - **🟡 `WhiteAndBlackList`/`WhiteList` در پروژهٔ مرجع هرگز در مسیر نوشتن اعمال نمی‌شوند.** سند مرجع صریحاً می‌گوید جست‌وجوی `whiteListRepository`/`whiteAndBlackListRepository` در کل `Commands` آن پروژه **صفر نتیجه** خارج از ماژول خودش داد — یعنی این ماتریس مجوز آنجا داده‌ای است که نوشته می‌شود ولی هیچ‌جا چک نمی‌شود. ما هم فقط CRUD ساختیم و هیچ enforcement ای اضافه نکردیم. **اگر انتظار می‌رود این لیست‌ها واقعاً دسترسی را محدود کنند، آن منطق هنوز هیچ‌جا وجود ندارد.**
 - **🟡 `PreDescrib` هیچ مسیر حذفی ندارد و این دائمی است، نه موقت.** رکورد اشتباه ثبت‌شده از طریق API **قابل حذف نیست** (فقط قابل ویرایش). اگر حذف لازم باشد، تصمیم صریح می‌خواهد: افزودن ستون `ISDELETED` به schema (که این پروژه هرگز انجام نمی‌دهد)، یا مجازکردن حذف فیزیکی فقط برای این جدول (که استثنای معماری است).
 - **🟡 `TB_BILL_LOG` در پروژهٔ مرجع فقط `Add` دارد، ما CRUD کامل دادیم.** آنجا یک **لاگ** است (لاگ شکست صورتحساب ماهانه) که فقط از `InvoiceConfirmation` نوشته می‌شود و بعد فقط گزارش گرفته می‌شود. ما Update/Delete هم ساختیم چون ستون‌هایش اجازه می‌دادند. **آیا قابل‌ویرایش‌بودن یک ردیف لاگ درست است؟** حدس زده نشد — اگر ماهیتش append-only است، باید Update/Delete حذف شود.
+
+### 🔴 تصمیمات باز جدید — کشف‌شده در فاز ۱۴ (۲۰۲۶-۰۸-۲۸)
+
+طبق Accounting Safety Gate هیچ‌کدام بی‌صدا رد نشد و هیچ‌کدام حدس زده نشد:
+
+- **🔴 نوشتن روی `TB_VAHED_INFO` هیچ ردّ Audit ای ندارد.** این جدول **هیچ** ستون Audit ای ندارد (نه `ADDUSERID`، نه `CHANGEUSERID`، نه `CREATEDDATE`، نه `UPDATEDDATE`)، پس Handlerهایش عمداً `ICurrentUser` نمی‌گیرند. یعنی **ریشهٔ سلسله‌مراتب واحد سازمانی — که مرز چندمستأجری آیندهٔ پروژه به آن وابسته است — بدون هیچ ردّ حسابرسی قابل تغییر است.** ضمناً این تنها ✅ باقی‌مانده در جدول Accounting Safety Gate (یعنی Audit Trail) را برای این جدول نقض می‌کند. اگر Audit لازم است، تنها راه‌ها افزودن ستون به schema (که این پروژه هرگز انجام نمی‌دهد) یا یک جدول لاگ جانبی است — **تصمیم گرفته نشد.**
+- **🔴 `CITY_ID` و `PARENT_ID` در `TB_VAHED_INFO` هیچ FK ای ندارند.** فقط `VAHEDTYPE_ID` FK دارد (`FK_VAHEDINFO_TYPE`). یعنی نگاشت مرکزی ORA-02291 → 400 برای آن دو ستون **کار نمی‌کند** و یک `CITY_ID`/`PARENT_ID` کاملاً نامعتبر **بی‌صدا نوشته می‌شود** — دقیقاً همان الگوی شکاف `TB_VOUCHERDETAIL_LINK_TAFSILI.TAFSILI_ID` از فاز ۱۱. pre-check عمداً اضافه نشد (اختراع قانون کسب‌وکاری).
+- **🔴 حذف `LevelTafsil`/`TafsilGroup` هیچ بررسی وابستگی ندارد — و این دو از `AccountCode` هم حساس‌ترند.** هر دو Lookupهایی‌اند که **منبع حقیقت تفصیلی مجاز** (`TB_ACCOUNT_LINK_TAFSILGROUP`) مستقیماً به آن‌ها FK می‌زند، و `TB_LEVEL_TAFSIL` علاوه بر آن هدف ۷ جدول لینک دیگر است. چون حذف نرم است، هیچ FK اوراکلی شکایت نمی‌کند: می‌توان یک سطح/گروه تفصیلی را حذف کرد در حالی که لینک‌های فعالی به آن اشاره می‌کنند و **ناسازگاری کاملاً بی‌صدا** می‌ماند. هم‌خانوادهٔ ریسک 🔴 موجود «حذف گرهٔ کدینگ بدون بررسی وابستگی» (فاز ۸) است، ولی سطح انفجارش بزرگ‌تر است.
+- **🟡 `UK_TBTAFSILGROUP` شامل خودِ `ISDELETED` است** (`TAFSILGROUP_CODE, ISDELETED`). یعنی soft-delete یک کد تفصیلی، آن کد را فقط **یک بار** آزاد می‌کند: ردیف حذف‌شدهٔ دومی با همان کد به ۴۰۹ می‌خورد. مشاهده ثبت شد، هیچ منطقی برایش اضافه نشد.
+- **🟡 هفت ستون `NUMBER(1)` مشکوک دیگر وارد مسیر نوشتن فعال شدند.** قوی‌ترین مورد: **`TB_IDENTITYSUBGRPS.SUBGRPS_TYPE`** که کامنت خودِ اوراکل می‌گوید «نوع : حروف, اعداد, يا هردو» — یعنی صراحتاً **سه** مقدار، که `bool?` اصلاً نمی‌تواند نمایش دهد. مورد پرخطر بعدی **`TB_WORKSHOP.ISACTIVE`** است: خواهرِ ساختاریِ `TB_TAFSILI.ISACTIVE` که در فاز ۱۲ تأیید شد enum واقعی `{IsActive=1, DeActive=2}` است و `۰` اصلاً در آن نیست. بقیه: `ATTRIBBOXNO`/`FLAG`/`ATTRIBSUM`/`CONTROLID` روی `TB_ATTRIBFORACCOUNTCODE` و `PERSONTYPE` روی `TB_TAFSIL_GROUP`. **هیچ‌کدام تغییر نوع داده نشد** (دامنهٔ Task جدا)، ولی همگی در XML doc علامت‌گذاری شدند تا Task اصلاح پیدایشان کند.
+- **🟡 `CHEQUE_IMAGE` و `CHECKFILE` (هر دو BLOB) بدون هیچ سقف اندازه‌ای پذیرفته می‌شوند.** اولین Endpointهای پروژه‌اند که داده باینری می‌گیرند (base64 در JSON). هیچ محدودیت اندازهٔ درخواست/آپلود در سطح API وجود ندارد و کنار نبودِ Rate Limiting یک مسیر سوءاستفادهٔ حافظه/فضاست. **سقف اختراع نشد** — سیاست آپلود یک تصمیم گرفته‌نشده است.
+- **🟡 `TB_CHECK_TYPE` هیچ UNIQUE ندارد** پس ۴۰۹ اعلام نشد؛ یعنی **چند نوع چک با عنوان کاملاً یکسان قابل ثبت است**. همین برای `TB_LEVEL_TAFSIL` هم صادق است (کد/نام سطح تفصیلی می‌تواند تکراری باشد). اعلام ۴۰۹ گمانه‌زنی می‌بود.
+- **🔴 IDOR حالا به ۸ Entity دیگر هم رسید** — هر ۳۹ Endpoint جدید زیر همان ریسک باز فازهای ۷/۸/۱۰/۱۳ اند. **نکتهٔ تشدیدکننده در این دسته:** `TB_VAHED_INFO` خودِ تعریف واحد سازمانی است، پس نبودِ authorization در سطح رکورد یعنی هر کاربر احراز‌شده می‌تواند **ساختار سازمانی‌ای را که قرار است مبنای چندمستأجری باشد** بازنویسی کند — آن هم بدون هیچ ردّ Audit ای (مورد اول بالا). **مسدودکنندهٔ استقرار.**
 
 ## قوانین کاری تیم
 

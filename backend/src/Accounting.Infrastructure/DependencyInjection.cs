@@ -54,6 +54,32 @@ public static class DependencyInjection
         services.AddScoped<IWhiteAndBlackListReadRepository, WhiteAndBlackListReadRepository>();
         services.AddScoped<IWhiteListReadRepository, WhiteListReadRepository>();
 
+        // Phase 14 (batch 3) independent entities. Same write/read repository split again.
+        // Two schema irregularities in this batch are worth knowing about when reading these
+        // registrations, because they change the shape of the feature above the repository:
+        //   - VahedInfo (TB_VAHED_INFO) has NO ISDELETED and NO audit columns whatsoever, so it
+        //     gets Create/Read/Update only (no delete path) and its handlers do not depend on
+        //     ICurrentUser at all — there is nowhere to stamp. See VahedInfoSchemaAssumptionsTests.
+        //   - WorkShop (TB_WORKSHOP) has a NULLABLE ISDELETED (bool?), like TB_RABET, so both
+        //     false and NULL mean "not deleted" throughout its handlers and read filters.
+        services.AddScoped<IAttribForAccountCodeRepository, AttribForAccountCodeRepository>();
+        services.AddScoped<IChequeTypeRepository, ChequeTypeRepository>();
+        services.AddScoped<IIdentityGroupRepository, IdentityGroupRepository>();
+        services.AddScoped<IIdentitySubGroupRepository, IdentitySubGroupRepository>();
+        services.AddScoped<ILevelTafsilRepository, LevelTafsilRepository>();
+        services.AddScoped<ITafsilGroupRepository, TafsilGroupRepository>();
+        services.AddScoped<IVahedInfoRepository, VahedInfoRepository>();
+        services.AddScoped<IWorkShopRepository, WorkShopRepository>();
+
+        services.AddScoped<IAttribForAccountCodeReadRepository, AttribForAccountCodeReadRepository>();
+        services.AddScoped<IChequeTypeReadRepository, ChequeTypeReadRepository>();
+        services.AddScoped<IIdentityGroupReadRepository, IdentityGroupReadRepository>();
+        services.AddScoped<IIdentitySubGroupReadRepository, IdentitySubGroupReadRepository>();
+        services.AddScoped<ILevelTafsilReadRepository, LevelTafsilReadRepository>();
+        services.AddScoped<ITafsilGroupReadRepository, TafsilGroupReadRepository>();
+        services.AddScoped<IVahedInfoReadRepository, VahedInfoReadRepository>();
+        services.AddScoped<IWorkShopReadRepository, WorkShopReadRepository>();
+
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 
         return services;

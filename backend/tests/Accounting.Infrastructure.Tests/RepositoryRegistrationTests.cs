@@ -66,6 +66,26 @@ public sealed class RepositoryRegistrationTests
     [InlineData(typeof(IRabetReadRepository))]
     [InlineData(typeof(IWhiteAndBlackListReadRepository))]
     [InlineData(typeof(IWhiteListReadRepository))]
+    // Phase 14 batch 3 — write side. VahedInfo appears here even though it has no delete path
+    // (TB_VAHED_INFO has no ISDELETED column): a missing registration would break its Create and
+    // Update endpoints just as badly, so it must be covered like any other write repository.
+    [InlineData(typeof(IAttribForAccountCodeRepository))]
+    [InlineData(typeof(IChequeTypeRepository))]
+    [InlineData(typeof(IIdentityGroupRepository))]
+    [InlineData(typeof(IIdentitySubGroupRepository))]
+    [InlineData(typeof(ILevelTafsilRepository))]
+    [InlineData(typeof(ITafsilGroupRepository))]
+    [InlineData(typeof(IVahedInfoRepository))]
+    [InlineData(typeof(IWorkShopRepository))]
+    // Phase 14 batch 3 — read side.
+    [InlineData(typeof(IAttribForAccountCodeReadRepository))]
+    [InlineData(typeof(IChequeTypeReadRepository))]
+    [InlineData(typeof(IIdentityGroupReadRepository))]
+    [InlineData(typeof(IIdentitySubGroupReadRepository))]
+    [InlineData(typeof(ILevelTafsilReadRepository))]
+    [InlineData(typeof(ITafsilGroupReadRepository))]
+    [InlineData(typeof(IVahedInfoReadRepository))]
+    [InlineData(typeof(IWorkShopReadRepository))]
     public void AddInfrastructure_RegistersServiceAsScoped(Type serviceType)
     {
         var services = BuildRegisteredServices();
@@ -84,9 +104,15 @@ public sealed class RepositoryRegistrationTests
     }
 
     /// <summary>
-    /// Pins the concrete type behind each phase-13 repository interface, so a copy/paste slip that
+    /// Pins the concrete type behind each batched repository interface, so a copy/paste slip that
     /// registers (say) <c>IWhiteListRepository</c> against <c>WhiteAndBlackListRepository</c> is
-    /// caught. Those two are the likeliest pair to be confused in this batch.
+    /// caught. Every batch of near-identical CRUD entities has at least one such confusable pair:
+    /// in phase 13 it was <c>WhiteList</c>/<c>WhiteAndBlackList</c>; in phase 14 there are two,
+    /// <c>IdentityGroup</c>/<c>IdentitySubGroup</c> and <c>LevelTafsil</c>/<c>TafsilGroup</c> —
+    /// the latter pair being especially easy to transpose since both names contain "Tafsil".
+    /// Note that <see cref="AddInfrastructure_RegistersServiceAsScoped"/> above would NOT catch a
+    /// crossed registration: the descriptor still exists and is still scoped, it just points at
+    /// the wrong table's repository, which would silently read and write the wrong Oracle table.
     /// </summary>
     [Theory]
     [InlineData(typeof(IAccountCodeInterfaceRepository), typeof(AccountCodeInterfaceRepository))]
@@ -105,7 +131,24 @@ public sealed class RepositoryRegistrationTests
     [InlineData(typeof(IRabetReadRepository), typeof(RabetReadRepository))]
     [InlineData(typeof(IWhiteAndBlackListReadRepository), typeof(WhiteAndBlackListReadRepository))]
     [InlineData(typeof(IWhiteListReadRepository), typeof(WhiteListReadRepository))]
-    public void AddInfrastructure_MapsPhase13InterfaceToItsOwnImplementation(
+    // Phase 14 batch 3.
+    [InlineData(typeof(IAttribForAccountCodeRepository), typeof(AttribForAccountCodeRepository))]
+    [InlineData(typeof(IChequeTypeRepository), typeof(ChequeTypeRepository))]
+    [InlineData(typeof(IIdentityGroupRepository), typeof(IdentityGroupRepository))]
+    [InlineData(typeof(IIdentitySubGroupRepository), typeof(IdentitySubGroupRepository))]
+    [InlineData(typeof(ILevelTafsilRepository), typeof(LevelTafsilRepository))]
+    [InlineData(typeof(ITafsilGroupRepository), typeof(TafsilGroupRepository))]
+    [InlineData(typeof(IVahedInfoRepository), typeof(VahedInfoRepository))]
+    [InlineData(typeof(IWorkShopRepository), typeof(WorkShopRepository))]
+    [InlineData(typeof(IAttribForAccountCodeReadRepository), typeof(AttribForAccountCodeReadRepository))]
+    [InlineData(typeof(IChequeTypeReadRepository), typeof(ChequeTypeReadRepository))]
+    [InlineData(typeof(IIdentityGroupReadRepository), typeof(IdentityGroupReadRepository))]
+    [InlineData(typeof(IIdentitySubGroupReadRepository), typeof(IdentitySubGroupReadRepository))]
+    [InlineData(typeof(ILevelTafsilReadRepository), typeof(LevelTafsilReadRepository))]
+    [InlineData(typeof(ITafsilGroupReadRepository), typeof(TafsilGroupReadRepository))]
+    [InlineData(typeof(IVahedInfoReadRepository), typeof(VahedInfoReadRepository))]
+    [InlineData(typeof(IWorkShopReadRepository), typeof(WorkShopReadRepository))]
+    public void AddInfrastructure_MapsInterfaceToItsOwnImplementation(
         Type serviceType,
         Type expectedImplementationType)
     {

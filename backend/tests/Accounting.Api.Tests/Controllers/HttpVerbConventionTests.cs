@@ -177,6 +177,82 @@ public sealed class HttpVerbConventionTests
         Assert.Null(deleteAction);
     }
 
+    /// <summary>
+    /// Phase 14 (batch 3) controllers. All eight expose <c>Update</c> as <c>POST {id}/update</c>;
+    /// the seven that own an <c>ISDELETED</c> column also expose <c>Delete</c> as
+    /// <c>POST {id}/delete</c>. <see cref="VahedInfosController"/> is absent from the delete
+    /// theory on purpose — see
+    /// <see cref="NoDeleteActionExistsOnVahedInfosController_BecauseTheTableHasNoIsDeletedColumn"/>.
+    /// </summary>
+    [Theory]
+    [InlineData(typeof(AttribForAccountCodesController), "Update")]
+    [InlineData(typeof(AttribForAccountCodesController), "Delete")]
+    [InlineData(typeof(ChequeTypesController), "Update")]
+    [InlineData(typeof(ChequeTypesController), "Delete")]
+    [InlineData(typeof(IdentityGroupsController), "Update")]
+    [InlineData(typeof(IdentityGroupsController), "Delete")]
+    [InlineData(typeof(IdentitySubGroupsController), "Update")]
+    [InlineData(typeof(IdentitySubGroupsController), "Delete")]
+    [InlineData(typeof(LevelTafsilsController), "Update")]
+    [InlineData(typeof(LevelTafsilsController), "Delete")]
+    [InlineData(typeof(TafsilGroupsController), "Update")]
+    [InlineData(typeof(TafsilGroupsController), "Delete")]
+    [InlineData(typeof(VahedInfosController), "Update")]
+    [InlineData(typeof(WorkShopsController), "Update")]
+    [InlineData(typeof(WorkShopsController), "Delete")]
+    public void Phase14Controllers_UpdateAndDelete_AreHttpPost(Type controllerType, string methodName)
+    {
+        AssertActionIsHttpPost(controllerType, methodName);
+    }
+
+    /// <summary>
+    /// Companion to <see cref="AllControllerActions_IncludesEveryPhase13Controller"/>: proves the
+    /// whole-assembly scan actually reaches every phase-14 controller, so the
+    /// <c>[HttpPut]</c>/<c>[HttpDelete]</c> guard above cannot pass vacuously for them.
+    /// </summary>
+    [Fact]
+    public void AllControllerActions_IncludesEveryPhase14Controller()
+    {
+        var actions = AllControllerActions().ToList();
+
+        Type[] phase14Controllers =
+        [
+            typeof(AttribForAccountCodesController),
+            typeof(ChequeTypesController),
+            typeof(IdentityGroupsController),
+            typeof(IdentitySubGroupsController),
+            typeof(LevelTafsilsController),
+            typeof(TafsilGroupsController),
+            typeof(VahedInfosController),
+            typeof(WorkShopsController),
+        ];
+
+        foreach (var controllerType in phase14Controllers)
+        {
+            Assert.Contains(actions, m => m.DeclaringType == controllerType);
+        }
+    }
+
+    /// <summary>
+    /// Intentional-absence guard, the phase-14 sibling of
+    /// <see cref="NoDeleteActionExistsOnPreDescribsController_BecauseTheTableHasNoIsDeletedColumn"/>.
+    /// <c>TB_VAHED_INFO</c> has no <c>ISDELETED</c> column, and this project never issues physical
+    /// deletes, so there is no safe delete path to expose. This table is a stronger case than
+    /// <c>TB_PREDESCRIB</c>: it is the root of the organisational-unit hierarchy that other tables
+    /// (<c>TB_WORKSHOP.BRANCH_ID</c>, <c>TB_TAFSILI</c>, <c>TB_WHITELIST</c>) point at, and it also
+    /// self-references via <c>PARENT_ID</c>, so deleting a row would orphan both children and
+    /// dependants. If someone later adds a <c>Delete</c> action here, this test fails and forces
+    /// that question to be re-answered rather than silently assumed.
+    /// </summary>
+    [Fact]
+    public void NoDeleteActionExistsOnVahedInfosController_BecauseTheTableHasNoIsDeletedColumn()
+    {
+        var deleteAction = typeof(VahedInfosController)
+            .GetMethod("Delete", BindingFlags.Public | BindingFlags.Instance);
+
+        Assert.Null(deleteAction);
+    }
+
     private static void AssertActionIsHttpPost(Type controllerType, string methodName)
     {
         var method = controllerType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
