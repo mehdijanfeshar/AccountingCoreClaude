@@ -119,7 +119,9 @@ Discovery + Scaffold هر ۶۵ جدول schema `CENTRALACCOUNT` **کامل و ب
 
 ## Workflow
 
-`Oracle Legacy → Discovery → Selected Tables → Scaffold → Domain Entity (Accounting.Domain/Legacy) + Mapping (Accounting.Infrastructure/Legacy) → entity-mapper`
+فقط در دو حالت نادر بالا اجرا می‌شود (نه به‌عنوان مسیر پیش‌فرض هر Task):
+
+`Oracle Legacy → Discovery → Selected Tables → Scaffold → Domain Entity (Accounting.Domain/Entity) + Mapping (Accounting.Infrastructure/Legacy) → entity-mapper`
 
 ## Definition of Done
 
