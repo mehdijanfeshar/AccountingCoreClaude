@@ -86,6 +86,25 @@ public sealed class RepositoryRegistrationTests
     [InlineData(typeof(ITafsilGroupReadRepository))]
     [InlineData(typeof(IVahedInfoReadRepository))]
     [InlineData(typeof(IWorkShopReadRepository))]
+    // Phase 15 batch 4 — write side. Unlike batches 2 and 3, every entity here owns an ISDELETED
+    // column, so all eight have a full Create/Update/Delete surface behind these registrations.
+    [InlineData(typeof(IBankAccountRepository))]
+    [InlineData(typeof(IBankCartDetailRepository))]
+    [InlineData(typeof(ICheckBookRepository))]
+    [InlineData(typeof(IChequesIncorrentRepository))]
+    [InlineData(typeof(IElamHeadRepository))]
+    [InlineData(typeof(IExpenseRepository))]
+    [InlineData(typeof(IReceiptRepository))]
+    [InlineData(typeof(IRevolvingFundRepository))]
+    // Phase 15 batch 4 — read side.
+    [InlineData(typeof(IBankAccountReadRepository))]
+    [InlineData(typeof(IBankCartDetailReadRepository))]
+    [InlineData(typeof(ICheckBookReadRepository))]
+    [InlineData(typeof(IChequesIncorrentReadRepository))]
+    [InlineData(typeof(IElamHeadReadRepository))]
+    [InlineData(typeof(IExpenseReadRepository))]
+    [InlineData(typeof(IReceiptReadRepository))]
+    [InlineData(typeof(IRevolvingFundReadRepository))]
     public void AddInfrastructure_RegistersServiceAsScoped(Type serviceType)
     {
         var services = BuildRegisteredServices();
@@ -113,6 +132,15 @@ public sealed class RepositoryRegistrationTests
     /// Note that <see cref="AddInfrastructure_RegistersServiceAsScoped"/> above would NOT catch a
     /// crossed registration: the descriptor still exists and is still scoped, it just points at
     /// the wrong table's repository, which would silently read and write the wrong Oracle table.
+    ///
+    /// Phase 15 introduces the most dangerous confusable pair in the whole project, so
+    /// <see cref="IAccountCodeRepository"/> is pinned here too even though it predates the batched
+    /// entities: <c>BankAccount</c> is <c>TB_ACCOUNT</c> (the bank account master — account number,
+    /// IBAN, card number) while <c>AccountCode</c> is <c>TB_ACCOUNTCODE</c> (the chart-of-accounts
+    /// node). Both are "account" repositories, they sit next to each other in
+    /// <c>AddInfrastructure</c>, and a transposition between them would silently write bank-account
+    /// rows into the chart of accounts — the single worst silent-corruption outcome available in
+    /// this codebase. <c>CheckBook</c>/<c>ChequesIncorrent</c> is the batch's other confusable pair.
     /// </summary>
     [Theory]
     [InlineData(typeof(IAccountCodeInterfaceRepository), typeof(AccountCodeInterfaceRepository))]
@@ -148,6 +176,27 @@ public sealed class RepositoryRegistrationTests
     [InlineData(typeof(ITafsilGroupReadRepository), typeof(TafsilGroupReadRepository))]
     [InlineData(typeof(IVahedInfoReadRepository), typeof(VahedInfoReadRepository))]
     [InlineData(typeof(IWorkShopReadRepository), typeof(WorkShopReadRepository))]
+    // Phase 15 batch 4. IAccountCodeRepository/IAccountCodeReadRepository are pinned alongside the
+    // BankAccount pair on purpose — see the XML doc above for why that transposition is the worst
+    // one available in this codebase.
+    [InlineData(typeof(IAccountCodeRepository), typeof(AccountCodeRepository))]
+    [InlineData(typeof(IAccountCodeReadRepository), typeof(AccountCodeReadRepository))]
+    [InlineData(typeof(IBankAccountRepository), typeof(BankAccountRepository))]
+    [InlineData(typeof(IBankCartDetailRepository), typeof(BankCartDetailRepository))]
+    [InlineData(typeof(ICheckBookRepository), typeof(CheckBookRepository))]
+    [InlineData(typeof(IChequesIncorrentRepository), typeof(ChequesIncorrentRepository))]
+    [InlineData(typeof(IElamHeadRepository), typeof(ElamHeadRepository))]
+    [InlineData(typeof(IExpenseRepository), typeof(ExpenseRepository))]
+    [InlineData(typeof(IReceiptRepository), typeof(ReceiptRepository))]
+    [InlineData(typeof(IRevolvingFundRepository), typeof(RevolvingFundRepository))]
+    [InlineData(typeof(IBankAccountReadRepository), typeof(BankAccountReadRepository))]
+    [InlineData(typeof(IBankCartDetailReadRepository), typeof(BankCartDetailReadRepository))]
+    [InlineData(typeof(ICheckBookReadRepository), typeof(CheckBookReadRepository))]
+    [InlineData(typeof(IChequesIncorrentReadRepository), typeof(ChequesIncorrentReadRepository))]
+    [InlineData(typeof(IElamHeadReadRepository), typeof(ElamHeadReadRepository))]
+    [InlineData(typeof(IExpenseReadRepository), typeof(ExpenseReadRepository))]
+    [InlineData(typeof(IReceiptReadRepository), typeof(ReceiptReadRepository))]
+    [InlineData(typeof(IRevolvingFundReadRepository), typeof(RevolvingFundReadRepository))]
     public void AddInfrastructure_MapsInterfaceToItsOwnImplementation(
         Type serviceType,
         Type expectedImplementationType)

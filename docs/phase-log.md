@@ -14,6 +14,78 @@
 
 ---
 
+### فاز ۱۵ — CRUD دستهٔ چهارم: ۸ Entity مستقل (۲۰۲۶-۰۹-۰۵، برنچ `EntityCRUD`، commit نشده)
+
+اجرای مکانیکی همان الگوی فازهای ۵–۱۴ روی ۸ Entity بعدی از بخش ۳ سند `docs/tamin-core-entity-reference.md`. **هیچ تصمیم معماری جدیدی گرفته نشد.** کار بین سه ایجنت موازی `backend-dotnet` تقسیم شد (روی مجموعه‌فایل‌های کاملاً مجزا) و سه فایل مشترک (`DependencyInjection.cs`, `RepositoryRegistrationTests.cs`, `HttpVerbConventionTests.cs`) عمداً برای `team-lead` رزرو شد — همان رویهٔ فاز ۱۴.
+
+| Entity | جدول | Endpoint | `ISDELETED` | ۴۰۹ |
+|---|---|---|---|---|
+| **BankAccount** | `TB_ACCOUNT` | ۵ | `bool?` | ✅ `UK_ACCOUNT_ACCOUNTCODE` |
+| BankCartDetail | `TB_BANKCARTDETAIL` | ۵ | `bool?` | ✅ `AK_AK_BANKCARTDETAIL_BANKCART` (۱۱ ستونه) |
+| CheckBook | `TB_CHECKBOOK` | ۵ | `bool` | ✅ `UK_CHECKBOOK` |
+| ChequesIncorrent | `TB_CHEQUES_INCORRENT` | ۵ | `bool` | ❌ UNIQUE ندارد |
+| Expense | `TB_EXPENCE` | ۵ | `bool?` | ✅ `UK_EXPENSE_CODE` |
+| Receipt | `TB_RECEIP` | ۵ | `bool` | ❌ UNIQUE ندارد |
+| RevolvingFund | `TB_REVOLVING_FUND` | ۵ | `bool?` | ✅ `UK_REVOLVING_CODE` |
+| ElamHead | `TB_ELAMHEAD` | ۵ | `bool?` | ✅ `AK_AK_ELAMHEAD_ELAMHEAD` |
+
+**۴۰ Endpoint روی ۸ Controller.** routeها: `/api/bank-accounts`, `/api/bank-cart-details`, `/api/check-books`, `/api/cheques-incorrents`, `/api/expenses`, `/api/receipts`, `/api/revolving-funds`, `/api/elam-heads`.
+
+#### درس فاز ۱۲ برای چهارمین بار اجرا شد — و این‌بار نتیجه‌اش «استثنا ندارد» بود
+
+طبق قاعده، schema هر ۸ Entity **جداگانه** از روی فایل Entity و Fluent Mapping واقعی بررسی شد. برخلاف فاز ۱۳ (`PreDescrib`) و فاز ۱۴ (`VahedInfo`)، **این‌بار هیچ استثنایی پیدا نشد**: هر ۸ جدول هم `ISDELETED` دارند و هم ستون‌های Audit. پس:
+- **هر ۸ تا CRUD کامل (۵ Endpoint) گرفتند** — اولین دسته‌ای که هیچ Entity ای در آن CRU-only نیست.
+- **هر ۸ Handler `ICurrentUser` می‌گیرند** (برخلاف `VahedInfo` که اصلاً جایی برای مهر زدن نداشت).
+- این «استثنا نداشتن» خودش با تست قفل شد (`Phase15Controllers_UpdateAndDelete_AreHttpPost` هر ۱۶ جفت Update/Delete را می‌بندد)، تا اگر روزی کسی یک Delete را حذف کند، تصمیمی صریح و مرئی باشد نه یک حذف خاموش.
+
+**تفکیک nullability که باید بدانید:** `ISDELETED` در ۵ مورد (`BankAccount`, `BankCartDetail`, `Expense`, `RevolvingFund`, `ElamHead`) از نوع `bool?` است — پس هم `false` و هم `null` یعنی «حذف‌نشده» و فقط `true` صریح یعنی حذف‌شده؛ ردیف `ISDELETED == null` واقعاً soft-delete می‌شود و idempotent تلقی **نمی‌شود** (با تست قفل شد). در ۳ مورد دیگر (`CheckBook`, `ChequesIncorrent`, `Receipt`) غیر-nullable است و فرم سادهٔ `== true` کافی است.
+
+#### تصمیم نام‌گذاری — `BankAccount` به‌جای `Account` (تنها تصمیم غیربدیهی این فاز)
+
+`TB_ACCOUNT` **حساب بانکی** است (شماره حساب، شبا، شماره کارت)، نه گرهٔ کدینگ `TB_ACCOUNTCODE`. اما پوشه/namespace `Accounting.Application.Accounts` **از قبل توسط `TB_ACCOUNTCODE` اشغال شده بود**، پس نام `Account` اصلاً در دسترس نبود. انتخاب: پیشوند `BankAccount`، پوشهٔ `BankAccounts/`، route `/api/bank-accounts`.
+⚠️ این صرفاً رفع تعارض نام نیست — **خطرناک‌ترین جفت قابل‌اشتباه کل پروژه** همین‌جا متولد شد: `IBankAccountRepository` و `IAccountCodeRepository` هر دو «account» اند و در `AddInfrastructure` کنار هم ثبت می‌شوند. یک جابه‌جایی بین این دو، ردیف‌های حساب بانکی را بی‌صدا در کدینگ حساب می‌نوشت. برای همین در `AddInfrastructure_MapsInterfaceToItsOwnImplementation` **علاوه بر ۸ Entity این دسته، خودِ `IAccountCodeRepository`/`IAccountCodeReadRepository` هم pin شدند** (با اینکه از فازهای قبل‌اند) و دلیلش در XML doc ثبت شد.
+
+نام‌گذاری‌های فرعی: `Expense` (نرمال‌سازی املای غلط جدول `TB_EXPENCE`، با همان precedent `ChequeType` برای `TB_CHECK_TYPE`؛ نام ستون‌ها مثل `EXPENCECODE` دست‌نخورده ماند) و `ChequesIncorrent` (نزدیک به نام جدول نگه داشته شد تا قابل ردیابی بماند).
+
+#### `ElamHead` فقط Head — عمداً و مستند
+
+`TB_ELAMDETAIL` **کاملاً خارج از scope** ماند: نه repository، نه Command، نه cascade، نه composite-create. دلیل: مرز Aggregate این جفت Head/Detail هنوز تصمیم‌گیری نشده (رجوع `docs/open-decisions.md`). دقیقاً همان الگوی `VoucherHead` در فازهای ۵–۸ دنبال شد. این در XML doc خودِ Controller صریحاً نوشته شد تا شبیه فراموشی به‌نظر نرسد.
+⚠️ **پیامد ثبت‌شده:** حذف نرم یک `ElamHead` ردیف‌های `TB_ELAMDETAIL` آن را فعال باقی می‌گذارد — همان وضعیتی که سند تا پیش از فاز ۹ داشت.
+
+#### فرزندان تعبیه‌شده — قاعدهٔ تیمی دست‌نخورده ماند
+
+چهار Aggregate Root این دسته فرزند تعبیه‌شده دارند و **به هیچ‌کدام دست زده نشد** (نه repository، نه Command، نه cascade): `TB_ACCOUNT_LINK_TAFSILI` (زیر `Account`)، `TB_CHECK` (زیر `CheckBook`)، `TB_EXPENCE_LINK_TAFSILI` (زیر `Expense`)، `TB_REVOLVINGFUND_LINK_TAFSILI` (زیر `RevolvingFund`). با بررسی پس از اتمام کار تأیید شد که هیچ repository ای برای این جدول‌ها ساخته نشده و گارد موجود `NoIndependentLinkTableWritePathTests` همچنان سبز است.
+
+#### ریسک `sys_guid()` — این‌بار اصلاً موضوعیت نداشت
+
+برخلاف فازهای ۱۳ و ۱۴، **هیچ‌کدام از این ۸ جدول هیچ `HasDefaultValueSql` ای ندارند** (جداگانه روی هر ۸ بلوک Fluent Mapping چک شد). پس ریسک باز 🔴 «DEFAULTهای Oracle ناسازگار با `Guid`» به این دسته اصلاً مربوط نمی‌شود. با این حال `ID = Guid.NewGuid()` سمت Application تولید می‌شود — طبق قاعدهٔ ثابت پروژه که هرگز به DEFAULT اوراکل تکیه نمی‌کند.
+
+#### نگاشت FK باز هم بدون یک خط کد جدید
+
+۶ Entity از ۸ تا FK واقعی دارند؛ نگاشت مرکزی ORA-02291 → `ForeignKeyViolationException` → **400** در `UnitOfWork` (فاز ۱۱) خودکار روی همهٔ مسیرهای نوشتن جدید اعمال شد. **هیچ pre-check دستی اضافه نشد** (عمدی: اختراع قانون کسب‌وکاری نمی‌کند و شرایط رقابتی را هم درست مدیریت می‌کند).
+
+#### سه فایل مشترک که `team-lead` مرکزی سیم‌کشی کرد
+
+- `DependencyInjection.cs` — ۱۶ ثبت جدید (۸ write + ۸ read).
+- `RepositoryRegistrationTests` — ۳۴ InlineData جدید (۱۶ در تست Scoped + ۱۸ در تست نگاشت، شامل ۲ pin جدید برای `AccountCode`).
+- `HttpVerbConventionTests` — `Phase15Controllers_UpdateAndDelete_AreHttpPost` (۱۶ InlineData) + `AllControllerActions_IncludesEveryPhase15Controller` (محافظ در برابر سبز شدن توخالی گارد `HttpPut`/`HttpDelete`).
+
+#### راستی‌آزمایی پس از ادغام (توسط `team-lead`، نه ادعای ایجنت‌ها)
+
+- ۸ Controller × ۵ اکشن = **۴۰ Endpoint**؛ **صفر** `[HttpPut]`/`[HttpDelete]` در کل assembly.
+- ۴۰۹ دقیقاً روی همان ۶ Entity دارای UNIQUE (۲ بار هرکدام: Create + Update) و **صفر** روی `Receipt`/`ChequesIncorrent`.
+- ۴۰۱ روی هر ۴۰ اکشن.
+- **صفر** Command دارای پراپرتی `AddUserId`/`ChangeUserId`/`CreatedDate`/`UpdatedDate` (با grep روی همهٔ `*Command.cs` این دسته تأیید شد؛ ۸ فایلی که در جست‌وجوی اولیه match شدند همگی DTOهای سمت خواندن بودند، که طبق الگوی تثبیت‌شده درست است). یعنی کلاس آسیب‌پذیری «جعل Audit» همچنان **ساختاراً** ناممکن است.
+- **صفر** `IsDeleted` در Command های Update.
+
+#### تست
+
+**۵۶۸ تست جدید، مجموع ۱۸۸۵/۱۸۸۵ سبز** (۲۲ Domain + **۱۵۸۳** Application + **۱۳۳** Api + **۱۴۷** Infrastructure)، از ۱۳۱۷ قبلی. **صفر رگرسیون.** build ۰ خطا / ۱۸ warning پیش‌موجود NU1903 (هیچ warning نوع CS).
+- Application: از ۱۰۶۶ به ۱۵۸۳ (+۵۱۷).
+- Api: از ۱۱۶ به ۱۳۳ (+۱۷) — گسترش `HttpVerbConventionTests`.
+- Infrastructure: از ۱۱۳ به ۱۴۷ (+۳۴) — گسترش `RepositoryRegistrationTests`.
+- ⚠️ همگی Unit/Mock — **هیچ اتصالی به Oracle زنده و هیچ تست repository واقعی (SQLite) برای این ۸ Entity نوشته نشد** (همان شکاف باز فازهای ۱۳ و ۱۴).
+
 ### فاز ۱۴ — CRUD دستهٔ سوم: ۸ Entity مستقل (۲۰۲۶-۰۸-۲۸، برنچ `EntityCRUD`، commit نشده)
 
 اجرای مکانیکی همان الگوی فازهای ۵–۱۳ روی ۸ Entity بعدی از بخش ۳ سند `docs/tamin-core-entity-reference.md`. **هیچ تصمیم معماری جدیدی گرفته نشد.** کار بین سه ایجنت موازی `backend-dotnet` تقسیم شد (روی مجموعه‌فایل‌های مجزا)، و سه فایل مشترک (`DependencyInjection.cs`, `RepositoryRegistrationTests.cs`, `HttpVerbConventionTests.cs`) عمداً برای `team-lead` رزرو شد تا نوشتن موازی روی آن‌ها تداخل نسازد.

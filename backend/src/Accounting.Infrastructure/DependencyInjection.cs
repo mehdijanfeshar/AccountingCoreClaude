@@ -80,6 +80,35 @@ public static class DependencyInjection
         services.AddScoped<IVahedInfoReadRepository, VahedInfoReadRepository>();
         services.AddScoped<IWorkShopReadRepository, WorkShopReadRepository>();
 
+        // Phase 15 (batch 4) independent entities. Same write/read repository split again.
+        // Unlike the two batches above, EVERY entity in this batch owns an ISDELETED column, so all
+        // eight get a full CRUD surface — there is no CRU-only exception here (contrast PreDescrib
+        // in phase 13 and VahedInfo in phase 14). Two things are worth knowing when reading these:
+        //   - BankAccount is TB_ACCOUNT, the BANK account master — NOT the TB_ACCOUNTCODE
+        //     chart-of-accounts node, whose repositories are IAccountCodeRepository above. The
+        //     "BankAccount" prefix exists precisely so these two can never be confused at a call
+        //     site; see AddInfrastructure_MapsInterfaceToItsOwnImplementation for the guard.
+        //   - BankAccount, BankCartDetail, Expense, RevolvingFund and ElamHead all have a NULLABLE
+        //     ISDELETED (bool?), so both false and NULL mean "not deleted" throughout their
+        //     handlers and read filters; CheckBook, ChequesIncorrent and Receipt are non-nullable.
+        services.AddScoped<IBankAccountRepository, BankAccountRepository>();
+        services.AddScoped<IBankCartDetailRepository, BankCartDetailRepository>();
+        services.AddScoped<ICheckBookRepository, CheckBookRepository>();
+        services.AddScoped<IChequesIncorrentRepository, ChequesIncorrentRepository>();
+        services.AddScoped<IElamHeadRepository, ElamHeadRepository>();
+        services.AddScoped<IExpenseRepository, ExpenseRepository>();
+        services.AddScoped<IReceiptRepository, ReceiptRepository>();
+        services.AddScoped<IRevolvingFundRepository, RevolvingFundRepository>();
+
+        services.AddScoped<IBankAccountReadRepository, BankAccountReadRepository>();
+        services.AddScoped<IBankCartDetailReadRepository, BankCartDetailReadRepository>();
+        services.AddScoped<ICheckBookReadRepository, CheckBookReadRepository>();
+        services.AddScoped<IChequesIncorrentReadRepository, ChequesIncorrentReadRepository>();
+        services.AddScoped<IElamHeadReadRepository, ElamHeadReadRepository>();
+        services.AddScoped<IExpenseReadRepository, ExpenseReadRepository>();
+        services.AddScoped<IReceiptReadRepository, ReceiptReadRepository>();
+        services.AddScoped<IRevolvingFundReadRepository, RevolvingFundReadRepository>();
+
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 
         return services;

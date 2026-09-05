@@ -253,6 +253,63 @@ public sealed class HttpVerbConventionTests
         Assert.Null(deleteAction);
     }
 
+    /// <summary>
+    /// Phase 15 (batch 4) controllers. Unlike phases 13 and 14, there is no CRU-only exception in
+    /// this batch: all eight underlying tables own an <c>ISDELETED</c> column, so every one of them
+    /// exposes both <c>Update</c> as <c>POST {id}/update</c> and <c>Delete</c> as
+    /// <c>POST {id}/delete</c>. That symmetry is itself worth locking in — if a future change drops
+    /// a delete action here it should be a deliberate, visible decision, not a quiet omission.
+    /// </summary>
+    [Theory]
+    [InlineData(typeof(BankAccountsController), "Update")]
+    [InlineData(typeof(BankAccountsController), "Delete")]
+    [InlineData(typeof(BankCartDetailsController), "Update")]
+    [InlineData(typeof(BankCartDetailsController), "Delete")]
+    [InlineData(typeof(CheckBooksController), "Update")]
+    [InlineData(typeof(CheckBooksController), "Delete")]
+    [InlineData(typeof(ChequesIncorrentsController), "Update")]
+    [InlineData(typeof(ChequesIncorrentsController), "Delete")]
+    [InlineData(typeof(ElamHeadsController), "Update")]
+    [InlineData(typeof(ElamHeadsController), "Delete")]
+    [InlineData(typeof(ExpensesController), "Update")]
+    [InlineData(typeof(ExpensesController), "Delete")]
+    [InlineData(typeof(ReceiptsController), "Update")]
+    [InlineData(typeof(ReceiptsController), "Delete")]
+    [InlineData(typeof(RevolvingFundsController), "Update")]
+    [InlineData(typeof(RevolvingFundsController), "Delete")]
+    public void Phase15Controllers_UpdateAndDelete_AreHttpPost(Type controllerType, string methodName)
+    {
+        AssertActionIsHttpPost(controllerType, methodName);
+    }
+
+    /// <summary>
+    /// Companion to <see cref="AllControllerActions_IncludesEveryPhase14Controller"/>: proves the
+    /// whole-assembly scan actually reaches every phase-15 controller, so the
+    /// <c>[HttpPut]</c>/<c>[HttpDelete]</c> guard above cannot pass vacuously for them.
+    /// </summary>
+    [Fact]
+    public void AllControllerActions_IncludesEveryPhase15Controller()
+    {
+        var actions = AllControllerActions().ToList();
+
+        Type[] phase15Controllers =
+        [
+            typeof(BankAccountsController),
+            typeof(BankCartDetailsController),
+            typeof(CheckBooksController),
+            typeof(ChequesIncorrentsController),
+            typeof(ElamHeadsController),
+            typeof(ExpensesController),
+            typeof(ReceiptsController),
+            typeof(RevolvingFundsController),
+        ];
+
+        foreach (var controllerType in phase15Controllers)
+        {
+            Assert.Contains(actions, m => m.DeclaringType == controllerType);
+        }
+    }
+
     private static void AssertActionIsHttpPost(Type controllerType, string methodName)
     {
         var method = controllerType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
