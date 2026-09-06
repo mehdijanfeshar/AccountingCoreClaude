@@ -12,6 +12,8 @@
 
 ## ورودی‌ها
 
+- **2026-09-06** (فاز ۱۶، برنچ `EntityCRUD`، commit نشده): CRUD دستهٔ پنجم — دستهٔ عمداً کوچک با ۲ Entity (`PayReciveHead`, `TmpVoucherHead`)، **۱۰ Endpoint روی ۲ Controller**، هر دو فقط Head. **۲۰۳۹/۲۰۳۹ سبز** (+۱۵۴)، ۱۱ تصمیم باز جدید. جزئیات: `docs/phase-log.md` بخش «فاز ۱۶»؛ ریسک‌ها: `docs/open-decisions.md`.
+
 - **2026-09-05** (فاز ۱۵، برنچ `EntityCRUD`، commit نشده): CRUD دستهٔ چهارم — ۸ Entity مستقل، **۴۰ Endpoint روی ۸ Controller**، با سه ایجنت موازی `backend-dotnet`. **اولین دسته بدون استثنای CRU-only** (هر ۸ جدول `ISDELETED` + Audit دارند)؛ `ElamHead` فقط Head. **۱۸۸۵/۱۸۸۵ سبز**، ۹ تصمیم باز جدید. جزئیات: `docs/phase-log.md` بخش «فاز ۱۵»؛ ریسک‌ها: `docs/open-decisions.md`.
 
 - **2026-08-28** (ادامهٔ فاز ۱۴، پیش از commit): پاس `/code-review` با **۸ Agent موازی**؛ ۱ باگ واقعی (`IdentitySubGroup.SubgrpsLen` بدون سقف در Validator → ۵۰۰ خام به‌جای ۴۰۰) رفع شد، تست از ۱۳۱۳ به **۱۳۱۷**. جزئیات کامل: `docs/phase-log.md` بخش «فاز ۱۴».

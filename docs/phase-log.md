@@ -14,6 +14,47 @@
 
 ---
 
+### فاز ۱۶ — CRUD دستهٔ پنجم: ۲ Entity مستقل (Head-only) (۲۰۲۶-۰۹-۰۶، برنچ `EntityCRUD`، commit نشده)
+
+اجرای مکانیکی همان الگوی فازهای ۵–۱۵ روی یک دستهٔ **عمداً کوچک** — فقط ۲ Entity، هر دو Head. **هیچ تصمیم معماری جدیدی گرفته نشد.** برخلاف فازهای ۱۳/۱۴/۱۵ کار بین ایجنت‌های موازی تقسیم نشد (حجمش توجیه نمی‌کرد) و همهٔ فایل‌ها از جمله سه فایل مشترک (`DependencyInjection.cs`, `RepositoryRegistrationTests.cs`, `HttpVerbConventionTests.cs`) مستقیماً نوشته شد.
+
+| Entity | جدول | Endpoint | `ISDELETED` | ستون‌های NOT NULL | ۴۰۹ | FK |
+|---|---|---|---|---|---|---|
+| PayReciveHead | `TB_PAYRECIVHEAD` | ۵ | `bool` (غیر-nullable) | ۵ ستون کسب‌وکاری + `ADDUSERID`/`CREATEDDATE` | ❌ هیچ UNIQUE ندارد | `FK_PAYRECIV_VOCHERHEAD` (تنها FK) |
+| TmpVoucherHead | `TB_TMP_VOUCHERHEAD` | ۵ | `bool?` | **هیچ — هر ستون nullable است** | ❌ هیچ UNIQUE ندارد | `FK_TMP_VOCHERHEAD` (تنها FK) |
+
+**۱۰ Endpoint روی ۲ Controller** (`api/pay-recive-heads`, `api/tmp-voucher-heads`)، همگی زیر محدودیت «فقط `GET`/`POST`» فاز ۸ و زیر `SetFallbackPolicy(RequireAuthenticatedUser)`. هر دو Entity هم `ISDELETED` دارند هم هر چهار ستون Audit، پس هر دو CRUD کامل گرفتند — **هیچ استثنای CRU-only در این دسته نیست** (مثل فاز ۱۵، برخلاف `PreDescrib` فاز ۱۳ و `VahedInfo` فاز ۱۴).
+
+**۴۰۹ روی هیچ‌کدام اعلام نشد** — هیچ‌کدام از دو جدول در `LegacyDbContext` UNIQUE constraint ندارند، پس `UnitOfWork` چیزی برای ترجمه به `DuplicateKeyException` ندارد و اعلامش گمانه‌زنی می‌بود (همان قضاوت `TB_RECEIP`/`TB_CHEQUES_INCORRENT` در فاز ۱۵). ۴۰۰ روی هر دو شامل نقض FK هم می‌شود (نگاشت مرکزی ORA-02291 فاز ۱۱).
+
+#### تفاوت‌های واقعی بین دو Entity که فرض یکسان را رد می‌کند
+
+طبق درس فازهای ۱۲–۱۵، هر Entity جداگانه بررسی شد و دقیقاً همین کار جواب داد — این دو تقریباً در هر بُعدی قرینهٔ هم‌اند:
+
+- **`TB_PAYRECIVHEAD`:** `ISDELETED` **غیر-nullable** است، پس Handlerها `entity.ISDELETED` را مستقیم تست می‌کنند و read filter ساده `== false` است. پنج ستون کسب‌وکاری NOT NULL (`PAYRECIVCODE`, `PAYRECIVDATE`, `PAYRECIVDESCRIPTION`, `VAHEDCODE`, `YEAR`) در Validatorها `NotEmpty()` گرفتند — این قوانین اختراعی نیستند، آینهٔ NOT NULL خود schema اند (همان استدلال `CreateReceiptCommandValidator`).
+- **`TB_TMP_VOUCHERHEAD`:** **هر ستون nullable است**، از جمله `ISDELETED` (`bool?`). پس هیچ `NotEmpty` در Validatorهایش نیست (فقط `MaximumLength`)، Handlerها `ISDELETED == true` را تست می‌کنند (هم `false` هم `null` = «حذف‌نشده»)، و read filter `!= true` است. حالت مرزیِ «`ISDELETED == null` واقعاً soft-delete می‌شود و idempotent تلقی نمی‌شود» با تست صریح قفل شد.
+
+#### دو یافتهٔ واقعی که حدس زده نشد و در XML doc علامت خورد
+
+1. **🔴 `TB_PAYRECIVHEAD.PAYRECIVTYPE` — باگ `bool?`→enum تأییدشده، نه صرفاً مشکوک.** طبق `docs/centralaccount-business-reference.md` بخش ۱۰-۲ ردیف ۱۴، پروژهٔ مرجع همین ستون را `PayRecivType` سه‌مقداری مدل می‌کند (**۱پرداخت ۲دریافت ۳همه**) و خودِ جدول مرجع نگاشت `bool?` ما را صراحتاً 🔴 **غلط** علامت زده. یعنی مقدار «۳=همه» از طریق API فعلی **اصلاً قابل بیان نیست** و مقدار موجود ۲ احتمالاً مثل ۱ به‌غلط `true` خوانده می‌شود. **رفع نشد** (تغییر نوع CLR یک breaking change در قرارداد API است و Taskی جداست)، ولی یک تست پین‌کننده (`Handle_PayReciveType_RoundTripsOnlyTwoOfItsThreeRealValues`) نوعِ فعلی را قفل می‌کند تا هر کس بعداً enum را درست کرد، مجبور شود تغییر را صریح اعلام کند.
+2. **🔴 `TmpVoucherDetail` در پروژهٔ مرجع «تعبیه‌شده» است — یعنی Head-only اینجا یک شکاف کارکردی واقعی است، نه فقط یک یادداشت scope.** در `D:\CentralAccount` هیچ پوشهٔ Command مستقلی برای این دیتیل وجود ندارد و `AddTmpVoucherHeadCommandHandler.cs:32-58` کل گراف `head + details` را می‌سازد و با **یک** `AddAsync` ذخیره می‌کند (`docs/centralaccount-business-reference.md` §5). این **عکسِ** سیگنال `PayReciveDetail` است که همان پروژه Aggregate Root مستقل مدلش می‌کند. پیامد: **API فعلی ما فقط می‌تواند سند موقتِ خالی بسازد**، و مسیر «ارتقای سند موقت به سند اصلی» (`AddVochersImportTempCommand` در پروژهٔ مرجع) از اینجا اصلاً در دسترس نیست. حدس زده نشد؛ نیازمند همان تصمیم «مدل ترکیبی» فاز ۱۰ از صاحب پروژه.
+
+#### چیزهایی که عمداً بازسازی **نشد** (طبق «Legacy جایگزین کامل»)
+
+- **گارد شمارهٔ تکراری `PayReciveCode`** — پروژهٔ مرجع در `AddPayReciveCommand`/`UpdatePayReciveCommand` آن را دارد (§21-6)، ولی `TB_PAYRECIVHEAD` **هیچ UNIQUE ندارد**. بازسازی‌اش یعنی اختراع قانون کسب‌وکاری روی constraint ناموجود (و race-prone). با تست `Validate_DuplicatePayReciveCode_IsNotRejected_NoUniqueConstraintExists` مستند شد.
+- **گارد حذف «برای ردیف انتخابی سند صادر شده و قابل حذف نمی باشد»** — پروژهٔ مرجع مانع حذف سندی می‌شود که قبلاً به سند حسابداری تبدیل شده. ما نداریم.
+- **تضمین تراز** — پروژهٔ مرجع تنها جایی که تراز را enforce می‌کند `AddVoucherByPayAndReciveCommandHandler` است (بخش ۱۴ سند مرجع)، یعنی دقیقاً روی همین Entity ولی در مسیر تبدیل به سند. آن مسیر اینجا اصلاً وجود ندارد، و `PayReciveHeadDto` هم جمع بدهکار/بستانکار برنمی‌گرداند.
+
+#### فرزندان دست‌نخورده
+
+`TB_PAYRECIVDETAIL` و `TB_TMP_VOUCHERSDETAIL` (و `TB_PAYRECIVDETAIL_LINK_TAFSILI` زیرشان): نه repository، نه Command، نه Controller، نه cascade. دو گارد ساختاری این را قفل می‌کنند: تستی که تأیید می‌کند هر دو repository interface دقیقاً `AddAsync`+`GetForUpdateAsync` دارند و هیچ متد دیگری، و `NoDetailActionExistsOnPhase16HeadControllers_BecauseTheAggregateBoundaryIsUndecided` که فهرست اکشن‌های هر دو Controller را دقیقاً به همان ۵ اکشن استاندارد قفل می‌کند.
+
+#### تست
+
+**۱۵۴ تست جدید؛ مجموع ۲۰۳۹/۲۰۳۹ سبز** (۲۲ Domain + ۱۷۲۰ Application + ۱۴۰ Api + ۱۵۷ Infrastructure)، صفر رگرسیون. build ۰ خطا / ۱۸ warning پیش‌موجود NU1903 (هیچ warning نوع CS). ⚠️ همگی Unit/Mock — **هیچ اتصالی به Oracle زنده**، و باز هم **هیچ تست repository واقعی روی SQLite** (همان شکاف باز فازهای ۱۳/۱۴/۱۵).
+
+گاردهای موجود گسترش یافتند نه دور زده شدند: `HttpVerbConventionTests` (تئوری `Phase16Controllers_*` + تست غیرخالی‌بودن اسکن + گارد عدم‌وجود اکشن دیتیل) و `RepositoryRegistrationTests` (۴ ثبت جدید + پین‌کردن نگاشت). در `RepositoryRegistrationTests` علاوه بر دو Entity جدید، **`IVoucherHeadRepository`/`IVoucherHeadReadRepository` هم پین شد** — چون `TmpVoucherHead` (جدول staging) و `VoucherHead` (دفتر واقعی) خطرناک‌ترین جفت قابل‌اشتباه این دسته‌اند: جابه‌جایی‌شان یعنی نوشتن سند تأییدنشده مستقیم در دفتر اصلی و دور زدن کل مسیر نوشتن سند. همان قضاوتی که فاز ۱۵ برای `AccountCode`/`BankAccount` اعمال کرد.
+
 ### فاز ۱۵ — CRUD دستهٔ چهارم: ۸ Entity مستقل (۲۰۲۶-۰۹-۰۵، برنچ `EntityCRUD`، commit نشده)
 
 اجرای مکانیکی همان الگوی فازهای ۵–۱۴ روی ۸ Entity بعدی از بخش ۳ سند `docs/tamin-core-entity-reference.md`. **هیچ تصمیم معماری جدیدی گرفته نشد.** کار بین سه ایجنت موازی `backend-dotnet` تقسیم شد (روی مجموعه‌فایل‌های کاملاً مجزا) و سه فایل مشترک (`DependencyInjection.cs`, `RepositoryRegistrationTests.cs`, `HttpVerbConventionTests.cs`) عمداً برای `team-lead` رزرو شد — همان رویهٔ فاز ۱۴.

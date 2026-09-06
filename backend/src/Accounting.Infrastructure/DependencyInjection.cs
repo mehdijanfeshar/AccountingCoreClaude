@@ -109,6 +109,24 @@ public static class DependencyInjection
         services.AddScoped<IReceiptReadRepository, ReceiptReadRepository>();
         services.AddScoped<IRevolvingFundReadRepository, RevolvingFundReadRepository>();
 
+        // Phase 16 (batch 5) independent entities — a deliberately small batch of just two, both
+        // of which are Head tables whose Detail children are explicitly OUT of scope because the
+        // aggregate boundary for each pair is still undecided (see docs/open-decisions.md).
+        // Both own an ISDELETED column so both get a full CRUD surface, but they differ in a way
+        // that matters when reading their handlers:
+        //   - PayReciveHead (TB_PAYRECIVHEAD) has a NON-nullable ISDELETED plus five NOT NULL
+        //     business columns, so its validators carry NotEmpty rules and its handlers test
+        //     `entity.ISDELETED` directly.
+        //   - TmpVoucherHead (TB_TMP_VOUCHERHEAD) is the opposite extreme: every single column is
+        //     nullable, including ISDELETED (bool?), so both false and NULL mean "not deleted"
+        //     throughout its handlers and read filters, and its validators have no NotEmpty rules.
+        // Neither table has any UNIQUE constraint, so neither controller declares 409.
+        services.AddScoped<IPayReciveHeadRepository, PayReciveHeadRepository>();
+        services.AddScoped<ITmpVoucherHeadRepository, TmpVoucherHeadRepository>();
+
+        services.AddScoped<IPayReciveHeadReadRepository, PayReciveHeadReadRepository>();
+        services.AddScoped<ITmpVoucherHeadReadRepository, TmpVoucherHeadReadRepository>();
+
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 
         return services;

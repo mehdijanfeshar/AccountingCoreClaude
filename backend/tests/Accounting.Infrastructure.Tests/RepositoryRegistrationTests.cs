@@ -105,6 +105,13 @@ public sealed class RepositoryRegistrationTests
     [InlineData(typeof(IExpenseReadRepository))]
     [InlineData(typeof(IReceiptReadRepository))]
     [InlineData(typeof(IRevolvingFundReadRepository))]
+    // Phase 16 batch 5 — two Head tables, both with a full Create/Update/Delete surface behind
+    // these registrations. Their Detail children are deliberately unregistered (and have no
+    // repository at all) because the aggregate boundaries are undecided.
+    [InlineData(typeof(IPayReciveHeadRepository))]
+    [InlineData(typeof(ITmpVoucherHeadRepository))]
+    [InlineData(typeof(IPayReciveHeadReadRepository))]
+    [InlineData(typeof(ITmpVoucherHeadReadRepository))]
     public void AddInfrastructure_RegistersServiceAsScoped(Type serviceType)
     {
         var services = BuildRegisteredServices();
@@ -197,6 +204,18 @@ public sealed class RepositoryRegistrationTests
     [InlineData(typeof(IExpenseReadRepository), typeof(ExpenseReadRepository))]
     [InlineData(typeof(IReceiptReadRepository), typeof(ReceiptReadRepository))]
     [InlineData(typeof(IRevolvingFundReadRepository), typeof(RevolvingFundReadRepository))]
+    // Phase 16 batch 5. The confusable pair here is TmpVoucherHead vs the pre-existing
+    // VoucherHead: TB_TMP_VOUCHERHEAD is the *staging* table an imported document lands in, while
+    // TB_VOUCHERSHEAD is the real accounting voucher. A transposition between them would either
+    // write real vouchers into the staging table or — far worse — write unvalidated staged
+    // documents straight into the live ledger, bypassing the voucher write path entirely. Both
+    // sides of that pair are pinned here, exactly as AccountCode/BankAccount were in phase 15.
+    [InlineData(typeof(IVoucherHeadRepository), typeof(VoucherHeadRepository))]
+    [InlineData(typeof(IVoucherHeadReadRepository), typeof(VoucherHeadReadRepository))]
+    [InlineData(typeof(IPayReciveHeadRepository), typeof(PayReciveHeadRepository))]
+    [InlineData(typeof(ITmpVoucherHeadRepository), typeof(TmpVoucherHeadRepository))]
+    [InlineData(typeof(IPayReciveHeadReadRepository), typeof(PayReciveHeadReadRepository))]
+    [InlineData(typeof(ITmpVoucherHeadReadRepository), typeof(TmpVoucherHeadReadRepository))]
     public void AddInfrastructure_MapsInterfaceToItsOwnImplementation(
         Type serviceType,
         Type expectedImplementationType)

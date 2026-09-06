@@ -22,7 +22,8 @@
 | ۱۳. CRUD دستهٔ دوم — ۸ Entity مستقل | ✅ انجام شد (۲۰۲۶-۰۸-۲۷) — `AccountCodeInterface`, `AccountException`, `BillLog`, `PersonAction`, `PreDescrib`, `Rabet`, `WhiteAndBlackList`, `WhiteList`. **۳۹ Endpoint روی ۸ Controller**؛ ۷ تا CRUD کامل، **`PreDescrib` فقط CRU** (جدولش `ISDELETED` ندارد و این پروژه حذف فیزیکی نمی‌کند — با گارد reflection قفل شد). ۴۰۹ فقط روی ۳ Entity دارای UNIQUE اعلام شد. هیچ تصمیم معماری جدید؛ اجرای مکانیکی الگوی فازهای ۵–۱۱. گارد جدید `RepositoryRegistrationTests` شکاف «repository ثبت‌نشده در DI» را می‌بندد. **۸۶۹/۸۶۹ تست سبز** (۴۵۲ تست جدید، از ۴۱۷). ⚠️ ۷ تصمیم باز جدید (سه ستون `bool?` مشکوک در مسیر نوشتن فعال، گسترش IDOR، نبود تست repository واقعی). |
 | ۱۴. CRUD دستهٔ سوم — ۸ Entity مستقل | ✅ انجام شد (۲۰۲۶-۰۸-۲۸) — `AttribForAccountCode`, `LevelTafsil`, `TafsilGroup`, `IdentityGroup`, `IdentitySubGroup`, `ChequeType`, `VahedInfo`, `WorkShop`. **۳۹ Endpoint روی ۸ Controller**؛ ۷ تا CRUD کامل، **`VahedInfo` فقط CRU**. ۴۰۹ فقط روی ۶ Entity دارای UNIQUE اعلام شد. کار بین ۳ ایجنت موازی تقسیم شد و ۳ فایل مشترک برای `team-lead` رزرو شد. هیچ تصمیم معماری جدید. پاس `/code-review` (۸ Agent موازی) ۱ باگ واقعی (`IdentitySubGroup.SubgrpsLen` بدون سقف `NUMBER(2)`) پیدا و رفع کرد. **۱۳۱۷/۱۳۱۷ تست سبز** (۴۴۸ تست جدید، از ۸۶۹). ⚠️ ۸ تصمیم باز جدید — مهم‌ترین: `TB_VAHED_INFO` **هیچ ستون Audit ای ندارد**. |
 | ۱۵. CRUD دستهٔ چهارم — ۸ Entity مستقل | ✅ انجام شد (۲۰۲۶-۰۹-۰۵) — `BankAccount`, `BankCartDetail`, `CheckBook`, `ChequesIncorrent`, `Expense`, `Receipt`, `RevolvingFund`, `ElamHead`. **۴۰ Endpoint روی ۸ Controller** — **اولین دسته‌ای که هیچ استثنای CRU-only ندارد** (هر ۸ جدول هم `ISDELETED` دارند هم Audit، پس هر ۸ تا CRUD کامل گرفتند). ۴۰۹ فقط روی ۶ Entity دارای UNIQUE. `ElamHead` **فقط Head** (مرز Aggregate با `ElamDetail` هنوز تصمیم‌گیری نشده). تصمیم نام‌گذاری `BankAccount` برای `TB_ACCOUNT` چون `Accounts/` از قبل متعلق به `TB_ACCOUNTCODE` بود. هیچ تصمیم معماری جدید. **۱۸۸۵/۱۸۸۵ تست سبز** (۵۶۸ تست جدید، از ۱۳۱۷). ⚠️ ۹ تصمیم باز جدید — مهم‌ترین: `TB_ELAMHEAD.ELAMHDRAMAD_TYPE` قطعی‌ترین باگ `bool?`→enum تا امروز. |
-| ۱۶. فرم صدور سند با تفصیلی داینامیک (Frontend) | ⬜ متوقف |
+| ۱۶. CRUD دستهٔ پنجم — ۲ Entity مستقل (Head-only) | ✅ انجام شد (۲۰۲۶-۰۹-۰۶) — `PayReciveHead`, `TmpVoucherHead`. **۱۰ Endpoint روی ۲ Controller**، دستهٔ عمداً کوچک و بدون ایجنت موازی. هر دو `ISDELETED` + Audit کامل دارند پس هر دو CRUD کامل گرفتند؛ **۴۰۹ روی هیچ‌کدام اعلام نشد** (هیچ‌کدام UNIQUE ندارند). هر دو **فقط Head** — `TB_PAYRECIVDETAIL` و `TB_TMP_VOUCHERSDETAIL` دست‌نخورده، با دو گارد ساختاری قفل شدند. دو Entity تقریباً قرینهٔ هم‌اند: `TB_PAYRECIVHEAD` پنج ستون NOT NULL و `ISDELETED` غیر-nullable دارد، `TB_TMP_VOUCHERHEAD` **هر ستونش nullable است**. هیچ تصمیم معماری جدید. **۲۰۳۹/۲۰۳۹ تست سبز** (۱۵۴ تست جدید، از ۱۸۸۵). ⚠️ ۱۱ تصمیم باز جدید — مهم‌ترین: `PAYRECIVTYPE` باگ `bool?`→enum **تأییدشده** (۱پرداخت/۲دریافت/۳همه، با تست پین‌کننده)، و `TmpVoucherHead` فقط سند موقتِ **خالی** می‌سازد. |
+| ۱۷. فرم صدور سند با تفصیلی داینامیک (Frontend) | ⬜ متوقف |
 
 ## Milestone Checklist
 
@@ -102,6 +103,16 @@
 - [ ] تست repository واقعی (SQLite) برای ۸ Entity فاز ۱۵ — باز هم نوشته نشد (همان شکاف فازهای ۱۳ و ۱۴)
 - [ ] تصمیم دربارهٔ مرز Aggregate `ElamHead`/`ElamDetail` — فاز ۱۵ فقط Head را ساخت؛ برای رسیدن به وضعیت معادل سند به همان تصمیم «مدل ترکیبی» فاز ۱۰ نیاز دارد (CRUD مستقل دیتیل + composite create + cascade)
 - [ ] تصمیم دربارهٔ cascade حذف برای `ElamHead`→`TB_ELAMDETAIL` و `CheckBook`→`TB_CHECK` و سه جدول لینک تفصیلی فاز ۱۵
+- [x] **CRUD دستهٔ پنجم — ۲ Entity مستقل (Head-only)** (فاز ۱۶، ۲۰۲۶-۰۹-۰۶) — `PayReciveHead`, `TmpVoucherHead`. **۱۰ Endpoint روی ۲ Controller** (۲×۵)، همگی زیر محدودیت «فقط `GET`/`POST`».
+- [x] **هر دو Entity جداگانه بررسی شد و واقعاً متفاوت بودند** — `TB_PAYRECIVHEAD` (`ISDELETED` غیر-nullable + ۵ ستون NOT NULL → `NotEmpty` در Validator) در برابر `TB_TMP_VOUCHERHEAD` (**هر ستون nullable**، `ISDELETED` سه‌مقداری → صفر `NotEmpty`). فرضِ یکسان گرفته نشد.
+- [x] **فرزندان Head دست‌نخورده ماندند** — `TB_PAYRECIVDETAIL` و `TB_TMP_VOUCHERSDETAIL`: نه repository، نه Command، نه Controller، نه cascade. با دو گارد ساختاری قفل شد (فهرست متدهای repository + فهرست اکشن‌های Controller).
+- [x] پوشش تست فاز ۱۶ — **۱۵۴ تست جدید**؛ مجموع **۲۰۳۹/۲۰۳۹ سبز** (۲۲ Domain + ۱۷۲۰ Application + ۱۴۰ Api + ۱۵۷ Infrastructure)، صفر رگرسیون، build ۰ خطا / بدون warning نوع CS.
+- [x] **`IVoucherHeadRepository` هم در `RepositoryRegistrationTests` پین شد** — `TmpVoucherHead` (جدول staging) و `VoucherHead` (دفتر واقعی) خطرناک‌ترین جفت قابل‌اشتباه این دسته‌اند؛ همان قضاوت `AccountCode`/`BankAccount` در فاز ۱۵.
+- [ ] تست repository واقعی (SQLite) برای ۲ Entity فاز ۱۶ — باز هم نوشته نشد (چهارمین دستهٔ پیاپی؛ اینجا به‌ویژه مهم چون تفاوت `== false` و `!= true` بین دو جدول اثبات‌نشده ماند)
+- [ ] تصمیم دربارهٔ مرز Aggregate `TmpVoucherHead`/`TmpVoucherDetail` — سیگنال پروژهٔ مرجع **تعبیه‌شده** است، پس API فعلی فقط سند موقتِ **خالی** می‌سازد و مسیر ارتقا به سند اصلی در دسترس نیست
+- [ ] تصمیم دربارهٔ مرز Aggregate `PayReciveHead`/`PayReciveDetail` — سیگنال پروژهٔ مرجع **مستقل + composite create** است (همان «مدل ترکیبی» فاز ۱۰)
+- [ ] تصمیم دربارهٔ cascade حذف برای `PayReciveHead`→`TB_PAYRECIVDETAIL` و `TmpVoucherHead`→`TB_TMP_VOUCHERSDETAIL`
+- [ ] تصمیم: آیا گارد شمارهٔ تکراری `PayReciveCode` باید بازسازی شود؟ (پروژهٔ مرجع دارد؛ ما نداریم چون هیچ UNIQUE پشتش نیست)
 - [ ] راه‌اندازی React (Vite) — متوقف تا اطلاع ثانوی
 - [ ] فرم صدور سند با فیلدهای تفصیلی داینامیک
 
@@ -181,8 +192,14 @@
 | 🟡 | `TB_CHEQUES_INCORRENT` و `TB_RECEIP` هیچ UNIQUE ندارند (فاز ۱۵) | ۴۰۹ اعلام نشد (گمانه‌زنی می‌بود)، یعنی **دو رسید با شمارهٔ یکسان** قابل ثبت است — به‌ویژه قابل‌توجه چون سه جدول به `TB_RECEIP` ارجاع می‌دهند. |
 | 🟡 | `AK_AK_BANKCARTDETAIL_BANKCART` یازده‌ستونه با همهٔ ستون‌های nullable (فاز ۱۵) | در منطق سه‌مقداری اوراکل، ردیف‌های دارای `NULL` معمولاً یکتایی را نقض نمی‌کنند، پس این constraint شاید بسیار ضعیف‌تر از ظاهرش باشد. ۴۰۹ اعلام شد ولی **رفتار واقعی روی دادهٔ زنده بررسی نشد**. |
 | 🟡 | `TB_ACCOUNT.CHECKFILE` سومین BLOB بدون سقف اندازه (فاز ۱۵) | به دو BLOB فاز ۱۴ اضافه شد. مثل `WorkShopDto` عمداً از `BankAccountDto` حذف شد (لیست/جزئیات جای stream باینری نیست) ولی در Create/Update نوشتنی است. سیاست آپلود همچنان تصمیم‌گیری‌نشده. |
+| 🔴 | **`TB_PAYRECIVHEAD.PAYRECIVTYPE` باگ `bool?`→enum *تأییدشده*** (فاز ۱۶) | پروژهٔ مرجع آن را `PayRecivType` سه‌مقداری مدل می‌کند (**۱پرداخت ۲دریافت ۳همه**) و سند مرجع نگاشت `bool?` ما را صراحتاً 🔴 غلط علامت زده. مقدار «۳» از API فعلی **غیرقابل بیان** است. رفع نشد (breaking change)، ولی **تنها مورد این خانواده که تست پین‌کننده دارد**. فهرست انباشته به **~۱۸** رسید. |
+| 🔴 | **`TmpVoucherHead` فقط سند موقتِ خالی می‌سازد** (فاز ۱۶) | در پروژهٔ مرجع `TmpVoucherDetail` **تعبیه‌شده** است (`AddTmpVoucherHeadCommandHandler` کل گراف را یک‌جا ذخیره می‌کند) — عکسِ سیگنال `PayReciveDetail`. API ما هیچ راهی برای افزودن ردیف ندارد، پس مسیر ارتقا به سند اصلی در دسترس نیست و مفهوم «سند موقت» عملاً بی‌مصرف می‌ماند. |
+| 🔴 | **حذف `PayReciveHead`/`TmpVoucherHead` بدون cascade** (فاز ۱۶) | soft-delete سرسند، ردیف‌های `TB_PAYRECIVDETAIL` (+ لینک‌های تفصیلی زیرشان) و `TB_TMP_VOUCHERSDETAIL` را **فعال** باقی می‌گذارد. دقیقاً وضعیت سند پیش از فاز ۹ و هم‌خانوادهٔ ریسک `ElamHead`/`CheckBook`. **حدس زده نشد.** |
+| 🟡 | هیچ‌کدام از دو جدول فاز ۱۶ UNIQUE ندارند | ۴۰۹ اعلام نشد، یعنی **دو سرسند با `PAYRECIVCODE` یکسان** یا دو سند موقت با `SOURCEID` یکسان قابل ثبت‌اند. ⚠️ پروژهٔ مرجع برای `PayReciveCode` گارد شمارهٔ تکراری در سطح Application دارد؛ ما عمداً بازسازی نکردیم (constraint پشتش نیست + race-prone). |
+| 🟡 | `TB_TMP_VOUCHERHEAD` بی‌محافظ‌ترین جدول مسیر نوشتن است (فاز ۱۶) | **هر ستونش nullable است** — نه فقط `ISDELETED`. در ترکیب با PUT کامل، یک بدنهٔ تماماً `null` هر فیلد کسب‌وکاری را پاک می‌کند و فقط Audit می‌ماند (با تست قفل شد). پیامد پذیرفته‌شدهٔ تصمیم PUT فاز ۸، ولی اینجا شدیدتر از هر جای دیگر. |
+| 🟡 | `TB_TMP_VOUCHERHEAD.SOURCEID` هیچ FK ندارد (فاز ۱۶) | مقدار نامعتبر بی‌صدا نوشته می‌شود؛ نگاشت مرکزی ORA-02291 → 400 کمکی نمی‌کند. همان الگوی موارد فاز ۱۱/۱۴/۱۵. |
 
-فهرست کامل و به‌روز همیشه در `CLAUDE.md` بخش «تصمیمات باز» است.
+فهرست کامل و به‌روز همیشه در `docs/open-decisions.md` است (خلاصهٔ 🔴 در `CLAUDE.md`).
 
 ## تیم ایجنت‌ها
 

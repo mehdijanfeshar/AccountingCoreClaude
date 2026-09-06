@@ -310,6 +310,71 @@ public sealed class HttpVerbConventionTests
         }
     }
 
+    /// <summary>
+    /// Phase 16 (batch 5) controllers — a deliberately small batch of two Head tables. Both own
+    /// an <c>ISDELETED</c> column, so both expose <c>Update</c> as <c>POST {id}/update</c> and
+    /// <c>Delete</c> as <c>POST {id}/delete</c>; there is no CRU-only exception in this batch
+    /// (contrast <see cref="PreDescribsController"/> in phase 13 and
+    /// <see cref="VahedInfosController"/> in phase 14).
+    /// </summary>
+    [Theory]
+    [InlineData(typeof(PayReciveHeadsController), "Update")]
+    [InlineData(typeof(PayReciveHeadsController), "Delete")]
+    [InlineData(typeof(TmpVoucherHeadsController), "Update")]
+    [InlineData(typeof(TmpVoucherHeadsController), "Delete")]
+    public void Phase16Controllers_UpdateAndDelete_AreHttpPost(Type controllerType, string methodName)
+    {
+        AssertActionIsHttpPost(controllerType, methodName);
+    }
+
+    /// <summary>
+    /// Companion to <see cref="AllControllerActions_IncludesEveryPhase15Controller"/>: proves the
+    /// whole-assembly scan actually reaches every phase-16 controller, so the
+    /// <c>[HttpPut]</c>/<c>[HttpDelete]</c> guard above cannot pass vacuously for them.
+    /// </summary>
+    [Fact]
+    public void AllControllerActions_IncludesEveryPhase16Controller()
+    {
+        var actions = AllControllerActions().ToList();
+
+        Type[] phase16Controllers =
+        [
+            typeof(PayReciveHeadsController),
+            typeof(TmpVoucherHeadsController),
+        ];
+
+        foreach (var controllerType in phase16Controllers)
+        {
+            Assert.Contains(actions, m => m.DeclaringType == controllerType);
+        }
+    }
+
+    /// <summary>
+    /// Intentional-absence guard for the phase-16 batch, and the reason it is worth having: both
+    /// of these tables are <c>Head</c> tables whose <c>Detail</c> children
+    /// (<c>TB_PAYRECIVDETAIL</c>, <c>TB_TMP_VOUCHERSDETAIL</c>) were deliberately left out of
+    /// scope because their aggregate boundaries are undecided (see <c>docs/open-decisions.md</c>).
+    /// If someone later adds a detail route to either controller — the most likely accidental way
+    /// to pre-empt that decision — this test fails and forces the boundary question to be
+    /// answered explicitly rather than settled by whoever writes the endpoint first.
+    /// </summary>
+    [Theory]
+    [InlineData(typeof(PayReciveHeadsController))]
+    [InlineData(typeof(TmpVoucherHeadsController))]
+    public void NoDetailActionExistsOnPhase16HeadControllers_BecauseTheAggregateBoundaryIsUndecided(
+        Type controllerType)
+    {
+        var expectedActions = new[] { "Create", "GetList", "GetById", "Update", "Delete" };
+
+        var actualActions = controllerType
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Select(m => m.Name)
+            .OrderBy(n => n)
+            .ToArray();
+
+        Assert.Equal(expectedActions.OrderBy(n => n).ToArray(), actualActions);
+    }
+
     private static void AssertActionIsHttpPost(Type controllerType, string methodName)
     {
         var method = controllerType.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance);
