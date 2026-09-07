@@ -31,6 +31,11 @@ public static class DependencyInjection
         services.AddScoped<IVoucherHeadReadRepository, VoucherHeadReadRepository>();
         services.AddScoped<IVoucherDetailReadRepository, VoucherDetailReadRepository>();
 
+        // Phase 15 — read-only trial balance reporting (4/6/8-column). Single raw-SQL read
+        // repository shared by all three report Queries; no write repository, no Command, no
+        // entity mutation — see TrialBalanceReadRepository XML doc.
+        services.AddScoped<ITrialBalanceReadRepository, TrialBalanceReadRepository>();
+
         // Phase 13 (batch 2) independent entities. Each follows the exact same write/read
         // repository split as the entities above: the write repository only stages changes and
         // never calls SaveChanges, while the read repository is AsNoTracking + DTO-projecting.

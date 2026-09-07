@@ -14,6 +14,121 @@
 
 ---
 
+### فاز ۱۸ — اولین گزارش‌های مالی: تراز آزمایشی ۴/۶/۸ ستونه (۲۰۲۶-۰۹-۰۷، برنچ `EntityCRUD`، commit نشده)
+
+اولین کار گزارشی پروژه (batch اول از ۳۱ Query گزارشی پروژهٔ مرجع). **دامنه عمداً فقط خانوادهٔ تراز آزمایشی پایه**؛ Drill-down، دفتر روزنامه، دفتر کل، ترازنامه، گزارش تلفیقی، مرور تفصیلی و هرم سنی به batchهای بعدی موکول شدند. **هیچ Command، هیچ write repository، هیچ تغییر Entity یا `LegacyDbContext`.**
+
+#### ۱. مسئلهٔ View — چرا مسدود نشدیم (یافتهٔ تعیین‌کننده)
+
+Task با این فرض شروع شد که ممکن است به View های `VWTRIALREPORTWRAPPER`/`VWTRIALREPORTWRAPPERTAFSILI` نیاز باشد و نبودشان مسدودکننده است. بررسی نشان داد این فرض **برای این batch اشتباه است**:
+
+طبق `docs/centralaccount-business-reference.md` §۲۴-۱۳، پروژهٔ مرجع **دو خانوادهٔ متفاوت** گزارش دارد:
+- **گزارش‌های پایه** (`TrialbalanceReport4/6/8` — دقیقاً دامنهٔ همین batch): SQL دست‌نویس با `OracleParameter` صریح، **مستقیماً روی جدول‌ها**. هیچ View ای دخیل نیست.
+- **گزارش‌های Drill-down** (batch بعدی): این‌ها هستند که از آن دو View می‌خوانند.
+
+پس مسیر «self-join روی جدول‌های پایه» یک fallback نیست — **همان کاری است که خودِ مرجع برای این سه گزارش می‌کند.**
+
+**وضعیت View ها همچنان نامعلوم و برای batch بعدی باز است:** در `LegacyDbContext.cs` **صفر View** اسکفولد شده (تنها دو `HasNoKey()` موجود متعلق به جدول‌های `TB_AUDITLOG` و `TB_WORKSHOP_LINK_TAFSILI` اند، و `ToView` هیچ‌جا وجود ندارد). فاز Reverse Engineering «۲۸ View» شمرد ولی **فهرست نامشان هرگز ذخیره نشد**. پس اینکه `VWTRIALREPORTWRAPPER` روی Oracle *ما* وجود دارد یا نه هنوز تأییدنشده است — در `docs/open-decisions.md` ثبت شد.
+
+#### ۲. چرا SQL خام (تصمیم معماری جدید — اولین SQL خام پروژه)
+
+`TB_ACCOUNTCODE.TYPECODE` و `TB_VOUCHERSHEAD.DOCLIFE` هر دو Oracle `NUMBER(1)` اند ولی به `bool?` نگاشت شده‌اند (ریسک باز 🔴 شمارهٔ ۲، صریحاً خارج از دامنهٔ این batch). گزارش به `a.TYPECODE = 3` و `h.DOCLIFE >= :docLife` نیاز دارد که **از طریق EF LINQ روی `bool?` اصلاً قابل بیان نیستند** — وقتی نوع CLR به true/false/null فروپاشیده، راهی برای پرسیدن «مقدار زیرین ۳ است» وجود ندارد.
+
+⚠️ **این یعنی `TYPECODE` هم مثل `DOCLIFE` مسدودکننده بود، نه فقط `DOCLIFE`** (فرض اولیهٔ Task فقط `DOCLIFE` را مشکل می‌دانست). SQL خام هر دو را حل کرد: ستون‌ها به‌صورت عدد خوانده می‌شوند، بدون لمس مدل نوشتن. **در نتیجه فیلتر ترتیبی `DOCLIFE >= n` به‌طور کامل و وفادار پیاده شد** و لازم نشد حذف یا محدود شود.
+
+- **`Database.SqlQueryRaw<T>` انتخاب شد، نه Dapper** — پروژه هیچ وابستگی Dapper و هیچ SQL خام دیگری ندارد؛ افزودن پکیج برای یک کوئری توجیه نداشت. نه Entity کیلس لازم شد، نه `ToView`/`HasNoKey` در `LegacyDbContext`.
+- خروجی repository **materialized `IReadOnlyList`** است، هرگز `IQueryable` — عمداً، چون نشتی `IQueryable` از repository یکی از نقدهای ثبت‌شده به پروژهٔ مرجع بود (§۲۴-۱۳).
+
+#### ۳. جبر پنجره‌های زمانی — مهم‌ترین ویژگی صحت این کوئری
+
+سه predicate:
+- `{T}` (تجمعی) = `(:toDate IS NULL OR (h.DATE_DOC IS NOT NULL AND h.DATE_DOC <= :toDate))`
+- `{O}` (اول دوره) = `(:fromDate IS NOT NULL AND h.DATE_DOC IS NOT NULL AND h.DATE_DOC < :fromDate)`
+- `{P}` (طی دوره) = **عیناً** `({T}) AND NOT ({O})`
+
+`{P}` عمداً به‌صورت ترکیب `{T}` و `{O}` نوشته شد، نه به‌صورت شرط مستقل. دلیل: این کار اتحاد **`Total = Opening + Period`** را **by construction** برای هر ردیف برقرار می‌کند، از جمله ردیف‌هایی که `DATE_DOC` آن‌ها `NULL` است. اگر `{P}` مستقل نوشته می‌شد، در حالت مرزی (`DATE_DOC IS NULL` و `toDate IS NULL` و `fromDate` داده‌شده) ردیف در `Total` شمرده می‌شد ولی در هیچ‌کدام از `Opening`/`Period` نمی‌افتاد — یعنی **باقی‌ماندهٔ بی‌صدا** در یک گزارش مالی. این استدلال در XML doc ثبت شد تا کسی بعداً «ساده‌سازی»اش نکند.
+
+`FromDate <= ToDate` در Validator اجباری شد چون شمول `Opening ⊆ Total` به آن وابسته است.
+
+#### ۴. `YEAR` اجباری است — و چرا
+
+`Year` تنها چیزی است که «مبدأ سال مالی» را **بدون هیچ محاسبهٔ تاریخ واقعی** قابل بیان می‌کند. `DATE_DOC` از نوع `VARCHAR2(8)` است (رشتهٔ جلالی `YYYYMMDD` با صفر پیشوند) و `YEAR` ستون `CHAR(4)` جداگانه‌ای است؛ پس مانده اول دوره صرفاً با تساوی `YEAR` محدود می‌شود. این از نظر حسابداری هم درست است: در این سیستم، انتقال مانده سال قبل خودش به‌صورت **سند افتتاحیه داخل همان سال** وارد می‌شود (`AddOpeningVoucherCommand` در مرجع، §۱۷-۱).
+
+مقایسهٔ `DATE_DOC` لغوی (lexicographic) است که برای این قالب عرض‌ثابتِ صفرپیشوند دقیقاً معادل ترتیب زمانی است؛ پارامترها به‌عنوان `Varchar2` bind می‌شوند تا هرگز تبدیل ضمنی رشته‌به‌تاریخ رخ ندهد.
+
+#### ۵. دو باگ مرجع که عمداً رفع شدند (در XML doc ثبت شد)
+
+1. مرجع `h.isdeleted = 0` را فقط در حالت‌های معین/کل می‌گذارد و در گروه/تفصیلی جا می‌اندازد → اسناد حذف‌شده در آن سطوح شمرده می‌شوند. **ما یکنواخت در `WHERE` سطح‌مستقل اعمال می‌کنیم.**
+2. مرجع **هرگز** `d.isdeleted` را فیلتر نمی‌کند. **ما می‌کنیم** — برای ما بحرانی‌تر است چون `DeleteVoucherDetailCommand` (فاز ۱۰) ردیف را بدون لمس سرسند حذف نرم می‌کند.
+
+#### ۶. یک فیلتر که عمداً **اضافه نشد** (تصمیم حسابداری، نه فراموشی)
+
+روی `a`/`ak`/`ag` (گره‌های `TB_ACCOUNTCODE`) هیچ فیلتر `ISDELETED` گذاشته نشد. حسابی که حذف نرم شده ولی ردیف سند تاریخی دارد **باید** در تراز بماند؛ حذفش یک طرف گزارش را بی‌صدا کم‌نمایی می‌کند و اتحاد بنیادین «جمع بدهکار = جمع بستانکار» را می‌شکند. در XML doc تصریح شد که افزودن این فیلتر در آینده یک **رگرسیون** است، نه بهبود.
+
+#### ۷. ⚠️ ابهام حسابداری که حدس زده نشد و به صاحب پروژه ارجاع شد
+
+`FirstDebtor`/`FirstCreditor` طبق فرمول خودِ مرجع (`FirstDebtor = TotDebtor - CurDebtor`) **گردش خام انباشته پیش از دوره** است، نه ماندهٔ خالصِ یک‌طرفه. ولی برچسب فارسی «مانده اول دوره» معنای netted (با `GREATEST`) را القا می‌کند. **وفادار به فرمول مرجع پیاده شد** (نه به برچسب) و تناقض در XML doc و `docs/open-decisions.md` ثبت شد. عمداً «اصلاح» نشد.
+
+#### ۸. خروجی
+
+**Application** (`Accounting.Application/Reports/TrialBalance/`): `TrialBalanceLevel` (enum `Group=1/Kol=2/Moin=3`، آینهٔ `TYPECODE`)، `TrialBalanceAggregateRow` (۶ عدد خام)، سه DTO (`TrialBalance4/6/8RowDto`)، سه Query + Handler + Validator.
+**Interface/Infrastructure:** `ITrialBalanceReadRepository` + `TrialBalanceReadRepository` (ثبت در DI کنار بقیهٔ read repositoryها).
+**Api:** `TrialBalanceReportsController` روی `api/reports` با سه `GET`: `trial-balance-4`, `trial-balance-6`, `trial-balance-8`. هر سه `200/400/401/500` اعلام می‌کنند، بدون `[AllowAnonymous]` (زیر FallbackPolicy فاز ۷).
+
+نگاشت projection: `DebtorBalance = Math.Max(TotalDebtor - TotalCreditor, 0)` و قرینه‌اش؛ `Debtor/Creditor` = پنجرهٔ دوره؛ `FirstDebtor/FirstCreditor` = پنجرهٔ اول دوره؛ `TotDebtor/TotCreditor` = پنجرهٔ تجمعی.
+
+**بدون paging** — تراز ناقص بی‌معناست (باید تراز شود). به‌عنوان ملاحظهٔ کارایی سطح معین ثبت شد.
+
+**نکتهٔ فنی ظریف که تأیید شد:** پارامترهای نام‌دار (`:toDate`, `:fromDate`) چند بار در متن SQL تکرار می‌شوند. صحت این کار به `BindByName = true` وابسته است؛ به‌جای فرض‌کردن، با decompile کردن `OracleRelationalCommand.CreateDbCommand` در همان نسخهٔ پکیج (`Oracle.EntityFrameworkCore` 10.23.26000) تأیید شد که این مقدار **بی‌قیدوشرط** ست می‌شود. در XML doc ثبت شد که با هر ارتقای provider باید دوباره راستی‌آزمایی شود.
+
+**تست: ۶۹ تست جدید، مجموع ۲۱۰۸/۲۱۰۸ سبز** (۲۲ Domain + ۱۷۸۹ Application + ۱۴۰ Api + ۱۵۷ Infrastructure)، صفر رگرسیون. build ۰ خطا / ۱۸ warning پیش‌موجود NU1903 (هیچ CS جدید). پوشش: یک‌طرفه‌بودن ماندهٔ پایان دوره (بدهکار‌غالب/بستانکار‌غالب/مساوی)، یک‌طرفه‌بودن ماندهٔ اول دوره (`FirstDebtor`/`FirstCreditor` — رجوع پایین‌تر)، و Validatorها (`Year` غایب/طول غلط، `FromDate > ToDate`، طول/رقم تاریخ، `DocLife` خارج بازه، `Level` تعریف‌نشده).
+
+**اصلاح پس از تصمیم صاحب پروژه (۲۰۲۶-۰۹-۰۷):** معنای `FirstDebtor`/`FirstCreditor` («مانده اول دوره») ابهام داشت — فرمول خام مرجع (`TotDebtor - CurDebtor`، بدون یک‌طرفه‌سازی) در برابر عرف تراز آزمایشی (یک‌طرفه، مثل `DebtorBalance`). صاحب پروژه صریحاً یک‌طرفه‌سازی را انتخاب کرد: «همیشه باید یک طرف مانده غیر صفر داشته باشد». `GetTrialBalance6QueryHandler`/`GetTrialBalance8QueryHandler` اصلاح شدند به `Math.Max(OpeningDebtor - OpeningCreditor, 0)` و متقارنش. **پیامد:** invariant قبلی `TotDebtor == FirstDebtor + Debtor` (که در فرمت ۸ ستونه تست می‌شد) دیگر به‌طور کلی برقرار نیست، چون `TotDebtor`/`TotCreditor` (گردش تجمیعی) عمداً خام ماندند در حالی که `FirstDebtor`/`FirstCreditor` (مانده) حالا یک‌طرفه‌اند — گردش برخلاف مانده می‌تواند هر دو طرفش هم‌زمان غیرصفر باشد. تست آن invariant حذف و با تست netting جایگزین شد. جزئیات کامل در `docs/open-decisions.md`.
+
+⚠️ **همگی Unit/Mock — هیچ اتصالی به Oracle زنده.** یعنی خودِ متن SQL هرگز روی Oracle واقعی اجرا نشده و صحت نحوی/اجرایی‌اش اثبات‌نشده است.
+
+---
+
+### فاز ۱۷ — پاس دوم خواندن Read-Only پروژهٔ مرجع `D:\CentralAccount` (۲۰۲۶-۰۹-۰۶، برنچ `EntityCRUD`، commit نشده)
+
+به درخواست صریح صاحب پروژه: «با دانش کاملی که الان از این ۳۹ Entity داری، دوباره برو `D:\CentralAccount` رو بخون و ببین چی رو در نظر نگرفته بودیم.» پاس اول (فاز ۱۲) وقتی انجام شد که پروژهٔ ما فقط `AccountCode`/`VoucherHead`/`VoucherDetail` را داشت، پس ناخودآگاه حول همان‌ها متمرکز شده بود.
+
+**هیچ فایلی در `D:\CentralAccount` تغییر نکرد (Read-Only). هیچ کد `backend/` لمس نشد. صفر تست جدید، صفر build.** خروجی کاملاً مستنداتی است.
+
+**خروجی:** `docs/centralaccount-business-reference.md` از ۱۸۸۷ به **۲۴۱۵ خط** رسید با **بخش ۲۴** جدید (۱۶ زیربخش، ۵۲۸ خط) — بدون بازنویسی هیچ محتوای موجود. `docs/open-decisions.md` یک بخش «فاز ۱۷» گرفت + سه مورد موجود تصحیح شد.
+
+#### ۸ یافتهٔ اصلی (به‌ترتیب اهمیت)
+
+1. **🔴 فهرست `bool`→enum از «~۱۸ مشکوک» به «۱۶ تأییدشده» ارتقا یافت — و یک فرض پایه‌ای باطل شد.** روش این‌بار تطبیق مستقیم property-به-property بین Entityهای ما و `Tamin.Core` بود (نه کامنت ستون، که فاز ۱۲ ثابت کرد غیرقابل‌اعتماد است). **فرض باطل‌شده:** «اگر ستون دومقداری باشد `bool` بی‌خطر است» — چون تقریباً همهٔ این enumها از **۱** شروع می‌شوند نه ۰. تنها استثنا `TB_PREDESCRIB.FLAGVOUCHER` (`Flag {0,1}`). سه مورد **تازه‌کشف‌شده** که قبلاً حتی مشکوک هم نبودند: `ATTRIBBOXNO` (در مرجع `int` است — اصلاً enum نیست)، `IDENTITYSUBGRPS.FIXED`, `ELAMHEAD.ELAMH_CASE`. چهار مورد هم **تأیید مثبت** شدند (`PERSON_ACTION.STATUS`, `IDENTITYSUBGRPS.SUMFLAG`, `WORKSHOP.ISACTIVE`, `YEAR.ISCURRENT`).
+2. **🔴 تفاوت بنیادین حذف فیزیکی/نرم + ۱۲ گارد وابستگی.** پروژهٔ مرجع در **۳۵ repository** حذف فیزیکی می‌کند و فقط ۸ جا soft delete؛ ما دقیقاً برعکس. آنجا Oracle خودش با `ORA-02292` جلوی حذف والدِ دارای فرزند را می‌گیرد، پس مجبور بودند گارد صریح بنویسند. **در مدل ما هیچ FK ای شکایت نمی‌کند، پس همان نقض‌ها بی‌صدا اتفاق می‌افتند.**
+3. **🔴 ۹ ستون که ما ورودی آزاد گرفته‌ایم و آنجا سمت سرور تولید/ثابت می‌شوند** (`ELAMH_SERIALNO`, `ELAMH_CODE`, `WEB_STAT`, `CHECKBOOK_TYPE`, `WORKSHOP.ISACTIVE`, `PERSON_ACTION.STATUS`, `USERNAME`, `RADIF`, `PAYRECIVCODE`). الگوی عمومی کشف‌شده: هر فیلد «وضعیت» از Update جدا و به Command اختصاصی تبدیل می‌شود — یعنی چیزی که ریسک 🔴 `DOCLIFE` ما می‌گوید، آنجا **قاعدهٔ عمومی** است نه استثنای سند.
+4. **🔴 مرز Aggregate چهار جفت Head/Detail قطعی شد — هر چهار تا composite-create.** قوی‌ترین مورد `CheckBook`: `AddCheckPapers` به‌ازای هر شماره در بازه یک ردیف `TB_CHECK` می‌سازد، پس **`POST /api/check-books` ما دسته‌چکی بدون هیچ برگ چک تولید می‌کند**. سه تای دیگر: `ElamHead`, `PayReciveHead`, `ChargeAndCostHead`.
+5. **🔴 `TB_PERSON_ACTION.USERID` کد ملی است، نه شناسهٔ کاربری** — با checksum اعتبارسنجی می‌شود و `USERNAME` از سرویس دایرکتوری سازمان می‌آید نه از فراخوان (یعنی نام صاحب امضا نزد ما قابل جعل است).
+6. **🟡 قاعدهٔ «تفصیلی الزامی/مجاز» — کد کامل و دوطرفه.** در سه Handler مستقل عیناً تکرار شده: نبودِ سطح الزامی خطا می‌دهد **و** پرکردن سطح غیرمجاز هم. تأیید سه‌بارهٔ مکانیزم «وجود/عدم‌وجود ردیف در `TB_ACCOUNT_LINK_LEVEL`» که فاز ۱۲ حدس زده بود.
+7. **🟡 ماتریس نقش‌های واقعی سازمان استخراج شد** — ۷ نقش `FINANCIAL CORE …` روی ۳۶ Controller با **همان پکیج `Tamin.Framework.Common.Security` که ما هم داریم**. ریسک باز 🔴 IDOR دیگر «از صفر» نیست.
+8. **🟡 حذف سند آنجا ۸ کار می‌کند، cascade فاز ۹ ما ۲ تا** — از جمله آزادکردن `DOC_NUM` (با تغییر نام به `"d"+…`) و reset برگ چک.
+
+#### تصحیح‌های مهم روی ریسک‌های ثبت‌شدهٔ قبلی
+
+- **✅ ابهام 🟡 «معنای `VAHEDTYPE`» حل شد (با شاهد قوی، نه اثبات).** دلیل شکست فاز ۱۲ این بود که **enum اشتباهی مقایسه می‌شد**: `Tafsili.VahedType` از نوع `TypeKoli` است (۱=بیمه، ۲=درمان، ۳=همه)، نه `TypeVahed` (۱..۱۷). دادهٔ زندهٔ `{1,3}` با `TypeKoli` کاملاً سازگار است.
+- **تصحیح دامنهٔ تناقض `TYPEACTIVITY`.** قاعدهٔ مرجع **سطح‌محور** است: گروه ۱..۳ ولی معین **۱..۷**. پس تناقض ۳ رکورد گروه‌سطح `{4,5,6}` پابرجاست، ولی دامنه‌اش دقیق‌تر شد.
+- `TB_ACCOUNTCODE_INTERFACE.TYPE` و `TB_PERSON_ACTION.OPERATORROLE` از «مشکوک» به **«تأییدشده غلط»** ارتقا یافتند.
+
+#### دو ابهام سیستماتیک که عمداً حدس زده نشد
+
+- **جابه‌جایی `Debtor`/`Creditor` در هر دو مسیر تبدیل به سند** (`SetDebtor(detail.Creditor)`) — دو مسیر مستقل، هر دو معکوس. باگ کپی‌شده یا معنای وارونهٔ ستون‌ها در جدول‌های staging؟
+- **توزیع معکوس مبلغ بر اساس `ElamCase`** در ساخت اعلامیه.
+
+#### یافتهٔ منفی مفید
+
+`ApplicationUseCases/Registration.cs` مرجع فقط سه کار می‌کند و **هیچ Behavior دیگری ندارد** (نه logging، نه transaction، نه multi-tenancy). فرضیهٔ «شاید الگوهای cross-cutting داشته باشند که ما نداریم» **رد شد** — در این بُعد ما جلوتریم. `HaveAccessToUnit` تنها مکانیزم واقعی آن‌طرف است و فقط در **۸ نقطه از ۳۷۲ Handler** صدا زده می‌شود.
+
+#### پوشش
+
+**خوانده شد:** هر ۳۴ پوشهٔ `Commands`، Handler کامل ~۳۰ Command، همهٔ Validatorهای مرتبط، `Behaviors/`, `Registration.cs`, `IUnitOfWork`, `BusinessUserAccess`, `BaseEntityG`, هر ۳۴ enum، ~۲۰ Entity مرجع، ۱۲ متد Delete، مسیر Kafka، `VouchersHeadRepository.DeleteAsync`, و SQL کامل تراز آزمایشی ۴ ستونه + drill-down.
+**خوانده نشد (عمداً):** SQL کامل گزارش‌های ۶/۸ ستونه و تجمیعی، ~۱۸۵ فایل DTO، مسیر SOAP، `Payments/*`، تست‌ها، `Infrastructure.Logging`.
+
+
 ### فاز ۱۶ — CRUD دستهٔ پنجم: ۲ Entity مستقل (Head-only) (۲۰۲۶-۰۹-۰۶، برنچ `EntityCRUD`، commit نشده)
 
 اجرای مکانیکی همان الگوی فازهای ۵–۱۵ روی یک دستهٔ **عمداً کوچک** — فقط ۲ Entity، هر دو Head. **هیچ تصمیم معماری جدیدی گرفته نشد.** برخلاف فازهای ۱۳/۱۴/۱۵ کار بین ایجنت‌های موازی تقسیم نشد (حجمش توجیه نمی‌کرد) و همهٔ فایل‌ها از جمله سه فایل مشترک (`DependencyInjection.cs`, `RepositoryRegistrationTests.cs`, `HttpVerbConventionTests.cs`) مستقیماً نوشته شد.

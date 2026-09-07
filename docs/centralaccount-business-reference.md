@@ -1885,3 +1885,531 @@ TYPECODE | TYPEACTIVITY | COUNT(*)
 - تمام دادهٔ بررسی‌شده از یک **دیتابیس محیط توسعه** (`setadidevdb.tamin.org`) آمد که حجم کم و ردیف‌های آشکارا تستی (`test1`, `تست`, `hdsgd`, ...) فراوان دارد. نتیجه‌گیری‌های بالا بر پایهٔ **جهت‌داری الگو** است، نه حجم آماری بزرگ. برای `TYPEACTIVITY` این مشکلی ایجاد نکرد چون شواهد سطح گروه ۱۰۰٪ بدون استثنا بودند؛ برای `VAHEDTYPE` دقیقاً همین محدودیت باعث شد نتیجه‌گیری «تا حدی» باقی بماند.
 - فقط سه ابهام مشخص‌شده در این Task بررسی شد؛ بقیهٔ enumهای فهرست‌شده در بخش ۱۰-۲ (`DOCLIFE`, `PERSONTYPE`, `ISACTIVE`, `OWNER`, ...) **در این کار لمس نشدند** و همچنان بر پایهٔ تحلیل کد مرجع (نه دادهٔ زنده) هستند.
 - کوئری‌ها روی یک اسکیمای تک‌مستأجر اجرا شدند (بدون فیلتر `VAHEDCODE`)؛ چون این کار صرفاً برای رفع ابهام نوع/enum بود، نه بررسی ایزولاسیون داده.
+
+---
+
+# بخش ۲۴ — پاس دوم خواندن `D:\CentralAccount` با دانش ۲۵ Entity فازهای ۱۳–۱۶ (۲۰۲۶-۰۹-۰۶)
+
+> **چرا این بخش وجود دارد.** پاس اول (فاز ۱۲) وقتی انجام شد که پروژهٔ ما فقط `AccountCode`/`VoucherHead`/`VoucherDetail` را داشت، پس ناخودآگاه حول همان‌ها متمرکز شد. از آن زمان فازهای ۱۳ تا ۱۶ برای **۲۵ Entity دیگر** CRUD ساختند. این پاس دوم عمداً از **دید آن ۲۵ Entity** دوباره همان پروژه را خواند تا چیزهایی را پیدا کند که پاس اول اهمیتشان معلوم نبود.
+>
+> ⚠️ همان قید همیشگی: این سند **مرجع طراحی** است نه منبع قانون کسب‌وکار ما. هیچ‌کدام از موارد زیر به‌خودی‌خود «باید پیاده شود» نیست؛ ورودی تصمیم‌گیری‌اند. هرجا از روی کد قطعی نشد، صریحاً نوشته شده **«حدس زده نشد»**.
+>
+> **هیچ فایلی در `D:\CentralAccount` تغییر نکرد (Read-Only) و هیچ کد `backend/` در این کار لمس نشد.**
+
+## ۲۴-۰. خلاصهٔ اجرایی — ۸ یافتهٔ اصلی به‌ترتیب اهمیت
+
+| # | یافته | شدت | Entityهای متأثر ما |
+|---|---|---|---|
+| ۱ | **۱۶ ستون `bool`/`bool?` دیگر واقعاً enum اند** — با تطبیق مستقیم property-به-property بین Entityهای ما و `Tamin.Core`. اکثرشان دامنهٔ `{1,2}` دارند نه `{0,1}`، پس حتی دومقداری‌ها هم با `bool` غلط نگاشت می‌شوند. | 🔴 | ۱۱ Entity |
+| ۲ | **پروژهٔ مرجع تقریباً همه‌جا حذف فیزیکی می‌کند، نه soft delete** — و دقیقاً به همین دلیل **۱۲ گارد وابستگی هنگام حذف** دارد که ما هیچ‌کدام را نداریم. حذف نرم ما این خطاها را ساکت می‌کند. | 🔴 | ۱۲ Entity |
+| ۳ | **۵ ستون که ما ورودی فراخوان گرفته‌ایم، در پروژهٔ مرجع سمت سرور تولید/ثابت می‌شوند** (`ELAMH_SERIALNO`, `ELAMH_CODE`, `WEB_STAT`, `CHECKBOOK_TYPE`, `ISACTIVE` کارگاه، `RADIF`). | 🔴 | ۴ Entity |
+| ۴ | **مرز Aggregate چهار جفت Head/Detail قطعی شد** — هر چهار تا در پروژهٔ مرجع **composite-create** اند (`CheckBook`+اوراق، `ElamHead`+دیتیل+تفصیلی، `PayReciveHead`+دیتیل+تفصیلی، `ChargeAndCostHead`+دیتیل). API فعلی ما هر چهار تا را فقط Head می‌سازد. | 🔴 | ۴ Entity |
+| ۵ | **`TB_PERSON_ACTION.USERID` کد ملی است، نه شناسهٔ کاربری** — با checksum اعتبارسنجی می‌شود و `USERNAME` از سرویس دایرکتوری سازمان گرفته می‌شود، نه از فراخوان. | 🔴 | PersonAction |
+| ۶ | **قاعدهٔ «تفصیلی الزامی/مجاز» در سه مسیر مستقل enforce می‌شود** و الگویش دقیقاً همان چیزی است که فاز ۱۲ حدس زده بود (وجود ردیف در `TB_ACCOUNT_LINK_LEVEL`). حالا کد کاملش را داریم. | 🟡 | مسیر سند |
+| ۷ | **ماتریس نقش‌های واقعی سازمان استخراج شد** (۷ نقش `FINANCIAL CORE …`) و روی ۳۶ Controller اعمال است — ورودی مستقیم برای ریسک باز 🔴 IDOR/authorization ما. | 🟡 | همه |
+| ۸ | **حذف سند در پروژهٔ مرجع ۷ کار انجام می‌دهد، cascade سه‌سطحی ما فقط ۲ تا** — از جمله آزادکردن شمارهٔ سند و بازگرداندن برگ چک به حوضچهٔ استفاده‌نشده. | 🟡 | VoucherHead |
+
+---
+
+## ۲۴-۱. 🔴 جدول کامل «`bool` که واقعاً enum است» — تطبیق مستقیم Entity به Entity
+
+روش: property-به-property بین `backend/src/Accounting.Domain/Entity/*.cs` و `D:\CentralAccount\Tamin.Core\Entities\**`. این **قطعی‌تر** از پاس اول است چون پاس اول از روی کامنت ستون و استفادهٔ پراکنده حدس می‌زد؛ اینجا خودِ اعلان نوع در Entity مرجع مبناست.
+
+### تلهٔ اصلی که باید بفهمید
+
+**تقریباً همهٔ این enumها از ۱ شروع می‌شوند، نه از ۰.** یعنی حتی برای enumهای **دومقداری** هم نگاشت `bool` غلط است: مقدار `2` در ستون `NUMBER(1)` نه `false` است نه لزوماً `true`. پس فرض قبلی ما («اگر واقعاً دومقداری باشد `bool` بی‌خطر است» — ثبت‌شده در `open-decisions.md` برای `TB_ACCOUNTCODE_INTERFACE.TYPE`) **باطل است**.
+
+تنها استثنای واقعی: `PreDescribs.Flag` که `{ForVoucherHead=0, ForVoucherDetail=1}` است — فقط این یکی با `bool?` سازگار است.
+
+| Entity ما | ستون | نوع فعلی ما | enum واقعی در `Tamin.Core` | مقادیر | حکم |
+|---|---|---|---|---|---|
+| `TB_ACCOUNTCODE_INTERFACE` | `TYPE` | `bool` | `InterfaceType` | ۱=افتتاحیه، ۲=اختتامیه | 🔴 **غلط** (نه «مشکوک») |
+| `TB_PERSON_ACTION` | `OPERATORROLE` | `bool` | `OperatorRole` | ۱=مسئول امور مالی، ۲=رئیس واحد، ۳=جانشین امور مالی، ۴=جانشین رئیس واحد | 🔴 **غلط** — چهارمقداری |
+| `TB_PERSON_ACTION` | `STATUS` | `bool?` | `bool?` | — | ✅ **درست** |
+| `TB_PREDESCRIB` | `FLAGVOUCHER` | `bool?` | `Flag` | ۰=شرح هد سند، ۱=شرح جزئیات سند | ✅ **سازگار** (تنها enum ۰-پایه) |
+| `TB_WHITEANDBLACKLIST` | `STATE` | `bool?` | `StateEnum` | ۱=مجاز، ۲=فقط سیستمی، ۳=غیرمجاز | 🔴 غلط (از قبل ثبت‌شده) |
+| `TB_ATTRIBFORACCOUNTCODE` | `ATTRIBBOXNO` | `bool` | `int AttribBoxNo` | **عدد صحیح** (تعداد/شمارهٔ خانهٔ صفت) | 🔴 **بدترین مورد این پاس** — اصلاً enum نیست، عدد است |
+| `TB_ATTRIBFORACCOUNTCODE` | `FLAG` | `bool` | `FlagEnum` | ۱=عدد، ۲=تاریخ | 🔴 غلط |
+| `TB_ATTRIBFORACCOUNTCODE` | `ATTRIBSUM` | `bool` | `AttribSumEnum` | ۱=جمع‌پذیر، ۲=جمع‌ناپذیر | 🔴 غلط |
+| `TB_ATTRIBFORACCOUNTCODE` | `CONTROLID` | `bool?` | `ControlEnum` | ۱=غیرصفر، ۲=تاریخ | 🔴 غلط |
+| `TB_TAFSIL_GROUP` | `PERSONTYPE` | `bool?` | `PersonTypes` | ۱=حقیقی، ۲=حقوقی، ۳=سایر | 🔴 غلط — سه‌مقداری |
+| `TB_IDENTITYSUBGRP` | `FIXED` | `bool` | `IdentitySubGroupKind` | ۱=ثابت، ۲=متغیر | 🔴 غلط |
+| `TB_IDENTITYSUBGRP` | `SUBGRPS_TYPE` | `bool?` | `IdentitySubGroupType` | ۱=تاریخ، ۲=حروف فارسی، ۳=عدد، ۴=حروف لاتین | 🔴 غلط — **چهارمقداری** |
+| `TB_IDENTITYSUBGRP` | `SUMFLAG` | `bool` | `bool SumFlag` | — | ✅ **درست** |
+| `TB_CHECKBOOK` | `CHECKBOOK_TYPE` | `bool?` | `CheckType` | ۱=چک صوری، ۲=چک واقعی | 🔴 غلط (+ رجوع ۲۴-۳: اصلاً نباید ورودی باشد) |
+| `TB_RECEIP` | `RECEIPT_KIND` | `bool` | `ReceiptType` | ۱=فیش، ۲=حواله | 🔴 غلط |
+| `TB_BANKCARTDETAIL` | `CHECKRECEIPTTYPE` | `bool?` | `CheckReceiptType` | ۱=چک صوری، ۲=چک واقعی، ۳=فیش، ۴=حواله | 🔴 غلط — **چهارمقداری** |
+| `TB_ELAMHEAD` | `ELAMH_CASE` | `bool?` | `ElamCase` | ۱=بدهکار، ۲=بستانکار | 🔴 غلط |
+| `TB_ELAMHEAD` | `ELAMHDRAMAD_TYPE` | `bool?` | `DaramElamhType` | ۱=حق بیمه کارکنان، ۲=ذیحسابی، ۳=سایر | 🔴 غلط — سه‌مقداری |
+| `TB_ELAMHEAD` | `WEB_STAT` | `byte?` | `WebStat` | ۱..۱۰ (ماشین حالت اعلامیه) | ✅ عرض درست (ولی رجوع ۲۴-۳) |
+| `TB_PAYRECIVHEAD` | `PAYRECIVTYPE` | `bool?` | `PayRecivType` | ۱=پرداخت، ۲=دریافت، ۳=همه | 🔴 غلط (از قبل ثبت‌شده در فاز ۱۶) |
+| `TB_WORKSHOP` | `ISACTIVE` | `bool` | `bool IsActive` | — | ✅ **درست** — برخلاف `TB_TAFSILI.ISACTIVE` |
+
+### Entityهایی که هنوز CRUD ندارند (برای آمادگی)
+
+| Entity | ستون | نوع فعلی ما | enum واقعی | مقادیر |
+|---|---|---|---|---|
+| `TB_TAFSILI` | `ISACTIVE` | `bool?` | `Active` | ۱=فعال، ۲=غیرفعال (**۰ در enum نیست**) |
+| `TB_TAFSILI` | `PERSONTYPE` | `bool?` | `PersonTypes` | ۱،۲،۳ |
+| `TB_TAFSILI` | `OWNER` | `bool?` | `Owners` | ۱=سراسری، ۲=داخلی |
+| `TB_TAFSILI` | `VAHEDTYPE` | `bool?` | **`TypeKoli?`** | ۱=بیمه، ۲=درمان، ۳=همه |
+| `TB_YEAR` | `ISCURRENT` | `bool?` | `bool IsCurrent` | ✅ واقعاً بولین |
+| `TB_CHECK` | `PRINT` | (تعبیه‌شده) | `CheckPrintStatus` | ۱=چاپ‌نشده، ۲=چاپ‌شده |
+| `TB_CHECK` | `EBTAL` | (تعبیه‌شده) | `CheckStatus` | ۱=پرداخت‌شده، ۲=پرداخت‌نشده، ۳=باطل |
+
+### ✅ ابهام باز 🟡 «معنای `VAHEDTYPE`» — شاهد قوی جدید
+
+`open-decisions.md` می‌گفت معنای `VAHEDTYPE` با `TypeVahed` قطعی نشد. **دلیلش پیدا شد: enum اشتباهی مقایسه می‌شد.** در `Tamin.Core`، `Tafsili.VahedType` از نوع **`TypeKoli`** است (۱=بیمه، ۲=درمان، ۳=همه) — نه `TypeVahed` (۱..۱۷، انواع واحد سازمانی). دادهٔ زندهٔ فاز ۱۲ فقط `{1,3}` داشت که با `TypeKoli` کاملاً سازگار است (بیمه، همه) و با `TypeVahed` بی‌معنا بود.
+⚠️ این **شاهد قوی است، نه اثبات روی دادهٔ خودمان** — برچسب مقادیر هرگز روی دیتابیس عملیاتی راستی‌آزمایی نشده. `VAHEDTYPE_ID` (که FK به `TB_VAHED_TYPE` است) موجود کاملاً متفاوتی است و نباید با این اشتباه شود.
+
+---
+
+## ۲۴-۲. 🔴 حذف فیزیکی + گارد وابستگی — بزرگ‌ترین تفاوت معماری بین دو پروژه
+
+### واقعیت پایه
+
+در `D:\CentralAccount`، **۳۵ repository متد `.Remove()` صدا می‌زنند** (حذف فیزیکی). حذف نرم (`SetIsDeleted(true)`) فقط در **۸ جا** استفاده می‌شود: `Tafsili`, `TbAccountLinkLevel`, `TbAccountLinkTafsilGroup`, `TbLevelTafsil`, `TbTafsilLinkTafsilGroup`, `TmpVoucherHead`, `VouchersHead`, `VouchersDetail`.
+
+**ما دقیقاً برعکسیم: حذف نرم سراسری، صفر حذف فیزیکی.**
+
+این صرفاً یک تفاوت سبک نیست. در پروژهٔ مرجع، حذف فیزیکی باعث می‌شود Oracle خودش با `ORA-02292` جلوی حذف والدِ دارای فرزند را بگیرد — پس آن‌ها **مجبور** بودند گاردهای صریح بنویسند تا پیام تمیز بدهند. در مدل ما هیچ FK ای شکایت نمی‌کند، پس همان نقض‌ها **کاملاً بی‌صدا** اتفاق می‌افتند. (این دقیقاً همان استدلالی است که فاز ۱۱ برای عدم‌نگاشت `ORA-02292` نوشته بود — درست بود، ولی نتیجه‌اش این است که گارد باید در Application ساخته شود.)
+
+### جدول کامل گاردهای حذف در پروژهٔ مرجع
+
+| Entity | گارد پروژهٔ مرجع | فایل مرجع | ما |
+|---|---|---|---|
+| `AttribForAccountCode` | اگر در `TB_ATTRIBINVOUCHER` استفاده شده → «برای ردیف انتخابی شناسه ای در اسناد ثبت شده و قابل حذف نمی باشد» | `Attributes/AttribForAccountCodes/Delete/…Handler.cs` | ❌ ندارد |
+| `ChequeType` | حذف **مجاز** است ولی اول `CHECKTYPE_ID` همهٔ دسته‌چک‌های وابسته `null` می‌شود (nullify به‌جای block) | `Checks/CheckTypes/Delete/…Handler.cs` | ❌ ندارد — دسته‌چک‌ها به نوع حذف‌شده اشاره می‌مانند |
+| `Expense` | cascade به `TB_EXPENCE_LINK_TAFSILI` | `Expenses/Expenses/Delete/…Handler.cs` | ❌ ندارد |
+| `IdentityGroup` | اگر زیرگروه دارد → بلاک | `Identitys/IdentityGroup/Delete/…Handler.cs` | ❌ ندارد |
+| `IdentitySubGroup` | اگر `IdentityDetails` یا `IdentityFixItems` دارد → بلاک | `Identitys/IdentitySubGroup/Delete/…Handler.cs` | ❌ ندارد |
+| `Rabet` | اگر حساب مرتبطش **گردش سند** دارد → بلاک | `Rabets/Delete/…Handler.cs` | ❌ ندارد |
+| `RevolvingFund` | اگر در `ChargeAndCostDetails` استفاده شده → بلاک | `RevolvingFunds/Delete/…Handler.cs` | ❌ ندارد |
+| `TafsilGroup` | اگر هیچ `TB_ACCOUNT_LINK_TAFSILGROUP` ای ندارد فقط آنگاه حذف | `TbTafsilGroups/Delete/…Handler.cs` | ❌ ندارد |
+| `CheckBook` | اگر هر برگ چک «استفاده‌شده» باشد → بلاک؛ در غیر این صورت cascade به همهٔ اوراق | `Checks/DeleteCheckBook/…Handler.cs` | ❌ ندارد |
+| `ElamHead` | اگر `WebStat == FinalConfirmOtherElam` → بلاک؛ cascade به دیتیل + لینک تفصیلی | `Elms/OtherElamHead/Delete/…Handler.cs` | ❌ ندارد |
+| `PayReciveHead` | اگر `VOUCHERSHEAD_ID != null` (سند صادر شده) → بلاک | `PayAndRecive/Delete/…Handler.cs` | ❌ (در فاز ۱۶ آگاهانه ثبت شد) |
+| `Tafsili` | اگر در `TB_VOUCHERDETAIL_LINK_TAFSILI` استفاده شده → بلاک | `Tafsilis/Delete/…Handler.cs` | (هنوز CRUD ندارد) |
+| `RabetClosing` | اگر هرکدام از دو حساب گردش دارند → بلاک | `RabetClosings/Delete/…Handler.cs` | (هنوز CRUD ندارد) |
+| `ExpenseGroup` | اگر Expense وابسته دارد → بلاک | `Expenses/ExpenseGroups/Delete/…Handler.cs` | (هنوز CRUD ندارد) |
+| `LevelTafsil` | **هیچ گاردی ندارد** | `TbLevelTafsils/Delete/…Handler.cs` | ✅ هم‌راستا (ما هم نداریم) |
+
+**«گردش سند» چطور بررسی می‌شود:** `IVouchersDetailRepository.GetTuroverByIdAsync(accountCodeId)` — یک `AnyAsync` روی `TB_VOUCHERSDETAIL` برای آن حساب. الگوی قابل بازاستفاده اگر بخواهیم ریسک باز 🔴 «حذف گرهٔ کدینگ بدون بررسی وابستگی» را ببندیم.
+
+⚠️ **حدس زده نشد:** آیا این گاردها برای پروژهٔ ما هم لازم‌اند یا صرفاً بازتاب مدل حذف فیزیکی آنجا هستند. با حذف نرم می‌شود استدلال کرد «رکورد یتیم فعال» بی‌ضرر است چون داده پاک نشده — ولی می‌شود استدلال عکس هم کرد. **تصمیم صاحب پروژه است.**
+
+---
+
+## ۲۴-۳. 🔴 ستون‌هایی که ما ورودی گرفته‌ایم و پروژهٔ مرجع سمت سرور تولید می‌کند
+
+| ستون | در پروژهٔ مرجع | در API ما |
+|---|---|---|
+| `TB_ELAMHEAD.ELAMH_SERIALNO` | **تولید سرور:** `GetNewElamSerialNoAsync(vahedCode, year, elamType)` → `MAX(serial)+1` با فرمت ۱۴ رقمی `D14`؛ اگر اولی باشد از `vahedCode + year + "000000"` شروع می‌شود | ورودی آزاد فراخوان |
+| `TB_ELAMHEAD.ELAMH_CODE` | **مشتق:** از `TB_RABET` (`GetRabetMoinByElamTypeAsync(elamType)`) — یعنی کد معین اعلامیه از جدول رابط resolve می‌شود | ورودی آزاد فراخوان |
+| `TB_ELAMHEAD.WEB_STAT` | **ماشین حالت:** روی `CreateOtherElam` (=۵) ست می‌شود؛ فقط با Commandهای جدا (`ChangeWebStat`) جلو می‌رود | ورودی آزاد در Create **و** Update |
+| `TB_CHECKBOOK.CHECKBOOK_TYPE` | **ثابت `CheckType.real`** در هر دو Create و Update — هرگز ورودی نیست. (تنها جای `sori` در `AddUnitFinancialYear` است، یعنی مسیر سیستمی افتتاح سال) | ورودی `bool?` فراخوان |
+| `TB_WORKSHOP.ISACTIVE` | **ثابت `true`** در Create؛ فقط از طریق `ChangeStateWorkShopCommand` عوض می‌شود | ورودی فراخوان در Create و Update |
+| `TB_PERSON_ACTION.STATUS` | **ثابت `true`** در Create؛ فقط با `DeactivatePersonActionCommand` toggle می‌شود | ورودی فراخوان |
+| `TB_PERSON_ACTION.USERNAME` | **از سرویس دایرکتوری سازمان** (رجوع ۲۴-۴) | ورودی آزاد فراخوان |
+| `RADIF` (دیتیل سند/دریافت‌پرداخت/اعلامیه) | **تولید سرور:** شمارندهٔ ۱،۲،۳… در حلقهٔ composite-create | ورودی آزاد (ریسک باز 🟡 موجود) |
+| `TB_PAYRECIVHEAD.PAYRECIVCODE` | **نرمال‌سازی:** `PadLeft(5, '0')` | بدون نرمال‌سازی |
+
+**الگوی تکرارشونده‌ای که باید دید:** پروژهٔ مرجع هر جا یک فیلد «وضعیت» دارد، آن را از Update معمولی **جدا** می‌کند و یک Command اختصاصی می‌سازد (`ChangeState`, `ReActive`, `Deactivation`, `ChangeStatusToAccept/Reviewed/Temporary`, `ChangeWebStat`, `ChangeState` سند). این دقیقاً همان چیزی است که ریسک باز 🔴 ما دربارهٔ `DOCLIFE` می‌گوید — و حالا معلوم است که در پروژهٔ مرجع **قاعده‌ای عمومی** است، نه استثنای سند.
+
+---
+
+## ۲۴-۴. 🔴 `TB_PERSON_ACTION` — کد ملی، نه شناسهٔ کاربری
+
+این Entity بیشترین یافتهٔ این پاس را داشت.
+
+- **`USERID` کد ملی ۱۰ رقمی است.** `AddPersonActionCommandValidator` آن را با `NationalCodeValidation.CheckNationalCode(a, '0')` (الگوریتم checksum کد ملی ایران) اعتبارسنجی می‌کند + `Length(10)`. ما آن را یک رشتهٔ ۱۰ کاراکتری بی‌ساختار می‌گیریم.
+- **`USERNAME` سمت سرور از سرویس دایرکتوری سازمان می‌آید:** `currentUserService.GetCurrentUserAsync(nationalCode)` → اگر کاربر پیدا نشد `403` با «کاربر با کد ملی وارد شده یافت نشد»؛ در غیر این صورت `displayName` یا `firstName + lastName`. **ما این فیلد را از فراخوان می‌گیریم** — یعنی نام صاحب امضا قابل جعل است.
+- **`FROMDATE`/`TODATE`:** فرمت `^\d{8}$` و قانون `ToDate >= FromDate`. ما هیچ‌کدام را نداریم.
+- **دو گارد یکتایی که فاز ۱۳ ثبت کرده بود، حالا کد کاملشان موجود است:**
+  - `HasActiveRoleAsync(operatorRole)` → `AnyAsync(p => p.OperatorRole == role && p.Status == true)` — **بدون فیلتر `VahedCode`**، یعنی «به‌ازای هر نقش در کل سیستم فقط یک کاربر فعال».
+  - `HasActiveUserAsync(userId)` → همان شخص نمی‌تواند نقش فعال دوم بگیرد.
+  - `HasActiveRoleExceptAsync(role, currentId)` → نسخهٔ Update.
+  - هر سه `409` برمی‌گردانند.
+  ⚠️ **حدس زده نشد** که «بدون فیلتر VahedCode» عمدی است یا باگ پروژهٔ مرجع. برای یک سازمان چندواحدی، «فقط یک مسئول امور مالی در کل کشور» عجیب به‌نظر می‌رسد، ولی کد صریحاً همین است.
+- **`Deactivation` یک toggle است، نه حذف:** اگر `Status == false` بود آن را `true` می‌کند و برعکس. یعنی همان Endpoint هم فعال‌سازی است هم غیرفعال‌سازی. Entity اصلاً از مسیر API حذف نمی‌شود.
+- **Update در پروژهٔ مرجع PATCH-گونه است** (`request.X ?? entity.X`) — برخلاف تصمیم PUT ما. تفاوت آگاهانه، نه یافتهٔ جدید.
+
+---
+
+## ۲۴-۵. 🔴 مرز Aggregate چهار جفت Head/Detail — قطعی شد
+
+هر چهار مورد در پروژهٔ مرجع **composite-create** اند. API فعلی ما هر چهار تا را فقط Head می‌سازد.
+
+### ۲۴-۵-۱. `CheckBook` → `TB_CHECK` — قوی‌ترین مورد
+
+`CheckBook.AddCheckPapers(from, to, userId)` روی خودِ Entity: یک حلقهٔ `long.Parse(From) .. long.Parse(To)` که **به‌ازای هر شماره یک ردیف `TB_CHECK` می‌سازد** با `CheqNo = i.PadLeft(len,'0')`, `IsPrint = None`, `IsEbtal = notCanceled`, و `VahedCode` ارث‌بری‌شده از دسته‌چک. همه در یک `AddAsync` + یک `CommitAsync`.
+
+اعتبارسنجی همراهش: `FromCheckNumber.Length == ToCheckNumber.Length` وگرنه «طول فیلد اولین برگ چک با فیلد آخرین برگ چک برابر نمی باشد».
+
+**Update بازهٔ چک را کاملاً تغییرناپذیر می‌کند** — اگر `From`/`To` عوض شده باشد، هر دو شاخهٔ `if/else` استثنا پرتاب می‌کنند (پیام‌ها متفاوت‌اند: «اوراق ایجاد شده، حذف و دوباره بسازید» یا «اوراق استفاده شده»). یعنی عملاً هیچ مسیری برای تغییر بازه نیست.
+
+**پیامد برای ما:** `POST /api/check-books` فقط سرصفحه می‌سازد و **هیچ برگ چکی تولید نمی‌شود**. یعنی دسته‌چک ساخته‌شده از API ما از دید بقیهٔ سیستم خالی است. `Update` ما هم بازه را آزادانه عوض می‌کند.
+
+### ۲۴-۵-۲. `ElamHead` → `TB_ELAMDETAIL` → `TB_ELAMDETAIL_LINK_TAFSILI`
+
+`AddOtherElamHeadCommandHandler` با `BeginTransaction`/`Commit`/`Rollback` صریح: سرصفحه، سپس به‌ازای هر دیتیل اعتبارسنجی سطوح تفصیلی و ساخت `ElamDetail` + لینک‌های تفصیلی. `RADIF` شمارنده. سه‌سطحی کامل.
+
+**نکتهٔ ظریف که حدس زده نشد:** مبلغ روی دیتیل بر اساس `ElamCase` سرصفحه توزیع می‌شود، ولی **معکوس**:
+`SetCreditor(elamCase == ElamCase.Debtor ? amount : 0)` و `SetDebtor(elamCase == ElamCase.Creditor ? amount : 0)`.
+یعنی وقتی سرصفحه «بدهکار» است، مبلغ در ستون **بستانکار** می‌نشیند. یا `ElamCase` طرف مقابل را توصیف می‌کند، یا این یک باگ است. **حدس زده نشد.**
+
+### ۲۴-۵-۳. `PayReciveHead` → `TB_PAYRECIVDETAIL` → `TB_PAYRECIVDETAIL_LINK_TAFSILI`
+
+همان الگو با تراکنش صریح. علاوه بر آن:
+- **کنترل تکراری‌بودن `PayRecivCode` در محدودهٔ `(code, vahedCode, year)`** — با اینکه جدول **هیچ UNIQUE ندارد**. (فاز ۱۶ این را دیده و آگاهانه بازسازی نکرده بود؛ حالا محدودهٔ دقیقش معلوم است.)
+- **`DebCredType` به‌جای دو ستون مستقل:** دیتیل یک `Amount` + یک enum طرف (`Debtor=1`/`Creditor=2`) می‌گیرد و Handler یکی را پر و دیگری را صفر می‌کند. **این ساختاراً غیرممکن می‌کند که یک ردیف هم‌زمان بدهکار و بستانکار باشد** — دقیقاً همان چیزی که ریسک باز 🔴 ما دربارهٔ ردیف سند می‌گوید.
+- اگر دیتیل بستانکار و دارای چک باشد، برگ چک همان‌جا به‌روز می‌شود (`CheqDate`/`PaperDesc`/`PayTo`).
+
+### ۲۴-۵-۴. `ChargeAndCostHead` → `TB_CHARGEANDCOSTDETAIL` (هنوز CRUD نداریم)
+
+Create یک سرصفحه + **دقیقاً یک دیتیل** می‌سازد (نه لیست). کنترل تکرار روی `(ChargeAndCostCode, VahedCode, Year)`. سپس Commandهای جدا برای افزودن/ویرایش/حذف دیتیل و سه Command تغییر وضعیت (`ChangeStatusToTemporary/Reviewed/Accept`) با enum `Status {temporary=0, reviewed=1, accepted=2}`. حذف سرصفحه **هیچ گاردی ندارد**.
+
+### ۲۴-۵-۵. `TmpVoucherHead` → `TB_TMP_VOUCHERSDETAIL` (تأیید مجدد فاز ۱۶)
+
+فاز ۱۶ درست تشخیص داده بود. جزئیات تکمیلی در ۲۴-۶.
+
+---
+
+## ۲۴-۶. مسیر Kafka و `TmpVoucherHead` — «مقصد بدون منبع» تأیید و کامل شد
+
+`Infrastructure.Service/Messaging/Kafka/KafkaVoucherConsumerService.cs` — یک `BackgroundService` که هر ۱۰ ثانیه poll می‌کند:
+
+- `EnableAutoCommit = false`؛ commit دستی فقط بعد از پردازش.
+- سه topic: اصلی، `-DLQ`، `-Processed`. هر دو producer با `Acks.All` + `EnableIdempotence`.
+- پیام → `AddTmpVoucherHeadCommand` (سرصفحه + لیست دیتیل) → MediatR.
+- موفق → پیام به topic `Processed` + commit؛ خطای کسب‌وکاری یا استثنا → DLQ + commit (پس هرگز retry بی‌نهایت نمی‌شود).
+- **`AddUserId` در این مسیر hardcode روی `"0000000000"` است** (هیچ کاربری وجود ندارد). این برای ما مهم است: `ICurrentUser` ما در مسیر غیر-HTTP throw می‌کند.
+
+**ساختار جدول staging که با فاز ۱۶ فرق می‌کند:** `TmpVoucherDetail` به‌جای `Guid` **کد رشته‌ای** نگه می‌دارد (`MoinCode`, `TafsiliCode1..7`) — یعنی staging عمداً کدهای resolve‌نشدهٔ سیستم مبدأ را می‌گیرد و ترجمه به `Guid` در زمان **ارتقا** انجام می‌شود.
+
+**`AddVochersImportTempCommandHandler` (ارتقای سند موقت → سند اصلی)** — این همان مسیری است که فاز ۱۶ گفت «از API ما اصلاً در دسترس نیست». اعتبارسنجی‌هایش:
+1. سند موقت خالی نباشد.
+2. **`SUM(Debtor) == SUM(Creditor)`** — تراز.
+3. هر `MoinCode` باید در `TB_ACCOUNTCODE` وجود داشته باشد وگرنه «کدمعین … تعریف نشده است».
+4. هر `TafsiliCode` باید در `TB_TAFSILI` وجود داشته باشد.
+5. `ValidateTafsiliLevels` — سطوح الزامی/مجاز.
+
+سپس سند واقعی با `DocLife.draft`, `IsAutomatic.auto`, شمارهٔ سند `MAX+1`, `AtfNum` جدید، و `ParentHeadId = tmpHead.Id` ساخته می‌شود و `TmpVoucherHead.VouchersHeadId` به سند جدید اشاره می‌کند.
+
+**`SOURCEID`** مستقیماً از پیام Kafka می‌آید و **هیچ بررسی تکراری‌بودنی روی آن انجام نمی‌شود** — یعنی مسیر ورودی در پروژهٔ مرجع idempotent نیست. (یافتهٔ خام؛ برای ما درس است اگر روزی مسیر ورودی بسازیم.)
+
+**⚠️ نکتهٔ سیستماتیک که حدس زده نشد — جابه‌جایی بدهکار/بستانکار:** در **هر دو** مسیر تبدیل به سند (`AddVochersImportTempCommandHandler` و `AddVoucherByPayAndReciveCommandHandler`) کد این است:
+
+```
+add.SetDebtor(detail.Creditor);
+add.SetCreditorr(detail.Debtor);
+```
+
+دو مسیر مستقل، هر دو معکوس. یا معنای `DEBTOR`/`CREDITOR` در جدول‌های staging/دریافت‌پرداخت نسبت به سند وارونه است، یا هر دو یک باگ کپی‌شده‌اند. **حدس زده نشد** — ولی اگر روزی ما مسیر تبدیل بسازیم، این اولین سؤالی است که باید از صاحب پروژه پرسیده شود.
+
+**نکتهٔ دیگر:** `TB_VOUCHERSHEAD.PARENTHEAD_ID` در پروژهٔ مرجع **خودارجاع نیست** — به `TmpVoucherHead.Id` یا `PayReciveHead.Id` اشاره می‌کند، یعنی «این سند از کدام منبع تولید شد». قانون `ParentHeadId != Id` که فاز ۸ ما اضافه کرد بی‌ضرر است ولی موضوعیت ندارد. (در `LegacyDbContext` ما هم این ستون هیچ FK ندارد، پس سازگار است.)
+
+---
+
+## ۲۴-۷. حذف سند در پروژهٔ مرجع ۷ کار می‌کند — cascade ما ۲ تا
+
+`VouchersHeadRepository.DeleteAsync` (بسیار غنی‌تر از cascade سه‌سطحی فاز ۹ ما):
+
+| # | کار | ما |
+|---|---|---|
+| ۱ | سرصفحه `IsDeleted = true` + `UpdatedDate` | ✅ داریم |
+| ۲ | **`NoDoc` بازنویسی می‌شود به `"d" + Atf_Num.Substring(10,5)`** — شمارهٔ سند **آزاد می‌شود** تا دوباره قابل استفاده باشد | ❌ نداریم |
+| ۳ | ردیف‌های `TB_ATTRIBINVOUCHER` مربوط به هر دیتیل → soft delete | ❌ اصلاً به این جدول دست نمی‌زنیم |
+| ۴ | اگر دیتیل `RECEIP_ID` دارد → ردیف `TB_RECEIP` **فیزیکاً حذف** می‌شود | ❌ نداریم |
+| ۵ | اگر دیتیل `CHECK_ID` دارد → برگ چک **reset** می‌شود (`CheqDate`/`PaperDesc`/`PayTo` → `null`) و به حوضچهٔ استفاده‌نشده برمی‌گردد | ❌ نداریم |
+| ۶ | لینک‌های تفصیلی → **فیزیکاً حذف** | 🟡 ما soft delete می‌کنیم |
+| ۷ | **دیتیل‌ها: اگر `DocLife != draft` → soft delete؛ اگر `draft` → حذف فیزیکی** | 🟡 ما همیشه soft delete |
+| ۸ | اگر سند از سند موقت آمده → `TmpVoucherHead.VouchersHeadId = null` (لینک برگشتی باز می‌شود) | ❌ نداریم |
+
+### قاعدهٔ شماره‌گذاری سند که کشف شد
+
+| ستون | شکل | رفتار |
+|---|---|---|
+| `ATF_NUM` | ۱۵ رقم: `vahedCode(4) + year(4) + sequence(7)` | `MAX+1` با `IgnoreQueryFilters()` — یعنی **حذف‌شده‌ها هم شمرده می‌شوند**؛ هرگز بازاستفاده نمی‌شود. یک عطف/شمارهٔ دائمی. |
+| `DOC_NUM` | ۶ رقم `PadLeft(6,'0')` | `MAX+1`؛ **قابل بازاستفاده** — و برای همین هنگام حذف به `"d" + …` تغییر نام می‌دهد تا از UNIQUE آزاد شود. |
+
+**پیامد برای ما:** `UK_VOUCHERHEAD_NUMBER` در schema ما وجود دارد. با حذف نرم فعلی، شمارهٔ یک سند حذف‌شده **برای همیشه سوخته می‌ماند** و ساخت سند جدید با آن شماره ۴۰۹ می‌گیرد. این دقیقاً همان تلهٔ `UK_TBTAFSILGROUP` است که فاز ۱۴ برای `TafsilGroup` ثبت کرد — ولی اینجا روی سند.
+
+---
+
+## ۲۴-۸. قاعدهٔ «تفصیلی الزامی/مجاز» — کد کامل، سه بار تکرارشده
+
+فاز ۱۲ فقط اشاره کرده بود؛ اینجا کد کامل و اینکه در **سه Handler مستقل عیناً تکرار شده** ثبت می‌شود: `AddOtherElamHeadCommandHandler`, `AddPayReciveCommandHandler`, `AddVochersImportTempCommandHandler` (و طبق فاز ۱۲ در `AddVoucherCommandHandler` هم هست).
+
+```
+var levels = await tbAccountLinkLevelRepository.GetLevelIdByMoein(accountCodeId);
+for (int i = 1; i <= 7; i++) {
+    var value = <Tafsili{i}Id یا TafsiliCode{i}>;
+    if (levels.Contains(i.ToString()) && value == null)
+        throw new LevelNotProvidedException($"برای کد معین {moin} سطح {i} اجباری است");
+    if (value != null && !levels.Contains(i.ToString()))
+        throw new UnauthorizedLevelException($"سطح {i} کد معین {moin} غیرمجاز پر شده است.");
+}
+```
+
+**سه نکتهٔ تعیین‌کننده:**
+1. قاعده **دوطرفه** است: نبودِ سطح الزامی خطا می‌دهد، **و** پرکردن سطح غیرمجاز هم خطا می‌دهد. ما هیچ‌کدام را نداریم.
+2. سقف سطوح **۷** است (هم‌راستا با enum `TafsiliNo { taf1..taf7 }`).
+3. منبع حقیقت `TB_ACCOUNT_LINK_LEVEL` است و مکانیزم «وجود یا نبودِ ردیف» — **تأیید دوباره**، این‌بار در سه مسیر مستقل. یعنی نتیجه‌گیری فاز ۱۲ درست بود و ستون `MUST`/`ISREQUIRED` واقعاً وجود ندارد چون لازم نیست.
+
+⚠️ توجه: این با تصمیم حل‌شدهٔ ما دربارهٔ `TB_ACCOUNT_LINK_TAFSILGROUP` (منبع حقیقتِ «کدام **نوع** تفصیلی مجاز است») تناقض ندارد؛ دو سؤال متفاوت‌اند: `TB_ACCOUNT_LINK_LEVEL` می‌گوید **کدام سطح‌ها** اجباری/مجازند، `TB_ACCOUNT_LINK_TAFSILGROUP` می‌گوید در هر سطح **کدام گروه تفصیلی**.
+
+---
+
+## ۲۴-۹. الگوهای Cross-cutting — `Behaviors/` و `Registration.cs`
+
+### ValidatorBehavior
+
+تنها Behavior پروژهٔ مرجع. تفاوت‌های واقعی با `ValidationBehavior` ما:
+- **`v.Validate(context)` همگام است، نه `ValidateAsync`** — یعنی هیچ قانون async ای (مثل «آیا این کد تکراری است») در Validator ممکن نیست؛ به همین دلیل همهٔ کنترل‌های تکراری‌بودن در **Handler** انجام می‌شوند نه Validator. (ما هم عملاً همین کار را می‌کنیم، ولی به دلیل متفاوت.)
+- خطاها به `CustomException(List<ValidationError>)` تبدیل می‌شوند، نه `ValidationException` فریم‌ورک.
+- `BaseCommandValidator<T>` یک کلاس **کاملاً خالی** است — فقط برای `AddValidatorsFromAssemblyContaining` به‌عنوان marker.
+
+### `Registration.cs` — یافتهٔ منفی مهم
+
+فقط سه کار می‌کند: AutoMapper، ثبت Validatorها، ثبت `ValidatorBehavior`. **هیچ Behavior دیگری وجود ندارد** — نه logging، نه transaction، نه multi-tenancy، نه performance. یعنی فرضیهٔ ما («شاید آنجا الگوهای cross-cutting داشته باشند که ما نداریم») **رد شد**: ما در این بُعد از آن‌ها جلوتریم (`GlobalExceptionHandler` مرکزی + نگاشت `ORA-00001`/`ORA-02291` در `UnitOfWork`).
+
+### `IBusinessUserAccess` — مکانیزم چندمستأجری
+
+دو پیاده‌سازی رقیب وجود دارد و **آن‌که ثبت شده `BusinessUserAccessRepository` است** (نه `BusinessUserAccess` در لایهٔ Application، که مرده است).
+
+```
+HaveAccessToUnit(targetUnitCode):
+    unitCode = CurrentUserDto.data.organization.code       // از توکن IDP
+    userVahedList = vahedInfoRepository.GetAllVahedInfoByParentAsync(unitCode)
+    if (!userVahedList.Any(v => v.VahedCode == targetUnitCode)) throw
+```
+
+یعنی دسترسی **سلسله‌مراتبی** است: کاربر به واحد خودش و همهٔ زیرمجموعه‌هایش (از `TB_VAHED_INFO.PARENT_ID`) دسترسی دارد. `HaveAccessToProvince` و `HaveAccessToUnitType` هر دو `NotImplementedException` اند.
+
+**تأیید یافتهٔ فاز ۱۲ با عدد دقیق‌تر:** این متد فقط در **۸ نقطه** صدا زده می‌شود (۶ Query سند/کدینگ/بانک + ۲ Command روی `BankCartDetail`) از میان ۳۷۲ Handler. **درس همان است: اگر ما چندمستأجری را پیاده کنیم باید `Behavior` سراسری باشد، وگرنه دقیقاً همین اتفاق می‌افتد.**
+
+⚠️ نکتهٔ ظریف: `UserId` روی `IBusinessUserAccess` یک **property قابل‌نوشتن (`set`)** است که از بیرون پر می‌شود — یعنی مکانیزم Audit آنجا ذاتاً ضعیف‌تر از `ICurrentUser` ما (که fail-loud و read-only است) طراحی شده.
+
+---
+
+## ۲۴-۱۰. 🟡 ماتریس نقش‌های واقعی سازمان — ورودی مستقیم برای ریسک باز IDOR
+
+`Presentaion.Web.API/Roles/Roles.cs` — ۷ نقش، روی **۳۶ Controller** با `[RolesAllowed([...])]` (از پکیج `Tamin.Framework.Common.Security` که ما هم داریم):
+
+| ثابت | مقدار رشته‌ای |
+|---|---|
+| `FINANCIAL_CORE_SETAD_ADMIN` | `FINANCIAL CORE SETAD ADMIN` |
+| `FINANCIAL_CORE_HLT_ADMIN` | `FINANCIAL CORE HLT ADMIN` |
+| `FINANCIAL_CORE_EDK_ADMIN` | `FINANCIAL CORE EDK ADMIN` |
+| `FINANCIAL_CORE_MALI_ADMIN` | `FINANCIAL CORE MALI ADMIN` |
+| `FINANCIAL_CORE_USER` | `FINANCIAL CORE USER` |
+| `FINANCIAL_CORE_REPORT` | `FINANCIAL CORE REPORT` |
+| `FINANCIAL_CORE_IT` | `FINANCIAL CORE IT` |
+
+**الگوی حاکم:**
+- **خواندن** → هر شش نقش عملیاتی.
+- **نوشتن روی دادهٔ مرجع/پیکربندی** (کدینگ حساب، گروه تفصیلی، رابط، لیست سیاه/سفید) → **فقط `SETAD_ADMIN`**.
+- **نوشتن روی دادهٔ عملیاتی** (کارگاه، دسته‌چک، هزینه) → `SETAD_ADMIN` + ادمین‌های واحدی (`MALI_ADMIN`/`HLT_ADMIN`/`EDK_ADMIN`).
+- **`PersonAction` (صاحب امضا)** → `SETAD_ADMIN` + `IT` برای نوشتن.
+- **`WhiteAndBlackList`** → `SETAD_ADMIN` حتی برای **خواندن**.
+
+نمونهٔ دقیق (`AccountCodeController`): همهٔ `GET`ها شش‌نقشی، ولی Create/Update/Delete فقط `[RolesAllowed([FINANCIAL_CORE_SETAD_ADMIN])]`.
+
+⚠️ **در خود پروژهٔ مرجع هم شکاف هست:** چند اکشن نوشتن اصلاً `RolesAllowed` ندارند — از جمله `AddCheckBooksAsync`, `AddVahedInfoAsync`, `AddWhiteListAsync`, `UpdateCheckTypeAsync` و **همهٔ اکشن‌های `TmpVouchersController`** (شامل `Import` که سند واقعی می‌سازد). پس این ماتریس را نباید کورکورانه کپی کرد.
+
+**نسبت به وضعیت ما:** ما `RolesAllowedAttribute` را در دسترس داریم (فاز ۷) ولی **روی هیچ Endpointی استفاده نکرده‌ایم** و هیچ‌جا `403` اعلام نکرده‌ایم. این یافته ریسک باز 🔴 IDOR را از «باید تصمیم گرفته شود» به «شکل تصمیم و نام نقش‌ها هم مشخص است» می‌برد.
+
+---
+
+## ۲۴-۱۱. اعتبارسنجی‌هایی که ما نداریم — استخراج‌شده از Validatorهای مرجع
+
+### کدینگ حساب — سه خانوادهٔ Command جدا، نه یکی
+
+پروژهٔ مرجع `AccountCode` را به **سه خانوادهٔ Command** می‌شکند (`Group`/`Kol`/`Moin`)، ما یک `CreateAccountCodeCommand` عمومی داریم.
+
+| سطح | `ACCCODE` | `TYPEACTIVITY` مجاز | `PARENTID` |
+|---|---|---|---|
+| گروه | دقیقاً ۲ رقم، `≠ "00"` | **۱ تا ۳** | — |
+| کل | دقیقاً ۴ رقم، هیچ‌کدام از دو نیم‌بخش `"00"` نباشد؛ **نام فقط حروف فارسی** (`^[؀-ۿ\s]+$`) | (بررسی نمی‌شود) | اجباری |
+| معین | دقیقاً ۶ رقم، هیچ‌کدام از سه بخش دو‌رقمی `"00"` نباشد | **۱ تا ۷** | اجباری |
+
+🔴 **این یک تصحیح مهم روی `open-decisions.md` است.** ریسک ثبت‌شدهٔ ما می‌گفت «پروژهٔ مرجع برای سطح گروه فقط ۱..۳ را مجاز می‌داند» و ۳ حساب گروه با `TYPEACTIVITY ∈ {4,5,6}` در دادهٔ زنده با آن در تضادند. حالا معلوم شد **۱..۳ فقط برای گروه است و برای معین ۱..۷ مجاز است** — پس آن ۳ رکورد گروه‌سطح واقعاً استثنایند و تناقض **پابرجاست**، ولی دامنه‌اش دقیق‌تر شد. **حدس زده نشد** که آن سه رکورد دادهٔ خراب‌اند یا قاعده در گذشته وسیع‌تر بوده.
+
+### قواعد عمومی تکرارشونده در سراسر پروژهٔ مرجع
+
+| قاعده | جزئیات |
+|---|---|
+| `VAHEDCODE` | همیشه `^[0-9]{4}$` — دقیقاً ۴ رقم عددی |
+| `YEAR` | `^[0-9]{4}$`؛ در جاهای سخت‌گیرتر `^1\d{3}$` یا `^(13[0-9]{2}|14[0-9]{2})$` |
+| تاریخ‌ها | همیشه رشتهٔ ۸ کاراکتری `yyyyMMdd` + گاهی اعتبارسنجی واقعی تقویم شمسی |
+| نام‌های فارسی | `^[؀-ۿ\s]+$` روی نام کل حساب، نام هزینه، نام تنخواه |
+| کدهای دو‌رقمی | هزینه، تنخواه، گروه شناسایی، زیرگروه شناسایی: همگی `^[0-9]{2}$` |
+| شرح آرتیکل | `MaximumLength(200)` |
+
+### 🔴 قاعدهٔ XOR بدهکار/بستانکار در `BankCartDetail`
+
+`AddbankCartDetailCommandValidator` و نسخهٔ Update هر دو:
+
+```
+if ((Debtor <= 0 && Creditor <= 0) || (Debtor > 0 && Creditor > 0))
+    AddFailure("Debtor and Creditor", "…همزمان نمی‌توانند صفر باشند و حداقل یکی باید بزرگتر از صفر باشد.");
+```
+
+به‌علاوه `Debtor >= 0` و `Creditor >= 0` جداگانه.
+
+**این مستقیماً به ریسک باز 🔴 ما مربوط است** («هیچ چیز مانع نمی‌شود یک ردیف هم‌زمان `DEBTOR` و `CREDITOR` غیرصفر داشته باشد»). پروژهٔ مرجع این را در **دو جا** حل کرده: اینجا با اعتبارسنجی صریح، و در دریافت/پرداخت با مدل `Amount + DebCredType` که ساختاراً اجازه نمی‌دهد. ما هیچ‌کدام را نداریم — نه روی `BankCartDetail` (فاز ۱۵) نه روی ردیف سند.
+
+سایر قواعد `BankCartDetail`: `ACCOUNTNUMBER` دقیقاً ۱۰ رقم عددی، `MONTH` دقیقاً ۲ رقم، `CHEQNO` فقط عدد.
+
+### `Tafsili` — اعتبارسنجی کد ملی/شناسهٔ ملی (برای CRUD آینده)
+
+- `PersonTypes.Person` → `TafsiliCode` باید کد ملی ۱۰ رقمی معتبر (checksum) باشد.
+- `PersonTypes.Legal` → شناسهٔ ملی شرکت ۱۱ رقمی معتبر (checksum با seed متفاوت `'1'`).
+- `PersonTypes.Other` → کد آزاد، ولی Handler آن را با `VahedCode` **پیشوند** می‌زند (`VahedCode + TafsiliCode`). این دقیقاً همان چیزی است که در SQL تراز آزمایشی با `INSTR/SUBSTR` دوباره برداشته می‌شود.
+
+### سایر قواعد نقطه‌ای
+
+| Entity | قاعده |
+|---|---|
+| `BillLog` | `LOG_DATE` دقیقاً ۸ کاراکتر، `LOG_DESC` اجباری |
+| `AttribForAccountCode` | همهٔ ۵ فیلد صفت اجباری (`AttribBoxNo`, `AttribSum`, `ControlId`, `Flag`, `Length`) |
+| `Expense`/`RevolvingFund` | کد `^[0-9]{2}$`، نام فقط فارسی |
+| `IdentityGroup`/`IdentitySubGroup` | کد `^[0-9]{2}$`، توضیحات ≤۲۵۰ |
+| `Receipt` | `RECEIPT_DATE` تاریخ شمسی معتبر ۸ رقمی؛ `RECEIPT_NO` فقط عدد |
+| `CheckBook` | `From`/`To` فقط عدد + هم‌طول |
+| `PreDescrib` | `Describ` ≤۲۰۰ اجباری، `FlagVoucher` `IsInEnum` |
+
+---
+
+## ۲۴-۱۲. Entityهایی که در پروژهٔ مرجع اصلاً مسیر نوشتن ندارند
+
+| Entity ما | وضعیت در پروژهٔ مرجع |
+|---|---|
+| **`AccountCodeInterface`** | `IAccountCodeInterfaceRepository` فقط `GetByIdAsync` + `GetIdByType(InterfaceType)` دارد — **صفر متد نوشتن**، و هیچ پوشهٔ Command. ⚠️ حتی `GetIdByType` هم **هیچ‌جا صدا زده نمی‌شود**. یعنی جدول پیکربندی‌ای است که خارج از اپلیکیشن (مستقیم در Oracle) نگه‌داری می‌شود. ما CRUD کامل ساختیم. |
+| **`AccountException`** | پوشهٔ Command ندارد؛ فقط خوانده می‌شود. **معنای کسب‌وکاری‌اش کشف شد:** فهرست حساب‌هایی که از سند **افتتاحیه/اختتامیه مستثنا** می‌شوند (`AddOpeningVoucherCommandHandler:37`, `AddClosingVoucherCommandHandler:41`). ما CRUD کامل ساختیم. |
+| **`BillLog`** | `IBillLogRepository` فقط `GetAllBillLogs` + `GetBillLogsByVahedCodeAsync` + `AddBillLogAsync`. **append-only** (تأیید مجدد فاز ۱۳). ما Update/Delete هم ساختیم. |
+| **`WhiteList`** | فقط `Create` (بدون Update/Delete) + هفت Query جست‌وجو. |
+| **`PreDescrib`** | فقط `Create` + `Delete` (**حذف فیزیکی**)؛ `UpdateAsync` صریحاً `NotImplementedException` پرتاب می‌کند. **دقیقاً معکوس ما** (ما Create + Update داریم، بدون Delete). |
+| **`VahedInfo`** | فقط `Create` + Queryها. هم‌راستا با تصمیم CRU-only فاز ۱۴ (به دلیل نبود `ISDELETED`/Audit). |
+| **`ChequeType`** | Create/Update/Delete دارد (با nullify وابسته‌ها). |
+
+**نکتهٔ ظریف `AccountException`:** دو Handler آن را متفاوت می‌خوانند — افتتاحیه با `GetAllAsync().Select(e => e.AccountCodeId)` و اختتامیه با `GetAccountCodeIdsAsync()`. تفاوت رفتاری‌ای پیدا نشد، ولی تکرار منطق است.
+
+**سند افتتاحیه — قاعده‌ای که کشف شد:** فقط معین‌هایی وارد می‌شوند که رقم اول کدشان در `"123459"` باشد، و ردیف‌ها **بر اساس همان رقم اول گروه‌بندی** می‌شوند (یک سند جداگانه به‌ازای هر گروه). حساب‌های `TB_ACCOUNTEXCEPTION` حذف می‌شوند و گروه‌هایی با جمع صفر رد می‌شوند.
+
+---
+
+## ۲۴-۱۳. SQL گزارش‌های تراز آزمایشی — منطق داخلی
+
+`VouchersDetailRepository.cs` (۲٬۷۶۶ خط، ~۲۵ گزارش). این‌بار منطق داخلی خوانده شد، نه فقط شکل خروجی.
+
+### دو خانوادهٔ متفاوت
+
+1. **گزارش‌های پایه** (`…TrialbalanceReport4/6/8`): SQL دست‌نویس با `OracleParameter` صریح؛ مستقیماً روی جدول‌ها.
+2. **گزارش‌های Drill-down**: روی **View**های اوراکل `VWTRIALREPORTWRAPPER` و `VWTRIALREPORTWRAPPERTAFSILI` (از قبل join‌شده)، با یک مبدل عمومی `OracleExpressionToSqlConverter` که از `List<SearchParam>` کلاینت یک `WHERE` می‌سازد. نام ستون‌ها از روی propertyهای تایپ هدف مشتق می‌شوند (نه از رشتهٔ کلاینت)، و مقادیر همیشه bind می‌شوند — پس تزریق SQL بسته است.
+
+### پیمایش سلسله‌مراتب — تأیید مستقل `TYPECODE`
+
+```sql
+FROM tb_vouchersdetail d
+JOIN tb_vouchershead h ON h.id = d.vouchershead_id
+JOIN tb_accountcode a  ON d.account_id = a.id      -- معین
+JOIN tb_accountcode ak ON ak.id = a.parentid       -- کل
+JOIN tb_accountcode ag ON ag.id = ak.parentid      -- گروه
+WHERE ... AND a.typecode = 3 AND h.isdeleted = 0
+```
+
+- **`a.typecode = 3` یعنی معین** — تأیید مستقل و سوم برای نگاشت `TYPECODE {Group=1, Kol=2, Moin=3}` (ریسک باز 🔴 ما).
+- سه سطح فقط با self-join روی `PARENTID` — بدون هیچ ستون سطح.
+- ردیف سند **همیشه** به معین وصل است؛ کل و گروه محاسباتی‌اند.
+
+### فرمول مانده
+
+```sql
+greatest(nvl(sumBed,0) - nvl(sumBes,0), 0)  AS DebtorBalance
+greatest(nvl(sumBes,0) - nvl(sumBed,0), 0)  AS CreditorBalance
+```
+
+مانده یک‌طرفه؛ همیشه یکی از دو ستون صفر است.
+
+### `DOCLIFE` به‌صورت **ترتیبی** فیلتر می‌شود
+
+```sql
+AND (:DocLife IS NULL OR h.doclife >= :DocLife)
+```
+
+`>=` نه `=`. یعنی `DOCLIFE` یک **enum ترتیبی** است (`draft=1 < temporary=2 < reviewed=3 < accepted=4`) و گزارش «حداقل این درجه از قطعیت» می‌گیرد. **شاهد قوی دیگر که `bool?` بودنش در مدل ما غلط است** — با `bool` مفهوم «حداقل بررسی‌شده» اصلاً قابل بیان نیست.
+
+### ⚠️ دو باگ واقعی در گزارش‌های مرجع که نباید تکرار کنیم
+
+1. **`h.isdeleted = 0` فقط روی حالت‌های `moin` و `kol` هست** — در حالت‌های `group` و `Tafsili` **وجود ندارد**. یعنی اسناد حذف‌شده در تراز سطح گروه و سطح تفصیلی **شمرده می‌شوند**.
+2. **`d.isdeleted` هیچ‌جا فیلتر نمی‌شود** — ردیف‌های حذف‌شدهٔ سند در همهٔ حالت‌ها وارد جمع می‌شوند. برای ما بحرانی‌تر است، چون مسیر `DeleteVoucherDetailCommand` مستقل (فاز ۱۰) ردیف را بدون لمس سرصفحه حذف می‌کند.
+
+### نکات فرعی
+
+- کد تفصیلی در خروجی، پیشوند `vahedCode` را از دست می‌دهد: `CASE WHEN INSTR(Code, vahedCode)=1 THEN SUBSTR(Code, LENGTH(vahedCode)+1) ELSE Code END` — قرینهٔ همان پیشوندزنی در `AddTafsiliHandler`.
+- `VoucherNumber` قبل از فیلتر `PadLeft(6,'0')` می‌شود.
+- گزارش‌ها `IEnumerable` برمی‌گردانند بدون `ToListAsync` — یعنی `IQueryable` تنبل از repository بیرون می‌رود (نشتی انتزاع).
+
+---
+
+## ۲۴-۱۴. یافته‌های متفرقهٔ قابل استفاده
+
+### `TB_YEAR` (هنوز CRUD نداریم)
+
+- **`WORKING_YEAR` کلید کسب‌وکاری است** — `GetByYearAsync`/`DeleteAsync` با خودِ سال کار می‌کنند نه `Id`.
+- `ISCURRENT` یک **singleton** واقعی است: ساخت سال جدید، سال فعال قبلی را `false` می‌کند و جدید را `true`.
+- **ساخت سال مالی فقط در ماه شمسی ۱ یا ۱۲ مجاز است**؛ سال جدید = ماه ۱ ? سال جاری : سال جاری + ۱.
+- `LAST_NUMBER` با ۱ شروع می‌شود.
+- یک عملیات جدا `AddUnitFinancialYearCommand` (افتتاح سال برای یک واحد): برای هر حساب بانکی واحد، **مانده افتتاحیه** را از تراز سال قبل می‌خواند و در `TB_ACCOUNT.FIRSTAMOUNT` می‌نویسد؛ سپس یک **دسته‌چک صوری** با بازهٔ `{year}{vahedCode}0001` تا `…1000` می‌سازد.
+  ⚠️ در همین متد یک باگ مرجع هست: `SetAddUserId`/`SetCreatedDate` روی دسته‌چک جدید صدا زده **نمی‌شود** (ستون‌های NOT NULL) و `AddCheckPapers` هم فراخوانی نمی‌شود.
+
+### `IdentityHead` (هنوز CRUD نداریم)
+
+- `SERIAL` **سمت سرور** از `GetMaxSerialAsync(identityGroupsId)`.
+- composite-create: `IdentityHead` + `IdentityFixItems` از یک `Dictionary<subGroupId, value>`.
+- `YEAR` با `^(13[0-9]{2}|14[0-9]{2})$` محدود می‌شود.
+
+### `Rabet` — معنای کسب‌وکاری روشن شد
+
+`TB_RABET` صرفاً یک لوکاپ نیست: **جدول resolve حساب برای ثبت‌های خودکار** است. مثال زنده: `GetRabetMoinByElamTypeAsync(ElamType.OtherSendElam)` که کد معین اعلامیه را برمی‌گرداند و در `ELAMH_CODE` می‌نشیند و در تولید سریال هم استفاده می‌شود. یعنی حذف یک `Rabet` می‌تواند مسیرهای خودکار را بشکند — دلیل وجود گارد «گردش مالی» روی حذفش.
+enum `TypeAccountCode { KolCode = 2, Moincode = 3 }` هم در همان namespace است (هم‌راستا با `TYPECODE`).
+
+### `WhiteAndBlackList`
+
+- **Create یک عملیات bulk کارتزین است:** `AccountCodeIds × VahedTypeIds` → N ردیف در یک Command. ما تک‌تک می‌سازیم.
+- `ChangeStateToBlackListed` علاوه بر ست‌کردن `State = Blacklisted`، **هر چهار فیلد تاریخ را `null` می‌کند** (`FROMAUTHORIZEDDATE`, `TOAUTHORIZEDDATE`, `FROMLIMITATIONDATE`, `TOLIMITATIONDATE`). یک قانون کسب‌وکاری واقعی که ما نداریم.
+- `ReActive` هر چهار تاریخ + `State` را با هم می‌گیرد.
+- **تأیید مجدد فاز ۱۳:** هیچ‌کدام از این جدول‌ها در هیچ مسیر نوشتن دیگری چک نمی‌شوند — ماتریس مجوزی است که نوشته می‌شود و هرگز اعمال نمی‌شود.
+
+### `WorkShop`
+
+`SetIsActive(true)` ثابت در Create؛ `ChangeStateWorkShopCommand` تنها راه تغییر. ⚠️ باگ مرجع: `ChangeState` هیچ ستون Audit ای (`ChangeUserId`/`UpdatedDate`) نمی‌زند.
+
+### `Receipt`
+
+در پروژهٔ مرجع `Receipt` یک Entity کاملاً وابسته است: ساختش داخل `AddPayReciveCommandHandler` بوده (الان کامنت‌شده) و حذفش داخل حذف سند اتفاق می‌افتد (`_dbReceipt.Remove`). یعنی چرخهٔ عمرش به دریافت/پرداخت و سند گره خورده، نه مستقل. ما CRUD مستقل کامل داریم.
+منطق کامنت‌شده یک قاعده را نشان می‌دهد: `ReceiptNo` باید در محدودهٔ `(vahedCode, year)` یکتا باشد («شماره فیش /حواله تکراری می باشد»).
+
+---
+
+## ۲۴-۱۵. چه چیزی بررسی شد و چه چیزی نشد
+
+**بررسی شد (این پاس):** همهٔ ۳۴ پوشهٔ `Commands` (سطح دایرکتوری)، Handler کامل برای ~۳۰ Command مرتبط با ۲۵ Entity ما + ۴ Entity آینده، همهٔ Validatorهای همان‌ها، `Behaviors/`, `Registration.cs`, `IUnitOfWork`, `BusinessUserAccess`, `BaseEntityG`, هر ۳۴ enum، ~۲۰ فایل Entity در `Tamin.Core`، ۱۲ متد Delete در repositoryها، مسیر Kafka، `VouchersHeadRepository.DeleteAsync`، و SQL کامل خانوادهٔ تراز آزمایشی ۴ ستونه + drill-down.
+
+**بررسی نشد (عمداً، خارج از دامنه):**
+- SQL کامل گزارش‌های ۶ و ۸ ستونه و تجمیعی (`Consolidate`) — فقط ساختارشان دیده شد، خط‌به‌خط نه.
+- ~۱۸۵ فایل DTO.
+- مسیر SOAP (`Connected Services/elmDrmd`) — فقط وجودش تأیید شد.
+- `Payments/*` به‌عنوان یک زیرپروژهٔ مستقل.
+- `Account.Tests`/`Application.Test`.
+- `Infrastructure.Logging`, `SeriLog`, `Utility.Exception`.
+
+**ابهاماتی که حدس زده نشد (فهرست صریح):**
+1. جابه‌جایی `Debtor`/`Creditor` در هر دو مسیر تبدیل به سند — باگ یا معنای عمدی؟
+2. توزیع معکوس مبلغ بر اساس `ElamCase` در `AddOtherElamHeadCommandHandler`.
+3. آیا `HasActiveRoleAsync` عمداً `VahedCode` را نادیده می‌گیرد؟
+4. آیا گاردهای حذف پروژهٔ مرجع برای مدل **حذف نرم** ما هم لازم‌اند یا صرفاً پیامد حذف فیزیکی آنجا هستند؟
+5. آن ۳ حساب گروه‌سطح با `TYPEACTIVITY ∈ {4,5,6}` — دادهٔ خراب یا قاعدهٔ تاریخی وسیع‌تر؟
+6. برچسب دقیق مقادیر `TypeKoli` روی دادهٔ عملیاتی (فقط dev دیده شد).

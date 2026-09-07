@@ -12,6 +12,12 @@
 
 ## ورودی‌ها
 
+- **2026-09-07** (ادامهٔ فاز ۱۸، پیش از commit): پاس `/code-review` ۲ یافته داد و همان‌جا رفع شد — `JOIN` غیرشرطی به `ak`/`ag` که می‌تونست ردیف معتبر رو از هر سه سطح گزارش بی‌صدا حذف کنه (به `LEFT JOIN` تبدیل شد)، و نقض مستندنشدهٔ قانون تیم #۲ (استثنای View حالا رسماً در `CLAUDE.md` ثبت شد). **۲۱۰۸/۲۱۰۸ همچنان سبز.** جزئیات: `docs/open-decisions.md`.
+- **2026-09-07** (ادامهٔ فاز ۱۸، پیش از commit): طبق تصمیم صریح صاحب پروژه، `FirstDebtor`/`FirstCreditor` (مانده اول دوره) یک‌طرفه (`Math.Max`) شدند، نه خام مثل فرمول مرجع. **۲۱۰۸/۲۱۰۸ سبز.** جزئیات: `docs/open-decisions.md`.
+- **2026-09-07** (فاز ۱۸، برنچ `EntityCRUD`، commit نشده): اولین گزارش‌های مالی — تراز آزمایشی ۴/۶/۸ ستونه، ۳ Endpoint `GET` روی `api/reports`، با اولین SQL خام پارامتری پروژه (چون `TYPECODE`/`DOCLIFE` با `bool?` قابل بیان نیستند). **۲۱۰۹/۲۱۰۹ سبز** (+۷۰). جزئیات: `docs/phase-log.md` بخش «فاز ۱۸»؛ ابهام باز «مانده اول دوره» و ۴ ریسک دیگر: `docs/open-decisions.md`.
+
+- **2026-09-06** (فاز ۱۷، برنچ `EntityCRUD`، commit نشده): پاس دوم خواندن Read-Only پروژهٔ مرجع `D:\CentralAccount` با دانش ۲۵ Entity فازهای ۱۳–۱۶ — **صفر تغییر کد**، فقط مستندسازی. ۸ یافتهٔ اصلی (۱۶ ستون `bool`→enum تأییدشده، ۱۲ گارد وابستگی حذف، ۹ ستون سمت‌سروری، ۴ مرز Aggregate، ماتریس نقش‌های سازمان). جزئیات: `docs/centralaccount-business-reference.md` **بخش ۲۴** و `docs/phase-log.md` بخش «فاز ۱۷»؛ ریسک‌ها: `docs/open-decisions.md`.
+
 - **2026-09-06** (فاز ۱۶، برنچ `EntityCRUD`، commit نشده): CRUD دستهٔ پنجم — دستهٔ عمداً کوچک با ۲ Entity (`PayReciveHead`, `TmpVoucherHead`)، **۱۰ Endpoint روی ۲ Controller**، هر دو فقط Head. **۲۰۳۹/۲۰۳۹ سبز** (+۱۵۴)، ۱۱ تصمیم باز جدید. جزئیات: `docs/phase-log.md` بخش «فاز ۱۶»؛ ریسک‌ها: `docs/open-decisions.md`.
 
 - **2026-09-05** (فاز ۱۵، برنچ `EntityCRUD`، commit نشده): CRUD دستهٔ چهارم — ۸ Entity مستقل، **۴۰ Endpoint روی ۸ Controller**، با سه ایجنت موازی `backend-dotnet`. **اولین دسته بدون استثنای CRU-only** (هر ۸ جدول `ISDELETED` + Audit دارند)؛ `ElamHead` فقط Head. **۱۸۸۵/۱۸۸۵ سبز**، ۹ تصمیم باز جدید. جزئیات: `docs/phase-log.md` بخش «فاز ۱۵»؛ ریسک‌ها: `docs/open-decisions.md`.
