@@ -15,6 +15,12 @@ namespace Accounting.Application.PayReciveHeads.Commands.CreatePayReciveHead;
 /// Oracle schema (<c>PAYRECIVCODE</c>, <c>PAYRECIVDATE</c>, <c>PAYRECIVDESCRIPTION</c>,
 /// <c>VAHEDCODE</c>, <c>YEAR</c>), which is exactly the same reasoning used by
 /// <c>CreateReceiptCommandValidator</c>.
+///
+/// The <c>RuleFor(x => x.VahedCode)</c> below is a deliberate second belt, not dead code: by the
+/// time this validator runs, <c>VahedScopeBehavior</c> (registered ahead of
+/// <c>ValidationBehavior</c> — see <c>DependencyInjection.cs</c>) has already overwritten
+/// <see cref="CreatePayReciveHeadCommand.VahedCode"/> with the server-assigned value, so this
+/// rule now validates that value rather than anything the caller supplied.
 /// </summary>
 public sealed class CreatePayReciveHeadCommandValidator : AbstractValidator<CreatePayReciveHeadCommand>
 {

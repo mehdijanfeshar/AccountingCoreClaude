@@ -14,6 +14,134 @@
 
 ---
 
+### فاز ۱۹ — اعمال سراسری `VahedCode` سمت سرور: بستن نیمهٔ اول ریسک 🔴 #۱ (IDOR) (۲۰۲۶-۰۹-۰۹، برنچ `EntityCRUD`، commit نشده)
+
+اولین فاز کاملاً امنیتی پروژه. ریسک باز 🔴 شمارهٔ ۱ («هیچ authorization در سطح رکورد وجود ندارد») که از فاز ۷ روی میز بود و با هر فاز CRUD بزرگ‌تر می‌شد، در بخش لیست/جستجو/ساخت **بسته شد**؛ بخش دسترسی مستقیم با `id` به تصمیم صریح صاحب پروژه **عمداً باز ماند**.
+
+#### ۱. پنج تصمیم صریح صاحب پروژه (پیش از هر کد گرفته شدند)
+
+Work Plan پیش از پیاده‌سازی ارائه و تأیید شد. تصمیم‌ها:
+
+1. **فعلاً فقط احراز هویت** — نقش‌بندی (Role-based) فاز جداگانه‌ای است. ماتریس ۷ نقش سازمان که در فاز ۱۷ استخراج شد (`FINANCIAL CORE {SETAD ADMIN, …}`) در این فاز اعمال **نشد**.
+2. **دامنه:** کوئری‌های لیست/جستجو + `Create` + (فقط فیلد `VahedCode` در) `Update`.
+3. **`TB_VAHED_INFO` کاملاً مستثنی** — مثل `TB_ACCOUNTCODE` جدول سراسری/admin است. دلیل: اگر Create مقدار را تحمیل کند هرگز نمی‌توان واحد جدید ساخت (و بلافاصله با UNIQUE `UK_VAHEDINFO` تصادم می‌کند)؛ اگر لیست فیلتر شود هیچ UI ای نمی‌تواند dropdown واحد یا `ParentId` بسازد.
+4. **گزارش‌های تراز آزمایشی فاز ۱۸ هم شامل شدند** — بزرگ‌ترین سطح نشت داده بود (کل تراز مالی یک واحد دیگر با یک پارامتر query string).
+5. **رکوردهای `VAHEDCODE IS NULL` برای همه نامرئی شوند** (fail-closed) — فیلتر `== vahedCode` ساده، نه `|| == null`.
+6. **قفل `VahedCode` در `Update` هم اضافه شد** — فقط همین یک فیلد. جلوی *انتقال* رکورد به واحد دیگر گرفته شد، ولی بررسی مالکیت رکورد (اینکه کاربر اصلاً حق دسترسی به این `id` را دارد) عمداً پیاده **نشد**.
+
+#### ۲. مکانیزم — چرا Behavior و نه چک per-handler
+
+**درس مستقیم فاز ۱۷:** پروژهٔ مرجع `D:\CentralAccount` دقیقاً همین کار را per-handler انجام داده بود و فقط **۱۲ از ۳۷۲ Handler** واقعاً پیاده‌اش کرده بودند — یعنی رویکرد دستی ذاتاً فراموش‌شدنی است. پس مکانیزم باید سراسری و خودکار باشد.
+
+فایل‌های مرکزی:
+- `backend/src/Accounting.Application/Common/Security/IVahedScoped.cs` — سه interface: `IVahedScoped` (پایه، با `string VahedCode { get; set; }` **mutable**)، `IVahedScopedQuery`، `IVahedScopedCommand`.
+- `backend/src/Accounting.Application/Common/Behaviors/VahedScopeBehavior.cs`
+- `backend/src/Accounting.Application/Common/Exceptions/MissingVahedScopeException.cs`
+
+**چرا پراپرتی mutable و نه `with`-expression روی record:** در MediatR 14 امضای `RequestHandlerDelegate<TResponse> next(ct)` است و **هیچ راهی برای جایگزینی instance درخواست در میانهٔ pipeline وجود ندارد**. پس تنها گزینهٔ عملی پراپرتی `set`‌دار است که Behavior بی‌قیدوشرط overwrite کند — عمداً همان الگوی `ADDUSERID` فاز ۷، فقط یک لایه بالاتر.
+
+**شکل درخواست‌ها:** `VahedCode` از پارامترهای positional رکورد **حذف** و به بدنهٔ رکورد با `[JsonIgnore]` منتقل شد. دو لایه دفاع: (الف) `[JsonIgnore]` جلوی bind شدن از request body را می‌گیرد و فیلد را از schema سوئگر هم حذف می‌کند، (ب) حتی اگر بایند می‌شد، Behavior بی‌قیدوشرط overwrite می‌کند. هیچ escape hatch از نوع «فقط اگر خالی بود پر کن» گذاشته نشد — آن صرفاً حفره را از «به مقدار client اعتماد کن» به «به مقدار client اعتماد کن وقتی client به‌قدر کافی زیرک باشد که فیلد را خالی بگذارد» منتقل می‌کرد.
+
+**جای Behavior در pipeline:** **قبل از** `ValidationBehavior` ثبت شد (MediatR رفتار registration-order را outermost-first اجرا می‌کند). دلیل: authorization مقدم بر validation است، و مهم‌تر اینکه هر `RuleFor(x => x.VahedCode)` باید مقدار **تحمیل‌شدهٔ سرور** را ببیند نه مقدار caller را.
+
+**رفتار fail-loud:** اگر `ICurrentUser.VahedCode` تهی/whitespace باشد یا بلندتر از ۴ کاراکتر (همهٔ ۴۵ نگاشت `VAHEDCODE` در `LegacyDbContext` بدون استثنا `HasMaxLength(4)` اند)، `MissingVahedScopeException` پرتاب می‌شود — **هرگز truncate نمی‌شود و هرگز فیلتر نادیده گرفته نمی‌شود**. در `GlobalExceptionHandler` به **403 Forbidden** نگاشت شد، نه 401: فراخوان احراز شده، فقط claim قابل‌استفاده ندارد (401 از قبل توسط `SetFallbackPolicy` برای درخواست‌های احراز‌نشده اعمال می‌شود).
+
+#### ۳. یافتهٔ جانبی 🔴 — `ValidationBehavior` هرگز برای Update/Delete اجرا نشده
+
+حین ساخت Behavior کشف و **مستقلاً تأیید شد**:
+
+`ValidationBehavior<TRequest,TResponse>` قید `where TRequest : IRequest<TResponse>` دارد. در MediatR 12 به بعد (اینجا **۱۴.۲.۰**)، `IRequest` غیرجنریک دیگر از `IRequest<Unit>` ارث نمی‌برد. همهٔ Update/Delete commandهای این پروژه `: IRequest` (بدون خروجی) اند — تأییدشده روی `UpdateWorkShopCommand`, `DeleteWorkShopCommand`, `UpdateReceiptCommand`, `UpdateVoucherHeadCommand`. کانتینر DI هنگام resolve کردن open-generic، هر registration ای را که قیدش برآورده نشود **بی‌صدا** رد می‌کند — بدون exception، بدون log.
+
+**یعنی از فاز ۸ تا امروز، FluentValidation روی هیچ ورودی Update یا Delete اجرا نشده است.** تست‌ها این را نگرفتند چون تست‌های Validator مستقیماً کلاس Validator را instantiate می‌کنند و از pipeline عبور نمی‌کنند.
+
+`VahedScopeBehavior` عمداً این قید را **ندارد** (فقط `where TRequest : notnull`) تا خودش قربانی همین باگ نشود — و در هر ۵ قرارداد batch صریحاً ممنوع شد که کسی «اصلاحش» کند، چون این کار بی‌صدا IDOR را روی همهٔ Update commandها بازمی‌گرداند.
+
+**در این فاز عمداً بسته نشد** (scope discipline): فعال‌کردن یک‌بارهٔ validation روی ~۲۹ Update و ~۲۸ Delete می‌تواند شکست‌های واقعی زیادی رو کند و فاز مستقل با QA می‌خواهد. به‌عنوان ریسک 🔴 در `docs/open-decisions.md` ثبت شد.
+
+#### ۴. دامنهٔ واقعی — Audit کامل ۲۹ Entity دارای CRUD
+
+اول Audit شد که کدام Entity اصلاً ستون `VAHEDCODE` دارد (این فیلتر فقط روی آن‌ها معنا دارد). نتیجه: از **۲۹ Entity دارای CRUD** (۲۸ پوشهٔ Application؛ `Vouchers` دو Entity دارد):
+
+**۲۱ Entity ستون `VAHEDCODE` دارند**، که از آن‌ها:
+- **۱۹ Entity تحت پوشش قرار گرفتند** → ۳۸ Command (Create+Update) + ۱۹ Query لیست:
+  `AttribForAccountCode`, `BankAccount` (`TB_ACCOUNT`), `BankCartDetail`, `BillLog`, `CheckBook`, `ChequeType`, `ChequesIncorrent`, `ElamHead`, `Expense`, `IdentityGroup`, `IdentitySubGroup`, `PayReciveHead`, `PreDescrib`, `Receipt`, `RevolvingFund`, `TmpVoucherHead`, `VoucherHead`, `VoucherDetail`, `WorkShop`
+- به‌علاوهٔ **۳ گزارش تراز آزمایشی** (`GetTrialBalance4/6/8Query`) → مجموع **۲۲ Query**
+- **`VahedInfo`** — مستثنی به تصمیم صریح صاحب پروژه (بالا).
+- **`PersonAction`** — معافیت **موقت**، منتظر تصمیم کاربر (بخش ۶ پایین).
+
+**۸ Entity اصلاً ستون `VAHEDCODE` ندارند** و طبیعتاً خارج از دامنه‌اند:
+`TB_ACCOUNTCODE` (Accounts), `TB_ACCOUNTCODE_INTERFACE`, `TB_ACCOUNTEXCEPTION`, `TB_LEVEL_TAFSIL`, `TB_TAFSIL_GROUP`, `TB_RABET`, `TB_WHITELIST`, `TB_WHITEANDBLACKLIST`.
+
+⚠️ **نکتهٔ مهم که باید بدانید:** **خودِ درخت کدینگ حساب (`TB_ACCOUNTCODE`) ستون واحد ندارد** — یعنی چارت حساب ذاتاً سراسری است و این فاز اصلاً محدودش نمی‌کند. این با انتظار شهودی «همه‌چیز واحدی می‌شود» فرق دارد.
+
+#### ۵. سمت خواندن — تیکهٔ دوم که بدون آن مکانیزم تزئینی می‌شد
+
+Behavior فقط مقدار را تحمیل می‌کند؛ اگر Repository از آن استفاده نکند هیچ اتفاقی نمی‌افتد. پس در هر ۱۹ `ReadRepository`:
+- `GetPagedAsync` پارامتر `string vahedCode` (**غیر nullable**) گرفت.
+- فیلتر `.Where(x => x.VAHEDCODE == vahedCode)` **بی‌قیدوشرط** اضافه شد.
+
+⚠️ الگوی قبلی در `VoucherHeadReadRepository`/`VoucherDetailReadRepository` — `if (!string.IsNullOrEmpty(vahedCode)) { query = query.Where(...); }` — **دقیقاً همان حفرهٔ IDOR بود** و حذف شد. فیلترهای دیگر (`Year`, `VoucherHeadId`) شرطی ماندند، که درست است.
+
+پارامتر `[FromQuery] string? vahedCode` از امضای `VoucherHeadsController`, `VoucherDetailsController` و `TrialBalanceReportsController` **حذف شد** — تغییر شکنندهٔ قرارداد API روی این ۵ Endpoint.
+
+گزارش‌های تراز SQL خام می‌زنند؛ `vahedCode` همچنان به‌صورت `OracleParameter` bind می‌شود (نه string concatenation) و شرط `(:vahedCode IS NULL OR …)` به تساوی بی‌قیدوشرط تبدیل شد.
+
+**مسیرهای composite:** `CreateVoucherHeadCommand` فرزندان `TB_VOUCHERSDETAIL` و `CreateVoucherDetailCommand` فرزندان `TB_VOUCHERDETAIL_LINK_TAFSILI` را می‌سازند. این فرزندان از قبل `VahedCode` را از والدشان مشتق می‌کردند (`CreateVoucherHeadDetailInput` و `VoucherDetailTafsiliLinkInput` عمداً `VahedCode` ندارند) — آن رفتار حفظ شد، فقط حالا مقدار مشتق‌شده مقدار **تحمیل‌شدهٔ سرور** است.
+
+#### ۶. ⚠️ `PersonAction` — قاعده‌ای که schema پشتیبانی نمی‌کند (منتظر تصمیم کاربر)
+
+در میانهٔ فاز، قاعدهٔ اضافی‌ای از کاربر رسید: «`VahedCode` هرگز نباید خالی باشد، **به‌جز در `PersonAction`** که به‌جای `VahedCode` مشخص می‌شود با `VahedType` (نوع واحد، که چند واحد را پوشش می‌دهد) دسترسی ایجاد کرد.»
+
+**verify شد، حدس زده نشد. نتیجه: `TB_PERSON_ACTION` هیچ ستون `VAHEDTYPE_ID` (یا هر معادلی که به `TB_VAHED_TYPE` اشاره کند) ندارد.**
+
+مجموعهٔ کامل ستون‌هایش: `ID`, `USERNAME`, `USERID`, `FROMDATE`, `TODATE`, `STATUS`, `OPERATORROLE`, `VAHEDCODE`, `UPDATEDDATE`, `ADDUSERID`, `CHANGEUSERID`, `ISDELETED`, `CREATEDDATE` — تمام. از دو منبع مستقل تأیید شد: خود Entity، و Fluent Mapping در `LegacyDbContext.cs` خطوط ۲۳۳۱–۲۳۶۵ که تک‌تک ستون‌های نگاشت‌شده را فهرست می‌کند. تنها index این جدول `UK_PERSON_ACTION` روی `(USERID, FROMDATE, TODATE)` است.
+
+**سرنخ قوی:** در کل ۶۵ Entity فقط ۵ جدول ستون `VAHEDTYPE_ID` واقعی (`Guid` + navigation به `TB_VAHED_TYPE`) دارند: `TB_WHITELIST`, `TB_WHITEANDBLACKLIST`, `TB_ACCOUNTEXCEPTION`, `TB_RABET_CLOSING`, `TB_VAHED_INFO`. چهار تای اول **هیچ‌کدام `VAHEDCODE` ندارند**. الگو گویاست: `TB_WHITELIST`/`TB_WHITEANDBLACKLIST` دقیقاً همان چیزی‌اند که کاربر توصیف کرد — جدول‌های مجوز/دسترسی که به‌جای یک واحد مشخص با **نوع** واحد کار می‌کنند. هر دو از ابتدا در فهرست ۸ Entity خارج از دامنه بودند.
+
+در مقابل، طبق `docs/centralaccount-business-reference.md` (خطوط ۱۶۱۷، ۱۹۲۷)، `TB_PERSON_ACTION` یک registry نقش اپراتوری است که با `OPERATORROLE` کار می‌کند — و آن ستون **چهارمقداری** است (۱=مسئول امور مالی، ۲=رئیس واحد، ۳=جانشین امور مالی، ۴=جانشین رئیس واحد) که ما اشتباهاً `bool` تایپش کرده‌ایم (ریسک باز 🔴 #۲).
+
+**اقدام:** `PersonAction` از هر ۵ batch بیرون گذاشته و **کاملاً دست‌نخورده** رها شد — نه قاعدهٔ استاندارد رویش اعمال شد (چون کاربر استثنا می‌خواهد)، نه استثنا ساخته شد (چون schema پشتیبانی نمی‌کند). تأیید شد که `git status` هیچ تغییری در `PersonActions/` ندارد. **این تنها Entity دارای `VAHEDCODE` است که هنوز `VahedCode` را از caller می‌گیرد.**
+
+#### ۷. سازمان‌دهی کار — Batch 0 مرجع + ۵ batch موازی
+
+- **Batch 0 (blocking):** مکانیزم مرکزی + پیاده‌سازی کامل روی **یک Entity مرجع (`WorkShops`)** به‌عنوان الگویی که بقیه عیناً کپی کنند. اینجا بود که باگ `ValidationBehavior` کشف شد.
+- **۵ batch موازی** روی ۱۸ Entity باقی‌مانده + ۳ گزارش تراز. تقسیم فایل‌ها طوری بود که **هیچ همپوشانی** بین batchها نباشد (هر batch فقط پوشه‌های Application خودش + `I<X>ReadRepository` + `<X>ReadRepository` + `<X>Controller` + تست‌های خودش). فایل‌های مشترک (`DependencyInjection.cs`, `GlobalExceptionHandler.cs`, خودِ Behavior) فقط در Batch 0 لمس شدند و برای بقیه read-only اعلام شدند.
+
+#### ۸. گاردهای ضدرگرسیون
+
+- `VahedScopeBehaviorTests` — مقدار جعلی caller دور ریخته می‌شود؛ claim تهی/whitespace/بلندتر از ۴ → استثنا؛ درخواست بدون marker دست‌نخورده رد می‌شود؛ `next` هنگام استثنا صدا نمی‌شود.
+- تست forgery-prevention به‌ازای هر Create و هر Update تحت پوشش.
+- تست فیلتر به‌ازای هر Query لیست.
+- **`VahedScopeConventionTests`** — تست convention با reflection، به سبک `NoIndependentLinkTableWritePathTests`. مهم‌ترین دستاورد ضدرگرسیون فاز: هر `Create*Command`/`Update*Command`/Query لیست جدیدی که در آینده اضافه شود و `IVahedScoped` نداشته باشد، باید صریحاً در فهرست معافیت ثبت شود وگرنه تست قرمز می‌شود. فهرست معافیت دو گروه دارد (۸ Entity بدون ستون + ۲ معافیت آگاهانه) و دلیل هرکدام در خود فایل مستند است — به‌خصوص `PersonAction` که **موقت** است.
+
+#### ۹. Audit مستقل `team-lead` پیش از Gate
+
+پیش از فراخوانی `security-reviewer`، سه بررسی مستقل انجام شد که همگی پاک بودند:
+- هیچ `[FromQuery] vahedCode` باقی‌مانده در هیچ کنترلری.
+- هیچ فیلتر شرطی `IsNullOrEmpty(vahedCode)` باقی‌مانده در هیچ Repository (تنها تطابق‌ها، comment های توضیح‌دهندهٔ همان anti-pattern اند).
+- **هیچ marker تزئینی** — برای هر ۳۸ Command و هر ۲۲ Query که marker دارند، Handler متناظرش واقعاً به `VahedCode` ارجاع می‌دهد.
+
+#### ۱۰. آنچه عمداً انجام **نشد**
+
+- بررسی مالکیت رکورد روی `GetById`/`Update`/`Delete` — تصمیم آگاهانهٔ صاحب پروژه. **نیمهٔ دوم ریسک #۱ همچنان باز است.**
+- نقش‌بندی (Role-based authorization).
+- تأیید claim واقعی `vahed_code` با توکن IDP (ریسک باز #۱۰ دست‌نخورده).
+- رفع باگ `ValidationBehavior` (بخش ۳).
+- هیچ‌کدام از ریسک‌های باز دیگر (`bool?`→enum، تراز بدهکار/بستانکار، cascade حذف، نوع دادهٔ مبلغ، معنای «مانده اول دوره»).
+
+#### ۱۱. پاس `/code-review` مستقل (۸ زاویهٔ موازی) و اصلاحات (۲۰۲۶-۰۹-۰۹)
+
+با توجه به حساسیت امنیتی و حجم دیف (۳۳۸ فایل)، علاوه بر Gate امنیتی داخلی بخش ۹، یک پاس جداگانهٔ ۸-زاویه‌ای (A1/A2/A3 خط‌به‌خط روی کل دیف، B ردیاب رفتار حذف‌شده، C ردیاب Cross-file، Reuse بررسی تکرار الگو، Simplification+Efficiency، Altitude+Conventions) اجرا شد. یافته‌های واقعی:
+
+1. **`ElamHead` — `.NotEmpty()` روی `VahedCode` جا افتاده بود** (Angle A2). برخلاف ۶ Entity هم‌batch، `CreateElamHeadCommandValidator`/`UpdateElamHeadCommandValidator` فقط `MaximumLength(4)` داشتند. رفع شد — هم Validator، هم تست‌های `Validate_EmptyVahedCode_Fails`، هم تست `AllFieldsNull`/`AllOptionalFieldsNull` که چون `VahedCode` دیگر واقعاً می‌توانست خالی بماند نیاز به تنظیم مقدار صریح داشت.
+2. **کامنت XML گمراه‌کننده در ۱۵ فایل `Update*CommandValidator.cs`** (Angle A3 + B + Altitude، هر سه مستقلاً به باگ بخش ۳ برخوردند و با یک repro مستقل MediatR 14.2.0 آن را تأیید کردند). این فایل‌ها ادعا می‌کردند «`RuleFor(VahedCode)` یک لایهٔ دفاعی دوم عمدی است، نه dead code» — درحالی‌که دقیقاً همان باگ بخش ۳ باعث می‌شود این Validator برای این commandهای void هرگز اجرا نشود. متن هر ۱۵ فایل به‌صراحت اصلاح شد تا وضعیت واقعی (غیرفعال در runtime، حفظ‌شده برای رفع آینده و تست واحد مستقیم) را منعکس کند.
+3. **ادعای نادرست در `docs/open-decisions.md` دربارهٔ قفل `Update`** (Angle B + Altitude، مستقلاً). متن قبلی می‌گفت قفل‌شدن `VahedCode` در Update باعث می‌شود «کسی نتواند رکورد را به واحد دیگری منتقل کند» — نادرست: چون `GetForUpdateAsync` فقط با `Id` می‌خواند (بدون فیلتر مالکیت)، کاربری که `Id` رکورد واحد دیگر را بداند هنوز می‌تواند با `POST {id}/update` آن را **به واحد خودش** منتقل کند (سرقت رکورد). این پیامد قبل از فاز ۱۹ هم وجود داشت (فقط مقصد قبلاً دلخواه بود، حالا فقط به واحد خودِ کاربر محدود شده). متن اصلاح شد.
+4. یافته‌های Angle Reuse (تکرار کامنت XML یکسان در ۳۸/۲۱/۱۹/۱۶ فایل) صرفاً کیفیت کد بودند، نه باگ — بدون اقدام رها شدند (طبق قاعدهٔ پروژه دربارهٔ عدم انتزاع زودهنگام).
+
+پس از اصلاحات: `dotnet build` = ۰ خطا؛ `dotnet test` = **۲۲۳۴ تست سبز** (۲ تست جدید نسبت به پایان بخش ۸: `Validate_EmptyVahedCode_Fails` برای Create و Update ElamHead).
+
+---
+
 ### فاز ۱۸ — اولین گزارش‌های مالی: تراز آزمایشی ۴/۶/۸ ستونه (۲۰۲۶-۰۹-۰۷، برنچ `EntityCRUD`، commit نشده)
 
 اولین کار گزارشی پروژه (batch اول از ۳۱ Query گزارشی پروژهٔ مرجع). **دامنه عمداً فقط خانوادهٔ تراز آزمایشی پایه**؛ Drill-down، دفتر روزنامه، دفتر کل، ترازنامه، گزارش تلفیقی، مرور تفصیلی و هرم سنی به batchهای بعدی موکول شدند. **هیچ Command، هیچ write repository، هیچ تغییر Entity یا `LegacyDbContext`.**

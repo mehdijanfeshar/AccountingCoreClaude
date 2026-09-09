@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.WorkShops.Commands.CreateWorkShop;
@@ -29,7 +31,6 @@ namespace Accounting.Application.WorkShops.Commands.CreateWorkShop;
 /// <param name="BranchId">Optional link to <c>TB_VAHED_INFO</c> (<c>FK_WORK_VAHEDINFO</c>).</param>
 /// <param name="WorkShopName">Workshop name (required, max 100 chars).</param>
 /// <param name="WorkShopCode">Workshop code (required, max 10 chars; part of <c>UK_WORKSHOP</c>).</param>
-/// <param name="VahedCode">Organizational unit code (required, max 4 chars; part of <c>UK_WORKSHOP</c>).</param>
 /// <param name="IsActive">ISACTIVE column — non-nullable flag, part of <c>UK_WORKSHOP</c>; see the unverified-enum note above.</param>
 /// <param name="CheckFile">Optional Oracle BLOB (JSON base64); no size limit enforced here.</param>
 public sealed record CreateWorkShopCommand(
@@ -37,6 +38,17 @@ public sealed record CreateWorkShopCommand(
     Guid? BranchId,
     string WorkShopName,
     string WorkShopCode,
-    string VahedCode,
     bool IsActive,
-    byte[]? CheckFile) : IRequest<Guid>;
+    byte[]? CheckFile) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// Organizational unit code (required, max 4 chars; part of <c>UK_WORKSHOP</c>). Never bound
+    /// from the request body — <see cref="JsonIgnoreAttribute"/> keeps it out of both model
+    /// binding and the Swagger schema — and never trusted even if a caller manages to set it:
+    /// <c>VahedScopeBehavior</c> unconditionally overwrites this with the authenticated caller's
+    /// own unit code before the request reaches <c>CreateWorkShopCommandHandler</c>. See
+    /// <see cref="IVahedScopedCommand"/> for the full mechanism.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

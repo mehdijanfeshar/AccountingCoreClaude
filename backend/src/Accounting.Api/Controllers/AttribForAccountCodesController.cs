@@ -22,6 +22,15 @@ namespace Accounting.Api.Controllers;
 /// <c>[AllowAnonymous]</c>, so it falls under the API-wide fallback policy
 /// (<c>SetFallbackPolicy(RequireAuthenticatedUser)</c> in <c>Program.cs</c>).
 ///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> — <c>CreateAttribForAccountCodeCommand</c>/<c>UpdateAttribForAccountCodeCommand</c>/
+/// <c>GetAttribForAccountCodesQuery</c> all implement <c>IVahedScopedCommand</c>/<c>IVahedScopedQuery</c>,
+/// so <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c> → 403 (via
+/// <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable unit-scope claim.
+/// <see cref="GetById"/>/<see cref="Delete"/> do not opt in and never return 403 for this reason —
+/// see <c>UpdateAttribForAccountCodeCommand</c> XML doc for the explicit scope note on what
+/// closing this still leaves open.
+///
 /// <b>No PUT/DELETE anywhere in this controller — by explicit project-owner mandate, not an
 /// internal architecture choice.</b> Update/Delete are exposed as <c>POST</c> to
 /// <c>{id}/update</c> and <c>{id}/delete</c>, mirroring <see cref="AccountCodesController"/>.
@@ -58,6 +67,7 @@ public sealed class AttribForAccountCodesController : ControllerBase
     [ProducesResponseType(typeof(CreateAttribForAccountCodeResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
@@ -79,6 +89,7 @@ public sealed class AttribForAccountCodesController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<AttribForAccountCodeDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
@@ -118,6 +129,7 @@ public sealed class AttribForAccountCodesController : ControllerBase
     [ProducesResponseType(typeof(UpdateAttribForAccountCodeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -134,7 +146,6 @@ public sealed class AttribForAccountCodesController : ControllerBase
             request.LenAtr,
             request.AttribSum,
             request.ControlId,
-            request.VahedCode,
             request.Year);
 
         await _mediator.Send(command, cancellationToken);
@@ -183,8 +194,10 @@ public sealed record DeleteAttribForAccountCodeResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="AttribForAccountCodesController.Update"/>. Mirrors every field of
-/// <see cref="UpdateAttribForAccountCodeCommand"/> except <c>Id</c>, which is bound from the
-/// route instead.
+/// <see cref="UpdateAttribForAccountCodeCommand"/> except <c>Id</c> (bound from the route instead)
+/// and <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdateAttribForAccountCodeCommand.VahedCode"/> XML doc — so it is not part of this
+/// request body at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdateAttribForAccountCodeRequest(
     Guid AccountCodeId,
@@ -193,5 +206,4 @@ public sealed record UpdateAttribForAccountCodeRequest(
     byte LenAtr,
     bool AttribSum,
     bool? ControlId,
-    string VahedCode,
     string Year);

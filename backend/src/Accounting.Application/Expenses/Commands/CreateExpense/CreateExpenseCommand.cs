@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.Expenses.Commands.CreateExpense;
@@ -34,12 +36,25 @@ namespace Accounting.Application.Expenses.Commands.CreateExpense;
 /// <param name="DefaultAmount">DEFAULTAMOUNT column (<c>NUMBER(25)</c>, optional).</param>
 /// <param name="ExpenseGroupId">Optional link to <c>TB_EXPENCEGROUP</c> (<c>FK_EXPENCEGROUP</c>).</param>
 /// <param name="AccountCodeId">Optional link to <c>TB_ACCOUNTCODE</c> (<c>FK_EXPENSE_ACCOUNTCODE</c>).</param>
-/// <param name="VahedCode">Organizational unit code (optional, max 4 chars; part of <c>UK_EXPENSE_CODE</c>).</param>
 public sealed record CreateExpenseCommand(
     string ExpenseCode,
     string ExpenseName,
     string? Description,
     decimal? DefaultAmount,
     Guid? ExpenseGroupId,
-    Guid? AccountCodeId,
-    string? VahedCode) : IRequest<Guid>;
+    Guid? AccountCodeId) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// Organizational unit code (max 4 chars; part of <c>UK_EXPENSE_CODE</c>). Never bound from
+    /// the request body — <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding
+    /// and the Swagger schema — and never trusted even if a caller manages to set it:
+    /// <c>VahedScopeBehavior</c> unconditionally overwrites this with the authenticated caller's
+    /// own unit code before the request reaches <c>CreateExpenseCommandHandler</c>. See
+    /// <see cref="IVahedScopedCommand"/> for the full mechanism. The Oracle column itself
+    /// (<c>TB_EXPENCE.VAHEDCODE</c>) is nullable, but this property never carries a null/empty
+    /// value once <c>VahedScopeBehavior</c> has run — see that class's XML doc for the fail-loud
+    /// guarantee.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

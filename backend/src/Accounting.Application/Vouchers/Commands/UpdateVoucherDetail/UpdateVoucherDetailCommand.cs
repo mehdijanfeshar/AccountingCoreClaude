@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using Accounting.Application.Vouchers.Commands.Common;
 using MediatR;
 
@@ -22,6 +24,12 @@ namespace Accounting.Application.Vouchers.Commands.UpdateVoucherDetail;
 /// own fields, and no business decision authorizes that operation; if it is ever needed it
 /// should be its own explicit use case (e.g. <c>MoveVoucherDetailCommand</c>), not smuggled into
 /// a field-level replace here.
+///
+/// ⚠️ <b>Scope note:</b> <see cref="IVahedScopedCommand"/> here only guarantees that
+/// <c>VAHEDCODE</c> cannot be *changed* to an arbitrary unit by the caller. It does <b>not</b>
+/// check whether the caller is allowed to touch this particular row in the first place —
+/// record-ownership verification on Update is explicitly out of scope for this pass, mirroring
+/// <c>UpdateVoucherHeadCommand</c>'s identical scope note.
 /// </summary>
 /// <param name="Id">The <c>TB_VOUCHERSDETAIL.ID</c> to update (bound from the route, never the body).</param>
 /// <param name="AccountId">ACCOUNT_ID column — optional FK to <c>TB_ACCOUNTCODE</c>.</param>
@@ -33,7 +41,6 @@ namespace Accounting.Application.Vouchers.Commands.UpdateVoucherDetail;
 /// <param name="Radif">RADIF column — ردیف نمایش سطر.</param>
 /// <param name="Debtor">DEBTOR column — مبلغ بدهکار.</param>
 /// <param name="Creditor">CREDITOR column — مبلغ بستانکار.</param>
-/// <param name="VahedCode">VAHEDCODE column — کد واحد (max 4 chars).</param>
 /// <param name="Year">YEAR column (max 4 chars).</param>
 /// <param name="TafsiliLinks">
 /// The complete desired set of تفصیلی assignments (<c>TB_VOUCHERDETAIL_LINK_TAFSILI</c> rows) for
@@ -72,6 +79,17 @@ public sealed record UpdateVoucherDetailCommand(
     int? Radif,
     decimal? Debtor,
     decimal? Creditor,
-    string? VahedCode,
     string? Year,
-    IReadOnlyList<VoucherDetailTafsiliLinkInput>? TafsiliLinks = null) : IRequest;
+    IReadOnlyList<VoucherDetailTafsiliLinkInput>? TafsiliLinks = null) : IRequest, IVahedScopedCommand
+{
+    /// <summary>
+    /// VAHEDCODE column (max 4 chars). Never bound from the request body —
+    /// <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and the Swagger
+    /// schema — and never trusted even if a caller manages to set it: <c>VahedScopeBehavior</c>
+    /// unconditionally overwrites this with the authenticated caller's own unit code before the
+    /// request reaches <c>UpdateVoucherDetailCommandHandler</c>. See <see cref="IVahedScopedCommand"/>
+    /// for the full mechanism, and the scope note above for what this does <b>not</b> cover.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

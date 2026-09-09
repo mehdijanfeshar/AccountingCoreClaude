@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.PayReciveHeads.Commands.CreatePayReciveHead;
@@ -42,7 +44,6 @@ namespace Accounting.Application.PayReciveHeads.Commands.CreatePayReciveHead;
 /// <param name="PayReciveDate">PAYRECIVDATE column (required, max 8 chars — Legacy string-encoded date, not a real <see cref="DateTime"/>).</param>
 /// <param name="PayReciveDescription">PAYRECIVDESCRIPTION column (required, max 250 chars — free-text description; the Oracle column carries <c>DEFAULT '-'</c>, but this command always sends an explicit value).</param>
 /// <param name="PayReciveType">PAYRECIVTYPE column (optional <see cref="bool"/>) — ⚠️ see the CONFIRMED enum flag above; real values are 1/2/3, so the third is unreachable via <see cref="bool"/>?.</param>
-/// <param name="VahedCode">VAHEDCODE column (required, max 4 chars — organizational unit code).</param>
 /// <param name="Year">YEAR column (required, max 4 chars, fixed-length — fiscal year).</param>
 /// <param name="VoucherHeadId">VOUCHERSHEAD_ID column (optional) — the accounting voucher this document was turned into (<c>FK_PAYRECIV_VOCHERHEAD</c>).</param>
 public sealed record CreatePayReciveHeadCommand(
@@ -50,6 +51,17 @@ public sealed record CreatePayReciveHeadCommand(
     string PayReciveDate,
     string PayReciveDescription,
     bool? PayReciveType,
-    string VahedCode,
     string Year,
-    Guid? VoucherHeadId) : IRequest<Guid>;
+    Guid? VoucherHeadId) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// VAHEDCODE column (required, max 4 chars — organizational unit code). Never bound from the
+    /// request body — <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and
+    /// the Swagger schema — and never trusted even if a caller manages to set it:
+    /// <c>VahedScopeBehavior</c> unconditionally overwrites this with the authenticated caller's
+    /// own unit code before the request reaches <c>CreatePayReciveHeadCommandHandler</c>. See
+    /// <see cref="IVahedScopedCommand"/> for the full mechanism.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

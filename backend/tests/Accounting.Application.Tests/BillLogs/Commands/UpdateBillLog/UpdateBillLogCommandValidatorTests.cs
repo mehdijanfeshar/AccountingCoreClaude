@@ -10,8 +10,10 @@ public sealed class UpdateBillLogCommandValidatorTests
         Id: Guid.NewGuid(),
         LogDesc: "desc",
         LogDate: "14030101",
-        VahedCode: "0100",
-        Year: "1403");
+        Year: "1403")
+    {
+        VahedCode = "0100",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.RevolvingFunds.Commands.CreateRevolvingFund;
@@ -23,7 +25,6 @@ namespace Accounting.Application.RevolvingFunds.Commands.CreateRevolvingFund;
 /// <param name="Description">DESCRIPTION column (optional, max 100 chars).</param>
 /// <param name="DefaultAmount">DEFAULTAMOUNT column (optional, <c>NUMBER(25)</c>).</param>
 /// <param name="AccountCodeId">Optional link to <c>TB_ACCOUNTCODE</c> (<c>FK_ACCOUNTCODE_REVOLVING</c>).</param>
-/// <param name="VahedCode">VAHEDCODE column (optional, max 4 chars; part of <c>UK_REVOLVING_CODE</c>).</param>
 /// <param name="Year">YEAR column (optional, max 4 chars; part of <c>UK_REVOLVING_CODE</c>).</param>
 public sealed record CreateRevolvingFundCommand(
     string Code,
@@ -31,5 +32,17 @@ public sealed record CreateRevolvingFundCommand(
     string? Description,
     decimal? DefaultAmount,
     Guid? AccountCodeId,
-    string? VahedCode,
-    string? Year) : IRequest<Guid>;
+    string? Year) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// Organizational unit code (<c>VAHEDCODE</c> column — nullable at the Legacy schema level,
+    /// but always populated with a real value here; part of <c>UK_REVOLVING_CODE</c>). Never
+    /// bound from the request body — <see cref="JsonIgnoreAttribute"/> keeps it out of both model
+    /// binding and the Swagger schema — and never trusted even if a caller manages to set it:
+    /// <c>VahedScopeBehavior</c> unconditionally overwrites this with the authenticated caller's
+    /// own unit code before the request reaches <c>CreateRevolvingFundCommandHandler</c>. See
+    /// <see cref="IVahedScopedCommand"/> for the full mechanism.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

@@ -12,7 +12,9 @@ namespace Accounting.Application.ChequeTypes.Commands.UpdateChequeType;
 /// <see cref="NotFoundException"/> — mapped to 404 by <c>GlobalExceptionHandler</c> — when the
 /// row does not exist or is already soft-deleted (<c>ISDELETED</c> is non-nullable <c>bool</c>
 /// on this table). <c>CHANGEUSERID</c> is sourced from <see cref="ICurrentUser"/> — never from
-/// the request.
+/// the request. <c>request.VahedCode</c> is equally non-forgeable: by the time this handler
+/// runs, <c>VahedScopeBehavior</c> has already overwritten it with the authenticated caller's
+/// own unit code (see <see cref="UpdateChequeTypeCommand.VahedCode"/>).
 /// </summary>
 public sealed class UpdateChequeTypeCommandHandler : IRequestHandler<UpdateChequeTypeCommand>
 {

@@ -29,9 +29,11 @@ public sealed class CreateElamHeadCommandValidatorTests
         WorkShopName: "کارگاه تستی",
         SendRcvVahed: "0009",
         ElamYear: "04",
-        VahedCode: "0001",
         Year: "1404",
-        ElamSenderId: Guid.NewGuid());
+        ElamSenderId: Guid.NewGuid())
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -42,8 +44,10 @@ public sealed class CreateElamHeadCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_AllFieldsNull_Passes()
+    public void Validate_AllNullableFieldsNull_Passes()
     {
+        // VahedCode is the sole exception to "every field is nullable" (see validator XML doc)
+        // and must still be set, since VahedCode itself is never allowed to be empty.
         var command = new CreateElamHeadCommand(
             VoucherHeadId: null,
             SerialNo: null,
@@ -67,13 +71,24 @@ public sealed class CreateElamHeadCommandValidatorTests
             WorkShopName: null,
             SendRcvVahed: null,
             ElamYear: null,
-            VahedCode: null,
             Year: null,
-            ElamSenderId: null);
+            ElamSenderId: null)
+        {
+            VahedCode = "0001",
+        };
 
         var result = _validator.Validate(command);
 
         Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_EmptyVahedCode_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { VahedCode = string.Empty });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateElamHeadCommand.VahedCode));
     }
 
     [Fact]

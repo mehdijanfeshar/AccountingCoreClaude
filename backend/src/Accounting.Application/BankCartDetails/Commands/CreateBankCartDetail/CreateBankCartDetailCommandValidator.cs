@@ -28,7 +28,15 @@ public sealed class CreateBankCartDetailCommandValidator : AbstractValidator<Cre
         RuleFor(x => x.RecivDate)
             .MaximumLength(8);
 
+        // Deliberate second belt, not dead code: by the time this validator runs,
+        // VahedScopeBehavior (registered ahead of ValidationBehavior — see
+        // DependencyInjection.cs) has already overwritten CreateBankCartDetailCommand.VahedCode
+        // with the server-assigned value, so this rule now validates that value rather than
+        // anything the caller supplied. NotEmpty() here is safe even though
+        // TB_BANKCARTDETAIL.VAHEDCODE is nullable in Legacy, because the server-assigned value is
+        // never actually empty.
         RuleFor(x => x.VahedCode)
+            .NotEmpty()
             .MaximumLength(4);
 
         RuleFor(x => x.Year)

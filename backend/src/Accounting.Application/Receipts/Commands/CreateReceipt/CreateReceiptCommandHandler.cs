@@ -11,6 +11,12 @@ namespace Accounting.Application.Receipts.Commands.CreateReceipt;
 /// <see cref="ICurrentUser"/> (the authenticated caller) — never from the request.
 ///
 /// <c>ID</c> is always generated application-side (<see cref="Guid.NewGuid"/>).
+///
+/// <c>request.VahedCode</c> is equally unforgeable, just enforced one layer earlier: by the
+/// time this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler can trust the field at face value and
+/// simply map it onto <c>TB_RECEIP.VAHEDCODE</c> — it does not read <see cref="ICurrentUser"/>
+/// directly for this field the way it does for <c>ADDUSERID</c>.
 /// </summary>
 public sealed class CreateReceiptCommandHandler : IRequestHandler<CreateReceiptCommand, Guid>
 {

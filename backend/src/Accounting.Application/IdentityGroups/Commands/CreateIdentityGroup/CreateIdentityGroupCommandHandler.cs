@@ -11,6 +11,12 @@ namespace Accounting.Application.IdentityGroups.Commands.CreateIdentityGroup;
 /// <see cref="ICurrentUser"/> (the authenticated caller) — never from the request — so it
 /// cannot be forged by the client.
 ///
+/// <c>request.VahedCode</c> is equally unforgeable, just enforced one layer earlier: by the time
+/// this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler can trust the field at face value and
+/// simply map it onto <c>TB_IDENTITYGROUP.VAHEDCODE</c> — it does not read
+/// <see cref="ICurrentUser"/> directly for this field the way it does for <c>ADDUSERID</c>.
+///
 /// <c>ID</c> is always generated application-side (<see cref="Guid.NewGuid"/>); the Oracle
 /// column has no <c>sys_guid()</c> default, so this simply follows the project-wide convention.
 /// </summary>

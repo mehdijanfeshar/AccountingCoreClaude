@@ -47,10 +47,17 @@ public interface ITrialBalanceReadRepository
     /// <param name="toDate">Optional inclusive-upper-bound Jalali <c>YYYYMMDD</c> string.
     /// <see langword="null"/> means "no upper bound" — every voucher line up to the present is
     /// included in the cumulative/period windows.</param>
-    /// <param name="vahedCode">Optional exact-match filter on <c>TB_VOUCHERSHEAD.VAHEDCODE</c>.
-    /// <see langword="null"/> means all organizational units (see the open multi-tenancy item in
-    /// <c>CLAUDE.md</c> — this parameter is not server-enforced from identity, exactly like every
-    /// other <c>vahedCode</c> filter in this codebase today).</param>
+    /// <param name="vahedCode">
+    /// Organizational unit code to filter by — required, not nullable. Server-assigned by
+    /// <c>VahedScopeBehavior</c> from the authenticated caller's own unit code (via
+    /// <c>GetTrialBalance4/6/8Query</c>'s <see cref="Accounting.Application.Common.Security.IVahedScopedQuery"/>
+    /// implementation) — never caller input. Rows are matched with exact equality only
+    /// (<c>h.VAHEDCODE = :vahedCode</c>); a head with <c>VAHEDCODE IS NULL</c> is never included
+    /// in anyone's trial balance, by deliberate fail-closed design (see
+    /// <c>TrialBalanceReadRepository</c> XML doc). This closes IDOR risk #1 (CLAUDE.md) on what was
+    /// previously the largest single data-leak surface in the project: an entire unit's trial
+    /// balance was reachable by any authenticated caller via one query-string parameter.
+    /// </param>
     /// <param name="docLife">Optional inclusive lower bound on the raw
     /// <c>TB_VOUCHERSHEAD.DOCLIFE</c> number (read as a number here specifically to route around
     /// the <c>bool?</c> mapping bug — see the class remarks). <see langword="null"/> means no
@@ -61,7 +68,7 @@ public interface ITrialBalanceReadRepository
         string year,
         string? fromDate,
         string? toDate,
-        string? vahedCode,
+        string vahedCode,
         int? docLife,
         CancellationToken cancellationToken = default);
 }

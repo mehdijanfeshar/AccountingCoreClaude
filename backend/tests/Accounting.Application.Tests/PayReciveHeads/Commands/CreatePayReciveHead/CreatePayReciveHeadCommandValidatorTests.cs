@@ -11,9 +11,11 @@ public sealed class CreatePayReciveHeadCommandValidatorTests
         PayReciveDate: "14040101",
         PayReciveDescription: "شرح سند",
         PayReciveType: true,
-        VahedCode: "0001",
         Year: "1404",
-        VoucherHeadId: Guid.NewGuid());
+        VoucherHeadId: Guid.NewGuid())
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()

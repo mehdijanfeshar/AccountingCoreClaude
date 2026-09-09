@@ -16,6 +16,12 @@ namespace Accounting.Application.PreDescribs.Commands.CreatePreDescrib;
 /// <c>ID</c> column has no <c>sys_guid()</c> default on this particular table, so that risk
 /// (see CLAUDE.md) does not apply here — noted only for symmetry with the other three entities
 /// in this batch, which do carry that default.
+///
+/// <c>request.VahedCode</c> is equally unforgeable, just enforced one layer earlier: by the
+/// time this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler can trust the field at face value and
+/// simply map it onto <c>TB_PREDESCRIB.VAHEDCODE</c> — it does not read
+/// <see cref="ICurrentUser"/> directly for this field the way it does for <c>ADDUSERID</c>.
 /// </summary>
 public sealed class CreatePreDescribCommandHandler : IRequestHandler<CreatePreDescribCommand, Guid>
 {

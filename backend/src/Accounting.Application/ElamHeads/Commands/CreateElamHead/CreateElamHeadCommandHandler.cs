@@ -11,6 +11,9 @@ namespace Accounting.Application.ElamHeads.Commands.CreateElamHead;
 /// <see cref="ICurrentUser"/> (the authenticated caller) — never from the request — so it
 /// cannot be forged by the client, even though the column itself is nullable in Legacy (all
 /// four audit columns are nullable on this table, mirroring <c>TB_RABET</c>).
+/// <c>request.VahedCode</c> is equally non-forgeable: by the time this handler runs,
+/// <c>VahedScopeBehavior</c> has already overwritten it with the authenticated caller's own unit
+/// code (see <see cref="CreateElamHeadCommand.VahedCode"/>).
 ///
 /// <c>ID</c> is always generated application-side (<see cref="Guid.NewGuid"/>) — this table has
 /// no <c>sys_guid()</c> default in <c>LegacyDbContext</c>, but generating it here regardless

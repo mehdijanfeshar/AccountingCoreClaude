@@ -37,6 +37,14 @@ namespace Accounting.Application.Vouchers.Commands.CreateVoucherDetail;
 /// between this check and the later <see cref="IUnitOfWork.SaveChangesAsync"/> call still falls
 /// through to the same DB FK and would surface as a 500 in that narrow window. No idempotency
 /// key or pessimistic lock was introduced to close this window; it remains open.
+///
+/// This handler just maps <see cref="CreateVoucherDetailCommand.VahedCode"/> onto the line — and,
+/// via <c>entity.VAHEDCODE</c>, onto every تفصیلی link created together with it — at face value;
+/// it does not read <see cref="ICurrentUser.VahedCode"/> directly. Forgery prevention is
+/// <c>VahedScopeBehavior</c>'s job, which runs before this handler for every
+/// <see cref="Accounting.Application.Common.Security.IVahedScopedCommand"/>. Note this does NOT
+/// verify the line's (now server-assigned) <c>VahedCode</c> agrees with the parent head's own
+/// <c>VAHEDCODE</c> — see the asymmetry note on <see cref="CreateVoucherDetailCommand"/>.
 /// </summary>
 public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVoucherDetailCommand, Guid>
 {

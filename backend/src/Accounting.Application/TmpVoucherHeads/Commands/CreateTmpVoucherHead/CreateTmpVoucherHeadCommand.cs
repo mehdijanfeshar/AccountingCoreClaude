@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.TmpVoucherHeads.Commands.CreateTmpVoucherHead;
@@ -38,14 +40,15 @@ namespace Accounting.Application.TmpVoucherHeads.Commands.CreateTmpVoucherHead;
 /// nothing here is guaranteed distinct, including <c>SourceId</c>, which means the same source
 /// document can be staged twice without complaint.
 ///
-/// Every single column on this table is nullable, so this command has no <c>NotEmpty</c> rules
-/// at all — only <c>MaximumLength</c>. Contrast <c>CreatePayReciveHeadCommand</c>, whose table
-/// has five NOT NULL columns.
+/// Every single column that reaches this command through its positional parameters is nullable,
+/// so this command has no <c>NotEmpty</c> rules on those — only <c>MaximumLength</c>. Contrast
+/// <c>CreatePayReciveHeadCommand</c>, whose table has five NOT NULL columns. <c>VahedCode</c> is
+/// the sole exception: even though <c>VAHEDCODE</c> is nullable at the Legacy schema level, it is
+/// no longer client-supplied at all (see below), so its validator rule is <c>NotEmpty</c>.
 /// </summary>
 /// <param name="VoucherHeadId">VOUCHERSHEAD_ID column (optional) — the real voucher this temporary one was promoted into, if any (<c>FK_TMP_VOCHERHEAD</c>).</param>
 /// <param name="DateDoc">DATE_DOC column (optional, max 8 chars — Legacy string-encoded document date, not a real <see cref="DateTime"/>).</param>
 /// <param name="HeadDesc">HEAD_DESC column (optional, max 250 chars — free-text document description).</param>
-/// <param name="VahedCode">VAHEDCODE column (optional, max 4 chars — organizational unit code).</param>
 /// <param name="Year">YEAR column (optional, max 4 chars, fixed-length — fiscal year).</param>
 /// <param name="SysType">SYS_TYPE column (optional, <b>max 1 char</b>) — a single-character source-system discriminator. It is a <see cref="string"/>, not a numeric column, so the <c>bool?</c>-should-be-enum pattern does not apply; but no allowed-value set is known, so no value rule is invented beyond the length limit.</param>
 /// <param name="SourceId">SOURCEID column (optional <see cref="Guid"/>) — ⚠️ NO FK at all; invalid values are written silently.</param>
@@ -53,7 +56,19 @@ public sealed record CreateTmpVoucherHeadCommand(
     Guid? VoucherHeadId,
     string? DateDoc,
     string? HeadDesc,
-    string? VahedCode,
     string? Year,
     string? SysType,
-    Guid? SourceId) : IRequest<Guid>;
+    Guid? SourceId) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// Organizational unit code (<c>VAHEDCODE</c> column — nullable at the Legacy schema level,
+    /// but always populated with a real value here). Never bound from the request body —
+    /// <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and the Swagger
+    /// schema — and never trusted even if a caller manages to set it: <c>VahedScopeBehavior</c>
+    /// unconditionally overwrites this with the authenticated caller's own unit code before the
+    /// request reaches <c>CreateTmpVoucherHeadCommandHandler</c>. See
+    /// <see cref="IVahedScopedCommand"/> for the full mechanism.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

@@ -39,6 +39,15 @@ namespace Accounting.Api.Controllers;
 /// ⚠️ This controller's child table <c>TB_REVOLVINGFUND_LINK_TAFSILI</c> is permanently
 /// embedded per the team rule that every <c>*_LINK_TAFSIL*</c> table never gets an independent
 /// write path — no route, repository, or cascade exists here for it, by design.
+///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> — <c>CreateRevolvingFundCommand</c>/<c>UpdateRevolvingFundCommand</c>/
+/// <c>GetRevolvingFundsQuery</c> all implement <c>IVahedScopedCommand</c>/<c>IVahedScopedQuery</c>,
+/// so <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c> → 403 (via
+/// <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable unit-scope claim.
+/// <see cref="GetById"/>/<see cref="Delete"/> do not opt in and never return 403 for this reason —
+/// see <see cref="UpdateRevolvingFundCommand"/> XML doc for the explicit scope note on what
+/// closing this still leaves open.
 /// </summary>
 [ApiController]
 [Route("api/revolving-funds")]
@@ -58,6 +67,7 @@ public sealed class RevolvingFundsController : ControllerBase
     [ProducesResponseType(typeof(CreateRevolvingFundResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
@@ -79,6 +89,7 @@ public sealed class RevolvingFundsController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<RevolvingFundDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
@@ -116,6 +127,7 @@ public sealed class RevolvingFundsController : ControllerBase
     [ProducesResponseType(typeof(UpdateRevolvingFundResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -131,7 +143,6 @@ public sealed class RevolvingFundsController : ControllerBase
             request.Description,
             request.DefaultAmount,
             request.AccountCodeId,
-            request.VahedCode,
             request.Year);
 
         await _mediator.Send(command, cancellationToken);
@@ -180,8 +191,10 @@ public sealed record DeleteRevolvingFundResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="RevolvingFundsController.Update"/>. Mirrors every field of
-/// <see cref="UpdateRevolvingFundCommand"/> except <c>Id</c>, which is bound from the route
-/// instead.
+/// <see cref="UpdateRevolvingFundCommand"/> except <c>Id</c> (bound from the route instead) and
+/// <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdateRevolvingFundCommand.VahedCode"/> XML doc — so it is not part of this request
+/// body at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdateRevolvingFundRequest(
     string Code,
@@ -189,5 +202,4 @@ public sealed record UpdateRevolvingFundRequest(
     string? Description,
     decimal? DefaultAmount,
     Guid? AccountCodeId,
-    string? VahedCode,
     string? Year);

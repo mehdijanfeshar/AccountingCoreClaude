@@ -44,11 +44,21 @@ public sealed class IdentityGroupReadRepository : IIdentityGroupReadRepository
     public async Task<PagedResult<IdentityGroupDto>> GetPagedAsync(
         int pageNumber,
         int pageSize,
+        string vahedCode,
         CancellationToken cancellationToken = default)
     {
+        // VahedCode filter: deliberately unconditional — no "if (!string.IsNullOrEmpty(vahedCode))"
+        // guard. That exact conditional pattern is precisely the IDOR hole CLAUDE.md risk #1
+        // describes: it lets a caller with no usable unit scope see every unit's rows instead of
+        // none. VahedScopeBehavior guarantees vahedCode is always a real, non-empty value here,
+        // so no such guard is needed — and adding one back would silently reopen the hole for any
+        // future caller path that manages to reach this method with an empty string.
+        //
+        // Also deliberately exact-equality only: rows are matched with exact equality against
+        // VAHEDCODE (non-nullable string on this table).
         var query = _dbContext.TB_IDENTITYGROUPs
             .AsNoTracking()
-            .Where(g => g.ISDELETED != true);
+            .Where(g => g.ISDELETED != true && g.VAHEDCODE == vahedCode);
 
         var totalCount = await query.CountAsync(cancellationToken);
 

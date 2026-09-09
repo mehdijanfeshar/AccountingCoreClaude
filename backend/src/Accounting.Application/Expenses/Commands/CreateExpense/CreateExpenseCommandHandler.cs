@@ -10,6 +10,12 @@ namespace Accounting.Application.Expenses.Commands.CreateExpense;
 /// <see cref="IUnitOfWork.SaveChangesAsync"/> exactly once. <c>ADDUSERID</c> is sourced from
 /// <see cref="ICurrentUser"/> (the authenticated caller) — never from the request.
 ///
+/// <c>request.VahedCode</c> is equally unforgeable, just enforced one layer earlier: by the time
+/// this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler can trust the field at face value and
+/// simply map it onto <c>TB_EXPENCE.VAHEDCODE</c> — it does not read <see cref="ICurrentUser"/>
+/// directly for this field the way it does for <c>ADDUSERID</c>.
+///
 /// <c>ID</c> is always generated application-side (<see cref="Guid.NewGuid"/>).
 /// </summary>
 public sealed class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand, Guid>

@@ -15,6 +15,12 @@ namespace Accounting.Application.RevolvingFunds.Commands.CreateRevolvingFund;
 /// no <c>sys_guid()</c> default in <c>LegacyDbContext</c>, but generating it here regardless
 /// keeps this handler symmetric with every other Create handler in the project and never relies
 /// on an Oracle DEFAULT.
+///
+/// <c>request.VahedCode</c> is equally unforgeable, just enforced one layer earlier: by the
+/// time this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler can trust the field at face value and
+/// simply map it onto <c>TB_REVOLVING_FUND.VAHEDCODE</c> — it does not read
+/// <see cref="ICurrentUser"/> directly for this field the way it does for <c>ADDUSERID</c>.
 /// </summary>
 public sealed class CreateRevolvingFundCommandHandler : IRequestHandler<CreateRevolvingFundCommand, Guid>
 {

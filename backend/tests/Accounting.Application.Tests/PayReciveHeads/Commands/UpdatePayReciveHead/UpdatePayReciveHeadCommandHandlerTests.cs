@@ -1,7 +1,9 @@
+using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.PayReciveHeads.Commands.UpdatePayReciveHead;
 using Accounting.Domain.Entity;
+using MediatR;
 using Moq;
 
 namespace Accounting.Application.Tests.PayReciveHeads.Commands.UpdatePayReciveHead;
@@ -16,9 +18,11 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
         PayReciveDate: "14041231",
         PayReciveDescription: "شرح به‌روزشده",
         PayReciveType: false,
-        VahedCode: "0002",
         Year: "1405",
-        VoucherHeadId: Guid.Parse("22222222-2222-2222-2222-222222222222"));
+        VoucherHeadId: Guid.Parse("22222222-2222-2222-2222-222222222222"))
+    {
+        VahedCode = "0002",
+    };
 
     /// <summary>
     /// A pre-existing row whose audit/creation columns carry recognizable values, so that
@@ -203,5 +207,52 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
 
         Assert.Null(entity.PAYRECIVTYPE);
         Assert.Null(entity.VOUCHERSHEAD_ID);
+    }
+
+    [Fact]
+    public async Task Handle_MapsVahedCodeFromCommandAtFaceValue()
+    {
+        // The handler itself just maps request.VahedCode onto the entity — it does not read
+        // ICurrentUser.VahedCode directly. Forgery prevention is VahedScopeBehavior's job (see
+        // the dedicated pipeline test below); this test only proves the mapping is faithful.
+        var entity = ExistingEntity();
+        var (handler, _, _) = Build(entity);
+        var command = ValidCommand() with { VahedCode = "0009" };
+
+        await handler.Handle(command, CancellationToken.None);
+
+        Assert.Equal("0009", entity.VAHEDCODE);
+    }
+
+    [Fact]
+    public async Task Handle_ThroughVahedScopeBehavior_ClientSuppliedVahedCodeIsDiscarded_ServerValueIsWritten()
+    {
+        // End-to-end forgery-prevention proof: even when a "client" manages to populate
+        // command.VahedCode with a forged value before dispatch, running the command through
+        // VahedScopeBehavior — exactly as the real MediatR pipeline does — overwrites it
+        // unconditionally with ICurrentUser.VahedCode before the handler ever sees it.
+        var entity = ExistingEntity();
+        var repository = new Mock<IPayReciveHeadRepository>();
+        repository
+            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entity);
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
+        currentUser.SetupGet(u => u.VahedCode).Returns("0009");
+        var handler = new UpdatePayReciveHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdatePayReciveHeadCommand, Unit>(currentUser.Object);
+        var forgedCommand = ValidCommand() with { VahedCode = "9999" };
+
+        await behavior.Handle(
+            forgedCommand,
+            async ct =>
+            {
+                await handler.Handle(forgedCommand, ct);
+                return Unit.Value;
+            },
+            CancellationToken.None);
+
+        Assert.Equal("0009", entity.VAHEDCODE);
+        Assert.Equal("0009", forgedCommand.VahedCode);
     }
 }

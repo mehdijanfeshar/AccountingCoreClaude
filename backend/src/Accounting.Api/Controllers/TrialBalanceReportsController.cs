@@ -25,6 +25,15 @@ namespace Accounting.Api.Controllers;
 /// (<c>SetFallbackPolicy(RequireAuthenticatedUser)</c> in <c>Program.cs</c>), exactly like every
 /// other controller except <c>HealthController</c>.
 ///
+/// <b>All three actions also declare <c>403 Forbidden</c></b> (2026-09 IDOR closure) —
+/// <c>GetTrialBalance4/6/8Query</c> all implement <c>IVahedScopedQuery</c>, so
+/// <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c> → 403 (via
+/// <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable unit-scope claim.
+/// There is also no <c>vahedCode</c> query parameter on any of the three actions anymore — before
+/// this change, <c>vahedCode</c> was caller-supplied and this was the single largest data-leak
+/// surface in the project (an entire unit's trial balance reachable via one query-string
+/// parameter); the unit scope is now always the caller's own.
+///
 /// <b>No paging on any of the three actions</b> — a partial trial balance does not reconcile (its
 /// debtor/creditor totals would not actually balance against each other), so returning a "page" of
 /// rows would be actively misleading rather than merely incomplete. See
@@ -50,7 +59,6 @@ public sealed class TrialBalanceReportsController : ControllerBase
     /// <param name="year">Required <c>TB_VOUCHERSHEAD.YEAR</c> exact-match filter (4 chars).</param>
     /// <param name="fromDate">Optional Jalali <c>YYYYMMDD</c> start of the reporting period.</param>
     /// <param name="toDate">Optional Jalali <c>YYYYMMDD</c> end of the reporting period.</param>
-    /// <param name="vahedCode">Optional exact-match filter on <c>TB_VOUCHERSHEAD.VAHEDCODE</c>.</param>
     /// <param name="level">Which row of the coding hierarchy to aggregate by.</param>
     /// <param name="docLife">Optional inclusive lower bound on the raw <c>DOCLIFE</c> number (0..4).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -58,18 +66,18 @@ public sealed class TrialBalanceReportsController : ControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<TrialBalance4RowDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetTrialBalance4(
         [FromQuery] string year = "",
         [FromQuery] string? fromDate = null,
         [FromQuery] string? toDate = null,
-        [FromQuery] string? vahedCode = null,
         [FromQuery] TrialBalanceLevel level = default,
         [FromQuery] int? docLife = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetTrialBalance4Query(year, fromDate, toDate, vahedCode, level, docLife),
+            new GetTrialBalance4Query(year, fromDate, toDate, level, docLife),
             cancellationToken);
 
         return Ok(result);
@@ -84,7 +92,6 @@ public sealed class TrialBalanceReportsController : ControllerBase
     /// <param name="year">Required <c>TB_VOUCHERSHEAD.YEAR</c> exact-match filter (4 chars).</param>
     /// <param name="fromDate">Optional Jalali <c>YYYYMMDD</c> start of the reporting period.</param>
     /// <param name="toDate">Optional Jalali <c>YYYYMMDD</c> end of the reporting period.</param>
-    /// <param name="vahedCode">Optional exact-match filter on <c>TB_VOUCHERSHEAD.VAHEDCODE</c>.</param>
     /// <param name="level">Which row of the coding hierarchy to aggregate by.</param>
     /// <param name="docLife">Optional inclusive lower bound on the raw <c>DOCLIFE</c> number (0..4).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -92,18 +99,18 @@ public sealed class TrialBalanceReportsController : ControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<TrialBalance6RowDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetTrialBalance6(
         [FromQuery] string year = "",
         [FromQuery] string? fromDate = null,
         [FromQuery] string? toDate = null,
-        [FromQuery] string? vahedCode = null,
         [FromQuery] TrialBalanceLevel level = default,
         [FromQuery] int? docLife = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetTrialBalance6Query(year, fromDate, toDate, vahedCode, level, docLife),
+            new GetTrialBalance6Query(year, fromDate, toDate, level, docLife),
             cancellationToken);
 
         return Ok(result);
@@ -119,7 +126,6 @@ public sealed class TrialBalanceReportsController : ControllerBase
     /// <param name="year">Required <c>TB_VOUCHERSHEAD.YEAR</c> exact-match filter (4 chars).</param>
     /// <param name="fromDate">Optional Jalali <c>YYYYMMDD</c> start of the reporting period.</param>
     /// <param name="toDate">Optional Jalali <c>YYYYMMDD</c> end of the reporting period.</param>
-    /// <param name="vahedCode">Optional exact-match filter on <c>TB_VOUCHERSHEAD.VAHEDCODE</c>.</param>
     /// <param name="level">Which row of the coding hierarchy to aggregate by.</param>
     /// <param name="docLife">Optional inclusive lower bound on the raw <c>DOCLIFE</c> number (0..4).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -127,18 +133,18 @@ public sealed class TrialBalanceReportsController : ControllerBase
     [ProducesResponseType(typeof(IReadOnlyList<TrialBalance8RowDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetTrialBalance8(
         [FromQuery] string year = "",
         [FromQuery] string? fromDate = null,
         [FromQuery] string? toDate = null,
-        [FromQuery] string? vahedCode = null,
         [FromQuery] TrialBalanceLevel level = default,
         [FromQuery] int? docLife = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetTrialBalance8Query(year, fromDate, toDate, vahedCode, level, docLife),
+            new GetTrialBalance8Query(year, fromDate, toDate, level, docLife),
             cancellationToken);
 
         return Ok(result);

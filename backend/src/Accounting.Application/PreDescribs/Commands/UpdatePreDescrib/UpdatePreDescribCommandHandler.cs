@@ -18,6 +18,12 @@ namespace Accounting.Application.PreDescribs.Commands.UpdatePreDescrib;
 /// <c>CHANGEUSERID</c>/<c>UPDATEDDATE</c> audit columns to stamp, and <c>ADDUSERID</c> is
 /// creation audit — immutable here, never re-set on Update. This is intentional, not an
 /// oversight.
+///
+/// <c>request.VahedCode</c> is likewise unforgeable, enforced one layer earlier: by the time
+/// this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler simply maps it onto
+/// <c>TB_PREDESCRIB.VAHEDCODE</c> at face value — see <c>UpdatePreDescribCommand</c> XML doc for
+/// the explicit scope note on what this does and does not cover.
 /// </summary>
 public sealed class UpdatePreDescribCommandHandler : IRequestHandler<UpdatePreDescribCommand>
 {

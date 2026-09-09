@@ -13,6 +13,12 @@ namespace Accounting.Application.IdentitySubGroups.Commands.UpdateIdentitySubGro
 /// row does not exist or is already soft-deleted (<c>ISDELETED</c> is non-nullable <c>bool</c>
 /// on this table). <c>CHANGEUSERID</c> is sourced from <see cref="ICurrentUser"/> — never from
 /// the request.
+///
+/// <c>request.VahedCode</c> is likewise unforgeable, enforced one layer earlier: by the time
+/// this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler simply maps it onto
+/// <c>TB_IDENTITYSUBGRP.VAHEDCODE</c> at face value — see <c>UpdateIdentitySubGroupCommand</c>
+/// XML doc for the explicit scope note on what this does and does not cover.
 /// </summary>
 public sealed class UpdateIdentitySubGroupCommandHandler : IRequestHandler<UpdateIdentitySubGroupCommand>
 {

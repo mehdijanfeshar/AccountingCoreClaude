@@ -11,6 +11,12 @@ namespace Accounting.Application.WorkShops.Commands.CreateWorkShop;
 /// <see cref="ICurrentUser"/> (the authenticated caller) — never from the request — so it
 /// cannot be forged by the client, even though the column itself is nullable in Legacy.
 ///
+/// <c>request.VahedCode</c> is equally unforgeable, just enforced one layer earlier: by the time
+/// this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler can trust the field at face value and
+/// simply map it onto <c>TB_WORKSHOP.VAHEDCODE</c> — it does not read <see cref="ICurrentUser"/>
+/// directly for this field the way it does for <c>ADDUSERID</c>.
+///
 /// <c>ID</c> is always generated application-side (<see cref="Guid.NewGuid"/>) — this table has
 /// no <c>sys_guid()</c> default in <c>LegacyDbContext</c>, but generating it here regardless
 /// keeps this handler symmetric with every other Create handler in the project and never relies

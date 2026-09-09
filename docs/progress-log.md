@@ -12,6 +12,9 @@
 
 ## ورودی‌ها
 
+- **2026-09-09** (فاز ۱۹، برنچ `EntityCRUD`، commit نشده): اعمال سراسری `VahedCode` سمت سرور با `VahedScopeBehavior` (MediatR pipeline) — نیمهٔ اول ریسک 🔴 #۱ (IDOR) بسته شد: ۳۸ Command + ۲۲ Query روی ۱۹ Entity + ۳ گزارش تراز. `GetById`/`Update`/`Delete` به تصمیم آگاهانهٔ صاحب پروژه باز ماند؛ `PersonAction` منتظر تصمیم کاربر دست‌نخورده ماند. جزئیات: `docs/phase-log.md` بخش «فاز ۱۹»؛ باگ 🔴 جدید `ValidationBehavior` و ۳ ریسک دیگر: `docs/open-decisions.md`.
+- **2026-09-09** (پاس `/code-review` مستقل فاز ۱۹، ۸ زاویهٔ موازی): ۳ اصلاح واقعی — `.NotEmpty()` جا‌افتاده در `ElamHead`، کامنت گمراه‌کننده «not dead code» در ۱۵ فایل `Update*Validator`، ادعای نادرست «نمی‌تواند منتقل کند» در `open-decisions.md`. **۲۲۳۴/۲۲۳۴ تست سبز.** جزئیات: `docs/phase-log.md` بخش «فاز ۱۹» §۱۱.
+
 - **2026-09-07** (ادامهٔ فاز ۱۸، پیش از commit): پاس `/code-review` ۲ یافته داد و همان‌جا رفع شد — `JOIN` غیرشرطی به `ak`/`ag` که می‌تونست ردیف معتبر رو از هر سه سطح گزارش بی‌صدا حذف کنه (به `LEFT JOIN` تبدیل شد)، و نقض مستندنشدهٔ قانون تیم #۲ (استثنای View حالا رسماً در `CLAUDE.md` ثبت شد). **۲۱۰۸/۲۱۰۸ همچنان سبز.** جزئیات: `docs/open-decisions.md`.
 - **2026-09-07** (ادامهٔ فاز ۱۸، پیش از commit): طبق تصمیم صریح صاحب پروژه، `FirstDebtor`/`FirstCreditor` (مانده اول دوره) یک‌طرفه (`Math.Max`) شدند، نه خام مثل فرمول مرجع. **۲۱۰۸/۲۱۰۸ سبز.** جزئیات: `docs/open-decisions.md`.
 - **2026-09-07** (فاز ۱۸، برنچ `EntityCRUD`، commit نشده): اولین گزارش‌های مالی — تراز آزمایشی ۴/۶/۸ ستونه، ۳ Endpoint `GET` روی `api/reports`، با اولین SQL خام پارامتری پروژه (چون `TYPECODE`/`DOCLIFE` با `bool?` قابل بیان نیستند). **۲۱۰۹/۲۱۰۹ سبز** (+۷۰). جزئیات: `docs/phase-log.md` بخش «فاز ۱۸»؛ ابهام باز «مانده اول دوره» و ۴ ریسک دیگر: `docs/open-decisions.md`.

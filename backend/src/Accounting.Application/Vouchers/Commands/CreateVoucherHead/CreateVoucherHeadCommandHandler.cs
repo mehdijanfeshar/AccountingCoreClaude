@@ -18,6 +18,16 @@ namespace Accounting.Application.Vouchers.Commands.CreateVoucherHead;
 /// from the request — so it cannot be forged by the client. <c>CREATEDDATE</c> is computed once
 /// (<c>now</c>) and reused for the head and every detail line, so they share one creation
 /// timestamp instead of drifting by however long line construction takes.
+///
+/// This handler just maps <see cref="CreateVoucherHeadCommand.VahedCode"/> onto the head — and,
+/// via <c>request.VahedCode</c>, onto every composite-created detail line — at face value; it
+/// does not read <see cref="ICurrentUser.VahedCode"/> directly. Forgery prevention (overwriting
+/// whatever the caller supplied with the authenticated caller's own unit code) is
+/// <c>VahedScopeBehavior</c>'s job, which runs before this handler for every
+/// <see cref="Accounting.Application.Common.Security.IVahedScopedCommand"/>. By the time
+/// <see cref="Handle"/> executes, <c>request.VahedCode</c> is already the server-assigned value,
+/// so mapping it onto both the head AND every detail line is exactly what closes IDOR risk #1 on
+/// this composite-create path.
 /// </summary>
 public sealed class CreateVoucherHeadCommandHandler : IRequestHandler<CreateVoucherHeadCommand, Guid>
 {

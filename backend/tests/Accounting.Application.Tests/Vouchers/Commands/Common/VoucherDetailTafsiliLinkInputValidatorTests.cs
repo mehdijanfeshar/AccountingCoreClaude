@@ -51,9 +51,11 @@ public sealed class VoucherDetailTafsiliLinkInputValidatorTests
         Radif: 1,
         Debtor: 1m,
         Creditor: null,
-        VahedCode: "0001",
         Year: "1405",
-        TafsiliLinks: links);
+        TafsiliLinks: links)
+    {
+        VahedCode = "0001",
+    };
 
     private static UpdateVoucherDetailCommand UpdateCommand(
         IReadOnlyList<VoucherDetailTafsiliLinkInput>? links) => new(
@@ -67,9 +69,11 @@ public sealed class VoucherDetailTafsiliLinkInputValidatorTests
         Radif: 1,
         Debtor: 1m,
         Creditor: null,
-        VahedCode: "0001",
         Year: "1405",
-        TafsiliLinks: links);
+        TafsiliLinks: links)
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void CreateValidator_NestedInvalidLink_FailsTheWholeCommand()

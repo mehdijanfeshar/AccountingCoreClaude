@@ -37,6 +37,15 @@ namespace Accounting.Api.Controllers;
 /// — <c>TB_PREDESCRIB</c> carries no UNIQUE constraint at all, so declaring 409 would be
 /// speculation about a constraint that does not exist (mirroring the recorded phase-10
 /// decision applied to <c>VoucherDetailsController</c>).
+///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> — <c>CreatePreDescribCommand</c>/<c>UpdatePreDescribCommand</c>/
+/// <c>GetPreDescribsQuery</c> all implement <c>IVahedScopedCommand</c>/<c>IVahedScopedQuery</c>,
+/// so <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c> → 403 (via
+/// <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable unit-scope claim.
+/// <see cref="GetById"/> does not opt in and never returns 403 for this reason — see
+/// <see cref="UpdatePreDescribCommand"/> XML doc for the explicit scope note on what closing this
+/// still leaves open.
 /// </summary>
 [ApiController]
 [Route("api/pre-describs")]
@@ -56,6 +65,7 @@ public sealed class PreDescribsController : ControllerBase
     [ProducesResponseType(typeof(CreatePreDescribResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
         [FromBody] CreatePreDescribCommand command,
@@ -76,6 +86,7 @@ public sealed class PreDescribsController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<PreDescribDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
@@ -113,6 +124,7 @@ public sealed class PreDescribsController : ControllerBase
     [ProducesResponseType(typeof(UpdatePreDescribResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Update(
@@ -124,7 +136,6 @@ public sealed class PreDescribsController : ControllerBase
             id,
             request.AccountId,
             request.Descrip,
-            request.VahedCode,
             request.FlagVoucher);
 
         await _mediator.Send(command, cancellationToken);
@@ -147,11 +158,12 @@ public sealed record UpdatePreDescribResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="PreDescribsController.Update"/>. Mirrors every field of
-/// <see cref="UpdatePreDescribCommand"/> except <c>Id</c>, which is bound from the route
-/// instead.
+/// <see cref="UpdatePreDescribCommand"/> except <c>Id</c> (bound from the route instead) and
+/// <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdatePreDescribCommand.VahedCode"/> XML doc — so it is not part of this request
+/// body at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdatePreDescribRequest(
     Guid? AccountId,
     string? Descrip,
-    string? VahedCode,
     bool? FlagVoucher);

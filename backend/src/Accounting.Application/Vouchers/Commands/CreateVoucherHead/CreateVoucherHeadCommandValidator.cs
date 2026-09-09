@@ -7,6 +7,12 @@ namespace Accounting.Application.Vouchers.Commands.CreateVoucherHead;
 /// <c>LegacyDbContext</c>. Per the recorded "Legacy fully replaces the rich model"
 /// architecture decision, accounting invariants (debit==credit balance, post-immutability,
 /// required-detail, etc.) were deliberately discarded and must NOT be re-created here.
+///
+/// The <c>RuleFor(x => x.VahedCode)</c> below is a deliberate second belt, not dead code: by the
+/// time this validator runs, <c>VahedScopeBehavior</c> (registered ahead of
+/// <c>ValidationBehavior</c> — see <c>DependencyInjection.cs</c>) has already overwritten
+/// <see cref="CreateVoucherHeadCommand.VahedCode"/> with the server-assigned value, so this rule
+/// now validates that value rather than anything the caller supplied.
 /// </summary>
 public sealed class CreateVoucherHeadCommandValidator : AbstractValidator<CreateVoucherHeadCommand>
 {

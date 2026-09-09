@@ -60,23 +60,30 @@ public sealed class VoucherHeadReadRepository : IVoucherHeadReadRepository
         int pageNumber,
         int pageSize,
         string? year,
-        string? vahedCode,
+        string vahedCode,
         CancellationToken cancellationToken = default)
     {
         // Logical delete filter: ISDELETED is bool? in Legacy, so both false and NULL mean
         // "not deleted" — only an explicit true excludes the row.
+        //
+        // VahedCode filter: deliberately unconditional — no "if (!string.IsNullOrEmpty(vahedCode))"
+        // guard. That exact conditional pattern used to live here and was precisely the IDOR hole
+        // CLAUDE.md risk #1 describes: it let a caller with no usable unit scope see every unit's
+        // vouchers instead of none. VahedScopeBehavior guarantees vahedCode is always a real,
+        // non-empty value here, so no such guard is needed — and adding one back would silently
+        // reopen the hole for any future caller path that manages to reach this method with an
+        // empty string. Mirrors WorkShopReadRepository.GetPagedAsync exactly.
+        //
+        // Also deliberately exact-equality only (never "|| v.VAHEDCODE == null"): rows with
+        // VAHEDCODE IS NULL are fail-closed — invisible to every caller, not just callers outside
+        // the row's unit — per explicit project-owner decision.
         var query = _dbContext.TB_VOUCHERSHEADs
             .AsNoTracking()
-            .Where(v => v.ISDELETED != true);
+            .Where(v => v.ISDELETED != true && v.VAHEDCODE == vahedCode);
 
         if (!string.IsNullOrEmpty(year))
         {
             query = query.Where(v => v.YEAR == year);
-        }
-
-        if (!string.IsNullOrEmpty(vahedCode))
-        {
-            query = query.Where(v => v.VAHEDCODE == vahedCode);
         }
 
         var totalCount = await query.CountAsync(cancellationToken);

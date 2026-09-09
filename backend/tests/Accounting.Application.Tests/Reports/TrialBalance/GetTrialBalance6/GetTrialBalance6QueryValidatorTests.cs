@@ -11,9 +11,11 @@ public sealed class GetTrialBalance6QueryValidatorTests
         Year: "1405",
         FromDate: "14050101",
         ToDate: "14051230",
-        VahedCode: "0001",
         Level: TrialBalanceLevel.Kol,
-        DocLife: 2);
+        DocLife: 2)
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_ValidQuery_Passes()
@@ -94,6 +96,21 @@ public sealed class GetTrialBalance6QueryValidatorTests
     public void Validate_DocLifeNull_Passes()
     {
         var result = _validator.Validate(ValidQuery() with { DocLife = null });
+
+        Assert.True(result.IsValid);
+    }
+
+    /// <summary>
+    /// VahedCode is deliberately not exercised by a dedicated length/emptiness rule here anymore:
+    /// it is no longer optional caller input (removed from the positional parameter list entirely
+    /// — see <see cref="GetTrialBalance6Query.VahedCode"/>), and this validator carries no rule
+    /// for it because it is always server-assigned by <c>VahedScopeBehavior</c> before this
+    /// validator ever runs.
+    /// </summary>
+    [Fact]
+    public void Validate_ServerAssignedVahedCode_IsNotValidatedHere()
+    {
+        var result = _validator.Validate(ValidQuery() with { VahedCode = "0009" });
 
         Assert.True(result.IsValid);
     }

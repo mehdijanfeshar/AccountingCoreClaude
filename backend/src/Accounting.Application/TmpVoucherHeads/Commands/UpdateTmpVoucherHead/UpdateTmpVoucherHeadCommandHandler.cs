@@ -20,6 +20,12 @@ namespace Accounting.Application.TmpVoucherHeads.Commands.UpdateTmpVoucherHead;
 ///
 /// ⚠️ HEAD ONLY — no <c>TB_TMP_VOUCHERSDETAIL</c> row is ever touched here. See
 /// <see cref="UpdateTmpVoucherHeadCommand"/> XML doc.
+///
+/// <c>request.VahedCode</c> is likewise unforgeable, enforced one layer earlier: by the time
+/// this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler simply maps it onto
+/// <c>TB_TMP_VOUCHERHEAD.VAHEDCODE</c> at face value — see <c>UpdateTmpVoucherHeadCommand</c> XML
+/// doc for the explicit scope note on what this does and does not cover.
 /// </summary>
 public sealed class UpdateTmpVoucherHeadCommandHandler : IRequestHandler<UpdateTmpVoucherHeadCommand>
 {

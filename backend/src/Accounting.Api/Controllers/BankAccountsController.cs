@@ -26,6 +26,15 @@ namespace Accounting.Api.Controllers;
 /// <c>[AllowAnonymous]</c>, so it falls under the API-wide fallback policy
 /// (<c>SetFallbackPolicy(RequireAuthenticatedUser)</c> in <c>Program.cs</c>).
 ///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> — <c>CreateBankAccountCommand</c>/<c>UpdateBankAccountCommand</c>/
+/// <c>GetBankAccountsQuery</c> all implement <c>IVahedScopedCommand</c>/<c>IVahedScopedQuery</c>,
+/// so <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c> → 403 (via
+/// <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable unit-scope claim.
+/// <see cref="GetById"/>/<see cref="Delete"/> do not opt in and never return 403 for this reason —
+/// see <c>UpdateBankAccountCommand</c> XML doc for the explicit scope note on what closing this
+/// still leaves open.
+///
 /// <b>No PUT/DELETE anywhere in this controller — by explicit project-owner mandate, not an
 /// internal architecture choice.</b> Update/Delete are exposed as <c>POST</c> to
 /// <c>{id}/update</c> and <c>{id}/delete</c>, mirroring <see cref="WorkShopsController"/>.
@@ -68,6 +77,7 @@ public sealed class BankAccountsController : ControllerBase
     [ProducesResponseType(typeof(CreateBankAccountResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
@@ -89,6 +99,7 @@ public sealed class BankAccountsController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<BankAccountDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
@@ -126,6 +137,7 @@ public sealed class BankAccountsController : ControllerBase
     [ProducesResponseType(typeof(UpdateBankAccountResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -146,7 +158,6 @@ public sealed class BankAccountsController : ControllerBase
             request.AccountTypeId,
             request.AccountCodeId,
             request.CheckFile,
-            request.VahedCode,
             request.AccountOpeningDate);
 
         await _mediator.Send(command, cancellationToken);
@@ -196,8 +207,10 @@ public sealed record DeleteBankAccountResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="BankAccountsController.Update"/>. Mirrors every field of
-/// <see cref="UpdateBankAccountCommand"/> except <c>Id</c>, which is bound from the route
-/// instead.
+/// <see cref="UpdateBankAccountCommand"/> except <c>Id</c> (bound from the route instead) and
+/// <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdateBankAccountCommand.VahedCode"/> XML doc — so it is not part of this request
+/// body at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdateBankAccountRequest(
     string AccountNumber,
@@ -210,5 +223,4 @@ public sealed record UpdateBankAccountRequest(
     Guid? AccountTypeId,
     Guid? AccountCodeId,
     byte[]? CheckFile,
-    string? VahedCode,
     string? AccountOpeningDate);

@@ -15,6 +15,9 @@ namespace Accounting.Application.ElamHeads.Commands.UpdateElamHead;
 /// "not deleted" — only an explicit <see langword="true"/> triggers 404, consistent with the
 /// <c>ISDELETED != true</c> filter used by the read side. <c>CHANGEUSERID</c> is sourced from
 /// <see cref="ICurrentUser"/> (the authenticated caller) — never from the request.
+/// <c>request.VahedCode</c> is equally non-forgeable: by the time this handler runs,
+/// <c>VahedScopeBehavior</c> has already overwritten it with the authenticated caller's own unit
+/// code (see <see cref="UpdateElamHeadCommand.VahedCode"/>).
 ///
 /// ⚠️ HEAD ONLY — no <c>TB_ELAMDETAIL</c> row is ever touched here. See
 /// <see cref="UpdateElamHeadCommand"/> XML doc.

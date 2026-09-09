@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.ChequesIncorrents.Commands.CreateChequesIncorrent;
@@ -28,7 +30,6 @@ namespace Accounting.Application.ChequesIncorrents.Commands.CreateChequesIncorre
 /// <param name="RecivDate">Optional execution date (تاریخ اجرا), Legacy string format (max 8 chars).</param>
 /// <param name="AccountNumber">Current account number (شماره جاری) (required, max 13 chars).</param>
 /// <param name="Creditor">Creditor amount (بستانکار) — required, non-nullable <c>NUMBER(25)</c>; see the amount-type warning above.</param>
-/// <param name="VahedCode">Organizational unit code (کد واحد) (required, max 4 chars).</param>
 /// <param name="Year">Cheque usage year (سال استفاده از چک) (required, max 4 chars).</param>
 public sealed record CreateChequesIncorrentCommand(
     Guid? CheckId,
@@ -41,5 +42,16 @@ public sealed record CreateChequesIncorrentCommand(
     string? RecivDate,
     string AccountNumber,
     decimal Creditor,
-    string VahedCode,
-    string Year) : IRequest<Guid>;
+    string Year) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// Organizational unit code (کد واحد) (required, max 4 chars). Never bound from the request
+    /// body — <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and the
+    /// Swagger schema — and never trusted even if a caller manages to set it:
+    /// <c>VahedScopeBehavior</c> unconditionally overwrites this with the authenticated caller's
+    /// own unit code before the request reaches <c>CreateChequesIncorrentCommandHandler</c>. See
+    /// <see cref="IVahedScopedCommand"/> for the full mechanism.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

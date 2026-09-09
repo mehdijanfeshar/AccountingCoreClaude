@@ -20,6 +20,12 @@ namespace Accounting.Application.PayReciveHeads.Commands.UpdatePayReciveHead;
 /// <c>CHANGEUSERID</c> is sourced from <see cref="ICurrentUser"/> (the authenticated caller) —
 /// never from the request.
 ///
+/// <c>request.VahedCode</c> is likewise unforgeable, enforced one layer earlier: by the time
+/// this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler simply maps it onto
+/// <c>TB_PAYRECIVHEAD.VAHEDCODE</c> at face value — see <c>UpdatePayReciveHeadCommand</c> XML
+/// doc for the explicit scope note on what this does and does not cover.
+///
 /// ⚠️ HEAD ONLY — no <c>TB_PAYRECIVDETAIL</c> row is ever touched here. See
 /// <see cref="UpdatePayReciveHeadCommand"/> XML doc.
 /// </summary>

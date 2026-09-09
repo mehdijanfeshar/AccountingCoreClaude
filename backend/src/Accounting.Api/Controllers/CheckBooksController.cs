@@ -25,6 +25,15 @@ namespace Accounting.Api.Controllers;
 /// internal architecture choice.</b> Update/Delete are exposed as <c>POST</c> to
 /// <c>{id}/update</c> and <c>{id}/delete</c>, mirroring <see cref="WorkShopsController"/>.
 ///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> — <c>CreateCheckBookCommand</c>/<c>UpdateCheckBookCommand</c>/
+/// <c>GetCheckBooksQuery</c> all implement <c>IVahedScopedCommand</c>/<c>IVahedScopedQuery</c>, so
+/// <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c> → 403 (via
+/// <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable unit-scope claim.
+/// <see cref="GetById"/>/<see cref="Delete"/> do not opt in and never return 403 for this reason —
+/// see <c>UpdateCheckBookCommand</c> XML doc for the explicit scope note on what closing this
+/// still leaves open.
+///
 /// <b>409 Conflict IS declared on <see cref="Create"/>/<see cref="Update"/></b> —
 /// <c>TB_CHECKBOOK</c> carries a real UNIQUE constraint (<c>UK_CHECKBOOK</c> on
 /// <c>ACCOUNT_ID, FROMCHECKNUMBER, TOCHECKNUMBER, VAHEDCODE</c>), mapped centrally by
@@ -60,6 +69,7 @@ public sealed class CheckBooksController : ControllerBase
     [ProducesResponseType(typeof(CreateCheckBookResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
@@ -81,6 +91,7 @@ public sealed class CheckBooksController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<CheckBookDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
@@ -118,6 +129,7 @@ public sealed class CheckBooksController : ControllerBase
     [ProducesResponseType(typeof(UpdateCheckBookResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -134,7 +146,6 @@ public sealed class CheckBooksController : ControllerBase
             request.FromCheckNumber,
             request.ToCheckNumber,
             request.CheckTypeId,
-            request.VahedCode,
             request.CheckBookType,
             request.Serial);
 
@@ -185,7 +196,10 @@ public sealed record DeleteCheckBookResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="CheckBooksController.Update"/>. Mirrors every field of
-/// <see cref="UpdateCheckBookCommand"/> except <c>Id</c>, which is bound from the route instead.
+/// <see cref="UpdateCheckBookCommand"/> except <c>Id</c> (bound from the route instead) and
+/// <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdateCheckBookCommand.VahedCode"/> XML doc — so it is not part of this request
+/// body at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdateCheckBookRequest(
     Guid AccountId,
@@ -194,6 +208,5 @@ public sealed record UpdateCheckBookRequest(
     string FromCheckNumber,
     string ToCheckNumber,
     Guid? CheckTypeId,
-    string VahedCode,
     bool? CheckBookType,
     string? Serial);

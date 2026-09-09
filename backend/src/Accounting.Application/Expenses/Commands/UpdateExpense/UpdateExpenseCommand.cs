@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.Expenses.Commands.UpdateExpense;
@@ -15,6 +17,13 @@ namespace Accounting.Application.Expenses.Commands.UpdateExpense;
 /// <see cref="Accounting.Application.Expenses.Commands.CreateExpense.CreateExpenseCommand"/>; see
 /// that command's XML doc for the misspelled-table-name/naming-normalisation note and the
 /// FK/UNIQUE flags.
+///
+/// ⚠️ <b>Scope note:</b> <see cref="IVahedScopedCommand"/> here only guarantees that
+/// <c>VAHEDCODE</c> cannot be *changed* to an arbitrary unit by the caller. It does
+/// <b>not</b> check whether the caller is allowed to touch this particular row in the first
+/// place — record-ownership verification on Update is explicitly out of scope for this pass, by
+/// project-owner decision. The IDOR risk on direct-by-id access therefore remains open for
+/// Update; only the "what unit does this row end up in" half of the problem is closed here.
 /// </summary>
 public sealed record UpdateExpenseCommand(
     Guid Id,
@@ -23,5 +32,16 @@ public sealed record UpdateExpenseCommand(
     string? Description,
     decimal? DefaultAmount,
     Guid? ExpenseGroupId,
-    Guid? AccountCodeId,
-    string? VahedCode) : IRequest;
+    Guid? AccountCodeId) : IRequest, IVahedScopedCommand
+{
+    /// <summary>
+    /// Organizational unit code (max 4 chars). Never bound from the request body —
+    /// <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and the Swagger
+    /// schema — and never trusted even if a caller manages to set it: <c>VahedScopeBehavior</c>
+    /// unconditionally overwrites this with the authenticated caller's own unit code before the
+    /// request reaches <c>UpdateExpenseCommandHandler</c>. See <see cref="IVahedScopedCommand"/>
+    /// for the full mechanism, and the scope note above for what this does <b>not</b> cover.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

@@ -10,8 +10,10 @@ public sealed class GetVoucherDetailsQueryValidatorTests
         PageNumber: 1,
         PageSize: 20,
         VoucherHeadId: Guid.NewGuid(),
-        Year: "1405",
-        VahedCode: "0001");
+        Year: "1405")
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_ValidQuery_Passes()
@@ -24,7 +26,7 @@ public sealed class GetVoucherDetailsQueryValidatorTests
     [Fact]
     public void Validate_NullFilters_Pass()
     {
-        var result = _validator.Validate(ValidQuery() with { VoucherHeadId = null, Year = null, VahedCode = null });
+        var result = _validator.Validate(ValidQuery() with { VoucherHeadId = null, Year = null });
 
         Assert.True(result.IsValid);
     }
@@ -117,19 +119,17 @@ public sealed class GetVoucherDetailsQueryValidatorTests
         Assert.True(result.IsValid);
     }
 
+    /// <summary>
+    /// VahedCode is deliberately not exercised here anymore: it is no longer optional caller
+    /// input (removed from the positional parameter list entirely — see
+    /// <see cref="GetVoucherDetailsQuery.VahedCode"/>), and the validator carries no rule for it
+    /// (mirrors <c>GetVoucherHeadsQueryValidator</c>) because it is always server-assigned by
+    /// <c>VahedScopeBehavior</c> before this validator ever runs.
+    /// </summary>
     [Fact]
-    public void Validate_VahedCodeOverMaxLength_Fails()
+    public void Validate_ServerAssignedVahedCode_IsNotValidatedHere()
     {
-        var result = _validator.Validate(ValidQuery() with { VahedCode = "00011" });
-
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == nameof(GetVoucherDetailsQuery.VahedCode));
-    }
-
-    [Fact]
-    public void Validate_VahedCodeAtMaxLength_Passes()
-    {
-        var result = _validator.Validate(ValidQuery() with { VahedCode = "0001" });
+        var result = _validator.Validate(ValidQuery() with { VahedCode = "0009" });
 
         Assert.True(result.IsValid);
     }

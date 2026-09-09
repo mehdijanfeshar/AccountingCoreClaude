@@ -18,6 +18,15 @@ namespace Accounting.Api.Controllers;
 /// Every action below also implicitly returns <b>401 Unauthorized</b> via the API-wide fallback
 /// policy (<c>SetFallbackPolicy(RequireAuthenticatedUser)</c> in <c>Program.cs</c>).
 ///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> — <c>CreateBillLogCommand</c>/<c>UpdateBillLogCommand</c>/
+/// <c>GetBillLogsQuery</c> all implement <c>IVahedScopedCommand</c>/<c>IVahedScopedQuery</c>, so
+/// <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c> → 403 (via
+/// <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable unit-scope claim.
+/// <see cref="GetById"/>/<see cref="Delete"/> do not opt in and never return 403 for this reason —
+/// see <c>UpdateBillLogCommand</c> XML doc for the explicit scope note on what closing this still
+/// leaves open.
+///
 /// <b>No PUT/DELETE anywhere in this controller — by explicit project-owner mandate</b>, exactly
 /// as in <see cref="AccountCodesController"/>: update/delete are exposed as <c>POST</c> to
 /// <c>{id}/update</c> and <c>{id}/delete</c>.
@@ -45,6 +54,7 @@ public sealed class BillLogsController : ControllerBase
     [ProducesResponseType(typeof(CreateBillLogResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
         [FromBody] CreateBillLogCommand command,
@@ -65,6 +75,7 @@ public sealed class BillLogsController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<BillLogDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
@@ -101,6 +112,7 @@ public sealed class BillLogsController : ControllerBase
     [ProducesResponseType(typeof(UpdateBillLogResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Update(
@@ -112,7 +124,6 @@ public sealed class BillLogsController : ControllerBase
             id,
             request.LogDesc,
             request.LogDate,
-            request.VahedCode,
             request.Year);
 
         await _mediator.Send(command, cancellationToken);
@@ -160,10 +171,12 @@ public sealed record DeleteBillLogResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="BillLogsController.Update"/>. Mirrors every field of
-/// <see cref="UpdateBillLogCommand"/> except <c>Id</c>, which is bound from the route instead.
+/// <see cref="UpdateBillLogCommand"/> except <c>Id</c> (bound from the route instead) and
+/// <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdateBillLogCommand.VahedCode"/> XML doc — so it is not part of this request body
+/// at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdateBillLogRequest(
     string? LogDesc,
     string? LogDate,
-    string VahedCode,
     string Year);

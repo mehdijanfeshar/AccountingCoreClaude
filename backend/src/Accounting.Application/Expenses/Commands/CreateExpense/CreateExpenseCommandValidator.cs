@@ -8,6 +8,12 @@ namespace Accounting.Application.Expenses.Commands.CreateExpense;
 /// decision, accounting invariants must NOT be re-created here. No rule is applied to
 /// <see cref="CreateExpenseCommand.ExpenseGroupId"/>/<see cref="CreateExpenseCommand.AccountCodeId"/>
 /// beyond nullability, since both are genuinely optional.
+///
+/// The <c>RuleFor(x => x.VahedCode)</c> below is a deliberate second belt, not dead code: by the
+/// time this validator runs, <c>VahedScopeBehavior</c> (registered ahead of
+/// <c>ValidationBehavior</c> — see <c>DependencyInjection.cs</c>) has already overwritten
+/// <see cref="CreateExpenseCommand.VahedCode"/> with the server-assigned value, so this rule now
+/// validates that value rather than anything the caller supplied.
 /// </summary>
 public sealed class CreateExpenseCommandValidator : AbstractValidator<CreateExpenseCommand>
 {
@@ -25,6 +31,7 @@ public sealed class CreateExpenseCommandValidator : AbstractValidator<CreateExpe
             .MaximumLength(100);
 
         RuleFor(x => x.VahedCode)
+            .NotEmpty()
             .MaximumLength(4);
     }
 }

@@ -16,7 +16,8 @@ namespace Accounting.Infrastructure.Repositories;
 /// read from a Read Model" rule documented on <see cref="AccountCodeReadRepository"/>.
 ///
 /// Neither query below applies an <c>ISDELETED</c> filter: <c>TB_PREDESCRIB</c> has no such
-/// column at all (unlike every other entity in this project so far).
+/// column at all (unlike every other entity in this project so far). <see cref="GetPagedAsync"/>
+/// DOES apply the standard <c>VAHEDCODE</c> unit-scope filter.
 /// </summary>
 public sealed class PreDescribReadRepository : IPreDescribReadRepository
 {
@@ -43,10 +44,24 @@ public sealed class PreDescribReadRepository : IPreDescribReadRepository
     public async Task<PagedResult<PreDescribDto>> GetPagedAsync(
         int pageNumber,
         int pageSize,
+        string vahedCode,
         CancellationToken cancellationToken = default)
     {
         // No ISDELETED filter here — the column does not exist on this table.
-        var query = _dbContext.TB_PREDESCRIBs.AsNoTracking();
+        //
+        // VahedCode filter: deliberately unconditional — no "if (!string.IsNullOrEmpty(vahedCode))"
+        // guard. That exact conditional pattern is precisely the IDOR hole CLAUDE.md risk #1
+        // describes: it lets a caller with no usable unit scope see every unit's rows instead of
+        // none. VahedScopeBehavior guarantees vahedCode is always a real, non-empty value here, so
+        // no such guard is needed — and adding one back would silently reopen the hole for any
+        // future caller path that manages to reach this method with an empty string.
+        //
+        // Also deliberately exact-equality only (never "|| p.VAHEDCODE == null"): rows with
+        // VAHEDCODE IS NULL are fail-closed — invisible to every caller, not just callers outside
+        // the row's unit — per explicit project-owner decision.
+        var query = _dbContext.TB_PREDESCRIBs
+            .AsNoTracking()
+            .Where(p => p.VAHEDCODE == vahedCode);
 
         var totalCount = await query.CountAsync(cancellationToken);
 

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.IdentitySubGroups.Commands.CreateIdentitySubGroup;
@@ -38,9 +40,6 @@ namespace Accounting.Application.IdentitySubGroups.Commands.CreateIdentitySubGro
 /// the current Domain entity declares it; fixing the underlying CLR type is a separate,
 /// out-of-scope task and was deliberately not attempted here.
 /// </param>
-/// <param name="VahedCode">
-/// VAHEDCODE column (max 4 chars, required — participates in <c>AK_AK_IDENTYSUBGRPS_IDENTYSU</c>).
-/// </param>
 /// <param name="Year">
 /// YEAR column (max 4 chars, required fiscal year — participates in
 /// <c>AK_AK_IDENTYSUBGRPS_IDENTYSU</c>).
@@ -56,6 +55,18 @@ public sealed record CreateIdentitySubGroupCommand(
     bool SumFlag,
     bool Fixed,
     bool? SubgrpsType,
-    string VahedCode,
     string Year,
-    string? IdentySubGroupsCode) : IRequest<Guid>;
+    string? IdentySubGroupsCode) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// VAHEDCODE column (max 4 chars, required — participates in
+    /// <c>AK_AK_IDENTYSUBGRPS_IDENTYSU</c>). Never bound from the request body —
+    /// <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and the Swagger
+    /// schema — and never trusted even if a caller manages to set it: <c>VahedScopeBehavior</c>
+    /// unconditionally overwrites this with the authenticated caller's own unit code before the
+    /// request reaches <c>CreateIdentitySubGroupCommandHandler</c>. See
+    /// <see cref="IVahedScopedCommand"/> for the full mechanism.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

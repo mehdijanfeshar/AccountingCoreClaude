@@ -12,8 +12,10 @@ public sealed class CreateRevolvingFundCommandValidatorTests
         Description: "توضیحات",
         DefaultAmount: 1000000m,
         AccountCodeId: Guid.NewGuid(),
-        VahedCode: "0001",
-        Year: "1404");
+        Year: "1404")
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -26,16 +28,30 @@ public sealed class CreateRevolvingFundCommandValidatorTests
     [Fact]
     public void Validate_NullOptionalFields_Passes()
     {
+        // VahedCode is deliberately excluded here: it is now always server-assigned by
+        // VahedScopeBehavior and is never nullable/omittable, unlike the genuinely optional
+        // fields below.
         var result = _validator.Validate(ValidCommand() with
         {
             Description = null,
             DefaultAmount = null,
             AccountCodeId = null,
-            VahedCode = null,
             Year = null,
         });
 
         Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_EmptyVahedCode_Fails()
+    {
+        // VahedCode is now always server-assigned by VahedScopeBehavior before this validator
+        // runs, so it can never legitimately be empty — NotEmpty is the correct second belt even
+        // though the underlying VAHEDCODE column is nullable at the Legacy schema level.
+        var result = _validator.Validate(ValidCommand() with { VahedCode = string.Empty });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateRevolvingFundCommand.VahedCode));
     }
 
     [Fact]

@@ -18,5 +18,5 @@ public sealed class GetElamHeadsQueryHandler : IRequestHandler<GetElamHeadsQuery
     }
 
     public Task<PagedResult<ElamHeadDto>> Handle(GetElamHeadsQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, cancellationToken);
+        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, request.VahedCode, cancellationToken);
 }

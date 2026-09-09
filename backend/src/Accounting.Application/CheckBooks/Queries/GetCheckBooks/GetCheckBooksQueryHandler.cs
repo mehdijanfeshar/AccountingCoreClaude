@@ -18,5 +18,5 @@ public sealed class GetCheckBooksQueryHandler : IRequestHandler<GetCheckBooksQue
     }
 
     public Task<PagedResult<CheckBookDto>> Handle(GetCheckBooksQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, cancellationToken);
+        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, request.VahedCode, cancellationToken);
 }

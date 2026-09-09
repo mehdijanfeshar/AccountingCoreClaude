@@ -9,6 +9,12 @@ namespace Accounting.Application.ChequesIncorrents.Commands.CreateChequesIncorre
 /// carries no rule beyond nullability since it is genuinely optional — see the command XML doc
 /// for the no-FK warning. <see cref="CreateChequesIncorrentCommand.Creditor"/> carries no
 /// range/precision rule — see the command XML doc for the amount-type open question.
+///
+/// The <c>RuleFor(x => x.VahedCode)</c> below is a deliberate second belt, not dead code: by the
+/// time this validator runs, <c>VahedScopeBehavior</c> (registered ahead of
+/// <c>ValidationBehavior</c> — see <c>DependencyInjection.cs</c>) has already overwritten
+/// <see cref="CreateChequesIncorrentCommand.VahedCode"/> with the server-assigned value, so this
+/// rule now validates that value rather than anything the caller supplied.
 /// </summary>
 public sealed class CreateChequesIncorrentCommandValidator : AbstractValidator<CreateChequesIncorrentCommand>
 {

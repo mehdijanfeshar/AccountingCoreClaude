@@ -15,6 +15,12 @@ namespace Accounting.Application.WorkShops.Commands.UpdateWorkShop;
 /// "not deleted" — only an explicit <see langword="true"/> triggers 404, consistent with the
 /// <c>ISDELETED != true</c> filter used by the read side. <c>CHANGEUSERID</c> is sourced from
 /// <see cref="ICurrentUser"/> (the authenticated caller) — never from the request.
+///
+/// <c>request.VahedCode</c> is likewise unforgeable, enforced one layer earlier: by the time
+/// this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler simply maps it onto
+/// <c>TB_WORKSHOP.VAHEDCODE</c> at face value — see <c>UpdateWorkShopCommand</c> XML doc for the
+/// explicit scope note on what this does and does not cover.
 /// </summary>
 public sealed class UpdateWorkShopCommandHandler : IRequestHandler<UpdateWorkShopCommand>
 {

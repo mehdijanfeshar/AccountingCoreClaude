@@ -59,6 +59,21 @@ namespace Accounting.Infrastructure.Repositories;
 /// <c>DATE</c>, precisely so this stays a string comparison and never triggers an implicit
 /// string-to-date conversion (which would fail or silently misbehave against this format).
 ///
+/// <b>VahedCode — fail-closed, unconditional, no longer an optional filter (2026-09 IDOR
+/// closure).</b> <c>h.VAHEDCODE = :vahedCode</c> is a plain, unconditional equality — there is
+/// deliberately no <c>(:vahedCode IS NULL OR h.VAHEDCODE = :vahedCode)</c> escape hatch, which is
+/// exactly what this predicate used to be before this codebase closed IDOR risk #1 (CLAUDE.md) on
+/// the trial balance reports. <c>GetTrialBalance4/6/8Query</c> all implement
+/// <see cref="Accounting.Application.Common.Security.IVahedScopedQuery"/>, so <c>VahedScopeBehavior</c>
+/// guarantees <paramref name="vahedCode"/> is always a real, non-empty, server-assigned value by
+/// the time this method runs — an <c>IS NULL</c> branch would only ever exist to (re-)open the
+/// hole for some future caller path that manages to reach this method with an empty string. A
+/// head with <c>VAHEDCODE IS NULL</c> is therefore invisible to every caller's trial balance, not
+/// just callers outside that head's unit — the same fail-closed design already applied to
+/// <c>VoucherHeadReadRepository</c>/<c>VoucherDetailReadRepository</c>. <c>vahedCode</c> is still
+/// bound as an <see cref="OracleParameter"/>, never string-concatenated into the SQL text — this
+/// change only removed the <c>IS NULL</c> branch of the predicate, not the parameterization.
+///
 /// <b>Deliberate difference from the reference project — two bugs fixed here.</b>
 /// <list type="number">
 /// <item><description>The reference applies <c>h.isdeleted = 0</c> only in its moin/kol report
@@ -142,7 +157,7 @@ public sealed class TrialBalanceReadRepository : ITrialBalanceReadRepository
         string year,
         string? fromDate,
         string? toDate,
-        string? vahedCode,
+        string vahedCode,
         int? docLife,
         CancellationToken cancellationToken = default)
     {
@@ -172,7 +187,7 @@ public sealed class TrialBalanceReadRepository : ITrialBalanceReadRepository
               AND h.YEAR = :year
               AND (h.ISDELETED IS NULL OR h.ISDELETED = 0)
               AND (d.ISDELETED IS NULL OR d.ISDELETED = 0)
-              AND (:vahedCode IS NULL OR h.VAHEDCODE = :vahedCode)
+              AND h.VAHEDCODE = :vahedCode
               AND (:docLife   IS NULL OR h.DOCLIFE  >= :docLife)
             GROUP BY {codeExpr}
             ORDER BY {codeExpr}
@@ -181,7 +196,7 @@ public sealed class TrialBalanceReadRepository : ITrialBalanceReadRepository
         var parameters = new OracleParameter[]
         {
             new() { ParameterName = "year", OracleDbType = OracleDbType.Char, Value = year },
-            new() { ParameterName = "vahedCode", OracleDbType = OracleDbType.Varchar2, Value = (object?)vahedCode ?? DBNull.Value },
+            new() { ParameterName = "vahedCode", OracleDbType = OracleDbType.Varchar2, Value = vahedCode },
             new() { ParameterName = "docLife", OracleDbType = OracleDbType.Int32, Value = (object?)docLife ?? DBNull.Value },
             new() { ParameterName = "fromDate", OracleDbType = OracleDbType.Varchar2, Value = (object?)fromDate ?? DBNull.Value },
             new() { ParameterName = "toDate", OracleDbType = OracleDbType.Varchar2, Value = (object?)toDate ?? DBNull.Value },

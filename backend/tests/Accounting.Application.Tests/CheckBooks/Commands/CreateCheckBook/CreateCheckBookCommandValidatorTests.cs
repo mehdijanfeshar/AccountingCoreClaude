@@ -13,9 +13,11 @@ public sealed class CreateCheckBookCommandValidatorTests
         FromCheckNumber: "100000",
         ToCheckNumber: "100050",
         CheckTypeId: Guid.NewGuid(),
-        VahedCode: "0001",
         CheckBookType: true,
-        Serial: "SER0001");
+        Serial: "SER0001")
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.ChequeTypes.Commands.CreateChequeType;
@@ -58,7 +60,6 @@ namespace Accounting.Application.ChequeTypes.Commands.CreateChequeType;
 /// <param name="PrinterMargineLeft">PRINTER_MARGINE_LEFT column (<c>NUMBER(3)</c>, mapped as <c>byte?</c>).</param>
 /// <param name="PrinterType">PRINTER_TYPE column (max 100 chars, optional).</param>
 /// <param name="Year">YEAR column (max 4 chars, fixed-length, required fiscal year).</param>
-/// <param name="VahedCode">VAHEDCODE column (max 4 chars, required organizational unit code).</param>
 public sealed record CreateChequeTypeCommand(
     string? ChequeTypeTitle,
     byte? ChequeWidth,
@@ -99,5 +100,16 @@ public sealed record CreateChequeTypeCommand(
     byte? PrinterMargineTop,
     byte? PrinterMargineLeft,
     string? PrinterType,
-    string Year,
-    string VahedCode) : IRequest<Guid>;
+    string Year) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// Organizational unit code (required, max 4 chars). Never bound from the request body —
+    /// <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and the Swagger
+    /// schema — and never trusted even if a caller manages to set it: <c>VahedScopeBehavior</c>
+    /// unconditionally overwrites this with the authenticated caller's own unit code before the
+    /// request reaches <c>CreateChequeTypeCommandHandler</c>. See <see cref="IVahedScopedCommand"/>
+    /// for the full mechanism.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

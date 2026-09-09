@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.CreateVoucherDetail;
@@ -19,8 +20,10 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         Radif: 1,
         Debtor: 1000m,
         Creditor: null,
-        VahedCode: "0001",
-        Year: "1405");
+        Year: "1405")
+    {
+        VahedCode = "0001",
+    };
 
     private static TB_VOUCHERSHEAD ExistingHead(Guid id, bool? isDeleted = false) => new()
     {
@@ -190,5 +193,63 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         headRepository.Verify(r => r.GetForUpdateAsync(headId, token), Times.Once);
         detailRepository.Verify(r => r.AddAsync(It.IsAny<TB_VOUCHERSDETAIL>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_MapsVahedCodeFromCommandAtFaceValue()
+    {
+        // The handler itself just maps request.VahedCode onto the entity — it does not read
+        // ICurrentUser.VahedCode directly. Forgery prevention is VahedScopeBehavior's job (see
+        // the dedicated pipeline test below); this test only proves the mapping is faithful.
+        var headId = Guid.NewGuid();
+        var headRepository = new Mock<IVoucherHeadRepository>();
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
+        var detailRepository = new Mock<IVoucherDetailRepository>();
+        TB_VOUCHERSDETAIL? staged = null;
+        detailRepository
+            .Setup(r => r.AddAsync(It.IsAny<TB_VOUCHERSDETAIL>(), It.IsAny<CancellationToken>()))
+            .Callback<TB_VOUCHERSDETAIL, CancellationToken>((entity, _) => staged = entity)
+            .Returns(Task.CompletedTask);
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
+
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var command = ValidCommand(headId) with { VahedCode = "0009" };
+
+        await handler.Handle(command, CancellationToken.None);
+
+        Assert.NotNull(staged);
+        Assert.Equal("0009", staged!.VAHEDCODE);
+    }
+
+    [Fact]
+    public async Task Handle_ThroughVahedScopeBehavior_ClientSuppliedVahedCodeIsDiscarded_ServerValueIsWritten()
+    {
+        // End-to-end forgery-prevention proof: even when a "client" manages to populate
+        // command.VahedCode with a forged value before dispatch, running the command through
+        // VahedScopeBehavior — exactly as the real MediatR pipeline does — overwrites it
+        // unconditionally with ICurrentUser.VahedCode before the handler ever sees it.
+        var headId = Guid.NewGuid();
+        var headRepository = new Mock<IVoucherHeadRepository>();
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
+        var detailRepository = new Mock<IVoucherDetailRepository>();
+        TB_VOUCHERSDETAIL? staged = null;
+        detailRepository
+            .Setup(r => r.AddAsync(It.IsAny<TB_VOUCHERSDETAIL>(), It.IsAny<CancellationToken>()))
+            .Callback<TB_VOUCHERSDETAIL, CancellationToken>((entity, _) => staged = entity)
+            .Returns(Task.CompletedTask);
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
+        currentUser.SetupGet(u => u.VahedCode).Returns("0009");
+
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateVoucherDetailCommand, Guid>(currentUser.Object);
+        var forgedCommand = ValidCommand(headId) with { VahedCode = "9999" };
+
+        await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);
+
+        Assert.NotNull(staged);
+        Assert.Equal("0009", staged!.VAHEDCODE);
+        Assert.Equal("0009", forgedCommand.VahedCode);
     }
 }

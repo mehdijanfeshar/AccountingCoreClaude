@@ -18,6 +18,12 @@ namespace Accounting.Application.PayReciveHeads.Commands.CreatePayReciveHead;
 /// keeps this handler symmetric with every other Create handler in the project and never relies
 /// on an Oracle DEFAULT.
 ///
+/// <c>request.VahedCode</c> is equally unforgeable, just enforced one layer earlier: by the time
+/// this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler can trust the field at face value and
+/// simply map it onto <c>TB_PAYRECIVHEAD.VAHEDCODE</c> — it does not read
+/// <see cref="ICurrentUser"/> directly for this field the way it does for <c>ADDUSERID</c>.
+///
 /// ⚠️ HEAD ONLY — no <c>TB_PAYRECIVDETAIL</c> row is ever created here. See
 /// <see cref="CreatePayReciveHeadCommand"/> XML doc.
 /// </summary>

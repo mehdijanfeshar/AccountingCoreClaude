@@ -12,8 +12,10 @@ public sealed class UpdateReceiptCommandValidatorTests
         ReceiptDate: "14030101",
         ReceiptNo: "R0000002",
         DateRsid: "14030102",
-        VahedCode: "0002",
-        Year: "1403");
+        Year: "1403")
+    {
+        VahedCode = "0002",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()

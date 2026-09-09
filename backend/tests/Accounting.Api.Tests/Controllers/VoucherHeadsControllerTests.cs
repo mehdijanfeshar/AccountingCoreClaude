@@ -27,13 +27,15 @@ public sealed class VoucherHeadsControllerTests
         Apendix: null,
         SystemTypeId: null,
         FlagState: null,
-        VahedCode: "0001",
         Year: "1403",
         IsAutomatic: false,
         SndVahedCode: null,
         ParentHeadId: null,
         AttachFileName: null,
-        AtfNum: null);
+        AtfNum: null)
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public async Task Create_ReturnsCreatedAtActionWithGeneratedIdInBodyAndRouteValues()
@@ -85,8 +87,11 @@ public sealed class VoucherHeadsControllerTests
     }
 
     [Fact]
-    public async Task GetList_PassesPageNumberPageSizeYearAndVahedCodeThroughToQueryUnchanged_AndReturns200WithPagedResult()
+    public async Task GetList_PassesPageNumberPageSizeAndYearThroughToQueryUnchanged_AndReturns200WithPagedResult()
     {
+        // No vahedCode parameter anymore — GetVoucherHeadsQuery implements IVahedScopedQuery, so
+        // the unit scope is always server-assigned (by VahedScopeBehavior, not exercised in this
+        // pure controller-layer test where IMediator is mocked).
         var mediator = new Mock<IMediator>();
         var pagedResult = new PagedResult<VoucherHeadDto>
         {
@@ -109,14 +114,12 @@ public sealed class VoucherHeadsControllerTests
             pageNumber: 2,
             pageSize: 10,
             year: "1403",
-            vahedCode: "0001",
             CancellationToken.None);
 
         Assert.NotNull(capturedQuery);
         Assert.Equal(2, capturedQuery!.PageNumber);
         Assert.Equal(10, capturedQuery.PageSize);
         Assert.Equal("1403", capturedQuery.Year);
-        Assert.Equal("0001", capturedQuery.VahedCode);
 
         var ok = Assert.IsType<OkObjectResult>(actionResult);
         Assert.Same(pagedResult, ok.Value);
@@ -135,16 +138,15 @@ public sealed class VoucherHeadsControllerTests
 
         var controller = new VoucherHeadsController(mediator.Object);
 
-        // Simulates the query string omitting pageNumber/pageSize/year/vahedCode — the C#
-        // compiler substitutes the action's own default parameter values, exactly as ASP.NET
-        // Core model binding would when the query string does not contain those keys.
+        // Simulates the query string omitting pageNumber/pageSize/year — the C# compiler
+        // substitutes the action's own default parameter values, exactly as ASP.NET Core model
+        // binding would when the query string does not contain those keys.
         await controller.GetList();
 
         Assert.NotNull(capturedQuery);
         Assert.Equal(1, capturedQuery!.PageNumber);
         Assert.Equal(20, capturedQuery.PageSize);
         Assert.Null(capturedQuery.Year);
-        Assert.Null(capturedQuery.VahedCode);
     }
 
     [Fact]
@@ -158,7 +160,7 @@ public sealed class VoucherHeadsControllerTests
         var controller = new VoucherHeadsController(mediator.Object);
         using var cts = new CancellationTokenSource();
 
-        await controller.GetList(1, 20, null, null, cts.Token);
+        await controller.GetList(1, 20, null, cts.Token);
 
         mediator.Verify(
             m => m.Send(It.IsAny<GetVoucherHeadsQuery>(), cts.Token),
@@ -251,7 +253,6 @@ public sealed class VoucherHeadsControllerTests
         Apendix: null,
         SystemTypeId: null,
         FlagState: null,
-        VahedCode: "0002",
         Year: "1404",
         IsAutomatic: true,
         SndVahedCode: null,

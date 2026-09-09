@@ -13,8 +13,10 @@ public sealed class UpdateExpenseCommandValidatorTests
         Description: "توضیحات جدید",
         DefaultAmount: 7500m,
         ExpenseGroupId: Guid.NewGuid(),
-        AccountCodeId: Guid.NewGuid(),
-        VahedCode: "0002");
+        AccountCodeId: Guid.NewGuid())
+    {
+        VahedCode = "0002",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -42,7 +44,6 @@ public sealed class UpdateExpenseCommandValidatorTests
             DefaultAmount = null,
             ExpenseGroupId = null,
             AccountCodeId = null,
-            VahedCode = null,
         };
 
         var result = _validator.Validate(command);
@@ -107,6 +108,15 @@ public sealed class UpdateExpenseCommandValidatorTests
     public void Validate_VahedCodeTooLong_Fails()
     {
         var result = _validator.Validate(ValidCommand() with { VahedCode = "00002" });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateExpenseCommand.VahedCode));
+    }
+
+    [Fact]
+    public void Validate_EmptyVahedCode_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { VahedCode = string.Empty });
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateExpenseCommand.VahedCode));

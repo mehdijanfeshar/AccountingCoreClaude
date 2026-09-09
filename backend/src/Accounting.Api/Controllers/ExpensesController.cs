@@ -42,6 +42,13 @@ namespace Accounting.Api.Controllers;
 ///
 /// ⚠️ Its child <c>TB_EXPENCE_LINK_TAFSILI</c> is permanently embedded per team rule — no
 /// repository, no cascade, and no independent write path for it exists anywhere in this project.
+///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> — <c>CreateExpenseCommand</c>/<c>UpdateExpenseCommand</c>/
+/// <c>GetExpensesQuery</c> all implement <c>IVahedScopedCommand</c>/<c>IVahedScopedQuery</c>, so
+/// <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c> → 403 (via
+/// <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable unit-scope claim.
+/// <see cref="GetById"/>/<see cref="Delete"/> do not opt in and never return 403 for this reason.
 /// </summary>
 [ApiController]
 [Route("api/expenses")]
@@ -61,6 +68,7 @@ public sealed class ExpensesController : ControllerBase
     [ProducesResponseType(typeof(CreateExpenseResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
@@ -82,6 +90,7 @@ public sealed class ExpensesController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<ExpenseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
@@ -119,6 +128,7 @@ public sealed class ExpensesController : ControllerBase
     [ProducesResponseType(typeof(UpdateExpenseResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -134,8 +144,7 @@ public sealed class ExpensesController : ControllerBase
             request.Description,
             request.DefaultAmount,
             request.ExpenseGroupId,
-            request.AccountCodeId,
-            request.VahedCode);
+            request.AccountCodeId);
 
         await _mediator.Send(command, cancellationToken);
 
@@ -183,7 +192,10 @@ public sealed record DeleteExpenseResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="ExpensesController.Update"/>. Mirrors every field of
-/// <see cref="UpdateExpenseCommand"/> except <c>Id</c>, which is bound from the route instead.
+/// <see cref="UpdateExpenseCommand"/> except <c>Id</c> (bound from the route instead) and
+/// <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdateExpenseCommand.VahedCode"/> XML doc — so it is not part of this request body
+/// at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdateExpenseRequest(
     string ExpenseCode,
@@ -191,5 +203,4 @@ public sealed record UpdateExpenseRequest(
     string? Description,
     decimal? DefaultAmount,
     Guid? ExpenseGroupId,
-    Guid? AccountCodeId,
-    string? VahedCode);
+    Guid? AccountCodeId);

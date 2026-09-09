@@ -9,8 +9,10 @@ public sealed class CreateBillLogCommandValidatorTests
     private static CreateBillLogCommand ValidCommand() => new(
         LogDesc: "invoice processed",
         LogDate: "14030101",
-        VahedCode: "0100",
-        Year: "1403");
+        Year: "1403")
+    {
+        VahedCode = "0100",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()

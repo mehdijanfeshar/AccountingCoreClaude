@@ -17,8 +17,10 @@ public sealed class CreateBankAccountCommandValidatorTests
         AccountTypeId: Guid.NewGuid(),
         AccountCodeId: Guid.NewGuid(),
         CheckFile: null,
-        VahedCode: "0001",
-        AccountOpeningDate: "13990101");
+        AccountOpeningDate: "13990101")
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -31,6 +33,11 @@ public sealed class CreateBankAccountCommandValidatorTests
     [Fact]
     public void Validate_AllOptionalsNull_Passes()
     {
+        // VahedCode is deliberately excluded from this "all optionals null" case: it is no
+        // longer a client-optional field — VahedScopeBehavior always assigns a real,
+        // non-empty value before this validator runs (see CreateBankAccountCommand.VahedCode
+        // XML doc), so NotEmpty() on it is correct even though every other field here is
+        // genuinely nullable in Legacy.
         var result = _validator.Validate(ValidCommand() with
         {
             CardNumber = null,
@@ -40,11 +47,19 @@ public sealed class CreateBankAccountCommandValidatorTests
             BranchId = null,
             AccountTypeId = null,
             AccountCodeId = null,
-            VahedCode = null,
             AccountOpeningDate = null,
         });
 
         Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_EmptyVahedCode_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { VahedCode = string.Empty });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateBankAccountCommand.VahedCode));
     }
 
     [Fact]

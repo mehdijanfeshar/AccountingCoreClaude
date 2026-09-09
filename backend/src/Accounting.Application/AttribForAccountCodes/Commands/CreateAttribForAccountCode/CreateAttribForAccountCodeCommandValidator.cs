@@ -16,6 +16,11 @@ public sealed class CreateAttribForAccountCodeCommandValidator : AbstractValidat
         RuleFor(x => x.AccountCodeId)
             .NotEmpty();
 
+        // Deliberate second belt, not dead code: by the time this validator runs,
+        // VahedScopeBehavior (registered ahead of ValidationBehavior — see
+        // DependencyInjection.cs) has already overwritten CreateAttribForAccountCodeCommand.VahedCode
+        // with the server-assigned value, so this rule now validates that value rather than
+        // anything the caller supplied.
         RuleFor(x => x.VahedCode)
             .NotEmpty()
             .MaximumLength(4);

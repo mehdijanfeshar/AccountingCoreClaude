@@ -30,9 +30,11 @@ public sealed class UpdateElamHeadCommandValidatorTests
         WorkShopName: "کارگاه به‌روزشده",
         SendRcvVahed: "0010",
         ElamYear: "05",
-        VahedCode: "0002",
         Year: "1405",
-        ElamSenderId: Guid.NewGuid());
+        ElamSenderId: Guid.NewGuid())
+    {
+        VahedCode = "0002",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -78,13 +80,24 @@ public sealed class UpdateElamHeadCommandValidatorTests
             WorkShopName: null,
             SendRcvVahed: null,
             ElamYear: null,
-            VahedCode: null,
             Year: null,
-            ElamSenderId: null);
+            ElamSenderId: null)
+        {
+            VahedCode = "0002",
+        };
 
         var result = _validator.Validate(command);
 
         Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_EmptyVahedCode_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { VahedCode = string.Empty });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateElamHeadCommand.VahedCode));
     }
 
     [Fact]

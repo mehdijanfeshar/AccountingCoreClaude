@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.AttribForAccountCodes.Commands.CreateAttribForAccountCode;
@@ -33,7 +35,6 @@ namespace Accounting.Application.AttribForAccountCodes.Commands.CreateAttribForA
 /// verbatim here without attempting to resolve that oddity (pre-existing, not introduced by this
 /// command). Same unverified-enum caveat as <see cref="AttribBoxNo"/>.
 /// </param>
-/// <param name="VahedCode">VAHEDCODE column (max 4 chars, required — participates in <c>AK_AK_ATTRIBFORMAINCO_ATTRIBFO</c>).</param>
 /// <param name="Year">YEAR column (max 4 chars, required — participates in <c>AK_AK_ATTRIBFORMAINCO_ATTRIBFO</c>).</param>
 public sealed record CreateAttribForAccountCodeCommand(
     Guid AccountCodeId,
@@ -42,5 +43,17 @@ public sealed record CreateAttribForAccountCodeCommand(
     byte LenAtr,
     bool AttribSum,
     bool? ControlId,
-    string VahedCode,
-    string Year) : IRequest<Guid>;
+    string Year) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// VAHEDCODE column (max 4 chars, required — participates in
+    /// <c>AK_AK_ATTRIBFORMAINCO_ATTRIBFO</c>). Never bound from the request body —
+    /// <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and the Swagger
+    /// schema — and never trusted even if a caller manages to set it: <c>VahedScopeBehavior</c>
+    /// unconditionally overwrites this with the authenticated caller's own unit code before the
+    /// request reaches <c>CreateAttribForAccountCodeCommandHandler</c>. See
+    /// <see cref="IVahedScopedCommand"/> for the full mechanism.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

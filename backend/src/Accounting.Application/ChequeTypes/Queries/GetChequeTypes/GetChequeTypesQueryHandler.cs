@@ -18,5 +18,5 @@ public sealed class GetChequeTypesQueryHandler : IRequestHandler<GetChequeTypesQ
     }
 
     public Task<PagedResult<ChequeTypeDto>> Handle(GetChequeTypesQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, cancellationToken);
+        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, request.VahedCode, cancellationToken);
 }

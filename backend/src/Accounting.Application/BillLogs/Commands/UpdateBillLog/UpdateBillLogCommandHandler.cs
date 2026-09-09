@@ -10,6 +10,12 @@ namespace Accounting.Application.BillLogs.Commands.UpdateBillLog;
 /// writable field from the command, stamps audit columns, and owns the transaction boundary by
 /// calling <see cref="IUnitOfWork.SaveChangesAsync"/> exactly once. Throws
 /// <see cref="NotFoundException"/> when the row does not exist or is already soft-deleted.
+///
+/// <c>request.VahedCode</c> is likewise unforgeable, enforced one layer earlier: by the time
+/// this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler simply maps it onto
+/// <c>TB_BILL_LOG.VAHEDCODE</c> at face value — see <c>UpdateBillLogCommand</c> XML doc for the
+/// explicit scope note on what this does and does not cover.
 /// </summary>
 public sealed class UpdateBillLogCommandHandler : IRequestHandler<UpdateBillLogCommand>
 {

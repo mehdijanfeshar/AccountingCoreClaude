@@ -10,10 +10,12 @@ public sealed class CreateTmpVoucherHeadCommandValidatorTests
         VoucherHeadId: Guid.NewGuid(),
         DateDoc: "14040101",
         HeadDesc: "شرح سند موقت",
-        VahedCode: "0001",
         Year: "1404",
         SysType: "K",
-        SourceId: Guid.NewGuid());
+        SourceId: Guid.NewGuid())
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -22,16 +24,34 @@ public sealed class CreateTmpVoucherHeadCommandValidatorTests
     }
 
     /// <summary>
-    /// Every column on this table is nullable, so an entirely empty command is valid. This is a
+    /// Every column on this table that reaches this command through a positional parameter is
+    /// nullable, so an entirely empty command (aside from <c>VahedCode</c>) is valid. This is a
     /// deliberate consequence of the "Legacy fully replaces the rich model" decision — inventing
-    /// required fields the schema does not have would be fabricating business rules.
+    /// required fields the schema does not have would be fabricating business rules. <c>VahedCode</c>
+    /// is the one exception: it is always server-assigned (never client-optional any more), so
+    /// <c>NotEmpty</c> still applies to it — an all-null-except-VahedCode command is what "empty"
+    /// means for this command now.
     /// </summary>
     [Fact]
-    public void Validate_AllFieldsNull_Passes()
+    public void Validate_AllFieldsNullExceptVahedCode_Passes()
     {
-        var command = new CreateTmpVoucherHeadCommand(null, null, null, null, null, null, null);
+        var command = new CreateTmpVoucherHeadCommand(null, null, null, null, null, null)
+        {
+            VahedCode = "0001",
+        };
 
         Assert.True(_validator.Validate(command).IsValid);
+    }
+
+    [Fact]
+    public void Validate_EmptyVahedCode_Fails()
+    {
+        // VahedCode is now always server-assigned by VahedScopeBehavior before this validator
+        // runs, so it can never legitimately be empty — NotEmpty is the correct second belt even
+        // though the underlying VAHEDCODE column is nullable at the Legacy schema level.
+        var command = ValidCommand() with { VahedCode = string.Empty };
+
+        Assert.False(_validator.Validate(command).IsValid);
     }
 
     [Fact]

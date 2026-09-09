@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.IdentityGroups.Commands.CreateIdentityGroup;
@@ -18,10 +20,6 @@ namespace Accounting.Application.IdentityGroups.Commands.CreateIdentityGroup;
 /// <param name="IdentityGroupsCode">
 /// IDENTITYGROUPS_CODE column (max 3 chars, optional — participates in <c>UK_IDENTITYGROUPCODE</c>).
 /// </param>
-/// <param name="VahedCode">
-/// VAHEDCODE column (max 4 chars, required organizational unit code — participates in
-/// <c>UK_IDENTITYGROUPCODE</c>).
-/// </param>
 /// <param name="TafsiliId">
 /// TAFSILI_ID column — optional FK to <c>TB_TAFSILI</c> (constraint <c>FK_IDENTITY_TAFSILI</c>).
 /// No pre-check is performed: an id that does not reference an existing <c>TB_TAFSILI</c> row
@@ -32,5 +30,17 @@ namespace Accounting.Application.IdentityGroups.Commands.CreateIdentityGroup;
 public sealed record CreateIdentityGroupCommand(
     string IdentityGroupsDesc,
     string? IdentityGroupsCode,
-    string VahedCode,
-    Guid? TafsiliId) : IRequest<Guid>;
+    Guid? TafsiliId) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// VAHEDCODE column (max 4 chars, required organizational unit code — participates in
+    /// <c>UK_IDENTITYGROUPCODE</c>). Never bound from the request body —
+    /// <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and the Swagger
+    /// schema — and never trusted even if a caller manages to set it: <c>VahedScopeBehavior</c>
+    /// unconditionally overwrites this with the authenticated caller's own unit code before the
+    /// request reaches <c>CreateIdentityGroupCommandHandler</c>. See
+    /// <see cref="IVahedScopedCommand"/> for the full mechanism.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

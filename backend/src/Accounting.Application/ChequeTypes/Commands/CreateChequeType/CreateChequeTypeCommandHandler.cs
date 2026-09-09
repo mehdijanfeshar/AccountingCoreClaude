@@ -9,6 +9,9 @@ namespace Accounting.Application.ChequeTypes.Commands.CreateChequeType;
 /// <see cref="IChequeTypeRepository"/>, and owns the transaction boundary by calling
 /// <see cref="IUnitOfWork.SaveChangesAsync"/> exactly once. <c>ADDUSERID</c> is sourced from
 /// <see cref="ICurrentUser"/> (the authenticated caller) — never from the request.
+/// <c>request.VahedCode</c> is equally non-forgeable: by the time this handler runs,
+/// <c>VahedScopeBehavior</c> has already overwritten it with the authenticated caller's own unit
+/// code (see <see cref="CreateChequeTypeCommand.VahedCode"/>).
 ///
 /// <c>ID</c> is always generated application-side (<see cref="Guid.NewGuid"/>).
 /// </summary>

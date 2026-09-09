@@ -36,6 +36,17 @@ namespace Accounting.Api.Controllers;
 /// <c>GlobalExceptionHandler</c>, but it is still documented via <c>[ProducesResponseType]</c>
 /// on every action for an accurate, uniform OpenAPI contract.
 ///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> (2026-09 IDOR closure) — <c>CreateVoucherHeadCommand</c>/
+/// <c>UpdateVoucherHeadCommand</c>/<c>GetVoucherHeadsQuery</c> all implement
+/// <c>IVahedScopedCommand</c>/<c>IVahedScopedQuery</c>, so <c>VahedScopeBehavior</c> throws
+/// <c>MissingVahedScopeException</c> → 403 (via <c>GlobalExceptionHandler</c>) when the
+/// authenticated caller has no usable unit-scope claim. There is also no <c>vahedCode</c> query
+/// parameter on <see cref="GetList"/> anymore — the unit scope is always the caller's own; see
+/// <see cref="GetList"/> XML doc. <see cref="GetById"/>/<see cref="Delete"/> do not opt in and
+/// never return 403 for this reason — see <c>UpdateVoucherHeadCommand</c> XML doc for the
+/// explicit scope note on what closing this still leaves open.
+///
 /// <b>No PUT/DELETE anywhere in this controller — by explicit project-owner mandate, not an
 /// internal architecture choice.</b> The network infrastructure this API runs behind does not
 /// allow <c>PUT</c>/<c>DELETE</c> verbs, so update/delete are exposed as <c>POST</c> to
@@ -60,6 +71,7 @@ public sealed class VoucherHeadsController : ControllerBase
     [ProducesResponseType(typeof(CreateVoucherHeadResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
@@ -75,22 +87,26 @@ public sealed class VoucherHeadsController : ControllerBase
     }
 
     /// <summary>
-    /// Returns a page of voucher heads, optionally filtered by <c>Year</c>/<c>VahedCode</c>.
+    /// Returns a page of voucher heads belonging to the caller's own organizational unit,
+    /// optionally filtered further by <c>Year</c>. There is no <c>vahedCode</c> query parameter —
+    /// <c>GetVoucherHeadsQuery</c> implements <c>IVahedScopedQuery</c>, so the unit scope is always
+    /// the authenticated caller's own (see <c>VahedScopeBehavior</c>); a caller can no longer list
+    /// another unit's vouchers by passing a different <c>vahedCode</c>.
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<VoucherHeadDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
         [FromQuery] string? year = null,
-        [FromQuery] string? vahedCode = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetVoucherHeadsQuery(pageNumber, pageSize, year, vahedCode),
+            new GetVoucherHeadsQuery(pageNumber, pageSize, year),
             cancellationToken);
 
         return Ok(result);
@@ -128,6 +144,7 @@ public sealed class VoucherHeadsController : ControllerBase
     [ProducesResponseType(typeof(UpdateVoucherHeadResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -145,7 +162,6 @@ public sealed class VoucherHeadsController : ControllerBase
             request.Apendix,
             request.SystemTypeId,
             request.FlagState,
-            request.VahedCode,
             request.Year,
             request.IsAutomatic,
             request.SndVahedCode,
@@ -201,9 +217,11 @@ public sealed record DeleteVoucherHeadResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="VoucherHeadsController.Update"/>. Mirrors every field of
-/// <see cref="UpdateVoucherHeadCommand"/> except <c>Id</c>, which is bound from the route
-/// instead — this deliberately prevents a route id/body id mismatch from ever reaching the
-/// handler.
+/// <see cref="UpdateVoucherHeadCommand"/> except <c>Id</c> (bound from the route instead — this
+/// deliberately prevents a route id/body id mismatch from ever reaching the handler) and
+/// <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdateVoucherHeadCommand.VahedCode"/> XML doc — so it is not part of this request
+/// body at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdateVoucherHeadRequest(
     string DocNum,
@@ -213,7 +231,6 @@ public sealed record UpdateVoucherHeadRequest(
     string? Apendix,
     Guid? SystemTypeId,
     decimal? FlagState,
-    string VahedCode,
     string Year,
     bool? IsAutomatic,
     string? SndVahedCode,

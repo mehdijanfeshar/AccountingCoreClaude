@@ -60,6 +60,13 @@ namespace Accounting.Api.Controllers;
 /// <c>PayRecivType</c> (۱پرداخت ۲دریافت ۳همه), so the third value is unreachable through this
 /// API. See <see cref="CreatePayReciveHeadCommand"/> XML doc for the full write-up. Re-typing it
 /// is a breaking API-contract change and out of scope for this batch.
+///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> — <c>CreatePayReciveHeadCommand</c>/<c>UpdatePayReciveHeadCommand</c>/
+/// <c>GetPayReciveHeadsQuery</c> all implement <c>IVahedScopedCommand</c>/<c>IVahedScopedQuery</c>,
+/// so <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c> → 403 (via
+/// <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable unit-scope claim.
+/// <see cref="GetById"/>/<see cref="Delete"/> do not opt in and never return 403 for this reason.
 /// </summary>
 [ApiController]
 [Route("api/pay-recive-heads")]
@@ -80,6 +87,7 @@ public sealed class PayReciveHeadsController : ControllerBase
     [ProducesResponseType(typeof(CreatePayReciveHeadResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
         [FromBody] CreatePayReciveHeadCommand command,
@@ -100,6 +108,7 @@ public sealed class PayReciveHeadsController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<PayReciveHeadDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
@@ -138,6 +147,7 @@ public sealed class PayReciveHeadsController : ControllerBase
     [ProducesResponseType(typeof(UpdatePayReciveHeadResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Update(
@@ -151,7 +161,6 @@ public sealed class PayReciveHeadsController : ControllerBase
             request.PayReciveDate,
             request.PayReciveDescription,
             request.PayReciveType,
-            request.VahedCode,
             request.Year,
             request.VoucherHeadId);
 
@@ -203,14 +212,15 @@ public sealed record DeletePayReciveHeadResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="PayReciveHeadsController.Update"/>. Mirrors every field of
-/// <see cref="UpdatePayReciveHeadCommand"/> except <c>Id</c>, which is bound from the route
-/// instead.
+/// <see cref="UpdatePayReciveHeadCommand"/> except <c>Id</c> (bound from the route instead) and
+/// <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdatePayReciveHeadCommand.VahedCode"/> XML doc — so it is not part of this request
+/// body at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdatePayReciveHeadRequest(
     string PayReciveCode,
     string PayReciveDate,
     string PayReciveDescription,
     bool? PayReciveType,
-    string VahedCode,
     string Year,
     Guid? VoucherHeadId);

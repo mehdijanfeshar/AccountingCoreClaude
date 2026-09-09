@@ -18,9 +18,11 @@ public sealed class CreateBankCartDetailCommandValidatorTests
         CheckReceiptType: true,
         Debtor: 1000m,
         Creditor: 0m,
-        VahedCode: "0001",
         Year: "1402",
-        CheckIncorrentId: Guid.NewGuid());
+        CheckIncorrentId: Guid.NewGuid())
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -33,6 +35,11 @@ public sealed class CreateBankCartDetailCommandValidatorTests
     [Fact]
     public void Validate_AllOptionalFieldsNull_Passes()
     {
+        // VahedCode is deliberately excluded from this "all optionals null" case: it is no
+        // longer a client-optional field — VahedScopeBehavior always assigns a real,
+        // non-empty value before this validator runs (see
+        // CreateBankCartDetailCommand.VahedCode XML doc), so NotEmpty() on it is correct even
+        // though every other field here is genuinely nullable in Legacy.
         var command = new CreateBankCartDetailCommand(
             ReceipId: null,
             CheckId: null,
@@ -45,13 +52,24 @@ public sealed class CreateBankCartDetailCommandValidatorTests
             CheckReceiptType: null,
             Debtor: null,
             Creditor: null,
-            VahedCode: null,
             Year: null,
-            CheckIncorrentId: null);
+            CheckIncorrentId: null)
+        {
+            VahedCode = "0001",
+        };
 
         var result = _validator.Validate(command);
 
         Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_EmptyVahedCode_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { VahedCode = string.Empty });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateBankCartDetailCommand.VahedCode));
     }
 
     [Fact]

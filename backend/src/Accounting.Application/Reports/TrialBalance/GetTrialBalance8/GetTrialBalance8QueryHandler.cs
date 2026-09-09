@@ -6,7 +6,10 @@ namespace Accounting.Application.Reports.TrialBalance.GetTrialBalance8;
 /// <summary>
 /// Delegates to <see cref="ITrialBalanceReadRepository.GetAggregatesAsync"/> and projects each
 /// <see cref="TrialBalanceAggregateRow"/> into a <see cref="TrialBalance8RowDto"/>. Never touches
-/// <see cref="IUnitOfWork"/> — there is nothing to persist.
+/// <see cref="IUnitOfWork"/> — there is nothing to persist. Passes
+/// <see cref="GetTrialBalance8Query.VahedCode"/> through at face value — by the time this handler
+/// runs, <c>VahedScopeBehavior</c> has already overwritten it with the authenticated caller's own
+/// unit code.
 ///
 /// <see cref="TrialBalance8RowDto.TotDebtor"/>/<see cref="TrialBalance8RowDto.TotCreditor"/> are
 /// mapped straight from <see cref="TrialBalanceAggregateRow.TotalDebtor"/>/

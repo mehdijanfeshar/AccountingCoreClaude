@@ -11,9 +11,11 @@ public sealed class CreateWorkShopCommandValidatorTests
         BranchId: Guid.NewGuid(),
         WorkShopName: "کارگاه شماره یک",
         WorkShopCode: "WS001",
-        VahedCode: "0001",
         IsActive: true,
-        CheckFile: null);
+        CheckFile: null)
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()

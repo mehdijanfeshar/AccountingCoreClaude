@@ -40,18 +40,40 @@ public sealed class GetChequesIncorrentsQueryHandlerTests
             TotalCount = 51,
         };
         readRepository
-            .Setup(r => r.GetPagedAsync(2, 25, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(2, 25, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetChequesIncorrentsQueryHandler(readRepository.Object);
+        var query = new GetChequesIncorrentsQuery(PageNumber: 2, PageSize: 25) { VahedCode = "0001" };
 
-        var result = await handler.Handle(new GetChequesIncorrentsQuery(PageNumber: 2, PageSize: 25), CancellationToken.None);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         Assert.Same(expected, result);
         Assert.Equal(2, result.PageNumber);
         Assert.Equal(25, result.PageSize);
         Assert.Equal(51, result.TotalCount);
-        readRepository.Verify(r => r.GetPagedAsync(2, 25, It.IsAny<CancellationToken>()), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(2, 25, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_PassesRequestVahedCodeToRepository_AtFaceValue()
+    {
+        // Proves the handler trusts request.VahedCode as-is: by the time this handler runs,
+        // VahedScopeBehavior has already overwritten it with the authenticated caller's own
+        // unit code, so the handler must forward exactly that value, not derive its own.
+        var readRepository = new Mock<IChequesIncorrentReadRepository>();
+        readRepository
+            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), "0007", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedResult<ChequesIncorrentDto>());
+
+        var handler = new GetChequesIncorrentsQueryHandler(readRepository.Object);
+        var query = new GetChequesIncorrentsQuery(PageNumber: 1, PageSize: 20) { VahedCode = "0007" };
+
+        await handler.Handle(query, CancellationToken.None);
+
+        readRepository.Verify(
+            r => r.GetPagedAsync(1, 20, "0007", It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -61,14 +83,15 @@ public sealed class GetChequesIncorrentsQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetPagedAsync(1, 20, token))
+            .Setup(r => r.GetPagedAsync(1, 20, "0001", token))
             .ReturnsAsync(new PagedResult<ChequesIncorrentDto>());
 
         var handler = new GetChequesIncorrentsQueryHandler(readRepository.Object);
+        var query = new GetChequesIncorrentsQuery(PageNumber: 1, PageSize: 20) { VahedCode = "0001" };
 
-        await handler.Handle(new GetChequesIncorrentsQuery(PageNumber: 1, PageSize: 20), token);
+        await handler.Handle(query, token);
 
-        readRepository.Verify(r => r.GetPagedAsync(1, 20, token), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(1, 20, "0001", token), Times.Once);
     }
 
     [Fact]

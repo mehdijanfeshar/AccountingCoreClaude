@@ -47,8 +47,10 @@ public sealed class UpdateChequeTypeCommandValidatorTests
         PrinterMargineTop: 7,
         PrinterMargineLeft: 8,
         PrinterType: "Epson",
-        Year: "1404",
-        VahedCode: "0200");
+        Year: "1404")
+    {
+        VahedCode = "0200",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()

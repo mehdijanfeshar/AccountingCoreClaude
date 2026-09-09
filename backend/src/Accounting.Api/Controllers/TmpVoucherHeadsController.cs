@@ -58,6 +58,15 @@ namespace Accounting.Api.Controllers;
 ///
 /// ⚠️⚠️ <b><c>SourceId</c> has NO FK at all</b> — an invalid value there is written silently and
 /// the 400 above does NOT cover it. See <see cref="CreateTmpVoucherHeadCommand"/> XML doc.
+///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> — <c>CreateTmpVoucherHeadCommand</c>/<c>UpdateTmpVoucherHeadCommand</c>/
+/// <c>GetTmpVoucherHeadsQuery</c> all implement <c>IVahedScopedCommand</c>/<c>IVahedScopedQuery</c>,
+/// so <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c> → 403 (via
+/// <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable unit-scope claim.
+/// <see cref="GetById"/>/<see cref="Delete"/> do not opt in and never return 403 for this reason —
+/// see <see cref="UpdateTmpVoucherHeadCommand"/> XML doc for the explicit scope note on what
+/// closing this still leaves open.
 /// </summary>
 [ApiController]
 [Route("api/tmp-voucher-heads")]
@@ -79,6 +88,7 @@ public sealed class TmpVoucherHeadsController : ControllerBase
     [ProducesResponseType(typeof(CreateTmpVoucherHeadResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
         [FromBody] CreateTmpVoucherHeadCommand command,
@@ -99,6 +109,7 @@ public sealed class TmpVoucherHeadsController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<TmpVoucherHeadDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
@@ -137,6 +148,7 @@ public sealed class TmpVoucherHeadsController : ControllerBase
     [ProducesResponseType(typeof(UpdateTmpVoucherHeadResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Update(
@@ -149,7 +161,6 @@ public sealed class TmpVoucherHeadsController : ControllerBase
             request.VoucherHeadId,
             request.DateDoc,
             request.HeadDesc,
-            request.VahedCode,
             request.Year,
             request.SysType,
             request.SourceId);
@@ -201,14 +212,15 @@ public sealed record DeleteTmpVoucherHeadResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="TmpVoucherHeadsController.Update"/>. Mirrors every field of
-/// <see cref="UpdateTmpVoucherHeadCommand"/> except <c>Id</c>, which is bound from the route
-/// instead.
+/// <see cref="UpdateTmpVoucherHeadCommand"/> except <c>Id</c> (bound from the route instead) and
+/// <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdateTmpVoucherHeadCommand.VahedCode"/> XML doc — so it is not part of this
+/// request body at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdateTmpVoucherHeadRequest(
     Guid? VoucherHeadId,
     string? DateDoc,
     string? HeadDesc,
-    string? VahedCode,
     string? Year,
     string? SysType,
     Guid? SourceId);

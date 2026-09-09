@@ -14,13 +14,15 @@ public sealed class CreateVoucherHeadCommandValidatorTests
         Apendix: null,
         SystemTypeId: null,
         FlagState: null,
-        VahedCode: "0001",
         Year: "1405",
         IsAutomatic: false,
         SndVahedCode: null,
         ParentHeadId: null,
         AttachFileName: null,
-        AtfNum: null);
+        AtfNum: null)
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()

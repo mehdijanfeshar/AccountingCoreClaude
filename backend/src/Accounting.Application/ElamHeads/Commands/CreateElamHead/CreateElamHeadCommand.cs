@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.ElamHeads.Commands.CreateElamHead;
@@ -65,7 +67,6 @@ namespace Accounting.Application.ElamHeads.Commands.CreateElamHead;
 /// <param name="WorkShopName">ELAMH_WORKSHOPNAME column (optional, max 100 chars).</param>
 /// <param name="SendRcvVahed">ELAMH_SENDRCVVAHED column (optional, max 4 chars — sending/receiving unit code).</param>
 /// <param name="ElamYear">ELAMH_YEAR column (optional, max 2 chars) — distinct from <c>Year</c> below (<c>YEAR</c> column); do not confuse the two.</param>
-/// <param name="VahedCode">VAHEDCODE column (optional, max 4 chars; part of <c>AK_AK_ELAMHEAD_ELAMHEAD</c>).</param>
 /// <param name="Year">YEAR column (optional, max 4 chars) — distinct from <c>ElamYear</c> above (<c>ELAMH_YEAR</c> column).</param>
 /// <param name="ElamSenderId">ELAMSENDERID column (optional <see cref="Guid"/>) — ⚠️ NO FK at all; invalid values are written silently.</param>
 public sealed record CreateElamHeadCommand(
@@ -91,6 +92,23 @@ public sealed record CreateElamHeadCommand(
     string? WorkShopName,
     string? SendRcvVahed,
     string? ElamYear,
-    string? VahedCode,
     string? Year,
-    Guid? ElamSenderId) : IRequest<Guid>;
+    Guid? ElamSenderId) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// VAHEDCODE column (max 4 chars; part of <c>AK_AK_ELAMHEAD_ELAMHEAD</c>). Never bound from
+    /// the request body — <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding
+    /// and the Swagger schema — and never trusted even if a caller manages to set it:
+    /// <c>VahedScopeBehavior</c> unconditionally overwrites this with the authenticated caller's
+    /// own unit code before the request reaches <c>CreateElamHeadCommandHandler</c>. See
+    /// <see cref="IVahedScopedCommand"/> for the full mechanism.
+    ///
+    /// ⚠️ Note the CLR type change from the underlying column: <c>TB_ELAMHEAD.VAHEDCODE</c> is
+    /// nullable (<c>string?</c>) in Legacy, but every <see cref="IVahedScopedCommand"/> property
+    /// in this project is a non-nullable <see cref="string"/> — <c>VahedScopeBehavior</c> always
+    /// assigns a real, non-empty value (or throws <c>MissingVahedScopeException</c>), so the
+    /// nullability was never reachable through this API to begin with.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

@@ -9,7 +9,7 @@ public sealed class GetVoucherHeadsQueryValidatorTests
     [Fact]
     public void Validate_ValidQuery_Passes()
     {
-        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 20, Year: "1405", VahedCode: "0001"));
+        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 20, Year: "1405"));
 
         Assert.True(result.IsValid);
     }
@@ -17,7 +17,7 @@ public sealed class GetVoucherHeadsQueryValidatorTests
     [Fact]
     public void Validate_NullFilters_Pass()
     {
-        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 20, Year: null, VahedCode: null));
+        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 20, Year: null));
 
         Assert.True(result.IsValid);
     }
@@ -25,7 +25,7 @@ public sealed class GetVoucherHeadsQueryValidatorTests
     [Fact]
     public void Validate_PageNumberLessThanOne_Fails()
     {
-        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 0, PageSize: 20, Year: null, VahedCode: null));
+        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 0, PageSize: 20, Year: null));
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(GetVoucherHeadsQuery.PageNumber));
@@ -34,7 +34,7 @@ public sealed class GetVoucherHeadsQueryValidatorTests
     [Fact]
     public void Validate_NegativePageNumber_Fails()
     {
-        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: -1, PageSize: 20, Year: null, VahedCode: null));
+        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: -1, PageSize: 20, Year: null));
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(GetVoucherHeadsQuery.PageNumber));
@@ -43,7 +43,7 @@ public sealed class GetVoucherHeadsQueryValidatorTests
     [Fact]
     public void Validate_PageSizeZero_Fails()
     {
-        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 0, Year: null, VahedCode: null));
+        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 0, Year: null));
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(GetVoucherHeadsQuery.PageSize));
@@ -60,7 +60,7 @@ public sealed class GetVoucherHeadsQueryValidatorTests
     [Fact]
     public void Validate_PageNumberAboveMax_Fails()
     {
-        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 10_737_420, PageSize: 200, Year: null, VahedCode: null));
+        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 10_737_420, PageSize: 200, Year: null));
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(GetVoucherHeadsQuery.PageNumber));
@@ -69,7 +69,7 @@ public sealed class GetVoucherHeadsQueryValidatorTests
     [Fact]
     public void Validate_PageNumberAtMax_Passes()
     {
-        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: GetVoucherHeadsQueryValidator.MaxPageNumber, PageSize: 20, Year: null, VahedCode: null));
+        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: GetVoucherHeadsQueryValidator.MaxPageNumber, PageSize: 20, Year: null));
 
         Assert.True(result.IsValid);
     }
@@ -77,7 +77,7 @@ public sealed class GetVoucherHeadsQueryValidatorTests
     [Fact]
     public void Validate_PageNumberJustAboveMax_Fails()
     {
-        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: GetVoucherHeadsQueryValidator.MaxPageNumber + 1, PageSize: 20, Year: null, VahedCode: null));
+        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: GetVoucherHeadsQueryValidator.MaxPageNumber + 1, PageSize: 20, Year: null));
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(GetVoucherHeadsQuery.PageNumber));
@@ -106,15 +106,7 @@ public sealed class GetVoucherHeadsQueryValidatorTests
     [Fact]
     public void Validate_YearAtMaxLength_Passes()
     {
-        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 20, Year: "1405", VahedCode: null));
-
-        Assert.True(result.IsValid);
-    }
-
-    [Fact]
-    public void Validate_VahedCodeAtMaxLength_Passes()
-    {
-        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 20, Year: null, VahedCode: "0001"));
+        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 20, Year: "1405"));
 
         Assert.True(result.IsValid);
     }
@@ -125,8 +117,7 @@ public sealed class GetVoucherHeadsQueryValidatorTests
         var result = _validator.Validate(new GetVoucherHeadsQuery(
             PageNumber: 1,
             PageSize: GetVoucherHeadsQueryValidator.MaxPageSize + 1,
-            Year: null,
-            VahedCode: null));
+            Year: null));
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(GetVoucherHeadsQuery.PageSize));
@@ -138,8 +129,7 @@ public sealed class GetVoucherHeadsQueryValidatorTests
         var result = _validator.Validate(new GetVoucherHeadsQuery(
             PageNumber: 1,
             PageSize: GetVoucherHeadsQueryValidator.MaxPageSize,
-            Year: null,
-            VahedCode: null));
+            Year: null));
 
         Assert.True(result.IsValid);
     }
@@ -147,18 +137,26 @@ public sealed class GetVoucherHeadsQueryValidatorTests
     [Fact]
     public void Validate_YearOverMaxLength_Fails()
     {
-        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 20, Year: "14050", VahedCode: null));
+        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 20, Year: "14050"));
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(GetVoucherHeadsQuery.Year));
     }
 
+    /// <summary>
+    /// VahedCode is deliberately not exercised here anymore: it is no longer optional caller
+    /// input (removed from the positional parameter list entirely — see
+    /// <see cref="GetVoucherHeadsQuery.VahedCode"/>), and the validator carries no rule for it
+    /// (mirrors <c>GetWorkShopsQueryValidator</c>) because it is always server-assigned by
+    /// <c>VahedScopeBehavior</c> before this validator ever runs.
+    /// </summary>
     [Fact]
-    public void Validate_VahedCodeOverMaxLength_Fails()
+    public void Validate_ServerAssignedVahedCode_IsNotValidatedHere()
     {
-        var result = _validator.Validate(new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 20, Year: null, VahedCode: "00011"));
+        var query = new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 20, Year: null) { VahedCode = "0001" };
 
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == nameof(GetVoucherHeadsQuery.VahedCode));
+        var result = _validator.Validate(query);
+
+        Assert.True(result.IsValid);
     }
 }

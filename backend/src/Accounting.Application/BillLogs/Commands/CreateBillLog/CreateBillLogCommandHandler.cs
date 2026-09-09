@@ -9,6 +9,12 @@ namespace Accounting.Application.BillLogs.Commands.CreateBillLog;
 /// <see cref="IBillLogRepository"/>, and owns the transaction boundary by calling
 /// <see cref="IUnitOfWork.SaveChangesAsync"/> exactly once. <c>ADDUSERID</c> is sourced from
 /// <see cref="ICurrentUser"/> (the authenticated caller) — never from the request.
+///
+/// <c>request.VahedCode</c> is equally unforgeable, just enforced one layer earlier: by the time
+/// this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler can trust the field at face value and
+/// simply map it onto <c>TB_BILL_LOG.VAHEDCODE</c> — it does not read <see cref="ICurrentUser"/>
+/// directly for this field the way it does for <c>ADDUSERID</c>.
 /// </summary>
 public sealed class CreateBillLogCommandHandler : IRequestHandler<CreateBillLogCommand, Guid>
 {

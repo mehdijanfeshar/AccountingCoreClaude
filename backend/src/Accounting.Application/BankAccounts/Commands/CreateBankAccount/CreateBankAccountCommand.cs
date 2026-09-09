@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.BankAccounts.Commands.CreateBankAccount;
@@ -30,7 +32,6 @@ namespace Accounting.Application.BankAccounts.Commands.CreateBankAccount;
 /// <param name="AccountTypeId">Optional link to <c>TB_ACCOUNT_TYPE</c> — see the no-FK warning above.</param>
 /// <param name="AccountCodeId">Optional link to <c>TB_ACCOUNTCODE</c> (<c>FK_ACCOUNTCODE_ACCOUNT</c>); part of <c>UK_ACCOUNT_ACCOUNTCODE</c> together with <c>VahedCode</c>.</param>
 /// <param name="CheckFile">Optional Oracle BLOB; no size limit enforced here.</param>
-/// <param name="VahedCode">Optional organizational unit code (max 4 chars); part of <c>UK_ACCOUNT_ACCOUNTCODE</c>.</param>
 /// <param name="AccountOpeningDate">Optional opening date, Legacy string format (max 8 chars).</param>
 public sealed record CreateBankAccountCommand(
     string AccountNumber,
@@ -43,5 +44,20 @@ public sealed record CreateBankAccountCommand(
     Guid? AccountTypeId,
     Guid? AccountCodeId,
     byte[]? CheckFile,
-    string? VahedCode,
-    string? AccountOpeningDate) : IRequest<Guid>;
+    string? AccountOpeningDate) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// Organizational unit code (max 4 chars); part of <c>UK_ACCOUNT_ACCOUNTCODE</c>. Although
+    /// <c>TB_ACCOUNT.VAHEDCODE</c> is nullable in Legacy, this property is deliberately
+    /// non-nullable <see cref="string"/> here — <c>VahedScopeBehavior</c> always assigns a real
+    /// value before the handler runs, so an empty string never actually reaches
+    /// <c>TB_ACCOUNT.VAHEDCODE</c> in practice. Never bound from the request body —
+    /// <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and the Swagger
+    /// schema — and never trusted even if a caller manages to set it: <c>VahedScopeBehavior</c>
+    /// unconditionally overwrites this with the authenticated caller's own unit code before the
+    /// request reaches <c>CreateBankAccountCommandHandler</c>. See <see cref="IVahedScopedCommand"/>
+    /// for the full mechanism.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

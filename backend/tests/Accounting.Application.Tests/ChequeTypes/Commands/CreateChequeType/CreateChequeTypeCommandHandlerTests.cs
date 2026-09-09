@@ -1,4 +1,5 @@
 using Accounting.Application.ChequeTypes.Commands.CreateChequeType;
+using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using Moq;
@@ -47,8 +48,10 @@ public sealed class CreateChequeTypeCommandHandlerTests
         PrinterMargineTop: 5,
         PrinterMargineLeft: 6,
         PrinterType: "HP LaserJet",
-        Year: "1403",
-        VahedCode: "0100");
+        Year: "1403")
+    {
+        VahedCode = "0100",
+    };
 
     private static Mock<ICurrentUser> CurrentUserMock(string userId = "user1")
     {
@@ -264,8 +267,10 @@ public sealed class CreateChequeTypeCommandHandlerTests
             null, null, null, null,
             null, null,
             null,
-            "1403",
-            "0100");
+            "1403")
+        {
+            VahedCode = "0100",
+        };
 
         await handler.Handle(command, CancellationToken.None);
 
@@ -274,5 +279,57 @@ public sealed class CreateChequeTypeCommandHandlerTests
         Assert.Null(staged.CHEQUE_IMAGE);
         Assert.Equal("1403", staged.YEAR);
         Assert.Equal("0100", staged.VAHEDCODE);
+    }
+
+    [Fact]
+    public async Task Handle_MapsVahedCodeFromCommandAtFaceValue()
+    {
+        // The handler itself just maps request.VahedCode onto the entity — it does not read
+        // ICurrentUser.VahedCode directly. Forgery prevention is VahedScopeBehavior's job (see
+        // the dedicated pipeline test below); this test only proves the mapping is faithful.
+        var repository = new Mock<IChequeTypeRepository>();
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
+        TB_CHECK_TYPE? staged = null;
+        repository
+            .Setup(r => r.AddAsync(It.IsAny<TB_CHECK_TYPE>(), It.IsAny<CancellationToken>()))
+            .Callback<TB_CHECK_TYPE, CancellationToken>((entity, _) => staged = entity)
+            .Returns(Task.CompletedTask);
+
+        var handler = new CreateChequeTypeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var command = ValidCommand() with { VahedCode = "0009" };
+
+        await handler.Handle(command, CancellationToken.None);
+
+        Assert.NotNull(staged);
+        Assert.Equal("0009", staged!.VAHEDCODE);
+    }
+
+    [Fact]
+    public async Task Handle_ThroughVahedScopeBehavior_ClientSuppliedVahedCodeIsDiscarded_ServerValueIsWritten()
+    {
+        // End-to-end forgery-prevention proof: even when a "client" manages to populate
+        // command.VahedCode with a forged value before dispatch, running the command through
+        // VahedScopeBehavior — exactly as the real MediatR pipeline does — overwrites it
+        // unconditionally with ICurrentUser.VahedCode before the handler ever sees it.
+        var repository = new Mock<IChequeTypeRepository>();
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
+        currentUser.SetupGet(u => u.VahedCode).Returns("0009");
+        TB_CHECK_TYPE? staged = null;
+        repository
+            .Setup(r => r.AddAsync(It.IsAny<TB_CHECK_TYPE>(), It.IsAny<CancellationToken>()))
+            .Callback<TB_CHECK_TYPE, CancellationToken>((entity, _) => staged = entity)
+            .Returns(Task.CompletedTask);
+
+        var handler = new CreateChequeTypeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateChequeTypeCommand, Guid>(currentUser.Object);
+        var forgedCommand = ValidCommand() with { VahedCode = "9999" };
+
+        await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);
+
+        Assert.NotNull(staged);
+        Assert.Equal("0009", staged!.VAHEDCODE);
+        Assert.Equal("0009", forgedCommand.VahedCode);
     }
 }

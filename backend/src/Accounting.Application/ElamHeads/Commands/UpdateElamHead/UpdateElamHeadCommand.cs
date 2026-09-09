@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.ElamHeads.Commands.UpdateElamHead;
@@ -18,6 +20,12 @@ namespace Accounting.Application.ElamHeads.Commands.UpdateElamHead;
 /// unverified <see cref="bool"/>?-should-be-enum columns (<c>Case</c>, <c>DramadType</c>) and
 /// the two FK-less columns (<c>WorkShopId</c>, <c>ElamSenderId</c>), all of which apply
 /// identically here.
+///
+/// ⚠️ <b>Scope note:</b> <see cref="IVahedScopedCommand"/> here only guarantees that
+/// <c>VAHEDCODE</c> cannot be *changed* to an arbitrary unit by the caller. It does
+/// <b>not</b> check whether the caller is allowed to touch this particular row in the first
+/// place — record-ownership verification on Update is explicitly out of scope for this pass, by
+/// project-owner decision.
 /// </summary>
 /// <param name="Id">The <c>TB_ELAMHEAD.ID</c> to update (bound from the route, never the body).</param>
 /// <param name="VoucherHeadId">Optional link to <c>TB_VOUCHERSHEAD</c> (<c>FK_ELAM_VOUCHER</c>). Maps to <c>VOUCHERSHEAD_ID</c>.</param>
@@ -42,7 +50,6 @@ namespace Accounting.Application.ElamHeads.Commands.UpdateElamHead;
 /// <param name="WorkShopName">ELAMH_WORKSHOPNAME column (optional, max 100 chars).</param>
 /// <param name="SendRcvVahed">ELAMH_SENDRCVVAHED column (optional, max 4 chars).</param>
 /// <param name="ElamYear">ELAMH_YEAR column (optional, max 2 chars) — distinct from <c>Year</c>.</param>
-/// <param name="VahedCode">VAHEDCODE column (optional, max 4 chars; part of <c>AK_AK_ELAMHEAD_ELAMHEAD</c>).</param>
 /// <param name="Year">YEAR column (optional, max 4 chars) — distinct from <c>ElamYear</c>.</param>
 /// <param name="ElamSenderId">ELAMSENDERID column (optional <see cref="Guid"/>) — ⚠️ NO FK at all.</param>
 public sealed record UpdateElamHeadCommand(
@@ -69,6 +76,19 @@ public sealed record UpdateElamHeadCommand(
     string? WorkShopName,
     string? SendRcvVahed,
     string? ElamYear,
-    string? VahedCode,
     string? Year,
-    Guid? ElamSenderId) : IRequest;
+    Guid? ElamSenderId) : IRequest, IVahedScopedCommand
+{
+    /// <summary>
+    /// VAHEDCODE column (max 4 chars; part of <c>AK_AK_ELAMHEAD_ELAMHEAD</c>). Never bound from
+    /// the request body — <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding
+    /// and the Swagger schema — and never trusted even if a caller manages to set it:
+    /// <c>VahedScopeBehavior</c> unconditionally overwrites this with the authenticated caller's
+    /// own unit code before the request reaches <c>UpdateElamHeadCommandHandler</c>. See
+    /// <see cref="IVahedScopedCommand"/> for the full mechanism, and the scope note above for
+    /// what this does <b>not</b> cover. See <c>CreateElamHeadCommand.VahedCode</c> XML doc for
+    /// the note on the nullable-column-vs-non-nullable-property type change.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

@@ -9,6 +9,12 @@ namespace Accounting.Application.ChequeTypes.Commands.CreateChequeType;
 /// <c>byte</c>'s range, so <c>byte</c> is already the tighter, safe constraint.
 /// <see cref="CreateChequeTypeCommand.ChequeImage"/> carries no size-limit rule — see the
 /// command's XML doc for why that is a deliberately unmade decision, not an oversight.
+///
+/// The <c>RuleFor(x => x.VahedCode)</c> below is a deliberate second belt, not dead code: by the
+/// time this validator runs, <c>VahedScopeBehavior</c> (registered ahead of
+/// <c>ValidationBehavior</c> — see <c>DependencyInjection.cs</c>) has already overwritten
+/// <see cref="CreateChequeTypeCommand.VahedCode"/> with the server-assigned value, so this rule
+/// now validates that value rather than anything the caller supplied.
 /// </summary>
 public sealed class CreateChequeTypeCommandValidator : AbstractValidator<CreateChequeTypeCommand>
 {

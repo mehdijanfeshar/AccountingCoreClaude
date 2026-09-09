@@ -93,14 +93,16 @@ public sealed class CreateVoucherHeadCommandValidatorInitialDetailsTests
         Apendix: null,
         SystemTypeId: null,
         FlagState: null,
-        VahedCode: "0001",
         Year: "1405",
         IsAutomatic: false,
         SndVahedCode: null,
         ParentHeadId: null,
         AttachFileName: null,
         AtfNum: null,
-        InitialDetails: initialDetails);
+        InitialDetails: initialDetails)
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_InitialDetailsNull_IsNoOp_CommandStillValid()

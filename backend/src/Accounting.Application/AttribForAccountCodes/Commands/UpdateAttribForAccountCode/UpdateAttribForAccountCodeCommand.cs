@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.AttribForAccountCodes.Commands.UpdateAttribForAccountCode;
@@ -16,6 +18,14 @@ namespace Accounting.Application.AttribForAccountCodes.Commands.UpdateAttribForA
 /// (<c>AccountCodeId</c>/<c>VahedCode</c>/<c>Year</c>) against a *different* row, surfacing as the
 /// same central ORA-00001 → 409 mapping, and can violate <c>FK_ATTRIBFO_ACCOUNTCODE</c> the same
 /// way Create can, surfacing as the same central ORA-02291 → 400 mapping.
+///
+/// ⚠️ <b>Scope note:</b> <see cref="IVahedScopedCommand"/> here only guarantees that
+/// <c>VAHEDCODE</c> cannot be *changed* to an arbitrary unit by the caller. It does
+/// <b>not</b> check whether the caller is allowed to touch this particular row in the first
+/// place — record-ownership verification on Update (i.e. "does this <c>Id</c> already belong to
+/// the caller's unit?") is explicitly out of scope for this pass, by project-owner decision. The
+/// IDOR risk on direct-by-id access therefore remains open for Update; only the "what unit does
+/// this row end up in" half of the problem is closed here.
 /// </summary>
 /// <param name="Id">The <c>TB_ATTRIBFORACCOUNTCODE.ID</c> to update (bound from the route, never the body).</param>
 /// <param name="AccountCodeId">Required link to <c>TB_ACCOUNTCODE</c> (<c>FK_ATTRIBFO_ACCOUNTCODE</c>).</param>
@@ -24,7 +34,6 @@ namespace Accounting.Application.AttribForAccountCodes.Commands.UpdateAttribForA
 /// <param name="LenAtr">LENATR column (<c>NUMBER(2)</c>, attribute digit length).</param>
 /// <param name="AttribSum">ATTRIBSUM column. Same unverified-enum caveat as <see cref="AttribBoxNo"/>.</param>
 /// <param name="ControlId">CONTROLID column. Same odd-mapping and unverified-enum caveats as the Create command.</param>
-/// <param name="VahedCode">VAHEDCODE column (max 4 chars, required).</param>
 /// <param name="Year">YEAR column (max 4 chars, required).</param>
 public sealed record UpdateAttribForAccountCodeCommand(
     Guid Id,
@@ -34,5 +43,17 @@ public sealed record UpdateAttribForAccountCodeCommand(
     byte LenAtr,
     bool AttribSum,
     bool? ControlId,
-    string VahedCode,
-    string Year) : IRequest;
+    string Year) : IRequest, IVahedScopedCommand
+{
+    /// <summary>
+    /// VAHEDCODE column (max 4 chars, required). Never bound from the request body —
+    /// <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and the Swagger
+    /// schema — and never trusted even if a caller manages to set it: <c>VahedScopeBehavior</c>
+    /// unconditionally overwrites this with the authenticated caller's own unit code before the
+    /// request reaches <c>UpdateAttribForAccountCodeCommandHandler</c>. See
+    /// <see cref="IVahedScopedCommand"/> for the full mechanism, and the scope note above for
+    /// what this does <b>not</b> cover.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

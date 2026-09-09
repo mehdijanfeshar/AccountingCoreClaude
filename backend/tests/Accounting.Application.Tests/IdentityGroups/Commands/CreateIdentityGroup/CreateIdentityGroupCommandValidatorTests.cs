@@ -9,8 +9,10 @@ public sealed class CreateIdentityGroupCommandValidatorTests
     private static CreateIdentityGroupCommand ValidCommand() => new(
         IdentityGroupsDesc: "Main group",
         IdentityGroupsCode: "001",
-        VahedCode: "0100",
-        TafsiliId: Guid.NewGuid());
+        TafsiliId: Guid.NewGuid())
+    {
+        VahedCode = "0100",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()

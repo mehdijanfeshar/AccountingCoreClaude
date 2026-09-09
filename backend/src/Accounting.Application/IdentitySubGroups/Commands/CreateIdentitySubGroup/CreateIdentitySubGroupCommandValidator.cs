@@ -12,6 +12,12 @@ namespace Accounting.Application.IdentitySubGroups.Commands.CreateIdentitySubGro
 /// (<c>byte</c>, 0-255), so an explicit upper-bound rule is needed here; without it, a value like
 /// 150 would pass FluentValidation and only fail at <c>SaveChangesAsync</c> with a raw
 /// <c>ORA-01438</c>-driven 500 instead of a clean 400.
+///
+/// The <c>RuleFor(x => x.VahedCode)</c> below is a deliberate second belt, not dead code: by the
+/// time this validator runs, <c>VahedScopeBehavior</c> (registered ahead of
+/// <c>ValidationBehavior</c> — see <c>DependencyInjection.cs</c>) has already overwritten
+/// <see cref="CreateIdentitySubGroupCommand.VahedCode"/> with the server-assigned value, so this
+/// rule now validates that value rather than anything the caller supplied.
 /// </summary>
 public sealed class CreateIdentitySubGroupCommandValidator : AbstractValidator<CreateIdentitySubGroupCommand>
 {

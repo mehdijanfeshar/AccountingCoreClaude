@@ -6,7 +6,10 @@ namespace Accounting.Application.Vouchers.Queries.GetVoucherDetails;
 
 /// <summary>
 /// Delegates straight to <see cref="IVoucherDetailReadRepository.GetPagedAsync"/>. Read-side
-/// handlers never touch <see cref="IUnitOfWork"/> — there is nothing to persist.
+/// handlers never touch <see cref="IUnitOfWork"/> — there is nothing to persist. Passes
+/// <see cref="GetVoucherDetailsQuery.VahedCode"/> through at face value — by the time this
+/// handler runs, <c>VahedScopeBehavior</c> has already overwritten it with the authenticated
+/// caller's own unit code, so this handler must forward exactly that value, never derive its own.
 /// </summary>
 public sealed class GetVoucherDetailsQueryHandler : IRequestHandler<GetVoucherDetailsQuery, PagedResult<VoucherDetailDto>>
 {

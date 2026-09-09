@@ -34,6 +34,12 @@ namespace Accounting.Api;
 /// handlers when the target row does not exist or is already soft-deleted) → 404
 /// <see cref="ProblemDetails"/> with a safe, generic message — no table/column name
 /// leaked.</description></item>
+/// <item><description><see cref="MissingVahedScopeException"/> (raised by
+/// <c>VahedScopeBehavior</c> when the authenticated caller has no usable
+/// <c>VahedCode</c>/unit-scope claim) → 403 <see cref="ProblemDetails"/>. Deliberately 403, not
+/// 401: the caller is authenticated (401 already applies to unauthenticated requests via the
+/// fallback authorization policy), it simply lacks a claim usable for this
+/// operation.</description></item>
 /// <item><description>Anything else → 500 generic <see cref="ProblemDetails"/> with no stack
 /// trace in the body. The original exception is still logged via <see cref="ILogger"/>.</description></item>
 /// </list>
@@ -87,6 +93,14 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     StatusCodes.Status404NotFound,
                     "Not Found",
                     "The requested resource was not found.")),
+
+            MissingVahedScopeException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    "The authenticated caller has no usable organizational-unit scope for this operation.")),
 
             _ => (
                 StatusCodes.Status500InternalServerError,

@@ -6,7 +6,10 @@ namespace Accounting.Application.Reports.TrialBalance.GetTrialBalance4;
 /// <summary>
 /// Delegates to <see cref="ITrialBalanceReadRepository.GetAggregatesAsync"/> and projects each
 /// <see cref="TrialBalanceAggregateRow"/> into a <see cref="TrialBalance4RowDto"/>. Never touches
-/// <see cref="IUnitOfWork"/> — there is nothing to persist.
+/// <see cref="IUnitOfWork"/> — there is nothing to persist. Passes
+/// <see cref="GetTrialBalance4Query.VahedCode"/> through at face value — by the time this handler
+/// runs, <c>VahedScopeBehavior</c> has already overwritten it with the authenticated caller's own
+/// unit code.
 /// </summary>
 public sealed class GetTrialBalance4QueryHandler
     : IRequestHandler<GetTrialBalance4Query, IReadOnlyList<TrialBalance4RowDto>>

@@ -25,6 +25,14 @@ namespace Accounting.Api.Controllers;
 /// internal architecture choice.</b> Update/Delete are exposed as <c>POST</c> to
 /// <c>{id}/update</c> and <c>{id}/delete</c>, mirroring <see cref="WorkShopsController"/>.
 ///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> — <c>CreateChequesIncorrentCommand</c>/<c>UpdateChequesIncorrentCommand</c>/
+/// <c>GetChequesIncorrentsQuery</c> all implement <c>IVahedScopedCommand</c>/
+/// <c>IVahedScopedQuery</c>, so <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c>
+/// → 403 (via <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable
+/// unit-scope claim. <see cref="GetById"/>/<see cref="Delete"/> do not opt in and never return
+/// 403 for this reason.
+///
 /// <b>409 Conflict is deliberately NOT declared anywhere on this controller</b> — unlike
 /// <see cref="BankAccountsController"/> and <see cref="CheckBooksController"/>,
 /// <c>TB_CHEQUES_INCORRENT</c> carries NO UNIQUE constraint at all, so declaring 409 here would
@@ -55,6 +63,7 @@ public sealed class ChequesIncorrentsController : ControllerBase
     [ProducesResponseType(typeof(CreateChequesIncorrentResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
         [FromBody] CreateChequesIncorrentCommand command,
@@ -75,6 +84,7 @@ public sealed class ChequesIncorrentsController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<ChequesIncorrentDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
@@ -114,6 +124,7 @@ public sealed class ChequesIncorrentsController : ControllerBase
     [ProducesResponseType(typeof(UpdateChequesIncorrentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Update(
@@ -133,7 +144,6 @@ public sealed class ChequesIncorrentsController : ControllerBase
             request.RecivDate,
             request.AccountNumber,
             request.Creditor,
-            request.VahedCode,
             request.Year);
 
         await _mediator.Send(command, cancellationToken);
@@ -182,8 +192,10 @@ public sealed record DeleteChequesIncorrentResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="ChequesIncorrentsController.Update"/>. Mirrors every field of
-/// <see cref="UpdateChequesIncorrentCommand"/> except <c>Id</c>, which is bound from the route
-/// instead.
+/// <see cref="UpdateChequesIncorrentCommand"/> except <c>Id</c> (bound from the route instead)
+/// and <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdateChequesIncorrentCommand.VahedCode"/> XML doc — so it is not part of this
+/// request body at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdateChequesIncorrentRequest(
     Guid? CheckId,
@@ -196,5 +208,4 @@ public sealed record UpdateChequesIncorrentRequest(
     string? RecivDate,
     string AccountNumber,
     decimal Creditor,
-    string VahedCode,
     string Year);

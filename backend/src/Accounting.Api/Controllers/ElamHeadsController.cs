@@ -34,6 +34,13 @@ namespace Accounting.Api.Controllers;
 /// internal architecture choice.</b> Update/Delete are exposed as <c>POST</c> to
 /// <c>{id}/update</c> and <c>{id}/delete</c>, mirroring <see cref="WorkShopsController"/>.
 ///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> — <c>CreateElamHeadCommand</c>/<c>UpdateElamHeadCommand</c>/
+/// <c>GetElamHeadsQuery</c> all implement <c>IVahedScopedCommand</c>/<c>IVahedScopedQuery</c>, so
+/// <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c> → 403 (via
+/// <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable unit-scope claim.
+/// <see cref="GetById"/>/<see cref="Delete"/> do not opt in and never return 403 for this reason.
+///
 /// <b>409 Conflict IS declared on <see cref="Create"/>/<see cref="Update"/></b> —
 /// <c>TB_ELAMHEAD</c> carries a real UNIQUE constraint (<c>AK_AK_ELAMHEAD_ELAMHEAD</c> on
 /// <c>ELAMH_SERIALNO, ELAMH_CODE, VAHEDCODE</c>), mapped centrally by
@@ -76,6 +83,7 @@ public sealed class ElamHeadsController : ControllerBase
     [ProducesResponseType(typeof(CreateElamHeadResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
@@ -97,6 +105,7 @@ public sealed class ElamHeadsController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<ElamHeadDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
@@ -135,6 +144,7 @@ public sealed class ElamHeadsController : ControllerBase
     [ProducesResponseType(typeof(UpdateElamHeadResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -167,7 +177,6 @@ public sealed class ElamHeadsController : ControllerBase
             request.WorkShopName,
             request.SendRcvVahed,
             request.ElamYear,
-            request.VahedCode,
             request.Year,
             request.ElamSenderId);
 
@@ -217,7 +226,10 @@ public sealed record DeleteElamHeadResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="ElamHeadsController.Update"/>. Mirrors every field of
-/// <see cref="UpdateElamHeadCommand"/> except <c>Id</c>, which is bound from the route instead.
+/// <see cref="UpdateElamHeadCommand"/> except <c>Id</c> (bound from the route instead) and
+/// <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdateElamHeadCommand.VahedCode"/> XML doc — so it is not part of this request
+/// body at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdateElamHeadRequest(
     Guid? VoucherHeadId,
@@ -242,6 +254,5 @@ public sealed record UpdateElamHeadRequest(
     string? WorkShopName,
     string? SendRcvVahed,
     string? ElamYear,
-    string? VahedCode,
     string? Year,
     Guid? ElamSenderId);

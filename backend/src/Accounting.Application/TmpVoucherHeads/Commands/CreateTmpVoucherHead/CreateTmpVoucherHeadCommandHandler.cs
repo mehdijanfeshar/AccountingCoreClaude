@@ -21,6 +21,12 @@ namespace Accounting.Application.TmpVoucherHeads.Commands.CreateTmpVoucherHead;
 /// voucher created through this path starts (and stays) empty. See
 /// <see cref="CreateTmpVoucherHeadCommand"/> XML doc for why that diverges from the reference
 /// project, which creates head and details as one graph.
+///
+/// <c>request.VahedCode</c> is equally unforgeable, just enforced one layer earlier: by the
+/// time this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler can trust the field at face value and
+/// simply map it onto <c>TB_TMP_VOUCHERHEAD.VAHEDCODE</c> — it does not read
+/// <see cref="ICurrentUser"/> directly for this field the way it does for <c>ADDUSERID</c>.
 /// </summary>
 public sealed class CreateTmpVoucherHeadCommandHandler : IRequestHandler<CreateTmpVoucherHeadCommand, Guid>
 {

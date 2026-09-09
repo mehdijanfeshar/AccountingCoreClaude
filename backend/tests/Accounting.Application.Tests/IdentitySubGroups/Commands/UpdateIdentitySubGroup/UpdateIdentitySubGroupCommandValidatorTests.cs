@@ -14,9 +14,11 @@ public sealed class UpdateIdentitySubGroupCommandValidatorTests
         SumFlag: false,
         Fixed: true,
         SubgrpsType: false,
-        VahedCode: "0200",
         Year: "1404",
-        IdentySubGroupsCode: "02");
+        IdentySubGroupsCode: "02")
+    {
+        VahedCode = "0200",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()

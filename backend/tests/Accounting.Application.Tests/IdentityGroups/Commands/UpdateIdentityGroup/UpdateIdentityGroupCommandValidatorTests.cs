@@ -10,8 +10,10 @@ public sealed class UpdateIdentityGroupCommandValidatorTests
         Id: Guid.NewGuid(),
         IdentityGroupsDesc: "Updated group",
         IdentityGroupsCode: "002",
-        VahedCode: "0200",
-        TafsiliId: Guid.NewGuid());
+        TafsiliId: Guid.NewGuid())
+    {
+        VahedCode = "0200",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()

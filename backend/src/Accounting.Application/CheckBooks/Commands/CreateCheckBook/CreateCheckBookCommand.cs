@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.CheckBooks.Commands.CreateCheckBook;
@@ -29,7 +31,6 @@ namespace Accounting.Application.CheckBooks.Commands.CreateCheckBook;
 /// <param name="FromCheckNumber">First cheque number in the book (required, max 14 chars); part of <c>UK_CHECKBOOK</c>.</param>
 /// <param name="ToCheckNumber">Last cheque number in the book (required, max 14 chars); part of <c>UK_CHECKBOOK</c>.</param>
 /// <param name="CheckTypeId">Optional link to <c>TB_CHECK_TYPE</c> (<c>FK_CHECKTYPE</c>).</param>
-/// <param name="VahedCode">Organizational unit code (required, max 4 chars); part of <c>UK_CHECKBOOK</c>.</param>
 /// <param name="CheckBookType">CHECKBOOK_TYPE column — see the unverified-enum note above.</param>
 /// <param name="Serial">Optional checkbook serial number (max 20 chars).</param>
 public sealed record CreateCheckBookCommand(
@@ -39,6 +40,17 @@ public sealed record CreateCheckBookCommand(
     string FromCheckNumber,
     string ToCheckNumber,
     Guid? CheckTypeId,
-    string VahedCode,
     bool? CheckBookType,
-    string? Serial) : IRequest<Guid>;
+    string? Serial) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// Organizational unit code (required, max 4 chars; part of <c>UK_CHECKBOOK</c>). Never bound
+    /// from the request body — <see cref="JsonIgnoreAttribute"/> keeps it out of both model
+    /// binding and the Swagger schema — and never trusted even if a caller manages to set it:
+    /// <c>VahedScopeBehavior</c> unconditionally overwrites this with the authenticated caller's
+    /// own unit code before the request reaches <c>CreateCheckBookCommandHandler</c>. See
+    /// <see cref="IVahedScopedCommand"/> for the full mechanism.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

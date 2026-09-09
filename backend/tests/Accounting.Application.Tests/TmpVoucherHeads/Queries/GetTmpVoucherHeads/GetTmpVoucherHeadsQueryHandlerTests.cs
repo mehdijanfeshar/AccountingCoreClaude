@@ -28,14 +28,36 @@ public sealed class GetTmpVoucherHeadsQueryHandlerTests
     {
         var readRepository = new Mock<ITmpVoucherHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedResult<TmpVoucherHeadDto>());
 
         var handler = new GetTmpVoucherHeadsQueryHandler(readRepository.Object);
+        var query = new GetTmpVoucherHeadsQuery(4, 75) { VahedCode = "0001" };
 
-        await handler.Handle(new GetTmpVoucherHeadsQuery(4, 75), CancellationToken.None);
+        await handler.Handle(query, CancellationToken.None);
 
-        readRepository.Verify(r => r.GetPagedAsync(4, 75, It.IsAny<CancellationToken>()), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(4, 75, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_PassesRequestVahedCodeToRepository_AtFaceValue()
+    {
+        // Proves the handler trusts request.VahedCode as-is: by the time this handler runs,
+        // VahedScopeBehavior has already overwritten it with the authenticated caller's own
+        // unit code, so the handler must forward exactly that value, not derive its own.
+        var readRepository = new Mock<ITmpVoucherHeadReadRepository>();
+        readRepository
+            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), "0007", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedResult<TmpVoucherHeadDto>());
+
+        var handler = new GetTmpVoucherHeadsQueryHandler(readRepository.Object);
+        var query = new GetTmpVoucherHeadsQuery(1, 20) { VahedCode = "0007" };
+
+        await handler.Handle(query, CancellationToken.None);
+
+        readRepository.Verify(
+            r => r.GetPagedAsync(1, 20, "0007", It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -50,12 +72,13 @@ public sealed class GetTmpVoucherHeadsQueryHandlerTests
         };
         var readRepository = new Mock<ITmpVoucherHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetTmpVoucherHeadsQueryHandler(readRepository.Object);
+        var query = new GetTmpVoucherHeadsQuery(1, 20) { VahedCode = "0001" };
 
-        var result = await handler.Handle(new GetTmpVoucherHeadsQuery(1, 20), CancellationToken.None);
+        var result = await handler.Handle(query, CancellationToken.None);
 
         Assert.Same(expected, result);
         Assert.Equal(7, result.TotalCount);
@@ -67,15 +90,16 @@ public sealed class GetTmpVoucherHeadsQueryHandlerTests
     {
         var readRepository = new Mock<ITmpVoucherHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedResult<TmpVoucherHeadDto>());
         using var cts = new CancellationTokenSource();
 
         var handler = new GetTmpVoucherHeadsQueryHandler(readRepository.Object);
+        var query = new GetTmpVoucherHeadsQuery(1, 20) { VahedCode = "0001" };
 
-        await handler.Handle(new GetTmpVoucherHeadsQuery(1, 20), cts.Token);
+        await handler.Handle(query, cts.Token);
 
-        readRepository.Verify(r => r.GetPagedAsync(1, 20, cts.Token), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(1, 20, "0001", cts.Token), Times.Once);
     }
 
     /// <summary>

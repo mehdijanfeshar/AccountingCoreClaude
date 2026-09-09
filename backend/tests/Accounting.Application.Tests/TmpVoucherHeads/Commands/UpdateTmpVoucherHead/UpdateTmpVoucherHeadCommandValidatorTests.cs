@@ -11,10 +11,12 @@ public sealed class UpdateTmpVoucherHeadCommandValidatorTests
         VoucherHeadId: Guid.NewGuid(),
         DateDoc: "14040101",
         HeadDesc: "شرح سند موقت",
-        VahedCode: "0001",
         Year: "1404",
         SysType: "K",
-        SourceId: Guid.NewGuid());
+        SourceId: Guid.NewGuid())
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -29,16 +31,28 @@ public sealed class UpdateTmpVoucherHeadCommandValidatorTests
     }
 
     /// <summary>
-    /// The route-bound <c>Id</c> is the only required field; every business column is nullable,
-    /// so a body that clears them all is syntactically valid (see the handler tests for what that
-    /// actually does).
+    /// The route-bound <c>Id</c> and the server-assigned <c>VahedCode</c> are the only two
+    /// required fields; every remaining business column is nullable, so a body that clears them
+    /// all is syntactically valid (see the handler tests for what that actually does).
     /// </summary>
     [Fact]
-    public void Validate_OnlyIdSupplied_Passes()
+    public void Validate_OnlyIdAndVahedCodeSupplied_Passes()
     {
-        var command = new UpdateTmpVoucherHeadCommand(Guid.NewGuid(), null, null, null, null, null, null, null);
+        var command = new UpdateTmpVoucherHeadCommand(Guid.NewGuid(), null, null, null, null, null, null)
+        {
+            VahedCode = "0001",
+        };
 
         Assert.True(_validator.Validate(command).IsValid);
+    }
+
+    [Fact]
+    public void Validate_EmptyVahedCode_Fails()
+    {
+        // VahedCode is now always server-assigned by VahedScopeBehavior before this validator
+        // runs, so it can never legitimately be empty — NotEmpty is the correct second belt even
+        // though the underlying VAHEDCODE column is nullable at the Legacy schema level.
+        Assert.False(_validator.Validate(ValidCommand() with { VahedCode = string.Empty }).IsValid);
     }
 
     /// <summary>

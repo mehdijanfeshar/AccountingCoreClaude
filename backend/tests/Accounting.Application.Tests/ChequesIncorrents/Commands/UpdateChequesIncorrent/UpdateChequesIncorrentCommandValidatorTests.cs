@@ -18,8 +18,10 @@ public sealed class UpdateChequesIncorrentCommandValidatorTests
         RecivDate: "13990210",
         AccountNumber: "3210987654321",
         Creditor: 750_000m,
-        VahedCode: "0002",
-        Year: "1400");
+        Year: "1400")
+    {
+        VahedCode = "0002",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()

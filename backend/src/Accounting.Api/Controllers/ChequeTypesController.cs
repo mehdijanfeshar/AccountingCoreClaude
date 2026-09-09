@@ -25,6 +25,13 @@ namespace Accounting.Api.Controllers;
 /// internal architecture choice.</b> Update/Delete are exposed as <c>POST</c> to
 /// <c>{id}/update</c> and <c>{id}/delete</c>, mirroring <see cref="AccountCodesController"/>.
 ///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> — <c>CreateChequeTypeCommand</c>/<c>UpdateChequeTypeCommand</c>/
+/// <c>GetChequeTypesQuery</c> all implement <c>IVahedScopedCommand</c>/<c>IVahedScopedQuery</c>,
+/// so <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c> → 403 (via
+/// <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable unit-scope claim.
+/// <see cref="GetById"/>/<see cref="Delete"/> do not opt in and never return 403 for this reason.
+///
 /// <b>409 Conflict is deliberately NOT declared on <see cref="Create"/>/<see cref="Update"/></b>
 /// — like <see cref="PreDescribsController"/>/<see cref="WhiteListsController"/>,
 /// <c>TB_CHECK_TYPE</c> carries no UNIQUE constraint at all, so declaring 409 would be
@@ -51,6 +58,7 @@ public sealed class ChequeTypesController : ControllerBase
     [ProducesResponseType(typeof(CreateChequeTypeResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
         [FromBody] CreateChequeTypeCommand command,
@@ -71,6 +79,7 @@ public sealed class ChequeTypesController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<ChequeTypeDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
@@ -108,6 +117,7 @@ public sealed class ChequeTypesController : ControllerBase
     [ProducesResponseType(typeof(UpdateChequeTypeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Update(
@@ -156,8 +166,7 @@ public sealed class ChequeTypesController : ControllerBase
             request.PrinterMargineTop,
             request.PrinterMargineLeft,
             request.PrinterType,
-            request.Year,
-            request.VahedCode);
+            request.Year);
 
         await _mediator.Send(command, cancellationToken);
 
@@ -205,7 +214,10 @@ public sealed record DeleteChequeTypeResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="ChequeTypesController.Update"/>. Mirrors every field of
-/// <see cref="UpdateChequeTypeCommand"/> except <c>Id</c>, which is bound from the route instead.
+/// <see cref="UpdateChequeTypeCommand"/> except <c>Id</c> (bound from the route instead) and
+/// <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdateChequeTypeCommand.VahedCode"/> XML doc — so it is not part of this request
+/// body at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdateChequeTypeRequest(
     string? ChequeTypeTitle,
@@ -247,5 +259,4 @@ public sealed record UpdateChequeTypeRequest(
     byte? PrinterMargineTop,
     byte? PrinterMargineLeft,
     string? PrinterType,
-    string Year,
-    string VahedCode);
+    string Year);

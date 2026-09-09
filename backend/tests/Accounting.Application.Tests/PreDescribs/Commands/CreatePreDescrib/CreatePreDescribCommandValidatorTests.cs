@@ -9,8 +9,10 @@ public sealed class CreatePreDescribCommandValidatorTests
     private static CreatePreDescribCommand ValidCommand() => new(
         AccountId: null,
         Descrip: "توضیحات پیش‌فرض",
-        VahedCode: "0001",
-        FlagVoucher: false);
+        FlagVoucher: false)
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -73,12 +75,16 @@ public sealed class CreatePreDescribCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_VahedCodeNull_Passes()
+    public void Validate_EmptyVahedCode_Fails()
     {
-        var command = ValidCommand() with { VahedCode = null };
+        // VahedCode is now always server-assigned by VahedScopeBehavior before this validator
+        // runs, so it can never legitimately be empty — NotEmpty is the correct second belt even
+        // though the underlying VAHEDCODE column is nullable at the Legacy schema level.
+        var command = ValidCommand() with { VahedCode = string.Empty };
 
         var result = _validator.Validate(command);
 
-        Assert.True(result.IsValid);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreatePreDescribCommand.VahedCode));
     }
 }

@@ -41,11 +41,24 @@ public sealed class BillLogReadRepository : IBillLogReadRepository
     public async Task<PagedResult<BillLogDto>> GetPagedAsync(
         int pageNumber,
         int pageSize,
+        string vahedCode,
         CancellationToken cancellationToken = default)
     {
+        // VahedCode filter: deliberately unconditional — no "if (!string.IsNullOrEmpty(vahedCode))"
+        // guard. That exact conditional pattern is precisely the IDOR hole CLAUDE.md risk #1
+        // describes: it lets a caller with no usable unit scope see every unit's rows instead of
+        // none. VahedScopeBehavior guarantees vahedCode is always a real, non-empty value here, so
+        // no such guard is needed — and adding one back would silently reopen the hole for any
+        // future caller path that manages to reach this method with an empty string.
+        //
+        // Also deliberately exact-equality only (never "|| b.VAHEDCODE == null"): rows with
+        // VAHEDCODE IS NULL are fail-closed — invisible to every caller, not just callers outside
+        // the row's unit — per explicit project-owner decision. (TB_BILL_LOG.VAHEDCODE is
+        // non-nullable in this schema, so this is largely defense-in-depth here, but kept
+        // consistent with every other *ReadRepository in this project.)
         var query = _dbContext.TB_BILL_LOGs
             .AsNoTracking()
-            .Where(b => b.ISDELETED != true);
+            .Where(b => b.ISDELETED != true && b.VAHEDCODE == vahedCode);
 
         var totalCount = await query.CountAsync(cancellationToken);
 

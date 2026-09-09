@@ -36,6 +36,13 @@ namespace Accounting.Api.Controllers;
 /// <c>ForeignKeyViolationException</c> → 400 (plain <see cref="ProblemDetails"/>, no
 /// <c>errors</c> dictionary — naming the offending field would mean leaking the Oracle
 /// constraint name).
+///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> — <c>CreateIdentityGroupCommand</c>/<c>UpdateIdentityGroupCommand</c>/
+/// <c>GetIdentityGroupsQuery</c> all implement <c>IVahedScopedCommand</c>/<c>IVahedScopedQuery</c>,
+/// so <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c> → 403 (via
+/// <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable unit-scope claim.
+/// <see cref="GetById"/>/<see cref="Delete"/> do not opt in and never return 403 for this reason.
 /// </summary>
 [ApiController]
 [Route("api/identity-groups")]
@@ -55,6 +62,7 @@ public sealed class IdentityGroupsController : ControllerBase
     [ProducesResponseType(typeof(CreateIdentityGroupResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
@@ -76,6 +84,7 @@ public sealed class IdentityGroupsController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<IdentityGroupDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
@@ -113,6 +122,7 @@ public sealed class IdentityGroupsController : ControllerBase
     [ProducesResponseType(typeof(UpdateIdentityGroupResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
@@ -125,7 +135,6 @@ public sealed class IdentityGroupsController : ControllerBase
             id,
             request.IdentityGroupsDesc,
             request.IdentityGroupsCode,
-            request.VahedCode,
             request.TafsiliId);
 
         await _mediator.Send(command, cancellationToken);
@@ -174,11 +183,12 @@ public sealed record DeleteIdentityGroupResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="IdentityGroupsController.Update"/>. Mirrors every field of
-/// <see cref="UpdateIdentityGroupCommand"/> except <c>Id</c>, which is bound from the route
-/// instead.
+/// <see cref="UpdateIdentityGroupCommand"/> except <c>Id</c> (bound from the route instead) and
+/// <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdateIdentityGroupCommand.VahedCode"/> XML doc — so it is not part of this request
+/// body at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdateIdentityGroupRequest(
     string IdentityGroupsDesc,
     string? IdentityGroupsCode,
-    string VahedCode,
     Guid? TafsiliId);

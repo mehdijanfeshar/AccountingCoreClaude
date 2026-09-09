@@ -13,8 +13,10 @@ public sealed class CreateAttribForAccountCodeCommandValidatorTests
         LenAtr: 4,
         AttribSum: true,
         ControlId: null,
-        VahedCode: "0001",
-        Year: "1404");
+        Year: "1404")
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()

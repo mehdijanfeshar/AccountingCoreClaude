@@ -15,6 +15,12 @@ namespace Accounting.Application.Expenses.Commands.UpdateExpense;
 /// <see langword="true"/> triggers 404, consistent with the <c>ISDELETED != true</c> filter used
 /// by the read side. <c>CHANGEUSERID</c> is sourced from <see cref="ICurrentUser"/> — never from
 /// the request.
+///
+/// <c>request.VahedCode</c> is likewise unforgeable, enforced one layer earlier: by the time
+/// this handler runs, <c>VahedScopeBehavior</c> has already overwritten it with
+/// <see cref="ICurrentUser.VahedCode"/>, so this handler simply maps it onto
+/// <c>TB_EXPENCE.VAHEDCODE</c> at face value — see <c>UpdateExpenseCommand</c> XML doc for the
+/// explicit scope note on what this does and does not cover.
 /// </summary>
 public sealed class UpdateExpenseCommandHandler : IRequestHandler<UpdateExpenseCommand>
 {

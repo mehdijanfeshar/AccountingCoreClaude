@@ -46,8 +46,10 @@ public sealed class CreateChequeTypeCommandValidatorTests
         PrinterMargineTop: 5,
         PrinterMargineLeft: 6,
         PrinterType: "HP LaserJet",
-        Year: "1403",
-        VahedCode: "0100");
+        Year: "1403")
+    {
+        VahedCode = "0100",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -126,8 +128,10 @@ public sealed class CreateChequeTypeCommandValidatorTests
             null, null, null, null,
             null, null,
             null,
-            "1403",
-            "0100"));
+            "1403")
+        {
+            VahedCode = "0100",
+        });
 
         Assert.True(result.IsValid);
     }

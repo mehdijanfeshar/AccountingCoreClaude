@@ -29,9 +29,11 @@ public sealed class GetTrialBalance6QueryHandlerTests
         Year: "1405",
         FromDate: "14050101",
         ToDate: "14051230",
-        VahedCode: "0001",
         Level: TrialBalanceLevel.Moin,
-        DocLife: null);
+        DocLife: null)
+    {
+        VahedCode = "0001",
+    };
 
     /// <summary>
     /// Regression test for the project-owner decision (see <c>docs/open-decisions.md</c>):
@@ -127,6 +129,34 @@ public sealed class GetTrialBalance6QueryHandlerTests
 
         Assert.Equal(0m, row.DebtorBalance);
         Assert.Equal(0m, row.CreditorBalance);
+    }
+
+    [Fact]
+    public async Task Handle_PassesRequestVahedCodeToRepository_AtFaceValue()
+    {
+        // Proves the handler trusts request.VahedCode as-is: by the time this handler runs,
+        // VahedScopeBehavior has already overwritten it with the authenticated caller's own unit
+        // code, so the handler must forward exactly that value, not derive its own. This is the
+        // IDOR-closure proof for what used to be the largest single data-leak surface in the
+        // project (CLAUDE.md risk #1) — an entire unit's trial balance reachable via one
+        // query-string parameter.
+        var readRepository = new Mock<ITrialBalanceReadRepository>();
+        readRepository
+            .Setup(r => r.GetAggregatesAsync(
+                It.IsAny<TrialBalanceLevel>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(),
+                "0007", It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<TrialBalanceAggregateRow>());
+
+        var handler = new GetTrialBalance6QueryHandler(readRepository.Object);
+        var query = Query() with { VahedCode = "0007" };
+
+        await handler.Handle(query, CancellationToken.None);
+
+        readRepository.Verify(
+            r => r.GetAggregatesAsync(
+                query.Level, query.Year, query.FromDate, query.ToDate, "0007", query.DocLife,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

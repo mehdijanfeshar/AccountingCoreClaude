@@ -18,5 +18,5 @@ public sealed class GetChequesIncorrentsQueryHandler : IRequestHandler<GetCheque
     }
 
     public Task<PagedResult<ChequesIncorrentDto>> Handle(GetChequesIncorrentsQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, cancellationToken);
+        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, request.VahedCode, cancellationToken);
 }

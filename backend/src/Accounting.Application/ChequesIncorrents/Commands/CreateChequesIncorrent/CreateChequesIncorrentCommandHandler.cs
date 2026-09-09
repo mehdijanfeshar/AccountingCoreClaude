@@ -9,7 +9,9 @@ namespace Accounting.Application.ChequesIncorrents.Commands.CreateChequesIncorre
 /// via <see cref="IChequesIncorrentRepository"/>, and owns the transaction boundary by calling
 /// <see cref="IUnitOfWork.SaveChangesAsync"/> exactly once. <c>ADDUSERID</c> is sourced from
 /// <see cref="ICurrentUser"/> (the authenticated caller) — never from the request — so it cannot
-/// be forged by the client.
+/// be forged by the client. <c>request.VahedCode</c> is equally non-forgeable: by the time this
+/// handler runs, <c>VahedScopeBehavior</c> has already overwritten it with the authenticated
+/// caller's own unit code (see <see cref="CreateChequesIncorrentCommand.VahedCode"/>).
 ///
 /// <c>ID</c> is always generated application-side (<see cref="Guid.NewGuid"/>); the Oracle
 /// column has no <c>sys_guid()</c> default, so this simply follows the project-wide convention.

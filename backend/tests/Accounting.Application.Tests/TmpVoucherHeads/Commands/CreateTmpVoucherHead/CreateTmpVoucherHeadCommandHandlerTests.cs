@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.TmpVoucherHeads.Commands.CreateTmpVoucherHead;
 using Accounting.Domain.Entity;
@@ -16,10 +17,12 @@ public sealed class CreateTmpVoucherHeadCommandHandlerTests
         VoucherHeadId: Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
         DateDoc: "14040101",
         HeadDesc: "شرح سند موقت تستی",
-        VahedCode: "0001",
         Year: "1404",
         SysType: "K",
-        SourceId: Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"));
+        SourceId: Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"))
+    {
+        VahedCode = "0001",
+    };
 
     private static Mock<ICurrentUser> CurrentUserMock(string userId = "user1")
     {
@@ -229,8 +232,12 @@ public sealed class CreateTmpVoucherHeadCommandHandlerTests
     }
 
     /// <summary>
-    /// Every column on <c>TB_TMP_VOUCHERHEAD</c> is nullable, so an all-null command must be
-    /// accepted and must stage genuine NULLs — nothing may be coerced to a default.
+    /// Every column on <c>TB_TMP_VOUCHERHEAD</c> reachable through a positional command
+    /// parameter is nullable, so an all-null command must be accepted and must stage genuine
+    /// NULLs — nothing may be coerced to a default. <c>VahedCode</c> is the one exception: it is
+    /// no longer a positional/nullable parameter at all (it is always server-assigned — see
+    /// <see cref="CreateTmpVoucherHeadCommand.VahedCode"/> XML doc), so an "unset" command still
+    /// carries its default <see cref="string.Empty"/> there, not <see langword="null"/>.
     /// </summary>
     [Fact]
     public async Task Handle_AllFieldsNull_Passes_EveryColumnIsNullable()
@@ -241,7 +248,7 @@ public sealed class CreateTmpVoucherHeadCommandHandlerTests
             repository.Object, unitOfWork.Object, CurrentUserMock().Object);
 
         await handler.Handle(
-            new CreateTmpVoucherHeadCommand(null, null, null, null, null, null, null),
+            new CreateTmpVoucherHeadCommand(null, null, null, null, null, null),
             CancellationToken.None);
 
         var entity = staged();
@@ -249,7 +256,7 @@ public sealed class CreateTmpVoucherHeadCommandHandlerTests
         Assert.Null(entity!.VOUCHERSHEAD_ID);
         Assert.Null(entity.DATE_DOC);
         Assert.Null(entity.HEAD_DESC);
-        Assert.Null(entity.VAHEDCODE);
+        Assert.Equal(string.Empty, entity.VAHEDCODE);
         Assert.Null(entity.YEAR);
         Assert.Null(entity.SYS_TYPE);
         Assert.Null(entity.SOURCEID);
@@ -290,5 +297,30 @@ public sealed class CreateTmpVoucherHeadCommandHandlerTests
                 && typeof(System.Collections.IEnumerable).IsAssignableFrom(p.PropertyType));
 
         Assert.False(hasCollectionProperty);
+    }
+
+    [Fact]
+    public async Task Handle_ThroughVahedScopeBehavior_ClientSuppliedVahedCodeIsDiscarded_ServerValueIsWritten()
+    {
+        // End-to-end forgery-prevention proof: even when a "client" manages to populate
+        // command.VahedCode with a forged value before dispatch, running the command through
+        // VahedScopeBehavior — exactly as the real MediatR pipeline does — overwrites it
+        // unconditionally with ICurrentUser.VahedCode before the handler ever sees it.
+        var repository = CapturingRepository(out var staged);
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
+        currentUser.SetupGet(u => u.VahedCode).Returns("0009");
+
+        var handler = new CreateTmpVoucherHeadCommandHandler(
+            repository.Object, unitOfWork.Object, currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateTmpVoucherHeadCommand, Guid>(currentUser.Object);
+        var forgedCommand = ValidCommand() with { VahedCode = "9999" };
+
+        await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);
+
+        var entity = staged();
+        Assert.NotNull(entity);
+        Assert.Equal("0009", entity!.VAHEDCODE);
+        Assert.Equal("0009", forgedCommand.VahedCode);
     }
 }

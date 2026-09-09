@@ -9,6 +9,16 @@ namespace Accounting.Application.IdentitySubGroups.Commands.UpdateIdentitySubGro
 /// explicit upper-bound rule is needed here; without it, a value like 150 would pass
 /// FluentValidation and only fail at <c>SaveChangesAsync</c> with a raw <c>ORA-01438</c>-driven
 /// 500 instead of a clean 400.
+///
+/// ⚠️ The <c>RuleFor(x => x.VahedCode)</c> below currently does NOT execute at runtime:
+/// <c>ValidationBehavior</c>'s <c>where TRequest : IRequest&lt;TResponse&gt;</c> constraint is
+/// never satisfied for this void (<c>: IRequest</c>) command in MediatR 14.2.0, so the DI
+/// container silently skips this validator for every <c>Update</c>/<c>Delete</c> request
+/// project-wide — see <c>docs/open-decisions.md</c> and <c>VahedScopeBehavior.cs</c> (which
+/// deliberately avoids the same constraint for this exact reason).
+/// <see cref="UpdateIdentitySubGroupCommand.VahedCode"/> is still safe at runtime only because
+/// <c>VahedScopeBehavior</c> unconditionally overwrites it before the handler runs, not because
+/// of this rule.
 /// </summary>
 public sealed class UpdateIdentitySubGroupCommandValidator : AbstractValidator<UpdateIdentitySubGroupCommand>
 {

@@ -17,6 +17,12 @@ namespace Accounting.Application.Vouchers.Commands.UpdateVoucherHead;
 /// <c>CHANGEUSERID</c> is sourced from <see cref="ICurrentUser"/> (the authenticated caller)
 /// — never from the request — so it cannot be forged by the client, mirroring the audit
 /// pattern already used by <c>CreateVoucherHeadCommandHandler</c>.
+///
+/// This handler just maps <see cref="UpdateVoucherHeadCommand.VahedCode"/> onto the entity at
+/// face value; it does not read <see cref="ICurrentUser.VahedCode"/> directly. Forgery
+/// prevention (the record's unit can only ever be set to the caller's own unit, never an
+/// arbitrary one) is <c>VahedScopeBehavior</c>'s job — see the scope note on
+/// <see cref="UpdateVoucherHeadCommand"/> for what this does and does not close.
 /// </summary>
 public sealed class UpdateVoucherHeadCommandHandler : IRequestHandler<UpdateVoucherHeadCommand>
 {

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.BankCartDetails.Commands.CreateBankCartDetail;
@@ -47,7 +49,6 @@ namespace Accounting.Application.BankCartDetails.Commands.CreateBankCartDetail;
 /// <param name="CheckReceiptType">CHECKRECEIPTTYPE column — see the unverified-enum note above.</param>
 /// <param name="Debtor">DEBTOR column (<c>NUMBER(25)</c>, optional); see the balance note above.</param>
 /// <param name="Creditor">CREDITOR column (<c>NUMBER(25)</c>, optional); see the balance note above.</param>
-/// <param name="VahedCode">Organizational unit code (optional, max 4 chars).</param>
 /// <param name="Year">Fiscal year (optional, max 4 chars).</param>
 /// <param name="CheckIncorrentId">Prior-year in-transit identifier — NO FK exists for this column; see the class remarks.</param>
 public sealed record CreateBankCartDetailCommand(
@@ -62,6 +63,21 @@ public sealed record CreateBankCartDetailCommand(
     bool? CheckReceiptType,
     decimal? Debtor,
     decimal? Creditor,
-    string? VahedCode,
     string? Year,
-    Guid? CheckIncorrentId) : IRequest<Guid>;
+    Guid? CheckIncorrentId) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// Organizational unit code (max 4 chars). Although <c>TB_BANKCARTDETAIL.VAHEDCODE</c> is
+    /// nullable in Legacy (and participates in the nullable-everywhere
+    /// <c>AK_AK_BANKCARTDETAIL_BANKCART</c> composite), this property is deliberately
+    /// non-nullable <see cref="string"/> here — <c>VahedScopeBehavior</c> always assigns a real
+    /// value before the handler runs. Never bound from the request body —
+    /// <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and the Swagger
+    /// schema — and never trusted even if a caller manages to set it: <c>VahedScopeBehavior</c>
+    /// unconditionally overwrites this with the authenticated caller's own unit code before the
+    /// request reaches <c>CreateBankCartDetailCommandHandler</c>. See
+    /// <see cref="IVahedScopedCommand"/> for the full mechanism.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

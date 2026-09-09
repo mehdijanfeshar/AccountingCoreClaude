@@ -46,13 +46,25 @@ public sealed class ReceiptReadRepository : IReceiptReadRepository
     public async Task<PagedResult<ReceiptDto>> GetPagedAsync(
         int pageNumber,
         int pageSize,
+        string vahedCode,
         CancellationToken cancellationToken = default)
     {
         // Logical delete filter: ISDELETED is a non-nullable bool on this table, so the simple
         // == false form is used (unlike the bool? tables elsewhere in this project).
+        //
+        // VahedCode filter: deliberately unconditional — no "if (!string.IsNullOrEmpty(vahedCode))"
+        // guard. That exact conditional pattern is precisely the IDOR hole CLAUDE.md risk #1
+        // describes: it lets a caller with no usable unit scope see every unit's rows instead of
+        // none. VahedScopeBehavior guarantees vahedCode is always a real, non-empty value here, so
+        // no such guard is needed — and adding one back would silently reopen the hole for any
+        // future caller path that manages to reach this method with an empty string.
+        //
+        // Also deliberately exact-equality only (never "|| r.VAHEDCODE == null"): rows with
+        // VAHEDCODE IS NULL are fail-closed — invisible to every caller, not just callers outside
+        // the row's unit — per explicit project-owner decision.
         var query = _dbContext.TB_RECEIPs
             .AsNoTracking()
-            .Where(r => r.ISDELETED == false);
+            .Where(r => r.ISDELETED == false && r.VAHEDCODE == vahedCode);
 
         var totalCount = await query.CountAsync(cancellationToken);
 

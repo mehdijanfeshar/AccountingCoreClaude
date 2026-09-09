@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.ChequeTypes.Commands.UpdateChequeType;
@@ -15,7 +17,13 @@ namespace Accounting.Application.ChequeTypes.Commands.UpdateChequeType;
 /// <see cref="Accounting.Application.ChequeTypes.Commands.CreateChequeType.CreateChequeTypeCommand"/>;
 /// see that command's XML doc for full detail (including the <c>ChequeImage</c> size-limit note).
 /// No individual <c>&lt;param&gt;</c> tags are used here on purpose — a partial set (documenting
-/// only some of the 42 parameters) would itself trigger CS1573 for every undocumented one.
+/// only some of the 41 parameters) would itself trigger CS1573 for every undocumented one.
+///
+/// ⚠️ <b>Scope note:</b> <see cref="IVahedScopedCommand"/> here only guarantees that
+/// <c>VAHEDCODE</c> cannot be *changed* to an arbitrary unit by the caller. It does
+/// <b>not</b> check whether the caller is allowed to touch this particular row in the first
+/// place — record-ownership verification on Update is explicitly out of scope for this pass, by
+/// project-owner decision.
 /// </summary>
 public sealed record UpdateChequeTypeCommand(
     Guid Id,
@@ -58,5 +66,16 @@ public sealed record UpdateChequeTypeCommand(
     byte? PrinterMargineTop,
     byte? PrinterMargineLeft,
     string? PrinterType,
-    string Year,
-    string VahedCode) : IRequest;
+    string Year) : IRequest, IVahedScopedCommand
+{
+    /// <summary>
+    /// Organizational unit code (required, max 4 chars). Never bound from the request body —
+    /// <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and the Swagger
+    /// schema — and never trusted even if a caller manages to set it: <c>VahedScopeBehavior</c>
+    /// unconditionally overwrites this with the authenticated caller's own unit code before the
+    /// request reaches <c>UpdateChequeTypeCommandHandler</c>. See <see cref="IVahedScopedCommand"/>
+    /// for the full mechanism, and the scope note above for what this does <b>not</b> cover.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

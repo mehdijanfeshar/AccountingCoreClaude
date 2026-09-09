@@ -47,6 +47,13 @@ namespace Accounting.Application.Vouchers.Commands.UpdateVoucherDetail;
 ///
 /// This does not create independent CRUD for an embedded table: every mutation goes through the
 /// parent aggregate's own repository, per the standing team rule.
+///
+/// This handler just maps <see cref="UpdateVoucherDetailCommand.VahedCode"/> onto the entity — and,
+/// via the post-update <c>entity.VAHEDCODE</c>, onto every تفصیلی link reconciled in the same
+/// call — at face value; it does not read <see cref="ICurrentUser.VahedCode"/> directly. Forgery
+/// prevention (the record's unit can only ever be set to the caller's own unit, never an
+/// arbitrary one) is <c>VahedScopeBehavior</c>'s job — see the scope note on
+/// <see cref="UpdateVoucherDetailCommand"/> for what this does and does not close.
 /// </summary>
 public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVoucherDetailCommand>
 {

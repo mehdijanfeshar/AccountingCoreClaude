@@ -40,6 +40,15 @@ namespace Accounting.Api.Controllers;
 /// <c>TB_VOUCHERSDETAIL</c>). Soft-deleting a receipt via <see cref="Delete"/> does NOT cascade —
 /// any referencing rows are left active and silent. See <see cref="DeleteReceiptCommand"/> XML
 /// doc.
+///
+/// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
+/// Forbidden</c></b> — <c>CreateReceiptCommand</c>/<c>UpdateReceiptCommand</c>/
+/// <c>GetReceiptsQuery</c> all implement <c>IVahedScopedCommand</c>/<c>IVahedScopedQuery</c>, so
+/// <c>VahedScopeBehavior</c> throws <c>MissingVahedScopeException</c> → 403 (via
+/// <c>GlobalExceptionHandler</c>) when the authenticated caller has no usable unit-scope claim.
+/// <see cref="GetById"/>/<see cref="Delete"/> do not opt in and never return 403 for this reason —
+/// see <see cref="UpdateReceiptCommand"/> XML doc for the explicit scope note on what closing this
+/// still leaves open.
 /// </summary>
 [ApiController]
 [Route("api/receipts")]
@@ -59,6 +68,7 @@ public sealed class ReceiptsController : ControllerBase
     [ProducesResponseType(typeof(CreateReceiptResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
         [FromBody] CreateReceiptCommand command,
@@ -79,6 +89,7 @@ public sealed class ReceiptsController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<ReceiptDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
@@ -116,6 +127,7 @@ public sealed class ReceiptsController : ControllerBase
     [ProducesResponseType(typeof(UpdateReceiptResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Update(
@@ -129,7 +141,6 @@ public sealed class ReceiptsController : ControllerBase
             request.ReceiptDate,
             request.ReceiptNo,
             request.DateRsid,
-            request.VahedCode,
             request.Year);
 
         await _mediator.Send(command, cancellationToken);
@@ -178,12 +189,14 @@ public sealed record DeleteReceiptResponse(Guid Id);
 
 /// <summary>
 /// Request body for <see cref="ReceiptsController.Update"/>. Mirrors every field of
-/// <see cref="UpdateReceiptCommand"/> except <c>Id</c>, which is bound from the route instead.
+/// <see cref="UpdateReceiptCommand"/> except <c>Id</c> (bound from the route instead) and
+/// <c>VahedCode</c> (server-assigned by <c>VahedScopeBehavior</c> — see
+/// <see cref="UpdateReceiptCommand.VahedCode"/> XML doc — so it is not part of this request
+/// body at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdateReceiptRequest(
     bool ReceiptKind,
     string ReceiptDate,
     string ReceiptNo,
     string? DateRsid,
-    string VahedCode,
     string Year);

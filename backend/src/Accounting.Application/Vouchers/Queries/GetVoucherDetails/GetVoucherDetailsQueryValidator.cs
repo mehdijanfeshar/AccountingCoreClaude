@@ -3,8 +3,11 @@ using FluentValidation;
 namespace Accounting.Application.Vouchers.Queries.GetVoucherDetails;
 
 /// <summary>
-/// Surface-level (syntactic) validation only, matching the Fluent mapping constraints in
-/// <c>LegacyDbContext</c> (<c>YEAR</c> and <c>VAHEDCODE</c> are both max 4 chars).
+/// Surface-level (syntactic) validation only, matching the Fluent mapping constraint on
+/// <c>YEAR</c> (max 4 chars). No rule for <c>VahedCode</c> here — mirrors
+/// <c>GetWorkShopsQueryValidator</c>/<c>GetVoucherHeadsQueryValidator</c>: it is never caller
+/// input (server-assigned by <c>VahedScopeBehavior</c>, always a valid value by the time this
+/// validator runs), so there is nothing meaningful for a syntactic validator to check.
 /// </summary>
 public sealed class GetVoucherDetailsQueryValidator : AbstractValidator<GetVoucherDetailsQuery>
 {
@@ -29,9 +32,6 @@ public sealed class GetVoucherDetailsQueryValidator : AbstractValidator<GetVouch
             .InclusiveBetween(1, MaxPageSize);
 
         RuleFor(x => x.Year)
-            .MaximumLength(4);
-
-        RuleFor(x => x.VahedCode)
             .MaximumLength(4);
     }
 }
