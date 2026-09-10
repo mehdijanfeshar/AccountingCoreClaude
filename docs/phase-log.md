@@ -14,6 +14,84 @@
 
 ---
 
+### فاز ۲۲ — پوستهٔ بصری MUI/RTL + اولین فرم‌های واقعی (کدینگ حساب و صدور سند با تفصیلی داینامیک) (۲۰۲۶-۰۹-۱۰، ریپوی فرانت `D:\AiProj\AccountCoreAiProj_UI`، commit نشده)
+
+اولین فازی که پروژه واقعاً «شکل و شمایل» گرفت. صاحب پروژه گفت فرانت «بی‌روح» است و ظاهر واقعی + فرم‌های واقعی خواست. فاز در **دو Task ترتیبی** به `frontend-react` واگذار شد (Task دوم روی زیرساخت Task اول ساخته می‌شود). **صفر تغییر در بک‌اند** — بک‌اند فقط برای خواندن Contract باز شد.
+
+#### ۱. تصمیم‌های قطعی صاحب پروژه (بدون بحث اجرا شدند)
+
+| تصمیم | نتیجه |
+|---|---|
+| کتابخانهٔ UI = **MUI** | `@mui/material` 9.4 + `@mui/icons-material` 9.4 |
+| RTL کامل فارسی | `stylis-plugin-rtl` 2.1 + `CacheProvider` emotion (`src/theme/rtlCache.ts`) — صرفِ `dir="rtl"` کافی نیست |
+| فونت فارسی | **Vazirmatn به‌صورت محلی bundle شد** (`@fontsource/vazirmatn` 5.3)، نه CDN — عمداً، چون محیط سازمانی ممکن است اینترنت نداشته باشد |
+| Date-picker شمسی | `react-multi-date-picker` 4.5 با تقویم `persian` و locale `persian_fa` |
+| استک فرم | React Hook Form 7.87 + Zod 4.6 + `@hookform/resolvers` 5.9 |
+
+این ریسک 🟡 فاز ۲۰ («کتابخانهٔ UI و datepicker شمسی انتخاب نشده‌اند») را **می‌بندد**.
+
+#### ۲. Task 22-الف — زیرساخت بصری
+
+- `src/theme/index.ts` — تم واحد، `direction: 'rtl'`، locale `faIR` (رشته‌های داخلی MUI مثل `TablePagination` را فارسی می‌کند)، تایپوگرافی Vazirmatn. عمداً ساده.
+- `src/theme/rtlCache.ts` — emotion cache با `prefixer` + `rtlPlugin`.
+- `Layout.tsx` با `AppBar`/`Drawer` بازنویسی شد؛ همان سه گروه ناوبری (اطلاعات پایه/عملیات/گزارش‌ها) حفظ شد، `YearSelector` و `DevTokenBar` (که منطق واقعی `SessionContext`/`AuthContext` دارند) نگه داشته شدند، بنر ۴۰۱ به `Alert` تبدیل شد، `skip-link` حفظ شد.
+- کامپوننت‌های مشترک روی MUI بازنویسی شدند: `DataTable` (`Table`+ حالت loading/empty)، `Pagination`، `ErrorBanner` (`Alert`)، `PageHeader`.
+- **`src/components/Field.tsx` حذف شد** — در فرم‌ها مستقیماً `TextField` MUI به‌کار می‌رود.
+- `src/lib/format/numbers.ts` — `toLatinDigits` / `toPersianDigits` / `normalizeNumericInput` / `formatThousands`. ⚠️ قاعدهٔ سختی که در خود فایل ثبت شد: توابع نمایشی هرگز نباید به مقدار فرم یا بدنهٔ درخواست برگردند؛ **هرچه به بک‌اند می‌رود رقم لاتین است**.
+- **نکتهٔ فنی:** به‌جای درگیرشدن با اینکه `stylis-plugin-rtl` دقیقاً کدام property را flip می‌کند، در کد از **logical properties** (`paddingInlineStart`/`marginInlineEnd`) استفاده شد تا درستی نتیجه به مدل ذهنی flip وابسته نباشد.
+
+#### ۳. Task 22-ب — فرم کدینگ حساب
+
+مسیرهای جدید `/base/account-codes/new` و `/base/account-codes/:id/edit` (`AccountCodeFormPage.tsx`، یک کامپوننت برای هر دو حالت).
+
+- Endpointهای واقعی: `POST /api/account-codes` (ساخت)، `GET /api/account-codes/{id}` (پرکردن اولیه)، `POST /api/account-codes/{id}/update` (ذخیره).
+- قیدهای Zod **دقیقاً برابر `CreateAccountCodeCommandValidator`**: `accCode` اجباری ≤۶، `accCodeName` اجباری ≤۲۰۰، `moInforClose` ≤۶.
+- `AccountCodePickerDialog.tsx` — انتخابگر حساب والد با جستجو/صفحه‌بندی روی `GET /api/account-codes`. عمداً **ورودی متنی خام GUID گرفته نمی‌شود**.
+- `409` به پیام فارسی «کد حساب تکراری است.» نگاشت شد.
+- **`TriStateToggle.tsx`** — پاسخ به ریسک باز #۲: چهار ستون `typeCode`/`typeActivity`/`typeAccCode`/`typeAction` در دیتابیس enum چندمقداری‌اند ولی روی سیم `bool|null` تایپ شده‌اند. به‌جای اختراع dropdown با گزینه‌های enum (که API نمی‌پذیرد)، یک کنترل سه‌حالتهٔ صریح (بله/خیر/خالی) ساخته شد و به ریسک #۲ گره خورد. ⚠️ رفع #۲ در بک‌اند این فرم را **breaking** می‌کند.
+
+#### ۴. Task 22-ب — فرم صدور سند با تفصیلی داینامیک (مهم‌ترین خروجی فاز)
+
+مسیر `/operation/vouchers/new`؛ آیتم منوی «صدور سند (تفصیلی داینامیک)» که از فاز ۲۰ بدون لینک بود، فعال شد.
+
+- `useTafsiliLevels.ts` که از فاز ۲۰ عمداً `throw` می‌کرد، **واقعاً پیاده شد** روی دو Endpoint فاز ۲۱. `useTafsiliLevelItems.ts` هم اضافه شد.
+- `TafsiliItemSelect.tsx` — `Autocomplete` با **جستجوی سمت سرور با debounce ۳۰۰ms** + صفحه‌بندی + `placeholderData: (previous) => previous`. سمت کلاینت فیلتر مجدد **نمی‌زند** (هیوریستیک «رقم→کد، غیررقم→نام» سمت سرور است).
+- تقسیم سطوح: **۱–۳ inline** در ردیف، **۴ به بعد در مودال** «لیست تفصیلی‌ها» با شمارندهٔ `(انتخاب‌شده/کل)`؛ اگر هیچ سطح ۴+ فعال نبود، پیام «سطح تفصیلی بیشتری وجود ندارد».
+- تغییر معین ⇒ سطوح قبلی کاملاً پاک می‌شوند (هرگز فیلد بازمانده از معین قبلی نشان داده نمی‌شود).
+
+##### 🔴 یافتهٔ قرارداد که کل مسیر ذخیره را تعیین کرد
+
+`team-lead` پیش از واگذاری، قرارداد بک‌اند را از خود کد استخراج کرد و یافت که **`CreateVoucherHeadDetailInput` (آیتم‌های `initialDetails` در composite create فاز ۱۰) فیلد `tafsiliLinks` ندارد** — این فیلد **فقط** روی `CreateVoucherDetailCommand` وجود دارد.
+
+⇒ پس `initialDetails` **عمداً هرگز استفاده نمی‌شود** و ذخیره اجباراً **دومرحله‌ای** است:
+1. `POST /api/voucher-heads` بدون `initialDetails` → `headId`
+2. برای هر ردیف: `POST /api/voucher-details` با `voucherHeadId` و `tafsiliLinks`.
+
+⚠️ **این ذخیره اتمیک نیست.** اگر سرسند ساخته شود و ردیفی خطا بدهد، سند ناقص در دیتابیس می‌ماند و بک‌اند هیچ endpoint ای برای rollback ندارد. مدیریت شده با: نگه‌داشتن `createdHeadId` + وضعیت per-row (`idle/pending/success/error`) طوری که «تلاش مجدد» فقط ردیف‌های ناموفق را دوباره می‌فرستد و **هرگز سرسند تکراری نمی‌سازد**. راه‌حل واقعی یک composite endpoint در بک‌اند است — به‌عنوان تصمیم باز ثبت شد.
+
+##### اعتبارسنجی تفصیلی الزامی سمت فرانت (ریسک #۱۲)
+
+`voucherEntrySchema.ts` یک **Zod schema پویا** می‌سازد: هر ردیف سطوح فعال معین خودش را در `activeLevelsRef` ثبت می‌کند و `superRefine` آن‌ها را اجباری می‌کند (چون `isRequired` در قرارداد فاز ۲۱ همیشه `true` است). در خود فایل صریحاً کامنت شد که این **جایگزین رفع ریسک #۱۲ در بک‌اند نیست** و آن ریسک همچنان باز است.
+
+##### تراز — عمداً غیرمسدودکننده
+
+طبق «تصمیم معماری دوم»، صاحب پروژه invariant تراز را آگاهانه کنار گذاشته (ریسک #۳). پس جمع زندهٔ بدهکار/بستانکار و اختلافشان **نمایش داده می‌شود** (`Chip` سبز/نارنجی + هشدار) ولی **ثبت را مسدود نمی‌کند** — مسدودکردن یعنی اختراع قانون کسب‌وکاری که صاحب پروژه صریحاً ردش کرده، و مصداق «Business Rule حسابداری فقط در UI». این قید در Task Contract صریح داده شد و رعایت شد.
+
+#### ۵. الگوهای اقتباس‌شده از پروژهٔ Angular مرجع
+
+خواندن **فقط‌خواندنی** از `D:\WorkSpace\projects\financial-account\src\app\pages\operation\add-voucher\` (به‌ویژه `add-voucher.component.html`/`.scss` و زیرپوشه‌های `tafsili-list`, `moin-list`) و `pages\base\base-coding\base-coding-moin\`. اقتباس شد (نه کپی): چیدمان سرسند به‌صورت فیلدهای بالای صفحه + ردیف‌ها زیر آن، تقسیم تفصیلی ۱–۳ inline / ۴+ مودال، مودال انتخابگر برای معین و تفصیلی، و نوار جمع‌ها در پای فرم.
+
+⚠️ یک الگوی مرجع **عمداً پیاده نشد**: `checkTafLevelField` (نمایش ستون یک سطح تفصیلی در جدول فقط وقتی حداقل یک ردیف مقدار دارد). دلیل: چیدمان انتخاب‌شده به‌جای گرید تخت، **کارت per-row** است و هر ردیف فقط سطوح معین خودش را نشان می‌دهد — یعنی مسئلهٔ «دیوار ستون‌های خالی» اصلاً پیش نمی‌آید. اگر بعداً چیدمان گریدی شد، این الگو باید برگردد.
+
+#### ۶. راستی‌آزمایی و نکتهٔ فرایندی
+
+- `npx tsc --noEmit` → **exit 0، صفر خطا**. `npm run build` → **موفق** (تنها هشدار: chunk بزرگ‌تر از ۵۰۰kB — MUI؛ code-splitting به‌عنوان follow-up).
+- گرپ‌های کنترلی توسط `team-lead`: هیچ `vahedCode` در بدنهٔ درخواست (فقط در DTOهای **خواندن** و کامنت‌ها)، هیچ فعل `PUT`/`DELETE`، `useTafsiliLevels` دیگر `throw` نمی‌کند، `initialDetails` در هیچ مسیر ذخیره‌ای استفاده نشده.
+- **هیچ commit ای در ریپوی فرانت زده نشد** (به دستور صریح صاحب پروژه، خودش بررسی و commit می‌کند).
+- ⚠️ **نکتهٔ فرایندی — چهارمین بار پیاپی:** Task اول به‌خاطر rate limit وسط کار قطع شد و چون `SendMessage` در دسترس نبود نمی‌شد همان ایجنت را ادامه داد؛ `team-lead` وضعیت واقعی ریپو را خودش کشف کرد و Task دوم را با **کل قرارداد بک‌اند از پیش استخراج‌شده** واگذار کرد تا ایجنت جدید آن را از صفر بازکشف نکند. ایجنت دوم کار کامل و باکیفیتی تحویل داد ولی گزارشش فقط «No new work. Complete.» بود — پس **همهٔ معیارهای پذیرش دستی توسط `team-lead` بازبینی شد** (build، typecheck، گرپ قیدهای امنیتی/معماری، خواندن مسیر ذخیره، schema پویا، رفتار تراز) و مستندسازی فاز را `team-lead` نوشت. این چهارمین فاز پیاپی است که ساب‌ایجنت Completion Contract ناقص می‌دهد (۱۹: `frontend-react`، ۲۰: «Standing by.»، ۲۱: `backend-dotnet`، ۲۲: «No new work.»).
+
+---
+
 ### فاز ۲۱ — دو Query تفصیلی داینامیک (backend) — رفع مسدودکنندهٔ فرم صدور سند (۲۰۲۶-۰۹-۱۰، برنچ `EntityCRUD`، commit نشده)
 
 فازی عمداً کوچک و **فقط خواندنی**، به درخواست صریح صاحب پروژه بلافاصله پس از فاز ۲۰: فاز ۲۰ با یک مسدودکنندهٔ سخت بسته شد (ریسک 🔴 #۱۸ / Issue #35) — فرم صدور سند به دو Query نیاز داشت که در بک‌اند **اصلاً وجود نداشتند**. این فاز فقط همان دو را می‌سازد. **هیچ Command، هیچ Entity جدید، هیچ تغییر schema.**
