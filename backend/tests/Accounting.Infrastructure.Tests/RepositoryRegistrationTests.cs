@@ -112,6 +112,9 @@ public sealed class RepositoryRegistrationTests
     [InlineData(typeof(ITmpVoucherHeadRepository))]
     [InlineData(typeof(IPayReciveHeadReadRepository))]
     [InlineData(typeof(ITmpVoucherHeadReadRepository))]
+    // Phase 20-b — read-only دینامیک تفصیلی lookups. No write-side counterpart: this whole phase
+    // is read-only by design (see TafsiliLookupReadRepository XML doc).
+    [InlineData(typeof(ITafsiliLookupReadRepository))]
     public void AddInfrastructure_RegistersServiceAsScoped(Type serviceType)
     {
         var services = BuildRegisteredServices();
@@ -216,6 +219,8 @@ public sealed class RepositoryRegistrationTests
     [InlineData(typeof(ITmpVoucherHeadRepository), typeof(TmpVoucherHeadRepository))]
     [InlineData(typeof(IPayReciveHeadReadRepository), typeof(PayReciveHeadReadRepository))]
     [InlineData(typeof(ITmpVoucherHeadReadRepository), typeof(TmpVoucherHeadReadRepository))]
+    // Phase 20-b.
+    [InlineData(typeof(ITafsiliLookupReadRepository), typeof(TafsiliLookupReadRepository))]
     public void AddInfrastructure_MapsInterfaceToItsOwnImplementation(
         Type serviceType,
         Type expectedImplementationType)

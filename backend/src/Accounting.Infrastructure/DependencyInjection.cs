@@ -132,6 +132,12 @@ public static class DependencyInjection
         services.AddScoped<IPayReciveHeadReadRepository, PayReciveHeadReadRepository>();
         services.AddScoped<ITmpVoucherHeadReadRepository, TmpVoucherHeadReadRepository>();
 
+        // Phase 20-b — read-only dynamic تفصیلی lookups for the voucher-entry form. No write
+        // repository: TB_ACCOUNT_LINK_LEVEL and TB_TAFSIL_LINK_TAFSILGROUP are section-2 embedded
+        // children (docs/tamin-core-entity-reference.md), never independent aggregates, and this
+        // whole phase is read-only by design. See TafsiliLookupReadRepository XML doc.
+        services.AddScoped<ITafsiliLookupReadRepository, TafsiliLookupReadRepository>();
+
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 
         return services;

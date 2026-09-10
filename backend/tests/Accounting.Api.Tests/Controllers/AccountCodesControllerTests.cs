@@ -5,6 +5,8 @@ using Accounting.Application.Accounts.Commands.UpdateAccountCode;
 using Accounting.Application.Accounts.Queries;
 using Accounting.Application.Accounts.Queries.GetAccountCodeById;
 using Accounting.Application.Accounts.Queries.GetAccountCodes;
+using Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems;
+using Accounting.Application.AccountCodes.Queries.GetTafsiliLevels;
 using Accounting.Application.Common;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -339,6 +341,144 @@ public sealed class AccountCodesControllerTests
 
         mediator.Verify(
             m => m.Send(It.IsAny<DeleteAccountCodeCommand>(), cts.Token),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetTafsiliLevels_ReturnsOkWithArray_AndSendsQueryBuiltFromRouteId()
+    {
+        var mediator = new Mock<IMediator>();
+        var accountCodeId = Guid.NewGuid();
+        var levels = new List<TafsiliLevelDto> { new(Guid.NewGuid(), 1, "معین", true) };
+
+        GetTafsiliLevelsQuery? capturedQuery = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetTafsiliLevelsQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<IReadOnlyList<TafsiliLevelDto>>, CancellationToken>(
+                (request, _) => capturedQuery = (GetTafsiliLevelsQuery)request)
+            .ReturnsAsync(levels);
+
+        var controller = new AccountCodesController(mediator.Object);
+
+        var actionResult = await controller.GetTafsiliLevels(accountCodeId, CancellationToken.None);
+
+        Assert.NotNull(capturedQuery);
+        Assert.Equal(accountCodeId, capturedQuery!.AccountCodeId);
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult);
+        Assert.Same(levels, ok.Value);
+    }
+
+    [Fact]
+    public async Task GetTafsiliLevels_ReturnsOkWithEmptyArray_WhenHandlerReturnsEmpty()
+    {
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetTafsiliLevelsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<TafsiliLevelDto>());
+
+        var controller = new AccountCodesController(mediator.Object);
+
+        var actionResult = await controller.GetTafsiliLevels(Guid.NewGuid(), CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult);
+        var body = Assert.IsAssignableFrom<IReadOnlyList<TafsiliLevelDto>>(ok.Value);
+        Assert.Empty(body);
+    }
+
+    [Fact]
+    public async Task GetTafsiliLevels_ForwardsCancellationTokenToMediator()
+    {
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetTafsiliLevelsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<TafsiliLevelDto>());
+
+        var controller = new AccountCodesController(mediator.Object);
+        using var cts = new CancellationTokenSource();
+
+        await controller.GetTafsiliLevels(Guid.NewGuid(), cts.Token);
+
+        mediator.Verify(
+            m => m.Send(It.IsAny<GetTafsiliLevelsQuery>(), cts.Token),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetTafsiliLevelItems_ReturnsOkWithPagedResult_AndSendsQueryBuiltFromRouteAndQueryValues()
+    {
+        var mediator = new Mock<IMediator>();
+        var accountCodeId = Guid.NewGuid();
+        var levelId = Guid.NewGuid();
+        var pagedResult = new PagedResult<TafsiliLookupItemDto>
+        {
+            Items = Array.Empty<TafsiliLookupItemDto>(),
+            PageNumber = 2,
+            PageSize = 10,
+            TotalCount = 0,
+        };
+
+        GetTafsiliLevelItemsQuery? capturedQuery = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetTafsiliLevelItemsQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<PagedResult<TafsiliLookupItemDto>>, CancellationToken>(
+                (request, _) => capturedQuery = (GetTafsiliLevelItemsQuery)request)
+            .ReturnsAsync(pagedResult);
+
+        var controller = new AccountCodesController(mediator.Object);
+
+        var actionResult = await controller.GetTafsiliLevelItems(
+            accountCodeId, levelId, search: "term", pageNumber: 2, pageSize: 10, CancellationToken.None);
+
+        Assert.NotNull(capturedQuery);
+        Assert.Equal(accountCodeId, capturedQuery!.AccountCodeId);
+        Assert.Equal(levelId, capturedQuery.LevelId);
+        Assert.Equal("term", capturedQuery.Search);
+        Assert.Equal(2, capturedQuery.PageNumber);
+        Assert.Equal(10, capturedQuery.PageSize);
+
+        var ok = Assert.IsType<OkObjectResult>(actionResult);
+        Assert.Same(pagedResult, ok.Value);
+    }
+
+    [Fact]
+    public async Task GetTafsiliLevelItems_DefaultParameterValues_AreAppliedWhenOmitted()
+    {
+        var mediator = new Mock<IMediator>();
+        GetTafsiliLevelItemsQuery? capturedQuery = null;
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetTafsiliLevelItemsQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<PagedResult<TafsiliLookupItemDto>>, CancellationToken>(
+                (request, _) => capturedQuery = (GetTafsiliLevelItemsQuery)request)
+            .ReturnsAsync(new PagedResult<TafsiliLookupItemDto>());
+
+        var controller = new AccountCodesController(mediator.Object);
+        var accountCodeId = Guid.NewGuid();
+        var levelId = Guid.NewGuid();
+
+        await controller.GetTafsiliLevelItems(accountCodeId, levelId);
+
+        Assert.NotNull(capturedQuery);
+        Assert.Null(capturedQuery!.Search);
+        Assert.Equal(1, capturedQuery.PageNumber);
+        Assert.Equal(20, capturedQuery.PageSize);
+    }
+
+    [Fact]
+    public async Task GetTafsiliLevelItems_ForwardsCancellationTokenToMediator()
+    {
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(It.IsAny<GetTafsiliLevelItemsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedResult<TafsiliLookupItemDto>());
+
+        var controller = new AccountCodesController(mediator.Object);
+        using var cts = new CancellationTokenSource();
+
+        await controller.GetTafsiliLevelItems(Guid.NewGuid(), Guid.NewGuid(), null, 1, 20, cts.Token);
+
+        mediator.Verify(
+            m => m.Send(It.IsAny<GetTafsiliLevelItemsQuery>(), cts.Token),
             Times.Once);
     }
 }

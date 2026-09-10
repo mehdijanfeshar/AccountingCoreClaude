@@ -4,6 +4,8 @@ using Accounting.Application.Accounts.Commands.UpdateAccountCode;
 using Accounting.Application.Accounts.Queries;
 using Accounting.Application.Accounts.Queries.GetAccountCodeById;
 using Accounting.Application.Accounts.Queries.GetAccountCodes;
+using Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems;
+using Accounting.Application.AccountCodes.Queries.GetTafsiliLevels;
 using Accounting.Application.Common;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -29,6 +31,15 @@ namespace Accounting.Api.Controllers;
 /// allow <c>PUT</c>/<c>DELETE</c> verbs, so update/delete are exposed as <c>POST</c> to
 /// <c>{id}/update</c> and <c>{id}/delete</c> instead. See the XML doc on <see cref="Update"/>
 /// and <see cref="Delete"/> for the exact route shape and response contract.
+///
+/// <b>Phase 20-b</b> added two nested, read-only GET routes under a معین's id —
+/// <see cref="GetTafsiliLevels"/> and <see cref="GetTafsiliLevelItems"/> — backing the
+/// frontend's dynamic تفصیلی fields on the voucher-entry form. Both hang off this controller,
+/// not a standalone controller, because their underlying link tables
+/// (<c>TB_ACCOUNT_LINK_LEVEL</c>, <c>TB_TAFSIL_LINK_TAFSILGROUP</c>) are section-2 embedded
+/// children of the معین aggregate per <c>docs/tamin-core-entity-reference.md</c>, never
+/// independent aggregates — see each action's own XML doc and its backing Query for the full
+/// business rules (Rule A / Rule B).
 /// </summary>
 [ApiController]
 [Route("api/account-codes")]
@@ -158,6 +169,57 @@ public sealed class AccountCodesController : ControllerBase
         await _mediator.Send(new DeleteAccountCodeCommand(id), cancellationToken);
 
         return Ok(new DeleteAccountCodeResponse(id));
+    }
+
+    /// <summary>
+    /// Returns every "active" تفصیلی level configured for this معین — see
+    /// <see cref="GetTafsiliLevelsQuery"/> XML doc for Rule A. Bare JSON array, never paginated
+    /// (a معین has at most 7 levels). Returns <b>200</b> with an empty array — never 404 — for an
+    /// unknown <paramref name="accountCodeId"/> or an account with no configured levels; see that
+    /// query's XML doc for why the two cases are indistinguishable at this layer and that is
+    /// fine. Deliberately does NOT implement <c>IVahedScopedQuery</c> and never returns 403 — see
+    /// the query's XML doc for the full justification (the chart of accounts is global, no
+    /// VAHEDCODE column exists anywhere in this chain).
+    /// </summary>
+    [HttpGet("{accountCodeId:guid}/tafsili-levels")]
+    [ProducesResponseType(typeof(IReadOnlyList<TafsiliLevelDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTafsiliLevels(Guid accountCodeId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetTafsiliLevelsQuery(accountCodeId), cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Returns a page of selectable تفصیلی items for one (معین, level) pair — see
+    /// <see cref="GetTafsiliLevelItemsQuery"/> XML doc for Rule B (visibility scoping) and the
+    /// <paramref name="search"/> digit-vs-name heuristic. <c>GetTafsiliLevelItemsQuery</c>
+    /// implements <c>IVahedScopedQuery</c> — <c>VahedCode</c> is server-assigned by
+    /// <c>VahedScopeBehavior</c> from the authenticated caller, never bound from any client
+    /// input, so this action also declares <b>403</b>.
+    /// </summary>
+    [HttpGet("{accountCodeId:guid}/tafsili-levels/{levelId:guid}/items")]
+    [ProducesResponseType(typeof(PagedResult<TafsiliLookupItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTafsiliLevelItems(
+        Guid accountCodeId,
+        Guid levelId,
+        [FromQuery] string? search = null,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(
+            new GetTafsiliLevelItemsQuery(accountCodeId, levelId, search, pageNumber, pageSize),
+            cancellationToken);
+
+        return Ok(result);
     }
 }
 

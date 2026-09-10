@@ -14,6 +14,203 @@
 
 ---
 
+### فاز ۲۱ — دو Query تفصیلی داینامیک (backend) — رفع مسدودکنندهٔ فرم صدور سند (۲۰۲۶-۰۹-۱۰، برنچ `EntityCRUD`، commit نشده)
+
+فازی عمداً کوچک و **فقط خواندنی**، به درخواست صریح صاحب پروژه بلافاصله پس از فاز ۲۰: فاز ۲۰ با یک مسدودکنندهٔ سخت بسته شد (ریسک 🔴 #۱۸ / Issue #35) — فرم صدور سند به دو Query نیاز داشت که در بک‌اند **اصلاً وجود نداشتند**. این فاز فقط همان دو را می‌سازد. **هیچ Command، هیچ Entity جدید، هیچ تغییر schema.**
+
+#### ۱. خروجی — دو Endpoint روی `AccountCodesController` موجود
+
+| Endpoint | کار |
+|---|---|
+| `GET /api/account-codes/{accountCodeId}/tafsili-levels` | کدام‌یک از ۷ سطح تفصیلی برای این معین فعال/اجباری است |
+| `GET /api/account-codes/{accountCodeId}/tafsili-levels/{levelId}/items?search=&pageNumber=&pageSize=` | آیتم‌های قابل‌انتخاب `TB_TAFSILI` برای آن سطح (با جستجو و صفحه‌بندی) |
+
+**هیچ Controller جدیدی ساخته نشد** — و این یک تصمیم معماری آگاهانه بود، نه راحتی: طبق `docs/tamin-core-entity-reference.md` هر دو جدول `TB_ACCOUNT_LINK_LEVEL` و `TB_TAFSIL_LINK_TAFSILGROUP` **بخش ۲ (تعبیه‌شده)** اند و هرگز Aggregate مستقل نیستند. پس مسیرها زیر Aggregate Root (`AccountCode`) تو‌در‌تو شدند و **هیچ** write repository / Command / cascade برای این دو جدول ساخته نشد.
+
+#### ۲. قاعدهٔ A — معنای «سطح فعال» (تأیید چهارم)
+
+وجود ردیف در `TB_ACCOUNT_LINK_LEVEL` = آن سطح **هم مجاز هم اجباری**؛ هیچ ستون `ISREQUIRED` ای وجود ندارد و هیچ حالت «مجاز ولی اختیاری» نیست. شمارهٔ سطح از `TB_LEVEL_TAFSIL.LEVEL_CODE` (که `string` است) می‌آید.
+
+این در قرارداد API هم صریح شد: فیلد `isRequired` در پاسخ **همیشه `true`** است. عمداً — تا قاعده در خودِ Contract بیان شود و فرانت مجبور نشود آن را بازپیاده‌سازی کند (قانون کاری تیم #۱: منطق اعتبارسنجی تفصیلی نباید فقط در UI باشد).
+
+#### ۳. قاعدهٔ B — فیلتر visibility تفصیلی (یافتهٔ اصلی فاز)
+
+این بخشِ **غیرواضح** کار بود و فاز ۲۰ از آن بی‌خبر بود. فرانت Angular قدیمی `vahedCode` را به `Gettafsili` پاس می‌داد و یادداشت فاز ۲۰ می‌پرسید «آیا زیر مدل scope جدید هنوز لازم است؟». پاسخ: **بله، ولی فیلتر یک تساوی ساده نیست.** از خواندن مستقیم کد پروژهٔ مرجع (هر دو نسخهٔ LINQ و SQL خام، که روی همان schema اوراکل اجرا می‌شوند):
+
+- `Infrastructure.Persistance.EF\Repositories\TbTafsilLinkTafsilGroupRepository.cs:115-120` (نسخهٔ LINQ)
+- `TbAccountLinkTafsilGroupRepository.cs:173-174` (نسخهٔ SQL خام روی View `VWTAFSILILIST`)
+
+قاعده:
+```
+link.VAHEDCODE == callerVahedCode  ||  link.VAHEDTYPE == 3  ||  link.VAHEDTYPE == callerCategory
+```
+یعنی سه مسیر دیده‌شدن: تفصیلی **محلیِ واحد** (تساوی `VAHEDCODE`)، تفصیلی **سراسری** (`VAHEDTYPE == 3`)، یا تفصیلی مخصوص **دستهٔ سازمانی** فراخوان.
+
+⚠️ **دو تلهٔ مهم که وفادارانه رعایت شد:**
+1. منبع حقیقت visibility، ستون‌های **جدول link** (`TB_TAFSIL_LINK_TAFSILGROUP.VAHEDCODE`/`.VAHEDTYPE`) است، **نه** کپی‌های هم‌نام روی `TB_TAFSILI`. هر دو جدول این دو ستون را دارند و توزیع دادهٔ زنده‌شان تقریباً یکسان است — انتخاب اشتباه بی‌صدا غلط می‌شد. کد مرجع قطعی است.
+2. `VAHEDTYPE == NULL` **wildcard نیست** — چنین ردیفی فقط با تساوی دقیق `VAHEDCODE` دیده می‌شود. وسوسهٔ افزودن `|| VAHEDTYPE == null` عمداً رد شد (در تست هم تثبیت شد).
+
+اگر ساده‌سازی می‌کردیم و فیلتر تساوی معمولِ فاز ۱۹ (`VAHEDCODE == vahedCode`) را می‌گذاشتیم، **همهٔ تفصیلی‌های سراسری از dropdown ناپدید می‌شدند** و فرم سند بی‌صدا می‌شکست.
+
+#### ۴. `VahedCategory` — enum جدید در Domain
+
+`callerCategory` از واحد فراخوان استخراج می‌شود: `TB_VAHED_INFO` (بر اساس `VAHEDCODE`) → nav `VAHEDTYPE` → `TB_VAHED_TYPE.TYPECODE` (یک `string` که عددِ `TypeVahed` را نگه می‌دارد) → دسته‌بندی.
+
+- `Accounting.Domain/ValueObjects/VahedCategory.cs` — `Insurance = 1, Treatment = 2, All = 3` (معادل `TypeKoli` مرجع: `bimeh`/`Darman`/`همه`).
+- `Accounting.Domain/ValueObjects/VahedCategoryMapper.cs` — تابع خالص `FromTypeCode(string?)`. نگاشت: `{1 EdareKol, 9 Shob}` → `Insurance`؛ `{2,3,4,5,6,7,8,15,16}` → `Treatment`؛ هر چیز دیگر → `All`.
+- **محل قرارگیری آگاهانه:** این منطق کسب‌وکار است، پس **نباید** در Infrastructure باشد. در Domain گذاشته شد (کنار `AccountNature`/`VoucherStatus`) و read repository فقط آن را صدا می‌زند. `Accounting.Domain` همچنان **صفر** وابستگی خارجی دارد (csproj تأیید شد: هیچ `PackageReference` ای).
+- **یک واگرایی عمدی از مرجع:** کد مرجع روی واحد پیدانشده `NullReferenceException` می‌دهد؛ ما به `All` عقب‌نشینی می‌کنیم (fail-soft). مستند شد.
+
+#### ۵. رفع باگ `bool?` — یک ستون (پرداخت جزئی ریسک #۲)
+
+`TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE` از `bool?` به **`short?`** تغییر کرد. این **مسدودکننده** بود نه بهسازی: دادهٔ زندهٔ اوراکل `{1, 3, NULL}` دارد (`docs/centralaccount-business-reference.md` §۲۳-۲) و `bool?` نمی‌تواند ۳ را نگه دارد، پس قاعدهٔ B بدون این تغییر **قابل پیاده‌سازی نبود**.
+
+- Fluent Mapping دست‌نخورده ماند (`HasColumnType("NUMBER(1)")`) — ستون فیزیکی عوض نشد.
+- عمداً **فقط همین یک ستون**. `TB_TAFSILI.VAHEDTYPE`، `TB_TAFSILI.ISACTIVE`، `TYPECODE`، `DOCLIFE` و بقیهٔ خانوادهٔ ریسک #۲ **لمس نشدند**. پیش از تغییر تأیید شد که هیچ کد دیگری در solution این property را مصرف نمی‌کند.
+
+#### ۶. جزئیاتی که وفادارانه از مرجع کپی شدند (نه اختراع ما)
+
+- **هیوریستیک جستجو:** اگر عبارت جستجو **رقم داشته باشد** → روی `TAFSILI_CODE` مچ می‌شود، وگرنه → روی `TAFSILI_NAME`. یک `OR` ساده **نیست**. این عیناً از `TbAccountLinkTafsilGroupRepository.cs:186-190` است و در XML doc صریحاً «کپی‌شده، نه اختراع‌شده» علامت خورد تا خواننده‌ای در آینده آن را «تصحیح» نکند.
+- **`label`** = `"{TAFSILI_CODE} - {TAFSILI_NAME}"`، معادل `Describtion` مرجع.
+
+#### ۷. چیزهایی که عمداً انجام **نشد**
+
+- **View `VWTAFSILILIST` استفاده نشد** — با اینکه در schema ما وجود دارد (در خروجی `ALL_TAB_COLUMNS` فاز ۱۲/۱۷ دیده شده) و مرجع از آن استفاده می‌کند. دلیل: **تعریف داخلی‌اش را نمی‌دانیم** (آیا `ISDELETED` را فیلتر می‌کند؟ چطور join می‌زند؟). join به‌صورت صریح با LINQ روی چهار جدول نگاشته‌شدهٔ موجود نوشته شد تا semantics قابل‌بازبینی باشد. به‌عنوان بهسازی آینده ثبت شد. (ربطی به استثنای قانون #۲ فاز ۱۸ ندارد: این‌ها lookup فرم‌اند، نه گزارش.)
+- **`TB_TAFSILI.ISACTIVE` فیلتر نشد** — مرجع هم در این مسیر فیلترش نمی‌کند، و ستون خودش عضو خانوادهٔ ریسک #۲ است (می‌تواند مقدار ۲ داشته باشد). از projection کامل بیرون گذاشته شد تا EF هرگز materialize نکند. ⚠️ یعنی تفصیلی‌های غیرفعال فعلاً در dropdown **ظاهر می‌شوند** — شکاف شناخته‌شده و ثبت‌شده.
+- **`isIdentity`** (که مرجع با cross-check روی `IdentityGroups` می‌سازد) پیاده نشد — فرانت فعلاً نمی‌خواهدش.
+
+#### ۸. Scope امنیتی — یک Endpoint scoped، یکی نه
+
+| Endpoint | `IVahedScopedQuery`؟ | دلیل |
+|---|---|---|
+| `tafsili-levels` | ❌ نه | **هیچ‌کدام** از `TB_ACCOUNT_LINK_LEVEL`، `TB_LEVEL_TAFSIL`، `TB_ACCOUNTCODE` ستون `VAHEDCODE` ندارند — کدینگ حساب در این schema سراسری است. سابقهٔ موجود: `GetAccountCodesQuery` هم scoped نیست. هیچ `vahedCode` ای در این Endpoint وجود ندارد، پس قاعدهٔ فاز ۱۹ بدیهتاً برقرار است. **۴۰۳ برنمی‌گرداند.** |
+| `.../items` | ✅ بله | جدول link ستون `VAHEDCODE` دارد و قاعدهٔ B به دستهٔ واحد فراخوان وابسته است. `403` دارد. |
+
+`callerVahedCode` از `request.VahedCode` خوانده می‌شود (که `VahedScopeBehavior` پیش از Handler پرش کرده)؛ Handler خودش هرگز `ICurrentUser` را نمی‌خواند — همان الگوی فاز ۱۹. هیچ مسیری `vahedCode` را از کلاینت نمی‌پذیرد.
+
+#### ۹. تست — **۲۳۰۰/۲۳۰۰ سبز** (+۶۶ از ۲۲۳۴)
+
+| پروژه | تعداد |
+|---|---|
+| `Accounting.Domain.Tests` | ۳۷ (+۱۲ — `VahedCategoryMapperTests`) |
+| `Accounting.Application.Tests` | ۱۹۳۷ |
+| `Accounting.Api.Tests` | ۱۴۶ |
+| `Accounting.Infrastructure.Tests` | ۱۸۰ |
+
+✅ **نکتهٔ مثبت قابل‌توجه:** این فاز **اولین تست واقعی repository روی SQLite in-memory** را نوشت (`TafsiliLookupReadRepositoryTests.cs`، ۲۰ تست با `CREATE TABLE` دست‌نویس و `SqliteConnection("DataSource=:memory:")`, نه EF InMemory). این همان شکافی است که **چهار دستهٔ پیاپی (فازهای ۱۳/۱۴/۱۵/۱۶)** به‌عنوان «🟡 هیچ تست repository واقعی نوشته نشد» ثبت کرده بودند — دست‌کم برای این مسیر بسته شد، و دقیقاً جایی به‌کار آمد که لازم بود: اثبات ترجمهٔ واقعی SQL برای قاعدهٔ B و برای de-duplication.
+
+پوشش: جدول‌حقیقت کامل قاعدهٔ B (هر سه مسیر دیده‌شدن + دو حالت دیده‌نشدن شامل `VAHEDTYPE IS NULL`)، هر دو شاخهٔ هیوریستیک جستجو، de-duplication وقتی یک تفصیلی از دو گروه قابل‌دسترسی است (هم `items` هم `totalCount`)، استخراج دسته (واحد بیمه‌ای/درمانی/`TYPECODE` ناشناس/واحد پیدانشده)، ترتیب عددی سطوح، `LEVEL_CODE` غیرقابل‌parse که **skip** می‌شود، ردیف soft-deleted در هر دو جدول، حساب ناشناس → آرایهٔ خالی با ۲۰۰، و یک تست **ساختاری** که تثبیت می‌کند کدام Query مارکر `IVahedScopedQuery` دارد و کدام ندارد (تا refactor آینده بی‌صدا آن را نیندازد).
+
+#### ۱۰. نکتهٔ فرایندی
+
+ایجنت `backend-dotnet` کد و تست را کامل و با کیفیت تحویل داد، ولی **گزارش Completion Contract برنگرداند** و به‌جای مستندسازی فاز خودش، مستندات **فاز ۲۰** را نوشت (که جا افتاده بود). پس: همهٔ معیارهای پذیرش **دستی توسط `team-lead` بازبینی شد** (اجرای کامل تست، بازخوانی قاعدهٔ B در repository، تأیید خلوص `Accounting.Domain`، بررسی diff تغییر `short?`، تأیید مسیرها و DTOها) و مستندسازی این فاز توسط `team-lead` نوشته شد. این دومین فاز پیاپی است که یک ساب‌ایجنت Completion Contract ناقص می‌دهد (فاز ۲۰: `frontend-react` با «Standing by.»).
+
+---
+
+### فاز ۲۰ — آغاز فرانت‌اند: بررسی پروژهٔ Angular قدیمی + اسکافولد React در ریپوی جدا (۲۰۲۶-۰۹-۱۰، برنچ `EntityCRUD`، commit نشده)
+
+اولین فاز فرانت‌اند پروژه. به دستور صریح صاحب پروژه، توقف فرانت (که از ابتدا در `CLAUDE.md` ثبت بود) برداشته شد.
+
+#### ۱. تغییر مکان پروژهٔ فرانت — تصمیم صریح صاحب پروژه
+
+| قبل (در `CLAUDE.md` بخش ساختار پوشه‌ها) | بعد (واقعی) |
+|---|---|
+| `frontend/src/features/...` داخل ریپوی `AccountingCoreClaude` | **`D:\AiProj\AccountCoreAiProj_UI`** — یک **ریپازیتوری/پروژهٔ کاملاً جدا** |
+
+این پوشه پیش‌تر خالی بود. `git init` **زده نشد** (عمداً؛ منتظر تصمیم صاحب پروژه دربارهٔ ریپوی مجزا یا monorepo). هیچ commit ای در هیچ‌کدام از دو ریپو زده نشد.
+
+#### ۲. بخش اول — بررسی READ-ONLY پروژهٔ Angular قدیمی
+
+مسیر بررسی‌شده: `D:\WorkSpace\projects\financial-account` (یک git submodule داخل workspace بزرگ‌تر `D:\WorkSpace`، نام package سطح workspace: `tamin-apps` v2.7.9). **صفر تغییر** — با `find -newermt` تأیید شد هیچ فایلی در `D:\WorkSpace\projects\financial-account\src` لمس نشده است.
+
+فریم‌ورک: **Angular 15.2** + کتابخانهٔ UI اختصاصی سازمانی **`@tamin/angular` ~2.7.9** (نه PrimeNG/Material/Kendo). پس هدف، کپی کد نبود؛ استخراج الگوهای دامنه/UX بود.
+
+**۷ الگوی استخراج‌شده:**
+
+1. **تقسیم‌بندی سه‌گانهٔ صفحات:** `pages/base/*` (اطلاعات پایه: کدینگ، گروه تفصیلی، بانک، هزینه، تنخواه، ویژگی، کارگاه، سال مالی، صاحبان امضا، انتساب رابط) + `pages/operation/*` (صدور سند، دریافت/پرداخت، کارتابل، دسته‌چک، تنخواه‌گردان، سند افتتاحیه، فاکتور، سند زیرسیستم) + `pages/report/*` (تراز ۴/۶/۸، دفتر کل، روزنامه، مرور، ترازنامه، ماتریسی، هرم سنی، …). ۱۷ صفحهٔ گزارشی مجزا.
+2. **صفحهٔ «کدینگ حسابداری» = یک صفحه با ۵ تب:** گروه / کل / معین / تفصیلی / ارتباط معین با گروه تفصیلی.
+3. **«تنظیمات اولیه» اجباری:** کاربر ابتدا **سال مالی** (`TbYear/GetAll`) و **واحد سازمانی** (`VahedInfo/GetAllVahedInfo`) را انتخاب می‌کند؛ در `localStorage` با کلیدهای `UnitInfo`/`YearInfo` ذخیره و با یک `BehaviorSubject` منتشر می‌شود. بقیهٔ صفحات از همان می‌خوانند.
+4. ⭐ **الگوی تفصیلی داینامیک — مهم‌ترین یافتهٔ فاز.** جریان دقیق (از `add-voucher.component.ts`، خطوط ۳۲۶–۵۷۵):
+   - انتخاب حساب **معین** → `resetLevels()` (هر ۷ سطح غیرفعال/خالی می‌شوند تا فیلد کهنه از معین قبلی باقی نماند)
+   - `GET TbAccountLinkLevel/GetLevelListdByAccountId?accountId={moinId}` → آرایهٔ `{ id: levelId, code: 1..7 }`
+   - **وجود ردیف = آن سطح فعال است**؛ هیچ ستون `isRequired` ای وجود ندارد
+   - برای هر سطح: `GET TbAccountLinkTafsilGroup/Gettafsili?accountId={moinId}&levelId={levelId}&vahedCode={unit}` → آیتم‌های dropdown
+   - **هر سطح فعال `Validators.required` می‌گیرد** → یعنی «وجود ردیف = هم مجاز، هم اجباری»
+   - **سطوح ۱–۳ inline** در فرم ردیف سند؛ **سطوح ۴–۷ پشت مودال** «لیست تفصیلی‌ها»؛ اگر هیچ‌کدام از ۴–۷ فعال نباشد پیام «سطح تفصیلی بیشتری وجود ندارد»
+   - در جدول ردیف‌ها، ستون هر سطح **فقط وقتی نمایش داده می‌شود که حداقل یک ردیف مقدار داشته باشد** (`checkTafLevelField`)
+   - فلگ‌های معین که رفتار فرم را عوض می‌کنند: `isbank` (مسیر ورود چک)، `isAttribute` + `flag` (`'عدد'` → فیلد عددی required، وگرنه → فیلد تاریخ required)
+
+   ⚠️ **این یک شاهد مستقل و سوم برای ریسک باز #۱۲ است.** مکانیزم «وجود/عدم‌وجود ردیف در `TB_ACCOUNT_LINK_LEVEL`» که در فاز ۱۲ از پروژهٔ مرجع `D:\CentralAccount` (سمت بک‌اند، `AddVoucherCommandHandler.cs:159-176`) استخراج شده بود، حالا **از سمت فرانت یک پروژهٔ دیگر هم تأیید می‌شود**. دو پروژهٔ مستقل، دو لایهٔ مختلف، یک مکانیزم.
+5. **فرم صدور سند دو بخش است:** `headForm` (شماره سند، تاریخ سند، شرح سند) + `articleForm` برای ردیف‌ها که در یک Grid تجمیع می‌شوند. به‌علاوه «لیست پرکاربرد (favorite)» و «کپی آرتیکل از اسناد دیگر».
+6. **ویجت‌های `@tamin/angular` به‌کاررفته:** `tamin-page`, `tamin-grid/row/col`, `tamin-card`, `tamin-fieldset`, `tamin-tabs/tab`, `tamin-input`, `tamin-select` (با `interface="popover"`), `tamin-dropdown`, `tamin-datepicker` (**تاریخ شمسی**), `tamin-chip`, `tamin-button`, `tamin-icon-button`, `tamin-validation`, و سرویس‌های `showToast`/`createModal`/`showLoader`/`dismissLoader`. **هیچ معادل React ای ندارد** → انتخاب جایگزین یک تصمیم باز است.
+7. **الگوی Auth:** `TaminSecurityService` از همان کتابخانه؛ `TaminAuthGuard` (`checkToken()` → `redirectToAccount(url)`) + `TaminRoleGuard` (`checkRole(allowedRoles)` از `route.data.roles`). `authorizationServer: https://account-pilot.tamin.ir/`, `clientId: 136f697b158116450170417a5105224e` — **همان audience ای که بک‌اند ما در فاز ۷ موقتاً به اشتراک گذاشته**. نقش‌ها: `SETAD`, `MALI`, `HLT`, `EDK`, `USER`, `REPORT`, `IT` — هم‌راستا با ماتریس ۷ نقشی که فاز ۱۷ مستقل استخراج کرده بود.
+
+**⚠️ یک ناسازگاری مهم که عمداً اقتباس نشد:** پروژهٔ Angular قدیمی یک **envelope** داشت: `IBaseResponse { messages: {message}[], code, succeeded, data }` و لیست‌ها همیشه `data.list` بودند. بک‌اند ما **envelope ندارد** — `PagedResult<T>` خام (`items`/`pageNumber`/`pageSize`/`totalCount`) و خطاها **RFC 7807 ProblemDetails**. این الگو صریحاً **تکرار نشد** و در چهار فایل `src/types/` و `src/lib/api/` کامنت هشدار گذاشته شد تا کسی بعداً اشتباهی envelope نسازد.
+
+#### ۳. بخش دوم — اسکافولد React
+
+اجرا توسط `frontend-react`. **Vite 6 عمداً پین شد** (نه `vite@latest`): Vite 7 نیازمند Node `^20.19.0 || >=22.12.0` است و Node محلی `v20.15.1` است.
+
+Stack نهایی (حداقلی و عمدی): `react@19.3.0`, `react-dom@19.3.0`, `react-router-dom@7.18.3`, `@tanstack/react-query@5.102.8`, `axios@1.20.0`, `vite@6.4.3`, `typescript@7.0.2`. **هیچ کتابخانهٔ UI و هیچ datepicker شمسی نصب نشد** (تصمیم باز).
+
+**ساختار (۲۶ فایل در `src/`):**
+```
+src/app/          App.tsx, routes.tsx, HomePage.tsx, queryClient.ts
+src/components/   Layout, PageHeader, DataTable, Pagination, Field, ErrorBanner
+src/lib/api/      client.ts (axios + interceptorها), apiError.ts, createResourceApi.ts
+src/lib/auth/     tokenStore.ts, AuthContext.tsx
+src/lib/session/  SessionContext.tsx  (الگوی «تنظیمات اولیه»)
+src/features/chart-of-accounts/   AccountCodesListPage.tsx, api.ts
+src/features/vouchers/            VoucherHeadsListPage.tsx, api.ts
+src/features/vouchers/dynamic-tafsili/useTafsiliLevels.ts
+src/types/        accountCode, voucherHead, pagedResult, problemDetails
+```
+
+**تصمیم‌های فنی اسکافولد:**
+
+- **CORS با Vite dev proxy دور زده شد، نه با تغییر بک‌اند.** در `Program.cs` بک‌اند **هیچ `AddCors`/`UseCors` ای وجود ندارد**. به‌جای تغییر بک‌اند (خارج از scope این جلسه)، `vite.config.ts` مسیر `/api` را به `https://localhost:7155` پروکسی می‌کند (`changeOrigin: true`, `secure: false` برای dev cert خودامضا). نتیجه: مرورگر همیشه same-origin است و `baseURL` نسبی (`/api`، قابل تنظیم با `VITE_API_BASE_URL`) می‌ماند — هیچ آدرس بک‌اند در bundle نمی‌رود.
+- **`createResourceApi<TDto>(resource)`** — تنها جایی که URL ساخته می‌شود، تا کسی تصادفاً `PUT`/`DELETE` نزند. پنج عمل: `list`, `getById`, `create`, `update` (→ `POST {id}/update`), `remove` (→ `POST {id}/delete`). ممنوعیت `PUT`/`DELETE` در docblock صریح ثبت شد. تأیید شد: **صفر استفادهٔ `PUT`/`DELETE` در کل `src/`** (تنها hitها `Set.delete` در `tokenStore` بودند).
+- **`ApiError` تایپ‌شده** از ProblemDetails ساخته می‌شود: `status`, `title`, `detail`, `traceId`, `instance`, `validationErrors?` + getterهای `isUnauthorized`/`isForbidden`/`isNotFound`/`isValidation`.
+- **`vahedCode` هرگز از کلاینت فرستاده نمی‌شود** — تأیید شد تنها حضورش در `src/` یک فیلد **خواندنی** در `VoucherHeadDto` و چند کامنت توضیحی است. در `SessionContext` واحد سازمانی صریحاً `unitLabel` (display-only) نام گرفت تا کسی آن را پارامتر نکند؛ برخلافش `financialYear` واقعاً پارامتر `?year=` است.
+- **RTL/فارسی:** `index.html` با `lang="fa" dir="rtl"`.
+- **ستون‌های `bool?` بک‌اند** (`typeCode`, `typeActivity`, `docLife`, …) با کامنت `TODO(backend risk #2)` علامت خوردند و هیچ منطق UI ای رویشان ساخته نشد.
+
+**اتصال End-to-End (با Endpoint واقعی، نه mock):**
+
+| صفحه | Endpoint واقعی | ستون‌ها |
+|---|---|---|
+| لیست حساب‌ها (`/base/account-codes`) | `GET /api/account-codes?pageNumber&pageSize` | `accCode`, `accCodeName`, `id` |
+| لیست اسناد (`/operation/voucher-heads`) | `GET /api/voucher-heads?pageNumber&pageSize&year` | `docNum`, `dateDoc`, `headDesc`, `year` |
+
+هر دو با React Query + pagination بر اساس `totalCount` + حالت‌های loading/error/empty (خطا `title`+`detail` از ProblemDetails را نشان می‌دهد). `year` از `SessionContext` می‌آید نه از فرم صفحه.
+
+**`useTafsiliLevels.ts`** — امضای hook آیندهٔ تفصیلی داینامیک با TSDoc کامل جریان ۵ مرحله‌ای، که در بدنه عامدانه `throw new Error('Not implemented: blocked on missing backend endpoints …')` می‌کند. دلیل: ساختنش روی یک شکل حدسی، قانون «هیچ‌وقت شکل پاسخ API را حدس نزن» را نقض می‌کرد.
+
+#### ۴. تأییدهای انجام‌شده توسط `team-lead` (ایجنت گزارش ناقص داد)
+
+⚠️ ایجنت `frontend-react` به‌جای Agent Completion Contract فقط «Standing by.» برگرداند. طبق قاعدهٔ «اگر خروجی ناقص یا مبهم بود، Task را Done تلقی نکن»، هر معیار پذیرش **دستی توسط `team-lead` بازبینی شد**:
+
+- ✅ `npx tsc --noEmit` → صفر خطا
+- ✅ `npm run build` → موفق (۱۵۹ module، `dist/` ساخته شد، ۳۶۲KB JS / ۱۱۷KB gzip)
+- ✅ صفر `PUT`/`DELETE`
+- ✅ صفر ارسال `vahedCode` از کلاینت
+- ✅ صفر فرض envelope `{succeeded,…}`
+- ✅ `lang="fa" dir="rtl"`
+- ✅ صفر secret/توکن در کد و env (`.env.development` فقط `VITE_API_BASE_URL=/api` دارد)
+- ✅ dependency حداقلی، بدون کتابخانهٔ UI
+- ✅ `git status` ریپوی بک‌اند **clean** (صفر تغییر پیش از به‌روزرسانی مستندات)
+- ✅ `D:\WorkSpace` کاملاً دست‌نخورده (با `find -newermt 2026-09-09` تأیید شد)
+
+#### ۵. آنچه در این فاز عمداً انجام **نشد**
+
+- `qa-tester` / `security-reviewer` / `performance-reviewer` صدا زده نشدند (دستور صریح محدودهٔ جلسه — برای فازهای بعدی فرانت).
+- `api-contract` صدا زده نشد (شکل DTO از Controllerهای واقعی خوانده شد و ابهامی نماند).
+- صفر تست فرانت (فاز بعدی). **تعداد تست بک‌اند بدون تغییر: ۲۲۳۴.**
+- صفر تغییر کد بک‌اند — شامل **افزودن CORS** که لازم خواهد شد اگر فرانت روزی بدون proxy اجرا شود.
+- هیچ اتصال واقعی به بک‌اند در مرورگر آزمایش نشد (بک‌اند اجرا نشد، توکن واقعی IDP در دست نبود).
+
+---
+
 ### فاز ۱۹ — اعمال سراسری `VahedCode` سمت سرور: بستن نیمهٔ اول ریسک 🔴 #۱ (IDOR) (۲۰۲۶-۰۹-۰۹، برنچ `EntityCRUD`، commit نشده)
 
 اولین فاز کاملاً امنیتی پروژه. ریسک باز 🔴 شمارهٔ ۱ («هیچ authorization در سطح رکورد وجود ندارد») که از فاز ۷ روی میز بود و با هر فاز CRUD بزرگ‌تر می‌شد، در بخش لیست/جستجو/ساخت **بسته شد**؛ بخش دسترسی مستقیم با `id` به تصمیم صریح صاحب پروژه **عمداً باز ماند**.

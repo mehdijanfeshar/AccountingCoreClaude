@@ -98,8 +98,6 @@ backend/src/Accounting.Infrastructure  # EF Core + Oracle، Repository
 backend/src/Accounting.Infrastructure/Legacy  # LegacyDbContext + Fluent Mapping + GuidToChar36Converter
 backend/src/Accounting.Api             # Controllers
 backend/tests/Accounting.Domain.Tests  # تست واحد قوانین دامنه (xUnit)
-frontend/src/features/chart-of-accounts
-frontend/src/features/vouchers
 docs/chart-of-accounts.md              # مستندسازی کامل منطق کدینگ شناور (SUPERSEDED)
 docs/progress-log.md                   # لاگ روزانهٔ پیشرفت
 docs/phase-log.md                      # آرشیو کامل جزئیات هر فاز (منتقل‌شده از CLAUDE.md در ۲۰۲۶-۰۸-۲۸)
@@ -107,6 +105,28 @@ docs/open-decisions.md                 # ریسک‌رجیستر زنده: تص�
 docs/tamin-core-entity-reference.md    # مرجع «مستقل vs تعبیه‌شده» استخراج‌شده از پروژهٔ خارجی Tamin.Core
 docs/centralaccount-business-reference.md  # مرجع منطق کسب‌وکار از پروژهٔ مرجع D:\CentralAccount
 ```
+
+### ⚠️ فرانت‌اند در این ریپو نیست (از ۲۰۲۶-۰۹-۱۰)
+
+پروژهٔ React **بیرون این ریپازیتوری** است: **`D:\AiProj\AccountCoreAiProj_UI`** (تصمیم صریح صاحب پروژه). پوشهٔ `frontend/` داخل این ریپو **وجود ندارد و ساخته نمی‌شود**.
+
+```
+D:\AiProj\AccountCoreAiProj_UI\        # Vite 6 + React 19 + TS (ریپوی جدا، git init نشده)
+  src/app/                             # Router، Providers، صفحهٔ خانه
+  src/components/                      # Layout, PageHeader, DataTable, Pagination, Field, ErrorBanner
+  src/lib/api/                         # axios client + ApiError(ProblemDetails) + createResourceApi
+  src/lib/auth/                        # tokenStore (JWT از IDP سازمان) + AuthContext
+  src/lib/session/                     # SessionContext — سال مالی (+ واحد، فقط نمایشی)
+  src/features/chart-of-accounts/      # لیست حساب‌ها ← GET /api/account-codes
+  src/features/vouchers/               # لیست اسناد ← GET /api/voucher-heads
+  src/features/vouchers/dynamic-tafsili/  # امضای hook آیندهٔ تفصیلی داینامیک (عامدانه throw — ریسک 🔴 #۱۸)
+  src/types/                           # DTOهای آینه‌ای بک‌اند + PagedResult + ProblemDetails
+```
+
+**سه قاعدهٔ الزامی برای هر کار فرانت** (در کد هم کامنت شده‌اند):
+1. **هرگز `PUT`/`DELETE` نزن** — الگوی بک‌اند `POST {id}/update` و `POST {id}/delete` است. همهٔ URLها فقط از `createResourceApi` ساخته شوند.
+2. **هرگز `vahedCode` از کلاینت نفرست** — سمت سرور از توکن تحمیل می‌شود (فاز ۱۹). ولی `year` واقعاً پارامتر query است.
+3. **شکل خطا فقط RFC 7807 ProblemDetails است** — بک‌اند ما envelope `{succeeded, code, messages, data}` پروژهٔ Angular قدیمی را **ندارد**؛ آن الگو را بازنساز.
 
 > 📄 **این فایل عمداً کوتاه نگه داشته می‌شود** (بازآرایی ۲۰۲۶-۰۸-۲۸): جزئیات فازها در `docs/phase-log.md` و ریسک‌ها/تصمیمات باز در `docs/open-decisions.md` هستند. **جزئیات فاز جدید را اینجا اضافه نکن** — در `docs/phase-log.md` بنویس و اینجا فقط یک خط خلاصه با ارجاع بگذار.
 
@@ -128,7 +148,7 @@ docs/centralaccount-business-reference.md  # مرجع منطق کسب‌وکار
 <!-- ⚠️ هر آیتم باید یک/دوخطی بماند. جزئیات کامل هر فاز در docs/phase-log.md است — آنجا اضافه کن، نه اینجا. -->
 
 - [x] راه‌اندازی solution و ۴ پروژهٔ .NET روی net10.0 طبق Clean Architecture + Swagger + `HealthController`.
-- [ ] راه‌اندازی اولیه React (Vite) — طبق تصمیم فعلی، فرانت‌اند تا اطلاع ثانوی متوقف است؛ تمرکز روی backend.
+- [x] **راه‌اندازی اولیه React (Vite + TS)** — ⚠️ **در ریپوی جدا: `D:\AiProj\AccountCoreAiProj_UI`** (نه `frontend/` داخل این ریپو؛ تصمیم صریح صاحب پروژه، ۲۰۲۶-۰۹-۱۰). توقف فرانت برداشته شد. جزئیات: `docs/phase-log.md` بخش «فاز ۲۰».
 - [x] ~~طراحی مدل دامنه کدینگ شناور (مدل Rich)~~ — **فیزیکاً حذف شد** (۲۲ فایل، ۲۰۲۶-۰۸-۱۷)؛ قابل بازیابی تا commit `9f760ad`. رجوع به «تصمیم معماری دوم» بالا.
 - [x] Reverse Engineering کامل Oracle Legacy (`CENTRALACCOUNT`) — ۶۵ جدول، ۷۷۴ ستون، ۸۲ FK، ۲۹ UNIQUE، ۲۸ View؛ همه Scaffold شده به Entity + Fluent Mapping. ⚠️ **Discovery/Scaffold بسته است** — برای CRUD روی Entity موجود `database-reverse-engineer` را صدا نزن.
 - [x] اجرای هر سه تصمیم معماری — Legacy-as-Domain + «Legacy جایگزین کامل» (۲۰۲۶-۰۸-۱۷) + مسطح‌سازی به `Accounting.Domain/Entity/` (۲۰۲۶-۰۸-۱۸). `Accounting.Domain` همچنان **صفر** وابستگی خارجی دارد.
@@ -150,8 +170,10 @@ docs/centralaccount-business-reference.md  # مرجع منطق کسب‌وکار
 - [x] **فاز ۱۷** — پاس دوم خواندن Read-Only پروژهٔ مرجع `D:\CentralAccount` با دانش ۲۵ Entity فازهای ۱۳–۱۶. **صفر تغییر کد**؛ ۸ یافتهٔ اصلی + تصحیح سه ریسک ثبت‌شده. جزئیات: `docs/centralaccount-business-reference.md` **بخش ۲۴** و `docs/phase-log.md` بخش «فاز ۱۷».
 - [x] **فاز ۱۸** — اولین گزارش‌های مالی: تراز آزمایشی ۴/۶/۸ ستونه (۳ Endpoint `GET` روی `api/reports`). اولین SQL خام پروژه — چون `TYPECODE`/`DOCLIFE` با `bool?` قابل بیان نیستند. `FirstDebtor`/`FirstCreditor` (مانده اول دوره) یک‌طرفه‌سازی شدند (تصمیم صریح صاحب پروژه، ۲۰۲۶-۰۹-۰۷). **۲۱۰۸ تست.** جزئیات: `docs/phase-log.md` بخش «فاز ۱۸».
 - [x] **فاز ۱۹** — اعمال سراسری `VahedCode` سمت سرور (`VahedScopeBehavior`): نیمهٔ اول ریسک 🔴 #۱ (IDOR) بسته شد — ۳۸ Command + ۲۲ Query. `GetById`/`Update`/`Delete` به تصمیم آگاهانهٔ صاحب پروژه باز ماند؛ `PersonAction` منتظر تصمیم کاربر. پاس `/code-review` ۸-زاویه‌ای مستقل + ۳ اصلاح (کامنت گمراه‌کننده در ۱۵ فایل، `.NotEmpty()` جا‌افتاده در `ElamHead`، ادعای نادرست در `open-decisions.md`). **۲۲۳۴ تست.** جزئیات: `docs/phase-log.md` بخش «فاز ۱۹».
-- [ ] رفع باگ‌های `bool?`→enum — فهرست حالا **قطعی و کامل است: ۱۶ ستون تأییدشده** (نه «مشکوک»)، به‌علاوهٔ `TYPECODE`/`DOCLIFE`. جدول کامل با مقادیر دقیق: `docs/centralaccount-business-reference.md` §۲۴-۱.
-- [ ] فرم صدور سند با تفصیلی داینامیک.
+- [x] **فاز ۲۰** — آغاز فرانت‌اند: بررسی READ-ONLY پروژهٔ Angular قدیمی (`D:\WorkSpace\projects\financial-account`) + اسکافولد React/Vite در ریپوی جدا با ۲ صفحهٔ متصل به Endpoint واقعی. **صفر تغییر بک‌اند؛ تست‌ها همچنان ۲۲۳۴.** جزئیات: `docs/phase-log.md` بخش «فاز ۲۰».
+- [x] **فاز ۲۱** — دو Query تفصیلی داینامیک (فقط `GET`، روی `AccountCodesController` موجود): ریسک 🔴 #۱۸ / Issue #35 بسته شد و فرم صدور سند از انسداد درآمد. کشف کلیدی: فیلتر visibility تفصیلی یک تساویِ ساده نیست (قاعدهٔ B). **۲۳۰۰ تست** + اولین تست واقعی repository روی SQLite. جزئیات: `docs/phase-log.md` بخش «فاز ۲۱».
+- [ ] رفع باگ‌های `bool?`→enum — فهرست حالا **قطعی و کامل است: ۱۶ ستون تأییدشده** (نه «مشکوک»)، به‌علاوهٔ `TYPECODE`/`DOCLIFE`. جدول کامل با مقادیر دقیق: `docs/centralaccount-business-reference.md` §۲۴-۱. ⚠️ یکی از این ستون‌ها (`TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE`) در فاز ۲۱ به `short?` اصلاح شد؛ بقیه باز.
+- [ ] فرم صدور سند با تفصیلی داینامیک — **دیگر مسدود نیست** (دو Endpoint لازمش در فاز ۲۱ ساخته شد).
 
 ## ریسک‌های باز 🔴 (خلاصه)
 
@@ -181,6 +203,9 @@ docs/centralaccount-business-reference.md  # مرجع منطق کسب‌وکار
 | ۱۴ | **۶ ستون شناسه در فاز ۱۵ هیچ FK ندارند** → مقدار نامعتبر بی‌صدا نوشته می‌شود (`TB_ACCOUNT.ACCOUNTTYPE_ID`، سه ستون `TB_BANKCARTDETAIL`، `TB_CHEQUES_INCORRENT.CHECK_ID`، دو ستون `TB_ELAMHEAD`). هم‌الگوی موارد ۹ و فاز ۱۱. | فاز ۱۵ |
 | ۱۵ | **حذف `ElamHead`/`CheckBook`/`PayReciveHead`/`TmpVoucherHead` هیچ cascade ای به فرزندانشان ندارد** (`TB_ELAMDETAIL`, `TB_CHECK`, `TB_PAYRECIVDETAIL`, `TB_TMP_VOUCHERSDETAIL`) — همان وضعیت سند پیش از فاز ۹. مرز Aggregate هر سه جفت Head/Detail هنوز تصمیم‌گیری نشده. | فاز ۱۵/۱۶ |
 | ۱۷ | **معنای «مانده اول دوره» در تراز آزمایشی قطعی نیست** — فرمول مرجع (`TotDebtor - CurDebtor`) گردش خام می‌دهد ولی برچسب فارسی ماندهٔ خالص یک‌طرفه را القا می‌کند. وفادار به فرمول پیاده شد؛ اگر معنا «خالص» باشد **مقادیر گزارش عوض می‌شوند**. ⬅️ نیازمند تصمیم صاحب پروژه. | فاز ۱۸ |
+| ~~۱۸~~ | ✅ **حل شد در فاز ۲۱** — هر دو Endpoint ساخته شدند (`GET /api/account-codes/{id}/tafsili-levels` و `.../{levelId}/items`). فرم صدور سند دیگر مسدود نیست. Issue #35 بسته شد. جزئیات: `docs/phase-log.md` بخش «فاز ۲۱». | فاز ۲۰ → ۲۱ |
+| ۱۹ | **بک‌اند هیچ CORS ای ندارد** — در فاز ۲۰ با Vite dev proxy دور زده شد؛ لحظهٔ استقرار جدای فرانت، همهٔ فراخوان‌ها می‌شکنند. نیازمند سیاست CORS صریح (whitelist، نه `*`) یا سرو از همان origin. | فاز ۲۰ |
+| ۲۰ | **توکن JWT در `localStorage` فرانت** — در معرض XSS، با بستن تب پاک نمی‌شود. برای اسکلت dev پذیرفته شد؛ پیش از استقرار باید تصمیم‌گیری شود. | فاز ۲۰ |
 | ۱۶ | **`TmpVoucherHead` فقط سند موقتِ *خالی* می‌سازد** — در پروژهٔ مرجع `TmpVoucherDetail` تعبیه‌شده است و head+details یک‌جا ساخته می‌شوند؛ API ما هیچ راهی برای افزودن ردیف ندارد، پس مسیر «ارتقا به سند اصلی» در دسترس نیست. | فاز ۱۶ |
 
 ## قوانین کاری تیم

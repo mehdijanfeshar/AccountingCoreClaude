@@ -12,6 +12,8 @@
 
 ## ورودی‌ها
 
+- **2026-09-10** (فاز ۲۱، برنچ `EntityCRUD`، commit نشده): دو Query تفصیلی داینامیک (فقط `GET`، روی `AccountCodesController`) — ریسک 🔴 #۱۸ / Issue #35 بسته شد و فرم صدور سند از انسداد درآمد. کشف کلیدی: فیلتر visibility تفصیلی تساویِ ساده نیست (`VAHEDCODE` **یا** `VAHEDTYPE=3` **یا** دستهٔ واحد). **۲۳۰۰ تست** (+۶۶) + اولین تست واقعی repository روی SQLite. جزئیات: `docs/phase-log.md` بخش «فاز ۲۱»؛ ۳ مورد باز جدید: `docs/open-decisions.md`.
+- **2026-09-10** (فاز ۲۰، برنچ `EntityCRUD`، commit نشده): آغاز فرانت‌اند — بررسی READ-ONLY پروژهٔ Angular قدیمی (۷ الگوی دامنه/UX، مهم‌ترینش جریان تفصیلی داینامیک) + اسکافولد React/Vite در **ریپوی جدا `D:\AiProj\AccountCoreAiProj_UI`** با ۲ صفحهٔ متصل به Endpoint واقعی. **صفر تغییر بک‌اند؛ ۲۲۳۴ تست بدون تغییر.** جزئیات: `docs/phase-log.md` بخش «فاز ۲۰»؛ ۱۰ ریسک/تصمیم باز جدید (مسدودکننده: نبودِ ۲ Endpoint تفصیلی + نبودِ CORS): `docs/open-decisions.md`.
 - **2026-09-09** (فاز ۱۹، برنچ `EntityCRUD`، commit نشده): اعمال سراسری `VahedCode` سمت سرور با `VahedScopeBehavior` (MediatR pipeline) — نیمهٔ اول ریسک 🔴 #۱ (IDOR) بسته شد: ۳۸ Command + ۲۲ Query روی ۱۹ Entity + ۳ گزارش تراز. `GetById`/`Update`/`Delete` به تصمیم آگاهانهٔ صاحب پروژه باز ماند؛ `PersonAction` منتظر تصمیم کاربر دست‌نخورده ماند. جزئیات: `docs/phase-log.md` بخش «فاز ۱۹»؛ باگ 🔴 جدید `ValidationBehavior` و ۳ ریسک دیگر: `docs/open-decisions.md`.
 - **2026-09-09** (پاس `/code-review` مستقل فاز ۱۹، ۸ زاویهٔ موازی): ۳ اصلاح واقعی — `.NotEmpty()` جا‌افتاده در `ElamHead`، کامنت گمراه‌کننده «not dead code» در ۱۵ فایل `Update*Validator`، ادعای نادرست «نمی‌تواند منتقل کند» در `open-decisions.md`. **۲۲۳۴/۲۲۳۴ تست سبز.** جزئیات: `docs/phase-log.md` بخش «فاز ۱۹» §۱۱.
 
