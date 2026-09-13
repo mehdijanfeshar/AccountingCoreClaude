@@ -22,8 +22,8 @@ public interface ICurrentUser
     string UserId { get; }
 
     /// <summary>
-    /// The authenticated user's unit code (<c>vahed_code</c> claim), if present. Exposed for
-    /// future authorization/filtering use cases — not currently wired into any query filter.
+    /// The authenticated user's unit code (Tamin IDP <c>urn:tamin:jwt:claim:org</c> claim), if
+    /// present. Wired into <c>VahedScopeBehavior</c> (phase 19) for server-side row scoping.
     /// </summary>
     string? VahedCode { get; }
 

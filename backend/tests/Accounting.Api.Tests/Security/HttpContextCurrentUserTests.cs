@@ -111,7 +111,7 @@ public sealed class HttpContextCurrentUserTests
     {
         var httpContext = AuthenticatedContext(
             new Claim(ClaimTypes.NameIdentifier, "user1"),
-            new Claim("vahed_code", "0001"));
+            new Claim("urn:tamin:jwt:claim:org", "0001"));
         var sut = CreateSut(httpContext);
 
         Assert.Equal("0001", sut.VahedCode);
