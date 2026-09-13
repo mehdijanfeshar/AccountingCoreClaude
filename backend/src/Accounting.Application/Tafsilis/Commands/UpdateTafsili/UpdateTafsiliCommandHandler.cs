@@ -25,9 +25,9 @@ namespace Accounting.Application.Tafsilis.Commands.UpdateTafsili;
 /// whose <c>TAFSILGROUP_ID</c> is no longer present in <see cref="UpdateTafsiliCommand.TafsilGroupIds"/>,
 /// and adds a new row (via <see cref="ITafsiliRepository.AddTafsiliGroupLinkAsync"/>) for any
 /// requested id that has no existing active link — exactly the same shape as
-/// <c>UpdateVoucherDetailCommandHandler</c>'s تفصیلی-link reconciliation. New rows get the same
-/// <c>VAHEDCODE</c>/<c>VAHEDTYPE</c> defaults as <c>CreateTafsiliCommandHandler</c> — see that
-/// class's XML doc for the rationale.
+/// <c>UpdateVoucherDetailCommandHandler</c>'s تفصیلی-link reconciliation. New rows get
+/// <c>VAHEDTYPE = request.TafsilGroupLinkVahedType</c>, same as <c>CreateTafsiliCommandHandler</c>
+/// — see that class's XML doc for the rationale. Links that remain selected are left untouched.
 /// </summary>
 public sealed class UpdateTafsiliCommandHandler : IRequestHandler<UpdateTafsiliCommand>
 {
@@ -79,6 +79,8 @@ public sealed class UpdateTafsiliCommandHandler : IRequestHandler<UpdateTafsiliC
             }
         }
 
+        short? groupLinkVahedType = request.TafsilGroupLinkVahedType is { } category ? (short)category : null;
+
         foreach (var tafsilGroupId in requestedGroupIds)
         {
             if (existingGroupIds.Contains(tafsilGroupId))
@@ -93,7 +95,7 @@ public sealed class UpdateTafsiliCommandHandler : IRequestHandler<UpdateTafsiliC
                     TAFSIL_ID = request.Id,
                     TAFSILGROUP_ID = tafsilGroupId,
                     VAHEDCODE = entity.VAHEDCODE ?? _currentUser.VahedCode ?? string.Empty,
-                    VAHEDTYPE = null,
+                    VAHEDTYPE = groupLinkVahedType,
                     ADDUSERID = _currentUser.UserId,
                     CREATEDDATE = DateTime.UtcNow,
                     ISDELETED = false,

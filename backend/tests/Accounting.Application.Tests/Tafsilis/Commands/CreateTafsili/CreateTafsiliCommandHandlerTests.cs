@@ -1,13 +1,16 @@
 using Accounting.Application.Tafsilis.Commands.CreateTafsili;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.Tafsilis.Commands.CreateTafsili;
 
 public sealed class CreateTafsiliCommandHandlerTests
 {
-    private static CreateTafsiliCommand ValidCommand(IReadOnlyList<Guid>? tafsilGroupIds = null) => new(
+    private static CreateTafsiliCommand ValidCommand(
+        IReadOnlyList<Guid>? tafsilGroupIds = null,
+        VahedCategory? tafsilGroupLinkVahedType = null) => new(
         TafsiliCode: "001",
         TafsiliName: "تفصیلی یک",
         TafsilDesc: "توضیحات",
@@ -15,7 +18,8 @@ public sealed class CreateTafsiliCommandHandlerTests
         PersonType: true,
         Owner: false,
         VahedType: null,
-        TafsilGroupIds: tafsilGroupIds ?? Array.Empty<Guid>())
+        TafsilGroupIds: tafsilGroupIds ?? Array.Empty<Guid>(),
+        TafsilGroupLinkVahedType: tafsilGroupLinkVahedType)
     {
         VahedCode = "1001",
     };
@@ -147,6 +151,31 @@ public sealed class CreateTafsiliCommandHandlerTests
         Assert.All(stagedLinks, l => Assert.Equal(command.VahedCode, l.VAHEDCODE));
         Assert.All(stagedLinks, l => Assert.Null(l.VAHEDTYPE));
         Assert.All(stagedLinks, l => Assert.False(l.ISDELETED));
+    }
+
+    [Fact]
+    public async Task Handle_WithTafsilGroupLinkVahedType_StampsItOnEveryCreatedLink()
+    {
+        var groupIds = new[] { Guid.NewGuid(), Guid.NewGuid() };
+        var repository = new Mock<ITafsiliRepository>();
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
+        var stagedLinks = new List<TB_TAFSIL_LINK_TAFSILGROUP>();
+        repository
+            .Setup(r => r.AddAsync(It.IsAny<TB_TAFSILI>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        repository
+            .Setup(r => r.AddTafsiliGroupLinkAsync(It.IsAny<TB_TAFSIL_LINK_TAFSILGROUP>(), It.IsAny<CancellationToken>()))
+            .Callback<TB_TAFSIL_LINK_TAFSILGROUP, CancellationToken>((link, _) => stagedLinks.Add(link))
+            .Returns(Task.CompletedTask);
+
+        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var command = ValidCommand(groupIds, VahedCategory.All);
+
+        await handler.Handle(command, CancellationToken.None);
+
+        Assert.Equal(2, stagedLinks.Count);
+        Assert.All(stagedLinks, l => Assert.Equal((short)VahedCategory.All, l.VAHEDTYPE));
     }
 
     [Fact]

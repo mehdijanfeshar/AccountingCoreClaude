@@ -26,5 +26,9 @@ public sealed class UpdateTafsiliCommandValidator : AbstractValidator<UpdateTafs
 
         RuleFor(x => x.TafsilGroupIds)
             .NotNull();
+
+        RuleFor(x => x.TafsilGroupLinkVahedType)
+            .IsInEnum()
+            .When(x => x.TafsilGroupLinkVahedType.HasValue);
     }
 }

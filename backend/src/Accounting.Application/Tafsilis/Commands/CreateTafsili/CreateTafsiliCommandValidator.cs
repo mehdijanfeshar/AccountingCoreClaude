@@ -24,5 +24,9 @@ public sealed class CreateTafsiliCommandValidator : AbstractValidator<CreateTafs
 
         RuleFor(x => x.TafsilGroupIds)
             .NotNull();
+
+        RuleFor(x => x.TafsilGroupLinkVahedType)
+            .IsInEnum()
+            .When(x => x.TafsilGroupLinkVahedType.HasValue);
     }
 }

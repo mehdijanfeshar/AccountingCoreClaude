@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.Tafsilis.Commands.UpdateTafsili;
@@ -22,7 +23,10 @@ namespace Accounting.Application.Tafsilis.Commands.UpdateTafsili;
 /// <see cref="TafsilGroupIds"/> replaces the entire linked-group set: the handler reconciles it
 /// against <c>TB_TAFSIL_LINK_TAFSILGROUP</c> (soft-deletes rows for groups no longer present in
 /// the list, adds rows for newly-added ones), exactly like
-/// <c>UpdateVoucherDetailCommandHandler</c> does for <c>TB_VOUCHERDETAIL_LINK_TAFSILI</c>.
+/// <c>UpdateVoucherDetailCommandHandler</c> does for <c>TB_VOUCHERDETAIL_LINK_TAFSILI</c>. Only
+/// newly-added link rows get <see cref="TafsilGroupLinkVahedType"/> stamped (see that parameter's
+/// doc and <c>CreateTafsiliCommand</c>'s) — links that remain selected keep whatever visibility
+/// scope they already had; this command never retroactively changes it for them.
 ///
 /// Like Create, this can violate <c>UK_TASILI</c> against a *different* row, surfacing as the
 /// same central ORA-00001 → 409 mapping.
@@ -36,6 +40,12 @@ namespace Accounting.Application.Tafsilis.Commands.UpdateTafsili;
 /// <param name="Owner">OWNER column. Same caveat.</param>
 /// <param name="VahedType">VAHEDTYPE column. Same caveat.</param>
 /// <param name="TafsilGroupIds"><c>TB_TAFSIL_GROUP.ID</c> values this تفصیلی should be linked to after this update (may be empty — clears every existing link).</param>
+/// <param name="TafsilGroupLinkVahedType">
+/// Visibility scope stamped onto any newly-added <c>TB_TAFSIL_LINK_TAFSILGROUP</c> row (ids
+/// present in <see cref="TafsilGroupIds"/> that didn't already have an active link) — see
+/// <c>CreateTafsiliCommand.TafsilGroupLinkVahedType</c> for the full rationale. Does not affect
+/// links that remain selected from before this update.
+/// </param>
 public sealed record UpdateTafsiliCommand(
     Guid Id,
     string TafsiliCode,
@@ -45,7 +55,8 @@ public sealed record UpdateTafsiliCommand(
     bool? PersonType,
     bool? Owner,
     bool? VahedType,
-    IReadOnlyList<Guid> TafsilGroupIds) : IRequest, IVahedScopedCommand
+    IReadOnlyList<Guid> TafsilGroupIds,
+    VahedCategory? TafsilGroupLinkVahedType = null) : IRequest, IVahedScopedCommand
 {
     /// <summary>
     /// Organizational unit code (max 4 chars). Never bound from the request body —

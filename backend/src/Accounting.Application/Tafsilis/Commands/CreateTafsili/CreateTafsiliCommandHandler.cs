@@ -16,12 +16,14 @@ namespace Accounting.Application.Tafsilis.Commands.CreateTafsili;
 /// <see cref="ICurrentUser.VahedCode"/>, so this handler can trust the field at face value.
 ///
 /// <b>Each <c>TB_TAFSIL_LINK_TAFSILGROUP</c> row created here gets <c>VAHEDCODE = request.VahedCode</c>
-/// and <c>VAHEDTYPE = null</c>.</b> Per that entity's own XML doc, <c>VAHEDTYPE = null</c> means
-/// "no wildcard category — only an exact <c>VAHEDCODE</c> match makes this row visible" (Rule B,
-/// <c>GetTafsiliLevelItemsQuery</c>): the most conservative, narrowest-visibility default
-/// available. This is a deliberate choice documented here (not derivable from the reference
-/// project's repository layer, which builds these rows one level higher than what was in scope
-/// to read) — revisit if the project owner specifies different real-world semantics.
+/// and <c>VAHEDTYPE = request.TafsilGroupLinkVahedType</c></b> (Rule B, <c>GetTafsiliLevelItemsQuery</c>
+/// / <c>TafsiliLookupReadRepository</c>) — traced against the reference project
+/// (<c>add-base-tafsili.component.ts</c> + <c>Tamin.Core.Entities.Tafsiliies.Tafsili.AddTafsiliLinkTafsilGroup</c>):
+/// its form let the creator pick this value (defaulting to "All" for SETAD/admin-role callers,
+/// forced to <see langword="null"/> otherwise). An earlier version of this handler hardcoded
+/// <c>VAHEDTYPE = null</c> unconditionally, which is what made every link created through this API
+/// invisible to every unit except the creator's own in the voucher-entry دینامیک تفصیلی lookup —
+/// fixed 2026-09-13 once traced back to the reference project.
 ///
 /// <c>ID</c> is always generated application-side (<see cref="Guid.NewGuid"/>).
 /// </summary>
@@ -61,6 +63,8 @@ public sealed class CreateTafsiliCommandHandler : IRequestHandler<CreateTafsiliC
 
         await _tafsiliRepository.AddAsync(entity, cancellationToken);
 
+        short? groupLinkVahedType = request.TafsilGroupLinkVahedType is { } category ? (short)category : null;
+
         foreach (var tafsilGroupId in request.TafsilGroupIds)
         {
             await _tafsiliRepository.AddTafsiliGroupLinkAsync(
@@ -70,7 +74,7 @@ public sealed class CreateTafsiliCommandHandler : IRequestHandler<CreateTafsiliC
                     TAFSIL_ID = entity.ID,
                     TAFSILGROUP_ID = tafsilGroupId,
                     VAHEDCODE = request.VahedCode,
-                    VAHEDTYPE = null,
+                    VAHEDTYPE = groupLinkVahedType,
                     ADDUSERID = _currentUser.UserId,
                     CREATEDDATE = DateTime.UtcNow,
                     ISDELETED = false,

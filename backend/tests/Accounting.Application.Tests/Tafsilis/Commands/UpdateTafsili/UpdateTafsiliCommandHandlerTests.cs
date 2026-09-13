@@ -2,13 +2,17 @@ using Accounting.Application.Tafsilis.Commands.UpdateTafsili;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.Tafsilis.Commands.UpdateTafsili;
 
 public sealed class UpdateTafsiliCommandHandlerTests
 {
-    private static UpdateTafsiliCommand ValidCommand(Guid id, IReadOnlyList<Guid>? tafsilGroupIds = null) => new(
+    private static UpdateTafsiliCommand ValidCommand(
+        Guid id,
+        IReadOnlyList<Guid>? tafsilGroupIds = null,
+        VahedCategory? tafsilGroupLinkVahedType = null) => new(
         Id: id,
         TafsiliCode: "002",
         TafsiliName: "تفصیلی دو",
@@ -17,7 +21,8 @@ public sealed class UpdateTafsiliCommandHandlerTests
         PersonType: false,
         Owner: true,
         VahedType: true,
-        TafsilGroupIds: tafsilGroupIds ?? Array.Empty<Guid>());
+        TafsilGroupIds: tafsilGroupIds ?? Array.Empty<Guid>(),
+        TafsilGroupLinkVahedType: tafsilGroupLinkVahedType);
 
     private static TB_TAFSILI ExistingEntity(Guid id, bool? isDeleted = false) => new()
     {
@@ -205,6 +210,47 @@ public sealed class UpdateTafsiliCommandHandlerTests
         repository.Verify(
             r => r.AddTafsiliGroupLinkAsync(It.IsAny<TB_TAFSIL_LINK_TAFSILGROUP>(), It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_LinkReconciliation_NewLinkGetsRequestedVahedType_KeptLinkIsUntouched()
+    {
+        var id = Guid.NewGuid();
+        var entity = ExistingEntity(id);
+        var keepGroupId = Guid.NewGuid();
+        var addGroupId = Guid.NewGuid();
+        var keepLink = new TB_TAFSIL_LINK_TAFSILGROUP
+        {
+            ID = Guid.NewGuid(),
+            TAFSIL_ID = id,
+            TAFSILGROUP_ID = keepGroupId,
+            VAHEDTYPE = (short)VahedCategory.Insurance,
+            ISDELETED = false,
+        };
+
+        var repository = new Mock<ITafsiliRepository>();
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository
+            .Setup(r => r.GetTafsiliGroupLinksAsync(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { keepLink });
+        TB_TAFSIL_LINK_TAFSILGROUP? addedLink = null;
+        repository
+            .Setup(r => r.AddTafsiliGroupLinkAsync(It.IsAny<TB_TAFSIL_LINK_TAFSILGROUP>(), It.IsAny<CancellationToken>()))
+            .Callback<TB_TAFSIL_LINK_TAFSILGROUP, CancellationToken>((l, _) => addedLink = l)
+            .Returns(Task.CompletedTask);
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
+
+        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+
+        await handler.Handle(
+            ValidCommand(id, new[] { keepGroupId, addGroupId }, VahedCategory.All),
+            CancellationToken.None);
+
+        Assert.NotNull(addedLink);
+        Assert.Equal((short)VahedCategory.All, addedLink!.VAHEDTYPE);
+        // The kept link's own VAHEDTYPE is never retroactively changed by this command.
+        Assert.Equal((short)VahedCategory.Insurance, keepLink.VAHEDTYPE);
     }
 
     [Fact]

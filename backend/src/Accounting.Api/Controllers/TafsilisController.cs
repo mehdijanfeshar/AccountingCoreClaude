@@ -5,6 +5,7 @@ using Accounting.Application.Tafsilis.Commands.UpdateTafsili;
 using Accounting.Application.Tafsilis.Queries;
 using Accounting.Application.Tafsilis.Queries.GetTafsiliById;
 using Accounting.Application.Tafsilis.Queries.GetTafsilis;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -142,7 +143,8 @@ public sealed class TafsilisController : ControllerBase
             request.PersonType,
             request.Owner,
             request.VahedType,
-            request.TafsilGroupIds);
+            request.TafsilGroupIds,
+            request.TafsilGroupLinkVahedType);
 
         await _mediator.Send(command, cancellationToken);
 
@@ -200,4 +202,5 @@ public sealed record UpdateTafsiliRequest(
     bool? PersonType,
     bool? Owner,
     bool? VahedType,
-    IReadOnlyList<Guid> TafsilGroupIds);
+    IReadOnlyList<Guid> TafsilGroupIds,
+    VahedCategory? TafsilGroupLinkVahedType = null);
