@@ -99,4 +99,28 @@ public sealed class AccountCodeReadRepository : IAccountCodeReadRepository
             .Select(ToDto)
             .FirstOrDefaultAsync(cancellationToken);
     }
+
+    private static readonly Expression<Func<TB_ACCOUNT_LINK_TAFSILGROUP, AccountTafsilGroupLinkDto>> ToLinkDto = l =>
+        new AccountTafsilGroupLinkDto(
+            l.ID,
+            l.ACCOUNT_ID,
+            l.LEVEL_ID,
+            l.TAFSILGROUP_ID,
+            l.CREATEDDATE,
+            l.UPDATEDDATE,
+            l.ADDUSERID,
+            l.CHANGEUSERID,
+            l.ISDELETED);
+
+    public async Task<IReadOnlyList<AccountTafsilGroupLinkDto>> GetTafsilGroupLinksAsync(
+        Guid accountCodeId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.TB_ACCOUNT_LINK_TAFSILGROUPs
+            .AsNoTracking()
+            .Where(l => l.ACCOUNT_ID == accountCodeId && l.ISDELETED == false)
+            .OrderBy(l => l.ID)
+            .Select(ToLinkDto)
+            .ToListAsync(cancellationToken);
+    }
 }

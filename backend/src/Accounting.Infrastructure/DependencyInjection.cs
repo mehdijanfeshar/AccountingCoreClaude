@@ -138,6 +138,13 @@ public static class DependencyInjection
         // whole phase is read-only by design. See TafsiliLookupReadRepository XML doc.
         services.AddScoped<ITafsiliLookupReadRepository, TafsiliLookupReadRepository>();
 
+        // New independent aggregate: Tafsili (TB_TAFSILI). Its گروه‌تفصیلی link
+        // (TB_TAFSIL_LINK_TAFSILGROUP) stays embedded per the same team rule referenced above —
+        // ITafsiliRepository exposes parent-scoped Get/Add methods for it, never an independent
+        // repository/Command. See NoIndependentLinkTableWritePathTests.
+        services.AddScoped<ITafsiliRepository, TafsiliRepository>();
+        services.AddScoped<ITafsiliReadRepository, TafsiliReadRepository>();
+
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 
         return services;

@@ -175,6 +175,7 @@ D:\AiProj\AccountCoreAiProj_UI\        # Vite 6 + React 19 + TS (ریپوی جد
 - [x] **فاز ۲۲** — پوستهٔ بصری MUI/RTL + اولین فرم‌های واقعی: کدینگ حساب (Create/Edit) و **صدور سند با تفصیلی داینامیک**. صفر تغییر بک‌اند؛ `tsc`/`build` تمیز. جزئیات: `docs/phase-log.md` بخش «فاز ۲۲».
 - [ ] رفع باگ‌های `bool?`→enum — فهرست حالا **قطعی و کامل است: ۱۶ ستون تأییدشده** (نه «مشکوک»)، به‌علاوهٔ `TYPECODE`/`DOCLIFE`. جدول کامل با مقادیر دقیق: `docs/centralaccount-business-reference.md` §۲۴-۱. ⚠️ یکی از این ستون‌ها (`TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE`) در فاز ۲۱ به `short?` اصلاح شد؛ بقیه باز.
 - [x] ~~فرم صدور سند با تفصیلی داینامیک~~ — **ساخته شد در فاز ۲۲** (ریپوی فرانت). ⚠️ ذخیره‌اش دومرحله‌ای و **غیراتمیک** است، چون `CreateVoucherHeadDetailInput` فیلد `tafsiliLinks` ندارد — ریسک 🔴 #۲۱ پایین.
+- [x] **فاز ۲۳** — CRUD مستقل `Tafsili` (`TB_TAFSILI`, `api/tafsilis`، Vahed-scoped) + ۴ Endpoint جدید «ارتباط معین با گروه تفصیلی» (`TB_ACCOUNT_LINK_TAFSILGROUP`) به‌صورت parent-scoped روی `AccountCodesController` موجود (نه Controller مستقل، طبق قاعدهٔ `*_LINK_TAFSIL*` تعبیه‌شده — `NoIndependentLinkTableWritePathTests` گسترش یافت). لینک تفصیلی↔گروه‌تفصیلی (`TB_TAFSIL_LINK_TAFSILGROUP`) هم embedded ماند، داخل خودِ `Create/UpdateTafsiliCommand`. **۲۳۷۷ تست سبز** (۲۰۱۴ Application + ۳۷ Domain + ۱۴۶ Api + ۱۸۰ Infrastructure). جزئیات: `docs/phase-log.md` بخش «فاز ۲۳».
 
 ## ریسک‌های باز 🔴 (خلاصه)
 

@@ -84,6 +84,12 @@ public sealed class VahedScopeConventionTests
         // TB_WHITEANDBLACKLIST
         "CreateWhiteAndBlackListCommand",
         "UpdateWhiteAndBlackListCommand",
+        // TB_ACCOUNT_LINK_TAFSILGROUP — permanently-embedded link table (see
+        // NoIndependentLinkTableWritePathTests), has no VAHEDCODE column at all. Its Create-shaped
+        // command is deliberately named LinkAccountCodeToTafsilGroupCommand (not
+        // Create...Command), so it never matches this test's name-prefix scan in the first
+        // place; only the Update-shaped one needs listing here.
+        "UpdateAccountTafsilGroupLinkCommand",
     };
 
     /// <summary>

@@ -25,4 +25,14 @@ public interface IAccountCodeReadRepository
     /// logical-delete state, or <see langword="null"/> if no such row exists.
     /// </summary>
     Task<AccountCodeDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns every non-deleted <c>TB_ACCOUNT_LINK_TAFSILGROUP</c> row belonging to
+    /// <paramref name="accountCodeId"/>, projected to <see cref="AccountTafsilGroupLinkDto"/>.
+    /// Not paginated — a معین is expected to have very few such links (at most a handful per
+    /// تفصیلی level), mirroring the unpaged <c>GetTafsiliLevelsQuery</c> precedent.
+    /// </summary>
+    Task<IReadOnlyList<AccountTafsilGroupLinkDto>> GetTafsilGroupLinksAsync(
+        Guid accountCodeId,
+        CancellationToken cancellationToken = default);
 }

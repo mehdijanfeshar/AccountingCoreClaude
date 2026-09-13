@@ -14,6 +14,26 @@
 
 ---
 
+### فاز ۲۳ — CRUD مستقل `Tafsili` + «ارتباط معین با گروه تفصیلی» parent-scoped (۲۰۲۶-۰۹-۱۳)
+
+انگیزه: صاحب پروژه خواست فرم «کدینگ حسابداری» فرانت مثل اپ Angular قدیمی ۵ تب باشد (گروه/کل/معین/تفصیلی/ارتباط معین با گروه تفصیلی). بررسی نشان داد گروه/کل/معین از قبل روی `AccountCodesController` سرویس می‌گیرند، ولی «تفصیلی» و «ارتباط» هیچ Endpoint ای در بک‌اند نداشتند.
+
+**تنش معماری کشف‌شده:** جدول واقعیِ ارتباط، `TB_ACCOUNT_LINK_TAFSILGROUP` است (نه `TB_ACCOUNT_LINK_LEVEL` که ابتدا حدس زده شد). این جدول — با ۹ جدول دیگر با الگوی `*_LINK_TAFSIL*`/`*_LINK_LEVEL*` — طبق تصمیم صاحب پروژه (۲۰۲۶-۰۸-۲۰، `docs/open-decisions.md`) هرگز نباید CRUD/Controller مستقل بگیرد؛ این با `NoIndependentLinkTableWritePathTests` قفل شده. صاحب پروژه تصمیم گرفت: این لینک به‌صورت متدهای parent-scoped روی `IAccountCodeRepository`/`AccountCodesController` موجود اضافه شود — دقیقاً الگوی فاز ۱۱ (`IVoucherDetailRepository.AddTafsiliLinkAsync`).
+
+**کار انجام‌شده:**
+1. **`Tafsilis`** (`api/tafsilis`, `TB_TAFSILI`) — CRUD کامل، کپی دقیق الگوی `TafsilGroups`: `ITafsiliRepository`/`ITafsiliReadRepository` + پیاده‌سازی EF + ثبت DI، `Create/Update/DeleteTafsiliCommand` + `GetTafsilis`/`GetTafsiliByIdQuery` + `TafsilisController`. Vahed-scoped (`IVahedScopedCommand`/`Query`) چون `TB_TAFSILI.VAHEDCODE` واقعی است — `UpdateTafsiliCommand` هم مثل `UpdateExpenseCommand` در هر ویرایش `VAHEDCODE` را به واحد ویرایش‌گر re-stamp می‌کند (کشف شد از طریق شکست `VahedScopeConventionTests`، نه حدس).
+2. **لینک تفصیلی↔گروه‌تفصیلی (`TB_TAFSIL_LINK_TAFSILGROUP`) — embedded، داخل خودِ `Create/UpdateTafsiliCommand`.** فیلد `TafsilGroupIds` روی هر دو Command؛ `ITafsiliRepository.AddTafsiliGroupLinkAsync`/`GetTafsiliGroupLinksAsync` (نام‌گذاری عمداً نه `AddAsync`/`GetForUpdateAsync`، تا از قفل `NoIndependentLinkTableWritePathTests` رد شود). هر لینک جدید `VAHEDCODE` را از کاربر جاری می‌گیرد و `VAHEDTYPE = null` (یعنی «فقط با تطابق دقیق واحد قابل‌دیدن» طبق کامنت خودِ Entity) — **تصمیم محافظه‌کارانهٔ این فاز، نه واقعیت کسب‌وکاری تأییدشده**؛ پروژهٔ مرجع `D:\CentralAccount` منطق ساخت این دو ستون را در لایه‌ای بالاتر از scope خواندن ما دارد.
+3. **«ارتباط معین با گروه تفصیلی» (`TB_ACCOUNT_LINK_TAFSILGROUP`) — ۴ اکشن جدید روی `AccountCodesController` موجود**, نه Controller مستقل: `POST/GET .../{accountCodeId}/tafsil-group-links`, `POST .../{linkId}/update`, `POST .../{linkId}/delete`. متدهای جدید `AddTafsilGroupLinkAsync`/`GetTafsilGroupLinkForUpdateAsync` روی `IAccountCodeRepository` (نوشتن)، `GetTafsilGroupLinksAsync` روی `IAccountCodeReadRepository` (خواندن، DTO جدید `AccountTafsilGroupLinkDto`). ۳ Command جدید (`LinkAccountCodeToTafsilGroup`, `UpdateAccountTafsilGroupLink`, `UnlinkAccountCodeFromTafsilGroup`) + ۱ Query (`GetAccountTafsilGroupLinks`, بدون صفحه‌بندی مثل `GetTafsiliLevelsQuery`). بدون Vahed-scope (جدول `VAHEDCODE` ندارد) — در `VahedScopeConventionTests.NoVahedCodeColumnExemptCommands` ثبت شد.
+4. **`NoIndependentLinkTableWritePathTests` گسترش یافت**: `IAccountCodeRepository` و `ITafsiliRepository` به `RepositoryInterfacesUnderTest` اضافه شدند + ۲ تست positive جدید که وجود مسیر نوشتنِ sanction‌شده را روی هر دو aggregate والد اثبات می‌کنند.
+
+هیچ کار EF/Migration لازم نبود — هر دو جدول (`TB_TAFSILI`, `TB_ACCOUNT_LINK_TAFSILGROUP`) از قبل در `LegacyDbContext.cs` scaffold و configure شده بودند.
+
+⚠️ **تصمیم باز، عمداً پیاده‌نشده:** `docs/open-decisions.md` (بخش «Tafsili CRUD آینده») قاعدهٔ چک‌سام کد ملی ۱۰ رقمی/شناسهٔ ملی ۱۱ رقمی روی `TAFSILI_CODE` را از قبل یادداشت کرده بود. چون جزئیات دقیقش تأیید نشده، در این فاز پیاده نشد — صرفاً اینجا به‌عنوان یادآوری ثبت می‌شود که آن قاعده هنوز اعمال نشده.
+
+**تست:** `dotnet build`/`dotnet test` کامل روی هر ۴ پروژهٔ تست بک‌اند — **۲۳۷۷/۲۳۷۷ سبز** (۲۰۱۴ Application + ۳۷ Domain + ۱۴۶ Api + ۱۸۰ Infrastructure؛ از ۲۳۰۰ در فاز ۲۱). فرانت (بازطراحی ۵-تبی فرم کدینگ روی این Endpointها) عمداً به فاز بعدی موکول شد.
+
+---
+
 ### فاز ۲۲ — پوستهٔ بصری MUI/RTL + اولین فرم‌های واقعی (کدینگ حساب و صدور سند با تفصیلی داینامیک) (۲۰۲۶-۰۹-۱۰، ریپوی فرانت `D:\AiProj\AccountCoreAiProj_UI`، commit نشده)
 
 اولین فازی که پروژه واقعاً «شکل و شمایل» گرفت. صاحب پروژه گفت فرانت «بی‌روح» است و ظاهر واقعی + فرم‌های واقعی خواست. فاز در **دو Task ترتیبی** به `frontend-react` واگذار شد (Task دوم روی زیرساخت Task اول ساخته می‌شود). **صفر تغییر در بک‌اند** — بک‌اند فقط برای خواندن Contract باز شد.

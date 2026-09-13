@@ -1,9 +1,13 @@
 using Accounting.Application.Accounts.Commands.CreateAccountCode;
 using Accounting.Application.Accounts.Commands.DeleteAccountCode;
+using Accounting.Application.Accounts.Commands.LinkAccountCodeToTafsilGroup;
+using Accounting.Application.Accounts.Commands.UnlinkAccountCodeFromTafsilGroup;
 using Accounting.Application.Accounts.Commands.UpdateAccountCode;
+using Accounting.Application.Accounts.Commands.UpdateAccountTafsilGroupLink;
 using Accounting.Application.Accounts.Queries;
 using Accounting.Application.Accounts.Queries.GetAccountCodeById;
 using Accounting.Application.Accounts.Queries.GetAccountCodes;
+using Accounting.Application.Accounts.Queries.GetAccountTafsilGroupLinks;
 using Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems;
 using Accounting.Application.AccountCodes.Queries.GetTafsiliLevels;
 using Accounting.Application.Common;
@@ -40,6 +44,20 @@ namespace Accounting.Api.Controllers;
 /// children of the معین aggregate per <c>docs/tamin-core-entity-reference.md</c>, never
 /// independent aggregates — see each action's own XML doc and its backing Query for the full
 /// business rules (Rule A / Rule B).
+///
+/// <b>New in this phase</b> — full CRUD for "ارتباط معین با گروه تفصیلی" nested under a معین's
+/// id: <see cref="CreateTafsilGroupLink"/>, <see cref="GetTafsilGroupLinks"/>,
+/// <see cref="UpdateTafsilGroupLink"/>, <see cref="DeleteTafsilGroupLink"/>. These write to
+/// <c>TB_ACCOUNT_LINK_TAFSILGROUP</c>, a THIRD embedded link table on this same aggregate —
+/// exactly the same "parent-scoped route, no standalone controller" shape as the phase 20-b pair
+/// above, and mirroring the phase-11 <c>IVoucherDetailRepository.AddTafsiliLinkAsync</c>
+/// precedent for <c>TB_VOUCHERDETAIL_LINK_TAFSILI</c>. <b>409 Conflict IS declared</b> on
+/// <see cref="CreateTafsilGroupLink"/>/<see cref="UpdateTafsilGroupLink"/> — unlike the two
+/// phase 20-b GETs above, <c>TB_ACCOUNT_LINK_TAFSILGROUP</c> carries a real composite UNIQUE
+/// constraint (<c>UK_ACCOUNTLINKTAFSILGROUP</c> on <c>ACCOUNT_ID</c>/<c>LEVEL_ID</c>/<c>TAFSILGROUP_ID</c>),
+/// and <b>400 also covers FK violations</b> on all three id fields (real FKs, unlike the other
+/// two embedded tables on this controller). None of these four actions are Vahed-scoped — the
+/// table has no <c>VAHEDCODE</c> column — so none of them ever return 403.
 /// </summary>
 [ApiController]
 [Route("api/account-codes")]
@@ -221,6 +239,93 @@ public sealed class AccountCodesController : ControllerBase
 
         return Ok(result);
     }
+
+    /// <summary>
+    /// Creates a new "ارتباط معین با گروه تفصیلی" link (<c>TB_ACCOUNT_LINK_TAFSILGROUP</c> row)
+    /// for this معین. See <see cref="LinkAccountCodeToTafsilGroupCommand"/> XML doc.
+    /// </summary>
+    [HttpPost("{accountCodeId:guid}/tafsil-group-links")]
+    [ProducesResponseType(typeof(CreateAccountTafsilGroupLinkResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateTafsilGroupLink(
+        Guid accountCodeId,
+        [FromBody] CreateAccountTafsilGroupLinkRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new LinkAccountCodeToTafsilGroupCommand(accountCodeId, request.LevelId, request.TafsilGroupId);
+        var id = await _mediator.Send(command, cancellationToken);
+
+        return CreatedAtAction(
+            nameof(GetTafsilGroupLinks),
+            new { accountCodeId },
+            new CreateAccountTafsilGroupLinkResponse(id));
+    }
+
+    /// <summary>
+    /// Returns every "ارتباط معین با گروه تفصیلی" link configured for this معین — see
+    /// <see cref="GetAccountTafsilGroupLinksQuery"/> XML doc.
+    /// </summary>
+    [HttpGet("{accountCodeId:guid}/tafsil-group-links")]
+    [ProducesResponseType(typeof(IReadOnlyList<AccountTafsilGroupLinkDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTafsilGroupLinks(Guid accountCodeId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetAccountTafsilGroupLinksQuery(accountCodeId), cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Fully replaces the <c>LEVEL_ID</c>/<c>TAFSILGROUP_ID</c> of an existing
+    /// "ارتباط معین با گروه تفصیلی" link. Exposed as <c>POST {linkId}/update</c>, not
+    /// <c>PUT</c> — by explicit project-owner mandate, mirroring every other write action on this
+    /// controller. Returns <b>200</b> with the affected <c>Id</c> in the body (not 204).
+    /// </summary>
+    [HttpPost("{accountCodeId:guid}/tafsil-group-links/{linkId:guid}/update")]
+    [ProducesResponseType(typeof(UpdateAccountTafsilGroupLinkResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateTafsilGroupLink(
+        Guid accountCodeId,
+        Guid linkId,
+        [FromBody] UpdateAccountTafsilGroupLinkRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new UpdateAccountTafsilGroupLinkCommand(accountCodeId, linkId, request.LevelId, request.TafsilGroupId);
+        await _mediator.Send(command, cancellationToken);
+
+        return Ok(new UpdateAccountTafsilGroupLinkResponse(linkId));
+    }
+
+    /// <summary>
+    /// Soft-deletes an "ارتباط معین با گروه تفصیلی" link. Exposed as
+    /// <c>POST {linkId}/delete</c>, not <c>DELETE</c> — by explicit project-owner mandate.
+    /// Idempotent: a link that is already soft-deleted still returns 200. Returns <b>200</b>
+    /// with the affected <c>Id</c> in the body (not 204).
+    /// </summary>
+    [HttpPost("{accountCodeId:guid}/tafsil-group-links/{linkId:guid}/delete")]
+    [ProducesResponseType(typeof(DeleteAccountTafsilGroupLinkResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteTafsilGroupLink(
+        Guid accountCodeId,
+        Guid linkId,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new UnlinkAccountCodeFromTafsilGroupCommand(accountCodeId, linkId), cancellationToken);
+
+        return Ok(new DeleteAccountTafsilGroupLinkResponse(linkId));
+    }
 }
 
 /// <summary>
@@ -258,3 +363,35 @@ public sealed record UpdateAccountCodeRequest(
     bool? TypeAccCode,
     string? MoInforClose,
     bool? TypeAction);
+
+/// <summary>
+/// Response body for a successful <see cref="AccountCodesController.CreateTafsilGroupLink"/> call.
+/// </summary>
+/// <param name="Id">The newly generated <c>TB_ACCOUNT_LINK_TAFSILGROUP.ID</c>.</param>
+public sealed record CreateAccountTafsilGroupLinkResponse(Guid Id);
+
+/// <summary>
+/// Response body for a successful <see cref="AccountCodesController.UpdateTafsilGroupLink"/> call.
+/// </summary>
+/// <param name="Id">The <c>TB_ACCOUNT_LINK_TAFSILGROUP.ID</c> that was updated (from the route).</param>
+public sealed record UpdateAccountTafsilGroupLinkResponse(Guid Id);
+
+/// <summary>
+/// Response body for a successful <see cref="AccountCodesController.DeleteTafsilGroupLink"/> call.
+/// </summary>
+/// <param name="Id">The <c>TB_ACCOUNT_LINK_TAFSILGROUP.ID</c> that was soft-deleted (from the route).</param>
+public sealed record DeleteAccountTafsilGroupLinkResponse(Guid Id);
+
+/// <summary>
+/// Request body for <see cref="AccountCodesController.CreateTafsilGroupLink"/>. Mirrors
+/// <see cref="LinkAccountCodeToTafsilGroupCommand"/> except <c>AccountCodeId</c>, which is bound
+/// from the route instead.
+/// </summary>
+public sealed record CreateAccountTafsilGroupLinkRequest(Guid LevelId, Guid TafsilGroupId);
+
+/// <summary>
+/// Request body for <see cref="AccountCodesController.UpdateTafsilGroupLink"/>. Mirrors
+/// <see cref="UpdateAccountTafsilGroupLinkCommand"/> except <c>AccountCodeId</c>/<c>LinkId</c>,
+/// both bound from the route instead.
+/// </summary>
+public sealed record UpdateAccountTafsilGroupLinkRequest(Guid LevelId, Guid TafsilGroupId);
