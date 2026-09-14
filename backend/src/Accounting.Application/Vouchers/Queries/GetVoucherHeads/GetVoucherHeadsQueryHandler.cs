@@ -21,5 +21,16 @@ public sealed class GetVoucherHeadsQueryHandler : IRequestHandler<GetVoucherHead
     }
 
     public Task<PagedResult<VoucherHeadDto>> Handle(GetVoucherHeadsQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, request.Year, request.VahedCode, cancellationToken);
+        => _readRepository.GetPagedAsync(
+            request.PageNumber,
+            request.PageSize,
+            new VoucherHeadFilter(
+                request.Year,
+                request.DocNumFrom,
+                request.DocNumTo,
+                request.DateDocFrom,
+                request.DateDocTo,
+                request.SystemTypeId),
+            request.VahedCode,
+            cancellationToken);
 }

@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IVoucherDetailRepository, VoucherDetailRepository>();
         services.AddScoped<IAccountCodeReadRepository, AccountCodeReadRepository>();
         services.AddScoped<IVoucherHeadReadRepository, VoucherHeadReadRepository>();
+        services.AddScoped<ISysTypeReadRepository, SysTypeReadRepository>();
         services.AddScoped<IVoucherDetailReadRepository, VoucherDetailReadRepository>();
 
         // Phase 15 — read-only trial balance reporting (4/6/8-column). Single raw-SQL read

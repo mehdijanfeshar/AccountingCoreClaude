@@ -43,7 +43,7 @@ public sealed class GetVoucherHeadsQueryHandlerTests
             TotalCount = 42,
         };
         readRepository
-            .Setup(r => r.GetPagedAsync(3, 10, "1405", "0001", It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(3, 10, It.Is<VoucherHeadFilter>(v => v.Year == "1405"), "0001", It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetVoucherHeadsQueryHandler(readRepository.Object);
@@ -56,7 +56,7 @@ public sealed class GetVoucherHeadsQueryHandlerTests
         Assert.Equal(3, result.PageNumber);
         Assert.Equal(10, result.PageSize);
         Assert.Equal(42, result.TotalCount);
-        readRepository.Verify(r => r.GetPagedAsync(3, 10, "1405", "0001", It.IsAny<CancellationToken>()), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(3, 10, It.Is<VoucherHeadFilter>(v => v.Year == "1405"), "0001", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public sealed class GetVoucherHeadsQueryHandlerTests
         // GetWorkShopsQueryHandlerTests.
         var readRepository = new Mock<IVoucherHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), "0007", It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<VoucherHeadFilter>(), "0007", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedResult<VoucherHeadDto>());
 
         var handler = new GetVoucherHeadsQueryHandler(readRepository.Object);
@@ -77,7 +77,7 @@ public sealed class GetVoucherHeadsQueryHandlerTests
         await handler.Handle(query, CancellationToken.None);
 
         readRepository.Verify(
-            r => r.GetPagedAsync(1, 20, null, "0007", It.IsAny<CancellationToken>()),
+            r => r.GetPagedAsync(1, 20, It.Is<VoucherHeadFilter>(v => v.Year == null), "0007", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -89,7 +89,7 @@ public sealed class GetVoucherHeadsQueryHandlerTests
         // string.Empty default) to keep this test's intent about Year, not VahedCode.
         var readRepository = new Mock<IVoucherHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetPagedAsync(1, 20, null, "0001", It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(1, 20, It.Is<VoucherHeadFilter>(v => v.Year == null), "0001", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedResult<VoucherHeadDto>());
 
         var handler = new GetVoucherHeadsQueryHandler(readRepository.Object);
@@ -98,7 +98,7 @@ public sealed class GetVoucherHeadsQueryHandlerTests
             new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 20, Year: null) { VahedCode = "0001" },
             CancellationToken.None);
 
-        readRepository.Verify(r => r.GetPagedAsync(1, 20, null, "0001", It.IsAny<CancellationToken>()), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(1, 20, It.Is<VoucherHeadFilter>(v => v.Year == null), "0001", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public sealed class GetVoucherHeadsQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetPagedAsync(1, 20, null, "0001", token))
+            .Setup(r => r.GetPagedAsync(1, 20, It.IsAny<VoucherHeadFilter>(), "0001", token))
             .ReturnsAsync(new PagedResult<VoucherHeadDto>());
 
         var handler = new GetVoucherHeadsQueryHandler(readRepository.Object);
@@ -117,7 +117,7 @@ public sealed class GetVoucherHeadsQueryHandlerTests
             new GetVoucherHeadsQuery(PageNumber: 1, PageSize: 20, Year: null) { VahedCode = "0001" },
             token);
 
-        readRepository.Verify(r => r.GetPagedAsync(1, 20, null, "0001", token), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(1, 20, It.IsAny<VoucherHeadFilter>(), "0001", token), Times.Once);
     }
 
     [Fact]

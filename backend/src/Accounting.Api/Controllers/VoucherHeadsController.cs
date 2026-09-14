@@ -88,7 +88,9 @@ public sealed class VoucherHeadsController : ControllerBase
 
     /// <summary>
     /// Returns a page of voucher heads belonging to the caller's own organizational unit,
-    /// optionally filtered further by <c>Year</c>. There is no <c>vahedCode</c> query parameter —
+    /// optionally narrowed by <c>year</c>, a <c>docNum</c> range, a <c>dateDoc</c> range
+    /// (Legacy <c>YYYYMMDD</c> strings) and/or <c>systemTypeId</c> (نوع سند — see
+    /// <c>SysTypesController</c> for the lookup list). There is no <c>vahedCode</c> query parameter —
     /// <c>GetVoucherHeadsQuery</c> implements <c>IVahedScopedQuery</c>, so the unit scope is always
     /// the authenticated caller's own (see <c>VahedScopeBehavior</c>); a caller can no longer list
     /// another unit's vouchers by passing a different <c>vahedCode</c>.
@@ -103,10 +105,15 @@ public sealed class VoucherHeadsController : ControllerBase
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
         [FromQuery] string? year = null,
+        [FromQuery] string? docNumFrom = null,
+        [FromQuery] string? docNumTo = null,
+        [FromQuery] string? dateDocFrom = null,
+        [FromQuery] string? dateDocTo = null,
+        [FromQuery] Guid? systemTypeId = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetVoucherHeadsQuery(pageNumber, pageSize, year),
+            new GetVoucherHeadsQuery(pageNumber, pageSize, year, docNumFrom, docNumTo, dateDocFrom, dateDocTo, systemTypeId),
             cancellationToken);
 
         return Ok(result);

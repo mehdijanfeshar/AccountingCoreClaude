@@ -114,7 +114,7 @@ public sealed class VoucherHeadsControllerTests
             pageNumber: 2,
             pageSize: 10,
             year: "1403",
-            CancellationToken.None);
+            cancellationToken: CancellationToken.None);
 
         Assert.NotNull(capturedQuery);
         Assert.Equal(2, capturedQuery!.PageNumber);
@@ -160,7 +160,7 @@ public sealed class VoucherHeadsControllerTests
         var controller = new VoucherHeadsController(mediator.Object);
         using var cts = new CancellationTokenSource();
 
-        await controller.GetList(1, 20, null, cts.Token);
+        await controller.GetList(1, 20, null, cancellationToken: cts.Token);
 
         mediator.Verify(
             m => m.Send(It.IsAny<GetVoucherHeadsQuery>(), cts.Token),

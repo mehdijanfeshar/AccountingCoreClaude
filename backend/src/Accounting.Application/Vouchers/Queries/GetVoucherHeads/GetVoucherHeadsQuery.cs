@@ -18,10 +18,20 @@ namespace Accounting.Application.Vouchers.Queries.GetVoucherHeads;
 /// <param name="PageNumber">1-based page number.</param>
 /// <param name="PageSize">Page size, capped by <see cref="GetVoucherHeadsQueryValidator.MaxPageSize"/>.</param>
 /// <param name="Year">Optional exact-match filter on the YEAR column.</param>
+/// <param name="DocNumFrom">Optional inclusive lower bound of the DOC_NUM range.</param>
+/// <param name="DocNumTo">Optional inclusive upper bound of the DOC_NUM range.</param>
+/// <param name="DateDocFrom">Optional inclusive lower bound of the DATE_DOC range (<c>YYYYMMDD</c>).</param>
+/// <param name="DateDocTo">Optional inclusive upper bound of the DATE_DOC range (<c>YYYYMMDD</c>).</param>
+/// <param name="SystemTypeId">Optional exact-match filter on SYSTEM_TYPE (نوع سند).</param>
 public sealed record GetVoucherHeadsQuery(
     int PageNumber,
     int PageSize,
-    string? Year) : IRequest<PagedResult<VoucherHeadDto>>, IVahedScopedQuery
+    string? Year,
+    string? DocNumFrom = null,
+    string? DocNumTo = null,
+    string? DateDocFrom = null,
+    string? DateDocTo = null,
+    Guid? SystemTypeId = null) : IRequest<PagedResult<VoucherHeadDto>>, IVahedScopedQuery
 {
     /// <summary>
     /// Organizational unit code to filter by. Server-assigned by <c>VahedScopeBehavior</c> from
