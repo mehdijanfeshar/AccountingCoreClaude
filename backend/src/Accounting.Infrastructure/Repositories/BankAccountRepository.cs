@@ -30,4 +30,21 @@ public sealed class BankAccountRepository : IBankAccountRepository
         return await _dbContext.TB_ACCOUNTs
             .FirstOrDefaultAsync(a => a.ID == id, cancellationToken);
     }
+
+    public async Task AddTafsiliLinkAsync(TB_ACCOUNT_LINK_TAFSILI link, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.TB_ACCOUNT_LINK_TAFSILIs.AddAsync(link, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TB_ACCOUNT_LINK_TAFSILI>> GetActiveTafsiliLinksAsync(
+        Guid accountId,
+        CancellationToken cancellationToken = default)
+    {
+        // Change-tracked on purpose (no AsNoTracking): the update handler soft-deletes the
+        // dropped links by mutating these instances in place. ISDELETED is a non-nullable bool
+        // on this table, so "== false" is the complete "active" predicate — no NULL branch.
+        return await _dbContext.TB_ACCOUNT_LINK_TAFSILIs
+            .Where(l => l.ACCOUNT_ID == accountId && l.ISDELETED == false)
+            .ToListAsync(cancellationToken);
+    }
 }

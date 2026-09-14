@@ -30,6 +30,12 @@ namespace Accounting.Application.BankAccounts.Queries;
 /// <c>IsDeleted == true</c> have already been filtered out) so callers can distinguish a
 /// not-deleted row from one that slipped through.
 /// </param>
+/// <param name="TafsiliLinks">
+/// The account's active (<c>ISDELETED == false</c>) تفصیلی assignments. Always present, never
+/// <see langword="null"/> — an account with none gets an empty list. Nested here rather than
+/// exposed as its own endpoint because <c>TB_ACCOUNT_LINK_TAFSILI</c> is a permanently embedded
+/// table (see <c>NoIndependentLinkTableWritePathTests</c>).
+/// </param>
 public sealed record BankAccountDto(
     Guid Id,
     string AccountNumber,
@@ -47,4 +53,5 @@ public sealed record BankAccountDto(
     DateTime? UpdatedDate,
     string? AddUserId,
     string? ChangeUserId,
-    bool? IsDeleted);
+    bool? IsDeleted,
+    IReadOnlyList<BankAccountTafsiliLinkDto> TafsiliLinks);

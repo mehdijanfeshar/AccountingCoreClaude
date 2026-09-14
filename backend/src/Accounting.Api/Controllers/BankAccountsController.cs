@@ -1,3 +1,4 @@
+using Accounting.Application.BankAccounts.Commands.Common;
 using Accounting.Application.BankAccounts.Commands.CreateBankAccount;
 using Accounting.Application.BankAccounts.Commands.DeleteBankAccount;
 using Accounting.Application.BankAccounts.Commands.UpdateBankAccount;
@@ -158,7 +159,8 @@ public sealed class BankAccountsController : ControllerBase
             request.AccountTypeId,
             request.AccountCodeId,
             request.CheckFile,
-            request.AccountOpeningDate);
+            request.AccountOpeningDate,
+            request.TafsiliLinks);
 
         await _mediator.Send(command, cancellationToken);
 
@@ -223,4 +225,5 @@ public sealed record UpdateBankAccountRequest(
     Guid? AccountTypeId,
     Guid? AccountCodeId,
     byte[]? CheckFile,
-    string? AccountOpeningDate);
+    string? AccountOpeningDate,
+    IReadOnlyList<BankAccountTafsiliLinkInput>? TafsiliLinks = null);

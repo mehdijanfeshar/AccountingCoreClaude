@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Accounting.Application.BankAccounts.Commands.Common;
 using Accounting.Application.Common.Security;
 using MediatR;
 
@@ -35,6 +36,13 @@ namespace Accounting.Application.BankAccounts.Commands.UpdateBankAccount;
 /// <param name="AccountCodeId">Optional link to <c>TB_ACCOUNTCODE</c> (<c>FK_ACCOUNTCODE_ACCOUNT</c>); part of <c>UK_ACCOUNT_ACCOUNTCODE</c> together with <c>VahedCode</c>.</param>
 /// <param name="CheckFile">Optional Oracle BLOB; no size limit enforced here.</param>
 /// <param name="AccountOpeningDate">Optional opening date, Legacy string format (max 8 chars).</param>
+/// <param name="TafsiliLinks">
+/// Full replacement set of تفصیلی assignments (<c>TB_ACCOUNT_LINK_TAFSILI</c>) for this account —
+/// replace semantics like every other field here: links present in the request but not in the
+/// database are inserted, links in the database but absent from the request are soft-deleted, and
+/// links in both are left untouched. <see langword="null"/> is treated as an empty set, i.e. it
+/// clears every existing link — a caller that wants to keep them must send them back.
+/// </param>
 public sealed record UpdateBankAccountCommand(
     Guid Id,
     string AccountNumber,
@@ -47,7 +55,8 @@ public sealed record UpdateBankAccountCommand(
     Guid? AccountTypeId,
     Guid? AccountCodeId,
     byte[]? CheckFile,
-    string? AccountOpeningDate) : IRequest, IVahedScopedCommand
+    string? AccountOpeningDate,
+    IReadOnlyList<BankAccountTafsiliLinkInput>? TafsiliLinks = null) : IRequest, IVahedScopedCommand
 {
     /// <summary>
     /// Organizational unit code (max 4 chars); part of <c>UK_ACCOUNT_ACCOUNTCODE</c>. See

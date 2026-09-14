@@ -46,6 +46,7 @@ public sealed class NoIndependentLinkTableWritePathTests
         typeof(IVoucherHeadRepository),
         typeof(IAccountCodeRepository),
         typeof(ITafsiliRepository),
+        typeof(IBankAccountRepository),
     };
 
     private static bool IsLinkTableEntityType(Type type)

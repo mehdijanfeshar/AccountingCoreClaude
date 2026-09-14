@@ -1,3 +1,4 @@
+using Accounting.Application.BankAccounts.Commands.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using MediatR;
@@ -61,6 +62,28 @@ public sealed class CreateBankAccountCommandHandler : IRequestHandler<CreateBank
         };
 
         await _bankAccountRepository.AddAsync(entity, cancellationToken);
+
+        // تفصیلی assignments travel with their parent account and are staged before the single
+        // SaveChanges below, so an account and its links are always persisted atomically. The
+        // links inherit ACCOUNT_ID/VAHEDCODE/ADDUSERID from the account written in this very
+        // call — they are never taken from the request (see BankAccountTafsiliLinkInput).
+        foreach (var link in request.TafsiliLinks ?? Array.Empty<BankAccountTafsiliLinkInput>())
+        {
+            await _bankAccountRepository.AddTafsiliLinkAsync(
+                new TB_ACCOUNT_LINK_TAFSILI
+                {
+                    ID = Guid.NewGuid(),
+                    ACCOUNT_ID = entity.ID,
+                    TAFSILI_ID = link.TafsiliId,
+                    LEVEL_ID = link.LevelId,
+                    VAHEDCODE = request.VahedCode,
+                    ADDUSERID = _currentUser.UserId,
+                    CREATEDDATE = DateTime.UtcNow,
+                    ISDELETED = false,
+                },
+                cancellationToken);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return entity.ID;

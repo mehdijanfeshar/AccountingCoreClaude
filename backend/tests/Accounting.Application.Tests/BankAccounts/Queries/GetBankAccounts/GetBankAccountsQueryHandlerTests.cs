@@ -25,7 +25,8 @@ public sealed class GetBankAccountsQueryHandlerTests
         UpdatedDate: null,
         AddUserId: "user1",
         ChangeUserId: null,
-        IsDeleted: false);
+        IsDeleted: false,
+        TafsiliLinks: Array.Empty<BankAccountTafsiliLinkDto>());
 
     [Fact]
     public async Task Handle_PassesPageNumberAndPageSizeToRepository_AndReturnsRepositoryResult()

@@ -40,7 +40,13 @@ public sealed class BankAccountReadRepository : IBankAccountReadRepository
         a.UPDATEDDATE,
         a.ADDUSERID,
         a.CHANGEUSERID,
-        a.ISDELETED);
+        a.ISDELETED,
+        // Projected inline (not Include'd) so the list/by-id queries stay single round-trips and
+        // the DTO never carries EF-tracked entities. Soft-deleted links are filtered out here.
+        a.TB_ACCOUNT_LINK_TAFSILIs
+            .Where(l => l.ISDELETED == false)
+            .Select(l => new BankAccountTafsiliLinkDto(l.TAFSILI_ID, l.LEVEL_ID))
+            .ToList());
 
     private readonly LegacyDbContext _dbContext;
 

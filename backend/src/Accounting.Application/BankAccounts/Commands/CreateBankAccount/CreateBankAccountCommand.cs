@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Accounting.Application.BankAccounts.Commands.Common;
 using Accounting.Application.Common.Security;
 using MediatR;
 
@@ -44,7 +45,8 @@ public sealed record CreateBankAccountCommand(
     Guid? AccountTypeId,
     Guid? AccountCodeId,
     byte[]? CheckFile,
-    string? AccountOpeningDate) : IRequest<Guid>, IVahedScopedCommand
+    string? AccountOpeningDate,
+    IReadOnlyList<BankAccountTafsiliLinkInput>? TafsiliLinks = null) : IRequest<Guid>, IVahedScopedCommand
 {
     /// <summary>
     /// Organizational unit code (max 4 chars); part of <c>UK_ACCOUNT_ACCOUNTCODE</c>. Although
