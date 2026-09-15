@@ -47,7 +47,7 @@ public sealed class GetVoucherDetailsQueryHandlerTests
         var handler = new GetVoucherDetailsQueryHandler(readRepository.Object);
 
         var result = await handler.Handle(
-            new GetVoucherDetailsQuery(PageNumber: 3, PageSize: 10, VoucherHeadId: voucherHeadId, Year: "1405", VahedCode: "0001"),
+            new GetVoucherDetailsQuery(PageNumber: 3, PageSize: 10, VoucherHeadId: voucherHeadId, Year: "1405") { VahedCode = "0001" },
             CancellationToken.None);
 
         Assert.Same(expected, result);
@@ -60,20 +60,44 @@ public sealed class GetVoucherDetailsQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_NullFilters_PassedThroughAsNull()
+    public async Task Handle_PassesRequestVahedCodeToRepository_AtFaceValue()
     {
+        // Proves the handler trusts request.VahedCode as-is: by the time this handler runs,
+        // VahedScopeBehavior has already overwritten it with the authenticated caller's own unit
+        // code, so the handler must forward exactly that value, not derive its own.
         var readRepository = new Mock<IVoucherDetailReadRepository>();
         readRepository
-            .Setup(r => r.GetPagedAsync(1, 20, null, null, null, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<Guid?>(), It.IsAny<string?>(), "0007", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedResult<VoucherDetailDto>());
+
+        var handler = new GetVoucherDetailsQueryHandler(readRepository.Object);
+        var query = new GetVoucherDetailsQuery(PageNumber: 1, PageSize: 20, VoucherHeadId: null, Year: null) { VahedCode = "0007" };
+
+        await handler.Handle(query, CancellationToken.None);
+
+        readRepository.Verify(
+            r => r.GetPagedAsync(1, 20, null, null, "0007", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_NullOptionalFilters_PassedThroughAsNull()
+    {
+        // VahedCode is no longer nullable/optional — this test only exercises the still-optional
+        // VoucherHeadId/Year filters. VahedCode is set explicitly to keep this test's intent about
+        // those two filters, not VahedCode.
+        var readRepository = new Mock<IVoucherDetailReadRepository>();
+        readRepository
+            .Setup(r => r.GetPagedAsync(1, 20, null, null, "0001", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedResult<VoucherDetailDto>());
 
         var handler = new GetVoucherDetailsQueryHandler(readRepository.Object);
 
         await handler.Handle(
-            new GetVoucherDetailsQuery(PageNumber: 1, PageSize: 20, VoucherHeadId: null, Year: null, VahedCode: null),
+            new GetVoucherDetailsQuery(PageNumber: 1, PageSize: 20, VoucherHeadId: null, Year: null) { VahedCode = "0001" },
             CancellationToken.None);
 
-        readRepository.Verify(r => r.GetPagedAsync(1, 20, null, null, null, It.IsAny<CancellationToken>()), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(1, 20, null, null, "0001", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -83,16 +107,16 @@ public sealed class GetVoucherDetailsQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetPagedAsync(1, 20, null, null, null, token))
+            .Setup(r => r.GetPagedAsync(1, 20, null, null, "0001", token))
             .ReturnsAsync(new PagedResult<VoucherDetailDto>());
 
         var handler = new GetVoucherDetailsQueryHandler(readRepository.Object);
 
         await handler.Handle(
-            new GetVoucherDetailsQuery(PageNumber: 1, PageSize: 20, VoucherHeadId: null, Year: null, VahedCode: null),
+            new GetVoucherDetailsQuery(PageNumber: 1, PageSize: 20, VoucherHeadId: null, Year: null) { VahedCode = "0001" },
             token);
 
-        readRepository.Verify(r => r.GetPagedAsync(1, 20, null, null, null, token), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(1, 20, null, null, "0001", token), Times.Once);
     }
 
     [Fact]

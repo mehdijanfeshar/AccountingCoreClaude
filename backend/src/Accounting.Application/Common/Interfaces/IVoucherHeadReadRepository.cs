@@ -1,5 +1,6 @@
 using Accounting.Application.Common;
 using Accounting.Application.Vouchers.Queries;
+using Accounting.Application.Vouchers.Queries.GetVoucherHeads;
 
 namespace Accounting.Application.Common.Interfaces;
 
@@ -12,15 +13,28 @@ namespace Accounting.Application.Common.Interfaces;
 public interface IVoucherHeadReadRepository
 {
     /// <summary>
-    /// Returns a page of non-deleted voucher heads, optionally filtered by <paramref name="year"/>
-    /// and/or <paramref name="vahedCode"/> when supplied, ordered by <c>YEAR</c>, <c>VAHEDCODE</c>,
-    /// <c>DOC_NUM</c>, then <c>ID</c> as a tie-breaker for stable paging.
+    /// Returns a page of non-deleted voucher heads belonging to <paramref name="vahedCode"/>,
+    /// narrowed further by whichever members of <paramref name="filter"/> are supplied, ordered
+    /// by <c>YEAR</c>, <c>VAHEDCODE</c>, <c>DOC_NUM</c>, then <c>ID</c> as a tie-breaker for
+    /// stable paging.
     /// </summary>
+    /// <param name="pageNumber">1-based page number.</param>
+    /// <param name="pageSize">Page size.</param>
+    /// <param name="filter">Optional column filters; every member may be <see langword="null"/>.</param>
+    /// <param name="vahedCode">
+    /// Organizational unit code to filter by — required, not nullable. Rows are matched with
+    /// exact equality only (<c>VAHEDCODE == vahedCode</c>); rows with <c>VAHEDCODE IS NULL</c>
+    /// are never returned to anyone, by deliberate fail-closed design (see implementation XML
+    /// doc). Mirrors <c>IWorkShopReadRepository.GetPagedAsync</c>. Deliberately a separate
+    /// parameter from <paramref name="filter"/>: it is not caller-controllable and must never be
+    /// mistaken for one of the optional filters.
+    /// </param>
+    /// <param name="cancellationToken">Propagated to the underlying EF Core query.</param>
     Task<PagedResult<VoucherHeadDto>> GetPagedAsync(
         int pageNumber,
         int pageSize,
-        string? year,
-        string? vahedCode,
+        VoucherHeadFilter filter,
+        string vahedCode,
         CancellationToken cancellationToken = default);
 
     /// <summary>

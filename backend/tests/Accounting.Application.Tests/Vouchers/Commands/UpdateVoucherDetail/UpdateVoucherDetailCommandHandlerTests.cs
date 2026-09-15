@@ -1,7 +1,9 @@
+using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.UpdateVoucherDetail;
 using Accounting.Domain.Entity;
+using MediatR;
 using Moq;
 
 namespace Accounting.Application.Tests.Vouchers.Commands.UpdateVoucherDetail;
@@ -19,8 +21,10 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         Radif: 2,
         Debtor: null,
         Creditor: 2500m,
-        VahedCode: "0002",
-        Year: "1404");
+        Year: "1404")
+    {
+        VahedCode = "0002",
+    };
 
     private static TB_VOUCHERSDETAIL ExistingEntity(Guid id, Guid voucherHeadId, bool? isDeleted = false) => new()
     {
@@ -221,5 +225,58 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
 
         repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_MapsVahedCodeFromCommandAtFaceValue()
+    {
+        // The handler itself just maps request.VahedCode onto the entity — it does not read
+        // ICurrentUser.VahedCode directly. Forgery prevention is VahedScopeBehavior's job (see
+        // the dedicated pipeline test below); this test only proves the mapping is faithful.
+        var id = Guid.NewGuid();
+        var entity = ExistingEntity(id, Guid.NewGuid());
+        var repository = new Mock<IVoucherDetailRepository>();
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
+
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var command = ValidCommand(id) with { VahedCode = "0009" };
+
+        await handler.Handle(command, CancellationToken.None);
+
+        Assert.Equal("0009", entity.VAHEDCODE);
+    }
+
+    [Fact]
+    public async Task Handle_ThroughVahedScopeBehavior_ClientSuppliedVahedCodeIsDiscarded_ServerValueIsWritten()
+    {
+        // End-to-end forgery-prevention proof: even when a "client" manages to populate
+        // command.VahedCode with a forged value before dispatch, running the command through
+        // VahedScopeBehavior — exactly as the real MediatR pipeline does — overwrites it
+        // unconditionally with ICurrentUser.VahedCode before the handler ever sees it.
+        var id = Guid.NewGuid();
+        var entity = ExistingEntity(id, Guid.NewGuid());
+        var repository = new Mock<IVoucherDetailRepository>();
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
+        currentUser.SetupGet(u => u.VahedCode).Returns("0009");
+
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdateVoucherDetailCommand, Unit>(currentUser.Object);
+        var forgedCommand = ValidCommand(id) with { VahedCode = "9999" };
+
+        await behavior.Handle(
+            forgedCommand,
+            async ct =>
+            {
+                await handler.Handle(forgedCommand, ct);
+                return Unit.Value;
+            },
+            CancellationToken.None);
+
+        Assert.Equal("0009", entity.VAHEDCODE);
+        Assert.Equal("0009", forgedCommand.VahedCode);
     }
 }

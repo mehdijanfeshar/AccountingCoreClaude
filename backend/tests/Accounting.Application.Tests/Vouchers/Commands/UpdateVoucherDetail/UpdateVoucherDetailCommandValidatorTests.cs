@@ -17,8 +17,10 @@ public sealed class UpdateVoucherDetailCommandValidatorTests
         Radif: 2,
         Debtor: null,
         Creditor: 2500m,
-        VahedCode: "0002",
-        Year: "1404");
+        Year: "1404")
+    {
+        VahedCode = "0002",
+    };
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -85,6 +87,9 @@ public sealed class UpdateVoucherDetailCommandValidatorTests
     [Fact]
     public void Validate_AllOptionalFieldsNull_Passes()
     {
+        // VahedCode is deliberately excluded here — it is no longer nullable/optional caller
+        // input (server-assigned by VahedScopeBehavior via IVahedScopedCommand), so it keeps its
+        // valid value from ValidCommand() rather than being set to null.
         var command = ValidCommand() with
         {
             AccountId = null,
@@ -96,12 +101,24 @@ public sealed class UpdateVoucherDetailCommandValidatorTests
             Radif = null,
             Debtor = null,
             Creditor = null,
-            VahedCode = null,
             Year = null,
         };
 
         var result = _validator.Validate(command);
 
         Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_VahedCodeEmpty_Fails()
+    {
+        // Deliberate second belt (see the validator's XML doc): validates the server-assigned
+        // value, not caller input. An empty value here would mean VahedScopeBehavior didn't run.
+        var command = ValidCommand() with { VahedCode = string.Empty };
+
+        var result = _validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateVoucherDetailCommand.VahedCode));
     }
 }

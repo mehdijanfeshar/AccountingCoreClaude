@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Queries;
+using Accounting.Application.Vouchers.Queries.GetVoucherHeads;
 using Accounting.Domain.Entity;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;
@@ -59,24 +60,76 @@ public sealed class VoucherHeadReadRepository : IVoucherHeadReadRepository
     public async Task<PagedResult<VoucherHeadDto>> GetPagedAsync(
         int pageNumber,
         int pageSize,
-        string? year,
-        string? vahedCode,
+        VoucherHeadFilter filter,
+        string vahedCode,
         CancellationToken cancellationToken = default)
     {
         // Logical delete filter: ISDELETED is bool? in Legacy, so both false and NULL mean
         // "not deleted" — only an explicit true excludes the row.
+        //
+        // VahedCode filter: deliberately unconditional — no "if (!string.IsNullOrEmpty(vahedCode))"
+        // guard. That exact conditional pattern used to live here and was precisely the IDOR hole
+        // CLAUDE.md risk #1 describes: it let a caller with no usable unit scope see every unit's
+        // vouchers instead of none. VahedScopeBehavior guarantees vahedCode is always a real,
+        // non-empty value here, so no such guard is needed — and adding one back would silently
+        // reopen the hole for any future caller path that manages to reach this method with an
+        // empty string. Mirrors WorkShopReadRepository.GetPagedAsync exactly.
+        //
+        // Also deliberately exact-equality only (never "|| v.VAHEDCODE == null"): rows with
+        // VAHEDCODE IS NULL are fail-closed — invisible to every caller, not just callers outside
+        // the row's unit — per explicit project-owner decision.
         var query = _dbContext.TB_VOUCHERSHEADs
             .AsNoTracking()
-            .Where(v => v.ISDELETED != true);
+            .Where(v => v.ISDELETED != true && v.VAHEDCODE == vahedCode);
 
-        if (!string.IsNullOrEmpty(year))
+        if (!string.IsNullOrEmpty(filter.Year))
         {
+            var year = filter.Year;
             query = query.Where(v => v.YEAR == year);
         }
 
-        if (!string.IsNullOrEmpty(vahedCode))
+        if (filter.SystemTypeId is { } systemTypeId)
         {
-            query = query.Where(v => v.VAHEDCODE == vahedCode);
+            query = query.Where(v => v.SYSTEM_TYPE == systemTypeId);
+        }
+
+        // DATE_DOC is a fixed-width Legacy "YYYYMMDD" string, so a plain lexicographic
+        // comparison IS the chronological one — no parsing or conversion needed.
+        if (!string.IsNullOrEmpty(filter.DateDocFrom))
+        {
+            var from = filter.DateDocFrom;
+            query = query.Where(v => v.DATE_DOC != null && string.Compare(v.DATE_DOC, from) >= 0);
+        }
+
+        if (!string.IsNullOrEmpty(filter.DateDocTo))
+        {
+            var to = filter.DateDocTo;
+            query = query.Where(v => v.DATE_DOC != null && string.Compare(v.DATE_DOC, to) <= 0);
+        }
+
+        // DOC_NUM is a *string* column holding numbers of mixed width (live data has both
+        // zero-padded "054354" and bare "20"), so a plain lexicographic range would be wrong:
+        // "20" sorts after "054354" alphabetically but is the smaller number. Comparing length
+        // first and only then lexicographically restores numeric order for non-negative
+        // integers, and — unlike TO_NUMBER — cannot raise ORA-01722 on a row that happens to
+        // hold something non-numeric. Assumes digits only; a value with a sign or spaces would
+        // still sort oddly, which is why this is a range filter, not an ordering change.
+        if (!string.IsNullOrEmpty(filter.DocNumFrom))
+        {
+            var from = filter.DocNumFrom;
+            var fromLength = from.Length;
+            query = query.Where(v => v.DOC_NUM != null
+                && (v.DOC_NUM.Length > fromLength
+                    || (v.DOC_NUM.Length == fromLength && string.Compare(v.DOC_NUM, from) >= 0)));
+        }
+
+        if (!string.IsNullOrEmpty(filter.DocNumTo))
+        {
+            var to = filter.DocNumTo;
+            var toLength = to.Length;
+            query = query.Where(v => v.DOC_NUM != null
+                && (v.DOC_NUM.Length < toLength
+                    || (v.DOC_NUM.Length == toLength && string.Compare(v.DOC_NUM, to) <= 0)));
         }
 
         var totalCount = await query.CountAsync(cancellationToken);

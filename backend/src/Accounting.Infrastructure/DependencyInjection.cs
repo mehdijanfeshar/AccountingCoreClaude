@@ -29,7 +29,122 @@ public static class DependencyInjection
         services.AddScoped<IVoucherDetailRepository, VoucherDetailRepository>();
         services.AddScoped<IAccountCodeReadRepository, AccountCodeReadRepository>();
         services.AddScoped<IVoucherHeadReadRepository, VoucherHeadReadRepository>();
+        services.AddScoped<ISysTypeReadRepository, SysTypeReadRepository>();
         services.AddScoped<IVoucherDetailReadRepository, VoucherDetailReadRepository>();
+
+        // Phase 15 — read-only trial balance reporting (4/6/8-column). Single raw-SQL read
+        // repository shared by all three report Queries; no write repository, no Command, no
+        // entity mutation — see TrialBalanceReadRepository XML doc.
+        services.AddScoped<ITrialBalanceReadRepository, TrialBalanceReadRepository>();
+
+        // Phase 13 (batch 2) independent entities. Each follows the exact same write/read
+        // repository split as the entities above: the write repository only stages changes and
+        // never calls SaveChanges, while the read repository is AsNoTracking + DTO-projecting.
+        // PreDescrib deliberately has no delete path at all — TB_PREDESCRIBS has no ISDELETED
+        // column and this project never issues physical deletes; see PreDescribSchemaAssumptionsTests.
+        services.AddScoped<IAccountCodeInterfaceRepository, AccountCodeInterfaceRepository>();
+        services.AddScoped<IAccountExceptionRepository, AccountExceptionRepository>();
+        services.AddScoped<IBillLogRepository, BillLogRepository>();
+        services.AddScoped<IPersonActionRepository, PersonActionRepository>();
+        services.AddScoped<IPreDescribRepository, PreDescribRepository>();
+        services.AddScoped<IRabetRepository, RabetRepository>();
+        services.AddScoped<IWhiteAndBlackListRepository, WhiteAndBlackListRepository>();
+        services.AddScoped<IWhiteListRepository, WhiteListRepository>();
+
+        services.AddScoped<IAccountCodeInterfaceReadRepository, AccountCodeInterfaceReadRepository>();
+        services.AddScoped<IAccountExceptionReadRepository, AccountExceptionReadRepository>();
+        services.AddScoped<IBillLogReadRepository, BillLogReadRepository>();
+        services.AddScoped<IPersonActionReadRepository, PersonActionReadRepository>();
+        services.AddScoped<IPreDescribReadRepository, PreDescribReadRepository>();
+        services.AddScoped<IRabetReadRepository, RabetReadRepository>();
+        services.AddScoped<IWhiteAndBlackListReadRepository, WhiteAndBlackListReadRepository>();
+        services.AddScoped<IWhiteListReadRepository, WhiteListReadRepository>();
+
+        // Phase 14 (batch 3) independent entities. Same write/read repository split again.
+        // Two schema irregularities in this batch are worth knowing about when reading these
+        // registrations, because they change the shape of the feature above the repository:
+        //   - VahedInfo (TB_VAHED_INFO) has NO ISDELETED and NO audit columns whatsoever, so it
+        //     gets Create/Read/Update only (no delete path) and its handlers do not depend on
+        //     ICurrentUser at all — there is nowhere to stamp. See VahedInfoSchemaAssumptionsTests.
+        //   - WorkShop (TB_WORKSHOP) has a NULLABLE ISDELETED (bool?), like TB_RABET, so both
+        //     false and NULL mean "not deleted" throughout its handlers and read filters.
+        services.AddScoped<IAttribForAccountCodeRepository, AttribForAccountCodeRepository>();
+        services.AddScoped<IChequeTypeRepository, ChequeTypeRepository>();
+        services.AddScoped<IIdentityGroupRepository, IdentityGroupRepository>();
+        services.AddScoped<IIdentitySubGroupRepository, IdentitySubGroupRepository>();
+        services.AddScoped<ILevelTafsilRepository, LevelTafsilRepository>();
+        services.AddScoped<ITafsilGroupRepository, TafsilGroupRepository>();
+        services.AddScoped<IVahedInfoRepository, VahedInfoRepository>();
+        services.AddScoped<IWorkShopRepository, WorkShopRepository>();
+
+        services.AddScoped<IAttribForAccountCodeReadRepository, AttribForAccountCodeReadRepository>();
+        services.AddScoped<IChequeTypeReadRepository, ChequeTypeReadRepository>();
+        services.AddScoped<IIdentityGroupReadRepository, IdentityGroupReadRepository>();
+        services.AddScoped<IIdentitySubGroupReadRepository, IdentitySubGroupReadRepository>();
+        services.AddScoped<ILevelTafsilReadRepository, LevelTafsilReadRepository>();
+        services.AddScoped<ITafsilGroupReadRepository, TafsilGroupReadRepository>();
+        services.AddScoped<IVahedInfoReadRepository, VahedInfoReadRepository>();
+        services.AddScoped<IWorkShopReadRepository, WorkShopReadRepository>();
+
+        // Phase 15 (batch 4) independent entities. Same write/read repository split again.
+        // Unlike the two batches above, EVERY entity in this batch owns an ISDELETED column, so all
+        // eight get a full CRUD surface — there is no CRU-only exception here (contrast PreDescrib
+        // in phase 13 and VahedInfo in phase 14). Two things are worth knowing when reading these:
+        //   - BankAccount is TB_ACCOUNT, the BANK account master — NOT the TB_ACCOUNTCODE
+        //     chart-of-accounts node, whose repositories are IAccountCodeRepository above. The
+        //     "BankAccount" prefix exists precisely so these two can never be confused at a call
+        //     site; see AddInfrastructure_MapsInterfaceToItsOwnImplementation for the guard.
+        //   - BankAccount, BankCartDetail, Expense, RevolvingFund and ElamHead all have a NULLABLE
+        //     ISDELETED (bool?), so both false and NULL mean "not deleted" throughout their
+        //     handlers and read filters; CheckBook, ChequesIncorrent and Receipt are non-nullable.
+        services.AddScoped<IBankAccountRepository, BankAccountRepository>();
+        services.AddScoped<IBankCartDetailRepository, BankCartDetailRepository>();
+        services.AddScoped<ICheckBookRepository, CheckBookRepository>();
+        services.AddScoped<IChequesIncorrentRepository, ChequesIncorrentRepository>();
+        services.AddScoped<IElamHeadRepository, ElamHeadRepository>();
+        services.AddScoped<IExpenseRepository, ExpenseRepository>();
+        services.AddScoped<IReceiptRepository, ReceiptRepository>();
+        services.AddScoped<IRevolvingFundRepository, RevolvingFundRepository>();
+
+        services.AddScoped<IBankAccountReadRepository, BankAccountReadRepository>();
+        services.AddScoped<IBankCartDetailReadRepository, BankCartDetailReadRepository>();
+        services.AddScoped<ICheckBookReadRepository, CheckBookReadRepository>();
+        services.AddScoped<IChequesIncorrentReadRepository, ChequesIncorrentReadRepository>();
+        services.AddScoped<IElamHeadReadRepository, ElamHeadReadRepository>();
+        services.AddScoped<IExpenseReadRepository, ExpenseReadRepository>();
+        services.AddScoped<IReceiptReadRepository, ReceiptReadRepository>();
+        services.AddScoped<IRevolvingFundReadRepository, RevolvingFundReadRepository>();
+
+        // Phase 16 (batch 5) independent entities — a deliberately small batch of just two, both
+        // of which are Head tables whose Detail children are explicitly OUT of scope because the
+        // aggregate boundary for each pair is still undecided (see docs/open-decisions.md).
+        // Both own an ISDELETED column so both get a full CRUD surface, but they differ in a way
+        // that matters when reading their handlers:
+        //   - PayReciveHead (TB_PAYRECIVHEAD) has a NON-nullable ISDELETED plus five NOT NULL
+        //     business columns, so its validators carry NotEmpty rules and its handlers test
+        //     `entity.ISDELETED` directly.
+        //   - TmpVoucherHead (TB_TMP_VOUCHERHEAD) is the opposite extreme: every single column is
+        //     nullable, including ISDELETED (bool?), so both false and NULL mean "not deleted"
+        //     throughout its handlers and read filters, and its validators have no NotEmpty rules.
+        // Neither table has any UNIQUE constraint, so neither controller declares 409.
+        services.AddScoped<IPayReciveHeadRepository, PayReciveHeadRepository>();
+        services.AddScoped<ITmpVoucherHeadRepository, TmpVoucherHeadRepository>();
+
+        services.AddScoped<IPayReciveHeadReadRepository, PayReciveHeadReadRepository>();
+        services.AddScoped<ITmpVoucherHeadReadRepository, TmpVoucherHeadReadRepository>();
+
+        // Phase 20-b — read-only dynamic تفصیلی lookups for the voucher-entry form. No write
+        // repository: TB_ACCOUNT_LINK_LEVEL and TB_TAFSIL_LINK_TAFSILGROUP are section-2 embedded
+        // children (docs/tamin-core-entity-reference.md), never independent aggregates, and this
+        // whole phase is read-only by design. See TafsiliLookupReadRepository XML doc.
+        services.AddScoped<ITafsiliLookupReadRepository, TafsiliLookupReadRepository>();
+
+        // New independent aggregate: Tafsili (TB_TAFSILI). Its گروه‌تفصیلی link
+        // (TB_TAFSIL_LINK_TAFSILGROUP) stays embedded per the same team rule referenced above —
+        // ITafsiliRepository exposes parent-scoped Get/Add methods for it, never an independent
+        // repository/Command. See NoIndependentLinkTableWritePathTests.
+        services.AddScoped<ITafsiliRepository, TafsiliRepository>();
+        services.AddScoped<ITafsiliReadRepository, TafsiliReadRepository>();
 
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 

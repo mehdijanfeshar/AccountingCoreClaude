@@ -56,14 +56,26 @@ public sealed class VoucherDetailReadRepository : IVoucherDetailReadRepository
         int pageSize,
         Guid? voucherHeadId,
         string? year,
-        string? vahedCode,
+        string vahedCode,
         CancellationToken cancellationToken = default)
     {
         // Logical delete filter: ISDELETED is bool? in Legacy, so both false and NULL mean
         // "not deleted" — only an explicit true excludes the row.
+        //
+        // VahedCode filter: deliberately unconditional — no "if (!string.IsNullOrEmpty(vahedCode))"
+        // guard. That exact conditional pattern used to live here and was precisely the IDOR hole
+        // CLAUDE.md risk #1 describes: it let a caller with no usable unit scope see every unit's
+        // voucher detail lines instead of none. VahedScopeBehavior guarantees vahedCode is always
+        // a real, non-empty value here, so no such guard is needed — and adding one back would
+        // silently reopen the hole for any future caller path that manages to reach this method
+        // with an empty string. Mirrors VoucherHeadReadRepository.GetPagedAsync exactly.
+        //
+        // Also deliberately exact-equality only (never "|| d.VAHEDCODE == null"): rows with
+        // VAHEDCODE IS NULL are fail-closed — invisible to every caller, not just callers outside
+        // the row's unit — per explicit project-owner decision.
         var query = _dbContext.TB_VOUCHERSDETAILs
             .AsNoTracking()
-            .Where(d => d.ISDELETED != true);
+            .Where(d => d.ISDELETED != true && d.VAHEDCODE == vahedCode);
 
         if (voucherHeadId.HasValue)
         {
@@ -73,11 +85,6 @@ public sealed class VoucherDetailReadRepository : IVoucherDetailReadRepository
         if (!string.IsNullOrEmpty(year))
         {
             query = query.Where(d => d.YEAR == year);
-        }
-
-        if (!string.IsNullOrEmpty(vahedCode))
-        {
-            query = query.Where(d => d.VAHEDCODE == vahedCode);
         }
 
         var totalCount = await query.CountAsync(cancellationToken);

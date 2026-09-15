@@ -19,7 +19,7 @@ public sealed class UpdateVoucherDetailCommandHandlerTafsiliLinksTests
     private static UpdateVoucherDetailCommand CommandWithLinks(
         Guid id,
         IReadOnlyList<VoucherDetailTafsiliLinkInput>? tafsiliLinks,
-        string? vahedCode = "0001",
+        string vahedCode = "0001",
         string? year = "1405") => new(
         Id: id,
         AccountId: Guid.NewGuid(),
@@ -31,9 +31,11 @@ public sealed class UpdateVoucherDetailCommandHandlerTafsiliLinksTests
         Radif: 2,
         Debtor: 500m,
         Creditor: null,
-        VahedCode: vahedCode,
         Year: year,
-        TafsiliLinks: tafsiliLinks);
+        TafsiliLinks: tafsiliLinks)
+    {
+        VahedCode = vahedCode,
+    };
 
     private static TB_VOUCHERSDETAIL ExistingDetail(Guid id) => new()
     {

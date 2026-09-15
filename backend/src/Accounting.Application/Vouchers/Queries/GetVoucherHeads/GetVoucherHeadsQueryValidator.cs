@@ -3,8 +3,11 @@ using FluentValidation;
 namespace Accounting.Application.Vouchers.Queries.GetVoucherHeads;
 
 /// <summary>
-/// Surface-level (syntactic) validation only, matching the Fluent mapping constraints in
-/// <c>LegacyDbContext</c> (<c>YEAR</c> and <c>VAHEDCODE</c> are both max 4 chars).
+/// Surface-level (syntactic) validation only, matching the Fluent mapping constraint on
+/// <c>YEAR</c> (max 4 chars). No rule for <c>VahedCode</c> here — mirrors
+/// <c>GetWorkShopsQueryValidator</c>: it is never caller input (server-assigned by
+/// <c>VahedScopeBehavior</c>, always a valid value by the time this validator runs), so there is
+/// nothing meaningful for a syntactic validator to check.
 /// </summary>
 public sealed class GetVoucherHeadsQueryValidator : AbstractValidator<GetVoucherHeadsQuery>
 {
@@ -30,7 +33,19 @@ public sealed class GetVoucherHeadsQueryValidator : AbstractValidator<GetVoucher
         RuleFor(x => x.Year)
             .MaximumLength(4);
 
-        RuleFor(x => x.VahedCode)
-            .MaximumLength(4);
+        // Mirror the Fluent mapping constraints on the filtered columns: DOC_NUM is
+        // VARCHAR2(10), DATE_DOC VARCHAR2(8). A longer bound could never match a row, so it is
+        // a caller error rather than an empty result.
+        RuleFor(x => x.DocNumFrom).MaximumLength(10);
+        RuleFor(x => x.DocNumTo).MaximumLength(10);
+        RuleFor(x => x.DateDocFrom).MaximumLength(8);
+        RuleFor(x => x.DateDocTo).MaximumLength(8);
+
+        // An inverted range returns nothing and almost always means the user filled the two
+        // fields the wrong way round — report it instead of silently showing an empty table.
+        RuleFor(x => x.DateDocTo)
+            .Must((query, to) => string.CompareOrdinal(query.DateDocFrom, to) <= 0)
+            .When(x => !string.IsNullOrEmpty(x.DateDocFrom) && !string.IsNullOrEmpty(x.DateDocTo))
+            .WithMessage("'تا تاریخ' نباید کوچک‌تر از 'از تاریخ' باشد.");
     }
 }

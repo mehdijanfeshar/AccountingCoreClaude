@@ -30,4 +30,20 @@ public sealed class AccountCodeRepository : IAccountCodeRepository
         return await _dbContext.TB_ACCOUNTCODEs
             .FirstOrDefaultAsync(a => a.ID == id, cancellationToken);
     }
+
+    public async Task<TB_ACCOUNT_LINK_TAFSILGROUP?> GetTafsilGroupLinkForUpdateAsync(
+        Guid accountCodeId,
+        Guid linkId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.TB_ACCOUNT_LINK_TAFSILGROUPs
+            .FirstOrDefaultAsync(l => l.ID == linkId && l.ACCOUNT_ID == accountCodeId, cancellationToken);
+    }
+
+    public async Task AddTafsilGroupLinkAsync(
+        TB_ACCOUNT_LINK_TAFSILGROUP link,
+        CancellationToken cancellationToken = default)
+    {
+        await _dbContext.TB_ACCOUNT_LINK_TAFSILGROUPs.AddAsync(link, cancellationToken);
+    }
 }

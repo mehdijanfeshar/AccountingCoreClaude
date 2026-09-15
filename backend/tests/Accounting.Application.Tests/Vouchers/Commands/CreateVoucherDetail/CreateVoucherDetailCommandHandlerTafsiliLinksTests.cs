@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.Common;
 using Accounting.Application.Vouchers.Commands.CreateVoucherDetail;
@@ -32,9 +33,11 @@ public sealed class CreateVoucherDetailCommandHandlerTafsiliLinksTests
         Radif: 1,
         Debtor: 1000m,
         Creditor: null,
-        VahedCode: "0001",
         Year: "1405",
-        TafsiliLinks: tafsiliLinks);
+        TafsiliLinks: tafsiliLinks)
+    {
+        VahedCode = "0001",
+    };
 
     private static TB_VOUCHERSHEAD ExistingHead(Guid id) => new()
     {
@@ -269,5 +272,62 @@ public sealed class CreateVoucherDetailCommandHandlerTafsiliLinksTests
             r => r.AddTafsiliLinkAsync(It.IsAny<TB_VOUCHERDETAIL_LINK_TAFSILI>(), It.IsAny<CancellationToken>()),
             Times.Never);
         harness.UnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// The critical IDOR-closure proof for this line's own composite-create path (2026-09):
+    /// running the command through <see cref="VahedScopeBehavior{TRequest,TResponse}"/> — exactly
+    /// as the real MediatR pipeline does — must overwrite the line's <c>VAHEDCODE</c> AND, because
+    /// every تفصیلی link derives its <c>VAHEDCODE</c> from the line's own (post-overwrite) value,
+    /// every تفصیلی link created together with it. This is the end-to-end guarantee that matters
+    /// for IDOR risk #1 (CLAUDE.md); <see cref="Handle_WithTafsiliLinks_DerivesVahedCodeAndYearFromTheLine_NotFromLinkInput"/>
+    /// above only proves the handler-level derivation is faithful to <c>request.VahedCode</c>.
+    /// </summary>
+    [Fact]
+    public async Task Handle_ThroughVahedScopeBehavior_ForgedVahedCode_IsDiscarded_LineAndEveryTafsiliLinkGetServerValue()
+    {
+        var headId = Guid.NewGuid();
+        var currentUser = new Mock<ICurrentUser>();
+        currentUser.SetupGet(u => u.UserId).Returns("user1");
+        currentUser.SetupGet(u => u.VahedCode).Returns("0009");
+
+        var headRepository = new Mock<IVoucherHeadRepository>();
+        headRepository
+            .Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ExistingHead(headId));
+
+        var stagedDetails = new List<TB_VOUCHERSDETAIL>();
+        var stagedLinks = new List<TB_VOUCHERDETAIL_LINK_TAFSILI>();
+        var detailRepository = new Mock<IVoucherDetailRepository>();
+        detailRepository
+            .Setup(r => r.AddAsync(It.IsAny<TB_VOUCHERSDETAIL>(), It.IsAny<CancellationToken>()))
+            .Callback<TB_VOUCHERSDETAIL, CancellationToken>((entity, _) => stagedDetails.Add(entity))
+            .Returns(Task.CompletedTask);
+        detailRepository
+            .Setup(r => r.AddTafsiliLinkAsync(It.IsAny<TB_VOUCHERDETAIL_LINK_TAFSILI>(), It.IsAny<CancellationToken>()))
+            .Callback<TB_VOUCHERDETAIL_LINK_TAFSILI, CancellationToken>((entity, _) => stagedLinks.Add(entity))
+            .Returns(Task.CompletedTask);
+        var unitOfWork = new Mock<IUnitOfWork>();
+        unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+        var handler = new CreateVoucherDetailCommandHandler(
+            headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateVoucherDetailCommand, Guid>(currentUser.Object);
+        var forgedCommand = CommandWithLinks(headId, new[]
+        {
+            new VoucherDetailTafsiliLinkInput(Guid.NewGuid(), Guid.NewGuid()),
+            new VoucherDetailTafsiliLinkInput(Guid.NewGuid(), Guid.NewGuid()),
+        }) with
+        {
+            VahedCode = "9999",
+        };
+
+        await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);
+
+        Assert.Equal("0009", forgedCommand.VahedCode);
+        var line = Assert.Single(stagedDetails);
+        Assert.Equal("0009", line.VAHEDCODE);
+        Assert.Equal(2, stagedLinks.Count);
+        Assert.All(stagedLinks, l => Assert.Equal("0009", l.VAHEDCODE));
     }
 }

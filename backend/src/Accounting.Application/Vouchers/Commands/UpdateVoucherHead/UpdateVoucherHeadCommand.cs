@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.Vouchers.Commands.UpdateVoucherHead;
@@ -20,6 +22,15 @@ namespace Accounting.Application.Vouchers.Commands.UpdateVoucherHead;
 /// handler sources them from <see cref="Accounting.Application.Common.Interfaces.ICurrentUser"/>
 /// and the server clock, never from client input. <c>ATTACHFILE</c> (BLOB attachment upload)
 /// stays out of scope here too, matching <c>CreateVoucherHeadCommand</c>.
+///
+/// ⚠️ <b>Scope note:</b> <see cref="IVahedScopedCommand"/> here only guarantees that
+/// <c>VAHEDCODE</c> cannot be *changed* to an arbitrary unit by the caller. It does
+/// <b>not</b> check whether the caller is allowed to touch this particular row in the first
+/// place — record-ownership verification on Update (i.e. "does this <c>Id</c> already belong to
+/// the caller's unit?") is explicitly out of scope for this pass, by project-owner decision. The
+/// IDOR risk on direct-by-id access therefore remains open for Update; only the "what unit does
+/// this row end up in" half of the problem is closed here — exactly the same scope split already
+/// applied to <c>UpdateWorkShopCommand</c>.
 /// </summary>
 /// <param name="Id">The <c>TB_VOUCHERSHEAD.ID</c> to update (bound from the route, never the body).</param>
 /// <param name="DocNum">DOC_NUM column — شماره واقعی سند (max 6 chars). Combined with Year/VahedCode must be unique (<c>UK_VOUCHERHEAD_NUMBER</c>).</param>
@@ -29,7 +40,6 @@ namespace Accounting.Application.Vouchers.Commands.UpdateVoucherHead;
 /// <param name="Apendix">APENDIX column — پیوست (max 800 chars).</param>
 /// <param name="SystemTypeId">Optional FK to <c>TB_SYSTYPE</c> — نوع سیستم.</param>
 /// <param name="FlagState">FLAG_STATE column — سند آیا اختتامیه می‌باشد.</param>
-/// <param name="VahedCode">VAHEDCODE column — کد واحد (max 4 chars).</param>
 /// <param name="Year">YEAR column (max 4 chars).</param>
 /// <param name="IsAutomatic">ISAUTOMATIC column — 0 دستی و 1 مکانیزه.</param>
 /// <param name="SndVahedCode">SNDVAHEDCODE column — واحد گیرنده (max 4 chars).</param>
@@ -45,10 +55,21 @@ public sealed record UpdateVoucherHeadCommand(
     string? Apendix,
     Guid? SystemTypeId,
     decimal? FlagState,
-    string VahedCode,
     string Year,
     bool? IsAutomatic,
     string? SndVahedCode,
     Guid? ParentHeadId,
     string? AttachFileName,
-    string? AtfNum) : IRequest;
+    string? AtfNum) : IRequest, IVahedScopedCommand
+{
+    /// <summary>
+    /// VAHEDCODE column (max 4 chars). Never bound from the request body —
+    /// <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and the Swagger
+    /// schema — and never trusted even if a caller manages to set it: <c>VahedScopeBehavior</c>
+    /// unconditionally overwrites this with the authenticated caller's own unit code before the
+    /// request reaches <c>UpdateVoucherHeadCommandHandler</c>. See <see cref="IVahedScopedCommand"/>
+    /// for the full mechanism, and the scope note above for what this does <b>not</b> cover.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

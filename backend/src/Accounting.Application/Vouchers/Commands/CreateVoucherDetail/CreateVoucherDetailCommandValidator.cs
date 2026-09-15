@@ -9,6 +9,15 @@ namespace Accounting.Application.Vouchers.Commands.CreateVoucherDetail;
 /// architecture decision, accounting invariants (debit==credit balance, non-negative amounts,
 /// mutually-exclusive debit/credit, account-is-leaf, etc.) were deliberately discarded and must
 /// NOT be re-created here.
+///
+/// The <c>RuleFor(x => x.VahedCode)</c> below is a deliberate second belt, not dead code: by the
+/// time this validator runs, <c>VahedScopeBehavior</c> (registered ahead of
+/// <c>ValidationBehavior</c> — see <c>DependencyInjection.cs</c>) has already overwritten
+/// <see cref="CreateVoucherDetailCommand.VahedCode"/> with the server-assigned value, so this rule
+/// now validates that value rather than anything the caller supplied. Unlike before this command
+/// implemented <see cref="Accounting.Application.Common.Security.IVahedScopedCommand"/>,
+/// <c>VahedCode</c> can no longer legitimately be empty, so <c>NotEmpty</c> was added alongside
+/// the pre-existing <c>MaximumLength</c> rule.
 /// </summary>
 public sealed class CreateVoucherDetailCommandValidator : AbstractValidator<CreateVoucherDetailCommand>
 {
@@ -21,6 +30,7 @@ public sealed class CreateVoucherDetailCommandValidator : AbstractValidator<Crea
             .MaximumLength(200);
 
         RuleFor(x => x.VahedCode)
+            .NotEmpty()
             .MaximumLength(4);
 
         RuleFor(x => x.Year)

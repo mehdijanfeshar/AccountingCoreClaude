@@ -1,0 +1,40 @@
+using Accounting.Application.ChequesIncorrents.Queries;
+using Accounting.Application.Common;
+
+namespace Accounting.Application.Common.Interfaces;
+
+/// <summary>
+/// Read-side repository for <c>TB_CHEQUES_INCORRENT</c>. Deliberately separate from
+/// <see cref="IChequesIncorrentRepository"/> (the write-side repository) — this repository
+/// never stages changes and always returns
+/// <see cref="ChequesIncorrents.Queries.ChequesIncorrentDto"/> projections, never the Domain
+/// entity.
+/// </summary>
+public interface IChequesIncorrentReadRepository
+{
+    /// <summary>
+    /// Returns a page of non-deleted <c>TB_CHEQUES_INCORRENT</c> rows belonging to
+    /// <paramref name="vahedCode"/>, ordered by <c>CHEQ_NO</c>, then <c>ID</c> as a tie-breaker
+    /// for stable paging.
+    /// </summary>
+    /// <param name="pageNumber">1-based page number.</param>
+    /// <param name="pageSize">Page size.</param>
+    /// <param name="vahedCode">
+    /// Organizational unit code to filter by — required, not nullable. Rows are matched with
+    /// exact equality only (<c>VAHEDCODE == vahedCode</c>); rows with <c>VAHEDCODE IS NULL</c>
+    /// are never returned to anyone, by deliberate fail-closed design (see implementation XML
+    /// doc).
+    /// </param>
+    /// <param name="cancellationToken">Propagated to the underlying EF Core query.</param>
+    Task<PagedResult<ChequesIncorrentDto>> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        string vahedCode,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the row with the given <paramref name="id"/> regardless of its logical-delete
+    /// state, or <see langword="null"/> if no such row exists.
+    /// </summary>
+    Task<ChequesIncorrentDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+}

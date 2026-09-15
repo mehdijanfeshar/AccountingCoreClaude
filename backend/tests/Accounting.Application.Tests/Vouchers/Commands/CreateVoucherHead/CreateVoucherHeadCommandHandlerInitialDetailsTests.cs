@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.CreateVoucherHead;
 using Accounting.Domain.Entity;
@@ -24,14 +25,16 @@ public sealed class CreateVoucherHeadCommandHandlerInitialDetailsTests
         Apendix: null,
         SystemTypeId: null,
         FlagState: null,
-        VahedCode: "0001",
         Year: "1405",
         IsAutomatic: false,
         SndVahedCode: null,
         ParentHeadId: null,
         AttachFileName: null,
         AtfNum: null,
-        InitialDetails: initialDetails);
+        InitialDetails: initialDetails)
+    {
+        VahedCode = "0001",
+    };
 
     private static CreateVoucherHeadDetailInput SampleDetail(int radif) => new(
         AccountId: Guid.NewGuid(),
@@ -258,5 +261,36 @@ public sealed class CreateVoucherHeadCommandHandlerInitialDetailsTests
         Assert.Equal(detail.Radif, staged.RADIF);
         Assert.Equal(detail.Debtor, staged.DEBTOR);
         Assert.Equal(detail.Creditor, staged.CREDITOR);
+    }
+
+    /// <summary>
+    /// The critical IDOR-closure proof for this composite-create path (2026-09): running the
+    /// command through <see cref="VahedScopeBehavior{TRequest,TResponse}"/> — exactly as the real
+    /// MediatR pipeline does — must overwrite <em>both</em> the head's <c>VAHEDCODE</c> AND every
+    /// composite-created detail line's <c>VAHEDCODE</c> with the authenticated caller's own unit
+    /// code, discarding whatever a "client" managed to populate <c>command.VahedCode</c> with
+    /// before dispatch. <see cref="Handle_DetailLines_CopyVahedCodeAndYearFromHead_NeverFromLineInput"/>
+    /// above only proves the handler-level mapping is faithful to <c>request.VahedCode</c>; this
+    /// test proves the end-to-end guarantee that matters for IDOR risk #1 (CLAUDE.md).
+    /// </summary>
+    [Fact]
+    public async Task Handle_ThroughVahedScopeBehavior_ForgedVahedCode_IsDiscarded_HeadAndEveryDetailLineGetServerValue()
+    {
+        var fixture = new Fixture();
+        fixture.CurrentUser.SetupGet(u => u.VahedCode).Returns("0009");
+        var handler = fixture.CreateHandler();
+        var behavior = new VahedScopeBehavior<CreateVoucherHeadCommand, Guid>(fixture.CurrentUser.Object);
+        var forgedCommand = ValidCommand(new[] { SampleDetail(1), SampleDetail(2) }) with
+        {
+            VahedCode = "9999",
+        };
+
+        await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);
+
+        Assert.Equal("0009", forgedCommand.VahedCode);
+        Assert.NotNull(fixture.StagedHead);
+        Assert.Equal("0009", fixture.StagedHead!.VAHEDCODE);
+        Assert.Equal(2, fixture.StagedDetails.Count);
+        Assert.All(fixture.StagedDetails, d => Assert.Equal("0009", d.VAHEDCODE));
     }
 }

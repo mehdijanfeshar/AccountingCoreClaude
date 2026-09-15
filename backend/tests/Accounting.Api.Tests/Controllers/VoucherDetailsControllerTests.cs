@@ -31,8 +31,10 @@ public sealed class VoucherDetailsControllerTests
         Radif: 1,
         Debtor: 1000m,
         Creditor: null,
-        VahedCode: "0001",
-        Year: "1405");
+        Year: "1405")
+    {
+        VahedCode = "0001",
+    };
 
     [Fact]
     public async Task Create_ReturnsCreatedAtActionWithGeneratedIdInBodyAndRouteValues()
@@ -82,8 +84,11 @@ public sealed class VoucherDetailsControllerTests
     }
 
     [Fact]
-    public async Task GetList_PassesPageNumberPageSizeVoucherHeadIdYearAndVahedCodeThroughToQueryUnchanged_AndReturns200WithPagedResult()
+    public async Task GetList_PassesPageNumberPageSizeVoucherHeadIdAndYearThroughToQueryUnchanged_AndReturns200WithPagedResult()
     {
+        // No vahedCode parameter anymore — GetVoucherDetailsQuery implements IVahedScopedQuery,
+        // so the unit scope is always server-assigned (by VahedScopeBehavior, not exercised in
+        // this pure controller-layer test where IMediator is mocked).
         var mediator = new Mock<IMediator>();
         var voucherHeadId = Guid.NewGuid();
         var pagedResult = new PagedResult<VoucherDetailDto>
@@ -108,7 +113,6 @@ public sealed class VoucherDetailsControllerTests
             pageSize: 10,
             voucherHeadId: voucherHeadId,
             year: "1405",
-            vahedCode: "0001",
             CancellationToken.None);
 
         Assert.NotNull(capturedQuery);
@@ -116,7 +120,6 @@ public sealed class VoucherDetailsControllerTests
         Assert.Equal(10, capturedQuery.PageSize);
         Assert.Equal(voucherHeadId, capturedQuery.VoucherHeadId);
         Assert.Equal("1405", capturedQuery.Year);
-        Assert.Equal("0001", capturedQuery.VahedCode);
 
         var ok = Assert.IsType<OkObjectResult>(actionResult);
         Assert.Same(pagedResult, ok.Value);
@@ -142,7 +145,6 @@ public sealed class VoucherDetailsControllerTests
         Assert.Equal(20, capturedQuery.PageSize);
         Assert.Null(capturedQuery.VoucherHeadId);
         Assert.Null(capturedQuery.Year);
-        Assert.Null(capturedQuery.VahedCode);
     }
 
     [Fact]
@@ -156,7 +158,7 @@ public sealed class VoucherDetailsControllerTests
         var controller = new VoucherDetailsController(mediator.Object);
         using var cts = new CancellationTokenSource();
 
-        await controller.GetList(1, 20, null, null, null, cts.Token);
+        await controller.GetList(1, 20, null, null, cts.Token);
 
         mediator.Verify(
             m => m.Send(It.IsAny<GetVoucherDetailsQuery>(), cts.Token),
@@ -246,7 +248,6 @@ public sealed class VoucherDetailsControllerTests
         Radif: 2,
         Debtor: null,
         Creditor: 2500m,
-        VahedCode: "0002",
         Year: "1404");
 
     [Fact]

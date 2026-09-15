@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.Vouchers.Commands.CreateVoucherHead;
@@ -19,7 +21,6 @@ namespace Accounting.Application.Vouchers.Commands.CreateVoucherHead;
 /// <param name="Apendix">APENDIX column — پیوست (max 800 chars).</param>
 /// <param name="SystemTypeId">Optional FK to <c>TB_SYSTYPE</c> — نوع سیستم.</param>
 /// <param name="FlagState">FLAG_STATE column — سند آیا اختتامیه می‌باشد.</param>
-/// <param name="VahedCode">VAHEDCODE column — کد واحد (max 4 chars).</param>
 /// <param name="Year">YEAR column (max 4 chars).</param>
 /// <param name="IsAutomatic">ISAUTOMATIC column — 0 دستی و 1 مکانیزه.</param>
 /// <param name="SndVahedCode">SNDVAHEDCODE column — واحد گیرنده (max 4 chars).</param>
@@ -60,11 +61,26 @@ public sealed record CreateVoucherHeadCommand(
     string? Apendix,
     Guid? SystemTypeId,
     decimal? FlagState,
-    string VahedCode,
     string Year,
     bool? IsAutomatic,
     string? SndVahedCode,
     Guid? ParentHeadId,
     string? AttachFileName,
     string? AtfNum,
-    IReadOnlyList<CreateVoucherHeadDetailInput>? InitialDetails = null) : IRequest<Guid>;
+    IReadOnlyList<CreateVoucherHeadDetailInput>? InitialDetails = null) : IRequest<Guid>, IVahedScopedCommand
+{
+    /// <summary>
+    /// VAHEDCODE column (max 4 chars) — organizational unit for this head AND, per the
+    /// <see cref="InitialDetails"/> doc above, for every composite-created
+    /// <c>TB_VOUCHERSDETAIL</c> line as well. Never bound from the request body —
+    /// <see cref="JsonIgnoreAttribute"/> keeps it out of both model binding and the Swagger
+    /// schema — and never trusted even if a caller manages to set it: <c>VahedScopeBehavior</c>
+    /// unconditionally overwrites this with the authenticated caller's own unit code before the
+    /// request reaches <c>CreateVoucherHeadCommandHandler</c>. See <see cref="IVahedScopedCommand"/>
+    /// for the full mechanism. This is the fix for IDOR risk #1 (CLAUDE.md) applied to the
+    /// heaviest write path in the project — a caller can no longer create a voucher head (or its
+    /// opening detail lines) in any unit but their own.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

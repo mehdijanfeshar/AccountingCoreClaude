@@ -29,6 +29,14 @@ namespace Accounting.Application.Tests.Common;
 /// MediatR request named for one. Any of those would mean the table had been promoted to an
 /// aggregate root of its own.</description></item>
 /// </list>
+///
+/// <b>Updated again for the Tafsili + "ارتباط معین با گروه تفصیلی" feature.</b> Two more
+/// permanently-embedded tables gained the exact same sanctioned shape:
+/// <c>TB_TAFSIL_LINK_TAFSILGROUP</c> via <see cref="ITafsiliRepository.AddTafsiliGroupLinkAsync"/>/
+/// <see cref="ITafsiliRepository.GetTafsiliGroupLinksAsync"/> (parent: Tafsili), and
+/// <c>TB_ACCOUNT_LINK_TAFSILGROUP</c> via <see cref="IAccountCodeRepository.AddTafsilGroupLinkAsync"/>/
+/// <see cref="IAccountCodeRepository.GetTafsilGroupLinkForUpdateAsync"/> (parent: AccountCode).
+/// Both interfaces were added to <see cref="RepositoryInterfacesUnderTest"/> below.
 /// </summary>
 public sealed class NoIndependentLinkTableWritePathTests
 {
@@ -36,6 +44,12 @@ public sealed class NoIndependentLinkTableWritePathTests
     {
         typeof(IVoucherDetailRepository),
         typeof(IVoucherHeadRepository),
+        typeof(IAccountCodeRepository),
+        typeof(ITafsiliRepository),
+        typeof(IBankAccountRepository),
+        typeof(IExpenseRepository),
+        typeof(IRevolvingFundRepository),
+        typeof(IWorkShopRepository),
     };
 
     private static bool IsLinkTableEntityType(Type type)
@@ -173,6 +187,53 @@ public sealed class NoIndependentLinkTableWritePathTests
     }
 
     /// <summary>
+    /// Same positive-half guard as <see cref="VoucherDetailRepository_OwnsTheTafsiliLinkWritePath_OnTheParentAggregate"/>,
+    /// for <c>TB_TAFSIL_LINK_TAFSILGROUP</c> (parent: Tafsili).
+    /// </summary>
+    [Fact]
+    public void TafsiliRepository_OwnsTheTafsilGroupLinkWritePath_OnTheParentAggregate()
+    {
+        var repository = typeof(ITafsiliRepository);
+
+        var add = repository.GetMethod("AddTafsiliGroupLinkAsync");
+        Assert.NotNull(add);
+        Assert.Equal(
+            typeof(TB_TAFSIL_LINK_TAFSILGROUP),
+            add!.GetParameters()[0].ParameterType);
+
+        var read = repository.GetMethod("GetTafsiliGroupLinksAsync");
+        Assert.NotNull(read);
+        // Scoped by the PARENT's id — the caller cannot address link rows directly.
+        Assert.Equal(typeof(Guid), read!.GetParameters()[0].ParameterType);
+    }
+
+    /// <summary>
+    /// Same positive-half guard as <see cref="VoucherDetailRepository_OwnsTheTafsiliLinkWritePath_OnTheParentAggregate"/>,
+    /// for <c>TB_ACCOUNT_LINK_TAFSILGROUP</c> (parent: AccountCode). Unlike the other two parents,
+    /// the read side here is scoped by BOTH the parent's id and the link's own id (see
+    /// <see cref="IAccountCodeRepository.GetTafsilGroupLinkForUpdateAsync"/> XML doc for why a
+    /// per-row lookup, not a whole-set reconciliation, is the right shape for this table).
+    /// </summary>
+    [Fact]
+    public void AccountCodeRepository_OwnsTheTafsilGroupLinkWritePath_OnTheParentAggregate()
+    {
+        var repository = typeof(IAccountCodeRepository);
+
+        var add = repository.GetMethod("AddTafsilGroupLinkAsync");
+        Assert.NotNull(add);
+        Assert.Equal(
+            typeof(TB_ACCOUNT_LINK_TAFSILGROUP),
+            add!.GetParameters()[0].ParameterType);
+
+        var read = repository.GetMethod("GetTafsilGroupLinkForUpdateAsync");
+        Assert.NotNull(read);
+        // Scoped by the PARENT's id (first parameter) — the caller cannot address a link row by
+        // its own id alone.
+        Assert.Equal(typeof(Guid), read!.GetParameters()[0].ParameterType);
+        Assert.Equal(typeof(Guid), read.GetParameters()[1].ParameterType);
+    }
+
+    /// <summary>
     /// Sanity check that the reflection-based type matcher above actually recognises the one
     /// link-table entity currently in the model — guards against the assertion above silently
     /// passing because the name pattern stopped matching anything.
@@ -181,8 +242,11 @@ public sealed class NoIndependentLinkTableWritePathTests
     public void IsLinkTableEntityType_RecognisesKnownLinkEntity()
     {
         Assert.True(IsLinkTableEntityType(typeof(TB_VOUCHERDETAIL_LINK_TAFSILI)));
+        Assert.True(IsLinkTableEntityType(typeof(TB_TAFSIL_LINK_TAFSILGROUP)));
+        Assert.True(IsLinkTableEntityType(typeof(TB_ACCOUNT_LINK_TAFSILGROUP)));
         Assert.False(IsLinkTableEntityType(typeof(TB_VOUCHERSDETAIL)));
         Assert.False(IsLinkTableEntityType(typeof(TB_VOUCHERSHEAD)));
+        Assert.False(IsLinkTableEntityType(typeof(TB_TAFSILI)));
     }
 
     [Fact]

@@ -1,0 +1,56 @@
+using Accounting.Application.Common.Exceptions;
+using Accounting.Application.Common.Interfaces;
+using MediatR;
+
+namespace Accounting.Application.WhiteLists.Commands.UpdateWhiteList;
+
+/// <summary>
+/// Loads the existing <see cref="Accounting.Domain.Entity.TB_WHITELIST"/> row via
+/// <see cref="IWhiteListRepository.GetForUpdateAsync"/> (change-tracked), overwrites every
+/// writable field from the command, stamps audit columns, and owns the transaction boundary by
+/// calling <see cref="IUnitOfWork.SaveChangesAsync"/> exactly once. Throws
+/// <see cref="NotFoundException"/> — mapped to 404 by <c>GlobalExceptionHandler</c> — when the
+/// row does not exist or is already soft-deleted. <c>ISDELETED</c> is <c>bool?</c> on this
+/// table, so both <see langword="false"/> and <see langword="null"/> are treated as
+/// "not deleted" — only an explicit <see langword="true"/> triggers 404, consistent with the
+/// <c>ISDELETED != true</c> filter used by the read side. <c>CHANGEUSERID</c> is sourced from
+/// <see cref="ICurrentUser"/> (the authenticated caller) — never from the request.
+/// </summary>
+public sealed class UpdateWhiteListCommandHandler : IRequestHandler<UpdateWhiteListCommand>
+{
+    private readonly IWhiteListRepository _whiteListRepository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUser _currentUser;
+
+    public UpdateWhiteListCommandHandler(
+        IWhiteListRepository whiteListRepository,
+        IUnitOfWork unitOfWork,
+        ICurrentUser currentUser)
+    {
+        _whiteListRepository = whiteListRepository;
+        _unitOfWork = unitOfWork;
+        _currentUser = currentUser;
+    }
+
+    public async Task Handle(UpdateWhiteListCommand request, CancellationToken cancellationToken)
+    {
+        var entity = await _whiteListRepository.GetForUpdateAsync(request.Id, cancellationToken);
+
+        if (entity is null || entity.ISDELETED == true)
+        {
+            throw new NotFoundException("WhiteList", request.Id);
+        }
+
+        entity.ACCOUNTCODE_ID = request.AccountCodeId;
+        entity.VAHEDTYPE_ID = request.VahedTypeId;
+        entity.VAHEDINFO_ID = request.VahedInfoId;
+        entity.FROMAUTHORIZEDDATE = request.FromAuthorizedDate;
+        entity.TOAUTHORIZEDDATE = request.ToAuthorizedDate;
+        entity.FROMLIMITATIONDATE = request.FromLimitationDate;
+        entity.TOLIMITATIONDATE = request.ToLimitationDate;
+        entity.CHANGEUSERID = _currentUser.UserId;
+        entity.UPDATEDDATE = DateTime.UtcNow;
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+}

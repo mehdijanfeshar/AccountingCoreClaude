@@ -17,7 +17,14 @@ public sealed class HttpContextCurrentUser : ICurrentUser
     /// </summary>
     private const int MaxUserIdLength = 10;
 
-    private const string VahedCodeClaimType = "vahed_code";
+    /// <summary>
+    /// Confirmed against a real Tamin IDP token and live Oracle data (2026-09-12): the org
+    /// claim's value ("0000") matches <c>TB_VAHED_INFO.VAHEDCODE</c> ("ستاد مرکزی") exactly, so
+    /// this is a plain claim-name correction, not a value transform. The previous "vahed_code"
+    /// name was never validated against a real IDP token (see open-decisions.md risk #10) and
+    /// does not exist on real tokens, so every VahedCode read silently came back null.
+    /// </summary>
+    private const string VahedCodeClaimType = "urn:tamin:jwt:claim:org";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
 
