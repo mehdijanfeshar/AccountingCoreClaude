@@ -2,6 +2,8 @@ using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using MediatR;
 
+using Accounting.Application.Expenses.Commands.Common;
+
 namespace Accounting.Application.Expenses.Commands.UpdateExpense;
 
 /// <summary>
@@ -32,7 +34,8 @@ public sealed record UpdateExpenseCommand(
     string? Description,
     decimal? DefaultAmount,
     Guid? ExpenseGroupId,
-    Guid? AccountCodeId) : IRequest, IVahedScopedCommand
+    Guid? AccountCodeId,
+    IReadOnlyList<ExpenseTafsiliLinkInput>? TafsiliLinks = null) : IRequest, IVahedScopedCommand
 {
     /// <summary>
     /// Organizational unit code (max 4 chars). Never bound from the request body —

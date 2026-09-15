@@ -1,3 +1,4 @@
+using Accounting.Application.RevolvingFunds.Commands.Common;
 using Accounting.Application.Common;
 using Accounting.Application.RevolvingFunds.Commands.CreateRevolvingFund;
 using Accounting.Application.RevolvingFunds.Commands.DeleteRevolvingFund;
@@ -143,7 +144,8 @@ public sealed class RevolvingFundsController : ControllerBase
             request.Description,
             request.DefaultAmount,
             request.AccountCodeId,
-            request.Year);
+            request.Year,
+            request.TafsiliLinks);
 
         await _mediator.Send(command, cancellationToken);
 
@@ -202,4 +204,5 @@ public sealed record UpdateRevolvingFundRequest(
     string? Description,
     decimal? DefaultAmount,
     Guid? AccountCodeId,
-    string? Year);
+    string? Year,
+    IReadOnlyList<RevolvingFundTafsiliLinkInput>? TafsiliLinks = null);

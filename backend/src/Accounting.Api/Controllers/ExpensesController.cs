@@ -1,3 +1,4 @@
+using Accounting.Application.Expenses.Commands.Common;
 using Accounting.Application.Common;
 using Accounting.Application.Expenses.Commands.CreateExpense;
 using Accounting.Application.Expenses.Commands.DeleteExpense;
@@ -144,7 +145,8 @@ public sealed class ExpensesController : ControllerBase
             request.Description,
             request.DefaultAmount,
             request.ExpenseGroupId,
-            request.AccountCodeId);
+            request.AccountCodeId,
+            request.TafsiliLinks);
 
         await _mediator.Send(command, cancellationToken);
 
@@ -203,4 +205,5 @@ public sealed record UpdateExpenseRequest(
     string? Description,
     decimal? DefaultAmount,
     Guid? ExpenseGroupId,
-    Guid? AccountCodeId);
+    Guid? AccountCodeId,
+    IReadOnlyList<ExpenseTafsiliLinkInput>? TafsiliLinks = null);

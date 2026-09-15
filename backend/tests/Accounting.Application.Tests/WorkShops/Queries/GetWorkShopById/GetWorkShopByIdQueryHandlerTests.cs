@@ -19,7 +19,8 @@ public sealed class GetWorkShopByIdQueryHandlerTests
         UpdatedDate: null,
         AddUserId: "user1",
         ChangeUserId: null,
-        IsDeleted: false);
+        IsDeleted: false,
+        TafsiliLinks: Array.Empty<WorkShopTafsiliLinkDto>());
 
     [Fact]
     public async Task Handle_ExistingId_ReturnsRepositoryDto()

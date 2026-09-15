@@ -21,7 +21,8 @@ public sealed class GetRevolvingFundsQueryHandlerTests
         UpdatedDate: null,
         AddUserId: "user1",
         ChangeUserId: null,
-        IsDeleted: false);
+        IsDeleted: false,
+        TafsiliLinks: Array.Empty<RevolvingFundTafsiliLinkDto>());
 
     [Fact]
     public async Task Handle_PassesPageNumberAndPageSizeToRepository_AndReturnsRepositoryResult()

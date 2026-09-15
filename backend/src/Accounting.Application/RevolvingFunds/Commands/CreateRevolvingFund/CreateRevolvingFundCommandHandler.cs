@@ -1,3 +1,4 @@
+using Accounting.Application.RevolvingFunds.Commands.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using MediatR;
@@ -56,6 +57,28 @@ public sealed class CreateRevolvingFundCommandHandler : IRequestHandler<CreateRe
         };
 
         await _revolvingFundRepository.AddAsync(entity, cancellationToken);
+
+        // تفصیلی assignments travel with their parent and are staged before the single
+        // SaveChanges below, so parent and links are always persisted atomically. They inherit
+        // the parent key/unit/user from the row written in this very call, never from the request.
+        foreach (var link in request.TafsiliLinks ?? Array.Empty<RevolvingFundTafsiliLinkInput>())
+        {
+            await _revolvingFundRepository.AddTafsiliLinkAsync(
+                new TB_REVOLVINGFUND_LINK_TAFSILI
+                {
+                    ID = Guid.NewGuid(),
+                    REVOLVINGFUND_ID = entity.ID,
+                    TAFSILI_ID = link.TafsiliId,
+                    LEVEL_ID = link.LevelId,
+                    VAHEDCODE = request.VahedCode,
+                    YEAR = request.Year,
+                    ADDUSERID = _currentUser.UserId,
+                    CREATEDDATE = DateTime.UtcNow,
+                    ISDELETED = false,
+                },
+                cancellationToken);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return entity.ID;

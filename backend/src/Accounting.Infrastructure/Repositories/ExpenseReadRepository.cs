@@ -35,7 +35,13 @@ public sealed class ExpenseReadRepository : IExpenseReadRepository
         e.UPDATEDDATE,
         e.ADDUSERID,
         e.CHANGEUSERID,
-        e.ISDELETED);
+        e.ISDELETED,
+        // Projected inline (not Include'd) so list/by-id stay single round-trips and the DTO
+        // never carries EF-tracked entities. Soft-deleted links are filtered out here.
+        e.TB_EXPENCE_LINK_TAFSILIs
+            .Where(l => l.ISDELETED == false)
+            .Select(l => new ExpenseTafsiliLinkDto(l.TAFSILI_ID, l.LEVEL_ID))
+            .ToList());
 
     private readonly LegacyDbContext _dbContext;
 

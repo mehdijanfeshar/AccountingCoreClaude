@@ -20,7 +20,8 @@ public sealed class GetExpenseByIdQueryHandlerTests
         UpdatedDate: null,
         AddUserId: "user1",
         ChangeUserId: null,
-        IsDeleted: false);
+        IsDeleted: false,
+        TafsiliLinks: Array.Empty<ExpenseTafsiliLinkDto>());
 
     [Fact]
     public async Task Handle_ExistingId_ReturnsRepositoryDto()

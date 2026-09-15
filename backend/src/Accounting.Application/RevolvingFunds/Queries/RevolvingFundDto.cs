@@ -22,6 +22,11 @@ namespace Accounting.Application.RevolvingFunds.Queries;
 /// <c>IsDeleted == true</c> have already been filtered out) so callers can distinguish a
 /// not-deleted row from one that slipped through.
 /// </param>
+/// <param name="TafsiliLinks">
+/// Active تفصیلی assignments (<c>TB_REVOLVINGFUND_LINK_TAFSILI</c>). Always present, never <see langword="null"/> —
+/// an empty list when there are none. Nested here rather than exposed as its own endpoint
+/// because the table is permanently embedded.
+/// </param>
 public sealed record RevolvingFundDto(
     Guid Id,
     string Code,
@@ -35,4 +40,5 @@ public sealed record RevolvingFundDto(
     DateTime? UpdatedDate,
     string? AddUserId,
     string? ChangeUserId,
-    bool? IsDeleted);
+    bool? IsDeleted,
+    IReadOnlyList<RevolvingFundTafsiliLinkDto> TafsiliLinks);

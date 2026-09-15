@@ -2,6 +2,8 @@ using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using MediatR;
 
+using Accounting.Application.Expenses.Commands.Common;
+
 namespace Accounting.Application.Expenses.Commands.CreateExpense;
 
 /// <summary>
@@ -42,7 +44,8 @@ public sealed record CreateExpenseCommand(
     string? Description,
     decimal? DefaultAmount,
     Guid? ExpenseGroupId,
-    Guid? AccountCodeId) : IRequest<Guid>, IVahedScopedCommand
+    Guid? AccountCodeId,
+    IReadOnlyList<ExpenseTafsiliLinkInput>? TafsiliLinks = null) : IRequest<Guid>, IVahedScopedCommand
 {
     /// <summary>
     /// Organizational unit code (max 4 chars; part of <c>UK_EXPENSE_CODE</c>). Never bound from

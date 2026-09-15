@@ -2,6 +2,8 @@ using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using MediatR;
 
+using Accounting.Application.RevolvingFunds.Commands.Common;
+
 namespace Accounting.Application.RevolvingFunds.Commands.CreateRevolvingFund;
 
 /// <summary>
@@ -32,7 +34,8 @@ public sealed record CreateRevolvingFundCommand(
     string? Description,
     decimal? DefaultAmount,
     Guid? AccountCodeId,
-    string? Year) : IRequest<Guid>, IVahedScopedCommand
+    string? Year,
+    IReadOnlyList<RevolvingFundTafsiliLinkInput>? TafsiliLinks = null) : IRequest<Guid>, IVahedScopedCommand
 {
     /// <summary>
     /// Organizational unit code (<c>VAHEDCODE</c> column — nullable at the Legacy schema level,

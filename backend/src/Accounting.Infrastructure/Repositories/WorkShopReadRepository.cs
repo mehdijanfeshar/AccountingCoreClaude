@@ -17,13 +17,28 @@ namespace Accounting.Infrastructure.Repositories;
 /// </summary>
 public sealed class WorkShopReadRepository : IWorkShopReadRepository
 {
+    private readonly LegacyDbContext _dbContext;
+
+    public WorkShopReadRepository(LegacyDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
     /// <summary>
     /// Projection expression shared by both queries below. Being a literal
     /// <see cref="Expression"/> (not a compiled delegate/method call), EF Core can translate
     /// it into a column-level SQL projection instead of loading the full entity. Deliberately
     /// excludes <c>CHECKFILE</c> (the BLOB column) — see <see cref="WorkShopDto"/> XML doc.
+    ///
+    /// Instance-level (and not <c>static readonly</c> like its sibling repositories) purely
+    /// because of the تفصیلی links: the scaffolded model configures no relationship between
+    /// <c>TB_WORKSHOP</c> and <c>TB_WORKSHOP_LINK_TAFSILI</c> — unlike <c>TB_EXPENCE</c> and
+    /// <c>TB_REVOLVING_FUND</c>, which both have the inverse collection — so they can only be
+    /// reached through an explicit correlated subquery over the <see cref="LegacyDbContext"/>
+    /// set, which a static field cannot capture. EF Core still translates it to one SQL
+    /// statement; nothing is evaluated client-side.
     /// </summary>
-    private static readonly Expression<Func<TB_WORKSHOP, WorkShopDto>> ToDto = w => new WorkShopDto(
+    private Expression<Func<TB_WORKSHOP, WorkShopDto>> ToDto => w => new WorkShopDto(
         w.ID,
         w.ACCOUNTCODE_ID,
         w.BRANCH_ID,
@@ -35,14 +50,11 @@ public sealed class WorkShopReadRepository : IWorkShopReadRepository
         w.UPDATEDDATE,
         w.ADDUSERID,
         w.CHANGEUSERID,
-        w.ISDELETED);
-
-    private readonly LegacyDbContext _dbContext;
-
-    public WorkShopReadRepository(LegacyDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+        w.ISDELETED,
+        _dbContext.TB_WORKSHOP_LINK_TAFSILIs
+            .Where(l => l.WORKSHOP_ID == w.ID && l.ISDELETED == false)
+            .Select(l => new WorkShopTafsiliLinkDto(l.TAFSILI_ID, l.LEVEL_ID))
+            .ToList());
 
     public async Task<PagedResult<WorkShopDto>> GetPagedAsync(
         int pageNumber,

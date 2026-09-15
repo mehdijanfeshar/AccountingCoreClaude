@@ -20,6 +20,11 @@ namespace Accounting.Application.Expenses.Queries;
 /// <param name="AddUserId">Audit trail: creating user identifier.</param>
 /// <param name="ChangeUserId">Audit trail: last modifying user identifier.</param>
 /// <param name="IsDeleted">Logical delete flag, exposed as-is.</param>
+/// <param name="TafsiliLinks">
+/// Active تفصیلی assignments (<c>TB_EXPENCE_LINK_TAFSILI</c>). Always present, never
+/// <see langword="null"/> — an empty list when there are none. Nested here rather than exposed
+/// as its own endpoint because the table is permanently embedded.
+/// </param>
 public sealed record ExpenseDto(
     Guid Id,
     string ExpenseCode,
@@ -33,4 +38,5 @@ public sealed record ExpenseDto(
     DateTime? UpdatedDate,
     string? AddUserId,
     string? ChangeUserId,
-    bool? IsDeleted);
+    bool? IsDeleted,
+    IReadOnlyList<ExpenseTafsiliLinkDto> TafsiliLinks);

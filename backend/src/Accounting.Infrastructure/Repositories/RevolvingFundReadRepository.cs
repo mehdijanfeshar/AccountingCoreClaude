@@ -35,7 +35,13 @@ public sealed class RevolvingFundReadRepository : IRevolvingFundReadRepository
         r.UPDATEDDATE,
         r.ADDUSERID,
         r.CHANGEUSERID,
-        r.ISDELETED);
+        r.ISDELETED,
+        // Projected inline (not Include'd) so list/by-id stay single round-trips and the DTO
+        // never carries EF-tracked entities. Soft-deleted links are filtered out here.
+        r.TB_REVOLVINGFUND_LINK_TAFSILIs
+            .Where(l => l.ISDELETED == false)
+            .Select(l => new RevolvingFundTafsiliLinkDto(l.TAFSILI_ID, l.LEVEL_ID))
+            .ToList());
 
     private readonly LegacyDbContext _dbContext;
 

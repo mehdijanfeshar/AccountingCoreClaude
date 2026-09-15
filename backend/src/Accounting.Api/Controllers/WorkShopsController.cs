@@ -1,3 +1,4 @@
+using Accounting.Application.WorkShops.Commands.Common;
 using Accounting.Application.Common;
 using Accounting.Application.WorkShops.Commands.CreateWorkShop;
 using Accounting.Application.WorkShops.Commands.DeleteWorkShop;
@@ -152,7 +153,8 @@ public sealed class WorkShopsController : ControllerBase
             request.WorkShopName,
             request.WorkShopCode,
             request.IsActive,
-            request.CheckFile);
+            request.CheckFile,
+            request.TafsiliLinks);
 
         await _mediator.Send(command, cancellationToken);
 
@@ -211,4 +213,5 @@ public sealed record UpdateWorkShopRequest(
     string WorkShopName,
     string WorkShopCode,
     bool IsActive,
-    byte[]? CheckFile);
+    byte[]? CheckFile,
+    IReadOnlyList<WorkShopTafsiliLinkInput>? TafsiliLinks = null);

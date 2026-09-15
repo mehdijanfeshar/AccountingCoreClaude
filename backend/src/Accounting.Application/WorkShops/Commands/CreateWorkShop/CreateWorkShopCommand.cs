@@ -2,6 +2,8 @@ using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using MediatR;
 
+using Accounting.Application.WorkShops.Commands.Common;
+
 namespace Accounting.Application.WorkShops.Commands.CreateWorkShop;
 
 /// <summary>
@@ -39,7 +41,8 @@ public sealed record CreateWorkShopCommand(
     string WorkShopName,
     string WorkShopCode,
     bool IsActive,
-    byte[]? CheckFile) : IRequest<Guid>, IVahedScopedCommand
+    byte[]? CheckFile,
+    IReadOnlyList<WorkShopTafsiliLinkInput>? TafsiliLinks = null) : IRequest<Guid>, IVahedScopedCommand
 {
     /// <summary>
     /// Organizational unit code (required, max 4 chars; part of <c>UK_WORKSHOP</c>). Never bound

@@ -1,3 +1,4 @@
+using Accounting.Application.Expenses.Commands.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using MediatR;
@@ -52,6 +53,27 @@ public sealed class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseC
         };
 
         await _expenseRepository.AddAsync(entity, cancellationToken);
+
+        // تفصیلی assignments travel with their parent and are staged before the single
+        // SaveChanges below, so parent and links are always persisted atomically. They inherit
+        // the parent key/unit/user from the row written in this very call, never from the request.
+        foreach (var link in request.TafsiliLinks ?? Array.Empty<ExpenseTafsiliLinkInput>())
+        {
+            await _expenseRepository.AddTafsiliLinkAsync(
+                new TB_EXPENCE_LINK_TAFSILI
+                {
+                    ID = Guid.NewGuid(),
+                    EXPENSE_ID = entity.ID,
+                    TAFSILI_ID = link.TafsiliId,
+                    LEVEL_ID = link.LevelId,
+                    VAHEDCODE = request.VahedCode,
+                    ADDUSERID = _currentUser.UserId,
+                    CREATEDDATE = DateTime.UtcNow,
+                    ISDELETED = false,
+                },
+                cancellationToken);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return entity.ID;

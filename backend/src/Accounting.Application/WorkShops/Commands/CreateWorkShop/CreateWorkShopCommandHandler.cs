@@ -1,3 +1,4 @@
+using Accounting.Application.WorkShops.Commands.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using MediatR;
@@ -56,6 +57,27 @@ public sealed class CreateWorkShopCommandHandler : IRequestHandler<CreateWorkSho
         };
 
         await _workShopRepository.AddAsync(entity, cancellationToken);
+
+        // تفصیلی assignments travel with their parent and are staged before the single
+        // SaveChanges below, so parent and links are always persisted atomically. They inherit
+        // the parent key/unit/user from the row written in this very call, never from the request.
+        foreach (var link in request.TafsiliLinks ?? Array.Empty<WorkShopTafsiliLinkInput>())
+        {
+            await _workShopRepository.AddTafsiliLinkAsync(
+                new TB_WORKSHOP_LINK_TAFSILI
+                {
+                    ID = Guid.NewGuid(),
+                    WORKSHOP_ID = entity.ID,
+                    TAFSILI_ID = link.TafsiliId,
+                    LEVEL_ID = link.LevelId,
+                    VAHEDCODE = request.VahedCode,
+                    ADDUSERID = _currentUser.UserId,
+                    CREATEDDATE = DateTime.UtcNow,
+                    ISDELETED = false,
+                },
+                cancellationToken);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return entity.ID;

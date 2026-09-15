@@ -1,5 +1,7 @@
 using Accounting.Application.Common.Exceptions;
+using Accounting.Application.RevolvingFunds.Commands.Common;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.Entity;
 using MediatR;
 
 namespace Accounting.Application.RevolvingFunds.Commands.UpdateRevolvingFund;
@@ -57,6 +59,62 @@ public sealed class UpdateRevolvingFundCommandHandler : IRequestHandler<UpdateRe
         entity.CHANGEUSERID = _currentUser.UserId;
         entity.UPDATEDDATE = DateTime.UtcNow;
 
+        await ReconcileTafsiliLinksAsync(request, cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Brings <c>TB_REVOLVINGFUND_LINK_TAFSILI</c> in line with the request's replacement set, matching existing
+    /// rows on the (TAFSILI_ID, LEVEL_ID) pair — the only identity a caller has for a link. Only
+    /// stages work; the caller still owns the single <see cref="IUnitOfWork.SaveChangesAsync"/>.
+    ///
+    /// Surviving rows are left completely untouched — not re-stamped — so an unrelated edit never
+    /// rewrites the audit trail of links the caller did not actually change. Mirrors
+    /// <c>UpdateBankAccountCommandHandler.ReconcileTafsiliLinksAsync</c>.
+    /// </summary>
+    private async Task ReconcileTafsiliLinksAsync(UpdateRevolvingFundCommand request, CancellationToken cancellationToken)
+    {
+        var requested = request.TafsiliLinks ?? Array.Empty<RevolvingFundTafsiliLinkInput>();
+        var existing = await _revolvingFundRepository.GetActiveTafsiliLinksAsync(request.Id, cancellationToken);
+
+        var requestedKeys = requested.Select(l => (l.TafsiliId, l.LevelId)).ToHashSet();
+
+        foreach (var link in existing)
+        {
+            if (requestedKeys.Contains((link.TAFSILI_ID, link.LEVEL_ID)))
+            {
+                continue;
+            }
+
+            link.ISDELETED = true;
+            link.CHANGEUSERID = _currentUser.UserId;
+            link.UPDATEDDATE = DateTime.UtcNow;
+        }
+
+        var existingKeys = existing.Select(l => (l.TAFSILI_ID, l.LEVEL_ID)).ToHashSet();
+
+        foreach (var link in requested)
+        {
+            if (existingKeys.Contains((link.TafsiliId, link.LevelId)))
+            {
+                continue;
+            }
+
+            await _revolvingFundRepository.AddTafsiliLinkAsync(
+                new TB_REVOLVINGFUND_LINK_TAFSILI
+                {
+                    ID = Guid.NewGuid(),
+                    REVOLVINGFUND_ID = request.Id,
+                    TAFSILI_ID = link.TafsiliId,
+                    LEVEL_ID = link.LevelId,
+                    VAHEDCODE = request.VahedCode,
+                    YEAR = request.Year,
+                    ADDUSERID = _currentUser.UserId,
+                    CREATEDDATE = DateTime.UtcNow,
+                    ISDELETED = false,
+                },
+                cancellationToken);
+        }
     }
 }

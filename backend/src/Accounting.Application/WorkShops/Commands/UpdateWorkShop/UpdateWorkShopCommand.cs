@@ -2,6 +2,8 @@ using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using MediatR;
 
+using Accounting.Application.WorkShops.Commands.Common;
+
 namespace Accounting.Application.WorkShops.Commands.UpdateWorkShop;
 
 /// <summary>
@@ -37,7 +39,8 @@ public sealed record UpdateWorkShopCommand(
     string WorkShopName,
     string WorkShopCode,
     bool IsActive,
-    byte[]? CheckFile) : IRequest, IVahedScopedCommand
+    byte[]? CheckFile,
+    IReadOnlyList<WorkShopTafsiliLinkInput>? TafsiliLinks = null) : IRequest, IVahedScopedCommand
 {
     /// <summary>
     /// Organizational unit code (required, max 4 chars; part of <c>UK_WORKSHOP</c>). Never bound
