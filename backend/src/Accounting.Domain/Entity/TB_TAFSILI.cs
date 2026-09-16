@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -11,9 +12,19 @@ public partial class TB_TAFSILI
 
     public string? TAFSILI_NAME { get; set; }
 
-    public bool? ISACTIVE { get; set; }
+    /// <summary>
+    /// فعال/غیرفعال — <see cref="ValueObjects.TafsiliActiveState"/> (۱=فعال, ۲=غیرفعال). تا فاز ۲۷
+    /// (بچ ۱) به‌اشتباه <c>bool?</c> بود؛ رجوع به <c>docs/centralaccount-business-reference.md</c>
+    /// §۲۴-۱.
+    /// </summary>
+    public TafsiliActiveState? ISACTIVE { get; set; }
 
-    public bool? PERSONTYPE { get; set; }
+    /// <summary>
+    /// نوع شخص — <see cref="ValueObjects.PersonTypes"/> (۱=حقیقی, ۲=حقوقی, ۳=سایر). تا فاز ۲۷
+    /// (بچ ۱) به‌اشتباه <c>bool?</c> بود؛ رجوع به <c>docs/centralaccount-business-reference.md</c>
+    /// §۲۴-۱.
+    /// </summary>
+    public PersonTypes? PERSONTYPE { get; set; }
 
     public DateTime? CREATEDDATE { get; set; }
 
@@ -30,11 +41,19 @@ public partial class TB_TAFSILI
     public string? TAFSIL_DESC { get; set; }
 
     /// <summary>
-    /// 2=setad 1=vahed
+    /// مالکیت — <see cref="ValueObjects.Owners"/> (۱=سراسری, ۲=داخلی). کامنت قدیمی این ستون در
+    /// Oracle («2=setad 1=vahed») نادرست/کهنه است و مقادیر را جابه‌جا گزارش می‌کند — رجوع به XML
+    /// doc خودِ <see cref="ValueObjects.Owners"/>. تا فاز ۲۷ (بچ ۱) به‌اشتباه <c>bool?</c> بود.
     /// </summary>
-    public bool? OWNER { get; set; }
+    public Owners? OWNER { get; set; }
 
-    public bool? VAHEDTYPE { get; set; }
+    /// <summary>
+    /// دستهٔ واحد (بیمه/درمان/همه) — بازاستفاده از <see cref="ValueObjects.VahedCategory"/> (همان
+    /// enum <c>TypeKoli</c> پروژهٔ مرجع که برای <c>TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE</c> هم
+    /// استفاده می‌شود). ⚠️ **شاهد قوی، نه اثبات‌شده روی دادهٔ ما** — رجوع به XML doc
+    /// <see cref="ValueObjects.VahedCategory"/>. تا فاز ۲۷ (بچ ۱) به‌اشتباه <c>bool?</c> بود.
+    /// </summary>
+    public VahedCategory? VAHEDTYPE { get; set; }
 
     public virtual ICollection<TB_ACCOUNT_LINK_TAFSILI> TB_ACCOUNT_LINK_TAFSILIs { get; set; } = new List<TB_ACCOUNT_LINK_TAFSILI>();
 

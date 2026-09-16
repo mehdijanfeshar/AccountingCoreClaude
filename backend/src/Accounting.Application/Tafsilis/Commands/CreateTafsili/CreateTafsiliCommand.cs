@@ -31,13 +31,13 @@ namespace Accounting.Application.Tafsilis.Commands.CreateTafsili;
 /// <param name="TafsiliName">TAFSILI_NAME column (required, max 200 chars).</param>
 /// <param name="TafsilDesc">TAFSIL_DESC column (optional, max 200 chars).</param>
 /// <param name="IsActive">
-/// ISACTIVE column (<c>NUMBER(1)</c>, mapped nullable <c>bool</c>; Oracle default <c>1</c>). A
-/// candidate for the known project-wide <c>bool?</c>/enum scaffolding bug (CLAUDE.md Phase 12) —
-/// not scanned/confirmed yet, modeled as-is.
+/// ISACTIVE column — <see cref="TafsiliActiveState"/> (1=IsActive, 2=DeActive; Oracle default
+/// <c>1</c>). Resolved from the project-wide <c>bool?</c>/enum scaffolding bug (CLAUDE.md risk
+/// #2) in phase 27 batch 1 — see <c>docs/centralaccount-business-reference.md</c> §24-1.
 /// </param>
-/// <param name="PersonType">PERSONTYPE column. Same unverified-enum caveat as <see cref="IsActive"/>.</param>
-/// <param name="Owner">OWNER column — Domain XML comment says "2=setad 1=vahed", which a <see cref="bool"/>? cannot represent faithfully. Modeled as-is; not resolved here.</param>
-/// <param name="VahedType">VAHEDTYPE column. Same unverified-enum caveat as <see cref="Owner"/>.</param>
+/// <param name="PersonType">PERSONTYPE column — <see cref="PersonTypes"/> (1=Person, 2=Legal, 3=Other). Same phase-27-batch-1 fix as <see cref="IsActive"/>.</param>
+/// <param name="Owner">OWNER column — <see cref="Owners"/> (1=Global/سراسری, 2=Unit/داخلی). Same phase-27-batch-1 fix; the Oracle column's own comment ("2=setad 1=vahed") is stale/inverted relative to the reference project's actual enum — see <see cref="Owners"/> XML doc.</param>
+/// <param name="VahedType">VAHEDTYPE column — reuses <see cref="VahedCategory"/> (1=Insurance, 2=Treatment, 3=All). Same phase-27-batch-1 fix. ⚠️ Strong evidence, not proven on our data — see <see cref="VahedCategory"/> XML doc.</param>
 /// <param name="TafsilGroupIds">
 /// <c>TB_TAFSIL_GROUP.ID</c> values to link this تفصیلی to (may be empty). See the class XML doc
 /// for how this is persisted.
@@ -57,10 +57,10 @@ public sealed record CreateTafsiliCommand(
     string TafsiliCode,
     string TafsiliName,
     string? TafsilDesc,
-    bool? IsActive,
-    bool? PersonType,
-    bool? Owner,
-    bool? VahedType,
+    TafsiliActiveState? IsActive,
+    PersonTypes? PersonType,
+    Owners? Owner,
+    VahedCategory? VahedType,
     IReadOnlyList<Guid> TafsilGroupIds,
     VahedCategory? TafsilGroupLinkVahedType = null) : IRequest<Guid>, IVahedScopedCommand
 {

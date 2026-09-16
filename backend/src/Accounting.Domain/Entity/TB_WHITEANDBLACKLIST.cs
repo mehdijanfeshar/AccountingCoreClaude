@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -29,7 +30,7 @@ public partial class TB_WHITEANDBLACKLIST
 
     public string? TOLIMITATIONDATE { get; set; }
 
-    public bool? STATE { get; set; }
+    public WhiteBlackListState? STATE { get; set; }
 
     public virtual TB_ACCOUNTCODE ACCOUNTCODE { get; set; } = null!;
 

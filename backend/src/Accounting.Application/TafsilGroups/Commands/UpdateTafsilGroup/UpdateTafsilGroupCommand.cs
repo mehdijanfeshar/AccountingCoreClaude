@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.TafsilGroups.Commands.UpdateTafsilGroup;
@@ -18,9 +19,9 @@ namespace Accounting.Application.TafsilGroups.Commands.UpdateTafsilGroup;
 /// <param name="Id">The <c>TB_TAFSIL_GROUP.ID</c> to update (bound from the route, never the body).</param>
 /// <param name="TafsilGroupCode">TAFSILGROUP_CODE column (max 3 chars, required).</param>
 /// <param name="TafsilGroupName">TAFSILGROUP_NAME column (max 200 chars, required).</param>
-/// <param name="PersonType">PERSONTYPE column. See <see cref="Accounting.Application.TafsilGroups.Commands.CreateTafsilGroup.CreateTafsilGroupCommand.PersonType"/> for the unverified-enum caveat.</param>
+/// <param name="PersonType">PERSONTYPE column — <see cref="PersonTypes"/>. See <see cref="Accounting.Application.TafsilGroups.Commands.CreateTafsilGroup.CreateTafsilGroupCommand.PersonType"/> for the phase-27-batch-1 fix this reflects.</param>
 public sealed record UpdateTafsilGroupCommand(
     Guid Id,
     string TafsilGroupCode,
     string TafsilGroupName,
-    bool? PersonType) : IRequest;
+    PersonTypes? PersonType) : IRequest;

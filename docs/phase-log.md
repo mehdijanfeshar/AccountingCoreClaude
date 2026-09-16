@@ -14,6 +14,156 @@
 
 ---
 
+### فاز ۲۷ — تعمیم `bool`→enum به ۱۴ ستون دیگر (بک‌اند) + هماهنگ‌سازی کامل فرانت (۲۰۲۶-۰۹-۱۵/۱۶، برنچ `EntityCRUD`، commit نشده)
+
+انگیزه: دستور صریح صاحب پروژه — «همان کار فاز ۲۵/۲۶ برای تمام Entityهای باقی‌مانده، هم بک‌اند هم فرانت». منبع حقیقت: `docs/centralaccount-business-reference.md` §۲۴-۱ (جدول قطعی property-به-property).
+
+**اجرا به‌صورت دسته‌بندی‌شده** (به‌خواست صریح صاحب پروژه، چون دو جلسهٔ قبلی وسط کار به محدودیت نرخ خوردند). هر دسته مستقلاً کامپایل‌شدنی و سبز تحویل شد.
+
+#### دستهٔ ۱ — خانوادهٔ تفصیلی (۵ ستون / ۲ Entity)
+
+| Entity | ستون | قبل | بعد | مقادیر |
+|---|---|---|---|---|
+| `TB_TAFSILI` | `ISACTIVE` | `bool?` | `TafsiliActiveState?` | ۱=فعال، ۲=غیرفعال |
+| `TB_TAFSILI` | `PERSONTYPE` | `bool?` | `PersonTypes?` | ۱=حقیقی، ۲=حقوقی، ۳=سایر |
+| `TB_TAFSILI` | `OWNER` | `bool?` | `Owners?` | ۱=سراسری، ۲=داخلی |
+| `TB_TAFSILI` | `VAHEDTYPE` | `bool?` | `VahedCategory?` (**بازاستفاده**، enum جدید ساخته نشد) | ۱=بیمه، ۲=درمان، ۳=همه |
+| `TB_TAFSIL_GROUP` | `PERSONTYPE` | `bool?` | `PersonTypes?` | ۱=حقیقی، ۲=حقوقی، ۳=سایر |
+
+`VahedCategory` از قبل وجود داشت (فاز ۲۰-ب/۲۴) و دقیقاً همان `TypeKoli` پروژهٔ مرجع است — به‌جای ساختن enum تکراری، همان بازاستفاده شد.
+⚠️ `TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE` (که `short?` است) **عمداً دست نخورد** — ستون متفاوتی است و پارامتر `TafsilGroupLinkVahedType` همچنان به آن می‌نویسد. همچنین `VAHEDTYPE_ID` (FK به `TB_VAHED_TYPE`) موجود کاملاً دیگری است.
+
+#### دستهٔ ۲ — دسته‌چک / دریافت‌پرداخت / صفت حساب (۶ ستون / ۳ Entity)
+
+| Entity | ستون | قبل | بعد | مقادیر |
+|---|---|---|---|---|
+| `TB_CHECKBOOK` | `CHECKBOOK_TYPE` | `bool?` | `CheckType?` | ۱=چک صوری، ۲=چک واقعی |
+| `TB_PAYRECIVHEAD` | `PAYRECIVTYPE` | `bool?` | `PayRecivType?` | ۱=پرداخت، ۲=دریافت، ۳=همه |
+| `TB_ATTRIBFORACCOUNTCODE` | `FLAG` | `bool` | `AttribFlag` | ۱=عدد، ۲=تاریخ |
+| `TB_ATTRIBFORACCOUNTCODE` | `ATTRIBSUM` | `bool` | `AttribSum` | ۱=جمع‌پذیر، ۲=جمع‌ناپذیر |
+| `TB_ATTRIBFORACCOUNTCODE` | `CONTROLID` | `bool?` | `AttribControl?` | ۱=غیرصفر، ۲=تاریخ |
+| `TB_ATTRIBFORACCOUNTCODE` | `ATTRIBBOXNO` | `bool` | **`short`** — enum نیست | عدد صحیح (شمارهٔ خانهٔ صفت) |
+
+`ATTRIBBOXNO` بدترین مورد کل این خانواده بود: در پروژهٔ مرجع `int` ساده است و اصلاً enum نیست. Validator آن `InclusiveBetween(0, 9)` گرفت — کران از **عرض فیزیکی ستون** می‌آید نه از قاعدهٔ کسب‌وکار شناخته‌شده، و همین در XML doc ثبت شد.
+⚠️ برای `short` قاعدهٔ Mapping **متفاوت** است: `.HasColumnType("NUMBER(1)")` **نگه داشته** می‌شود و `.HasConversion<>()` اضافه **نمی‌شود** (الگوی اثبات‌شدهٔ `TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE`).
+
+#### دستهٔ ۳ — رابط/امضادار/لیست سیاه‌وسفید (۳ ستون / ۳ Entity)
+
+| Entity | ستون | قبل | بعد | مقادیر |
+|---|---|---|---|---|
+| `TB_ACCOUNTCODE_INTERFACE` | `TYPE` | `bool` | `InterfaceType` | ۱=افتتاحیه، ۲=اختتامیه |
+| `TB_PERSON_ACTION` | `OPERATORROLE` | `bool` | `OperatorRole` | ۱=مسئول امور مالی، ۲=رئیس واحد، ۳=جانشین امور مالی، ۴=جانشین رئیس واحد |
+| `TB_WHITEANDBLACKLIST` | `STATE` | `bool?` | `WhiteBlackListState?` | ۱=مجاز به ثبت دستی و سیستمی، ۲=فقط مجاز به ثبت سیستمی، ۳=به‌طور کلی غیرمجاز |
+
+#### جمع‌بندی بک‌اند
+
+- **۱۴ ستون** تغییر کرد (۱۳ به enum + ۱ به `short`)، روی **۸ Entity**.
+- **۱۱ enum جدید** در `Accounting.Domain/ValueObjects/` + بازاستفاده از `VahedCategory`. `Accounting.Domain` همچنان **صفر وابستگی خارجی** دارد (بدون `[Description]`؛ برچسب فارسی در XML doc).
+- **۲۵۰۱ تست سبز** (۳۷ Domain + ۲۱۳۲ Application + ۱۴۶ Api + ۱۸۶ Infrastructure)، از baseline **۲۴۳۳** → **+۶۸**. Build صفر خطا.
+- یافتهٔ فاز ۲۵ عیناً اعمال شد: روی هر ستون enum، `.HasConversion<int>()`/`<int?>()` اضافه و `.HasColumnType("NUMBER(1)")` **حذف** شد.
+- هر پارامتر enum در Validatorها `.IsInEnum()` گرفت.
+- مقادیری که زیر `bool` **غیرقابل‌دسترس** بودند حالا تست اختصاصی دارند (`PayRecivType.All`, `OperatorRole.JaneshinReyisVahed`, `WhiteBlackListState.Blacklisted`).
+
+#### ستون‌هایی که عمداً دست نخوردند (واقعاً بولین‌اند)
+
+`TB_PERSON_ACTION.STATUS`، `TB_IDENTITYSUBGRP.SUMFLAG`، `TB_WORKSHOP.ISACTIVE`، `TB_YEAR.ISCURRENT`، `TB_PREDESCRIB.FLAGVOUCHER` (تنها enum صفر-پایهٔ پروژه: `{ForVoucherHead=0, ForVoucherDetail=1}` — با `bool?` سازگار). تغییرشان **رگرسیون** می‌بود.
+
+#### دسته‌های ۴ و ۵ — عمداً انجام نشدند
+
+به تصمیم صریح صاحب پروژه در میانهٔ کار («فعلاً همین‌قدر بک‌اند کافی است»). ۸ ستون زیر **هنوز `bool` غلط‌اند** — رجوع به `docs/open-decisions.md`.
+
+#### 🔴 تصحیح یک خطا در خودِ سند مرجع §۲۴-۱
+
+§۲۴-۱ می‌گوید `TB_CHECK.EBTAL` → `CheckStatus` با مقادیر «۱=پرداخت‌شده، ۲=پرداخت‌نشده، ۳=باطل». **این نادرست است.** در پروژهٔ مرجع **دو** enum هم‌نام `CheckStatus` وجود دارد:
+- `Tamin.Core\Entities\Checks\CheckStatus.cs` → `{Pay=1, UnPay=2, Cancle=3}`
+- `Tamin.Core\Entities\Checks\Enum\CheckStatus.cs` → `{canceled=1, notCanceled=2}`
+
+خودِ `Check.IsEbtal` صریحاً از نوع `Domain.Entities.Checks.Enum.CheckStatus` است (یعنی **دومی**، دومقداری)، و §۲۴-۵-۱ هم تأیید می‌کند که هنگام ساخت برگ چک `IsEbtal = notCanceled` ست می‌شود. §۲۴-۱ enum اشتباهی را نقل کرده. هنگام اجرای دستهٔ ۵ باید `{Canceled=1, NotCanceled=2}` استفاده شود، نه سه‌مقداری.
+
+#### فرانت (ریپوی مستقل `D:\AiProj\AccountCoreAiProj_UI`)
+
+الگوی فاز ۲۶ عیناً تکرار شد، ولی دامنه از ۸ مورد گزارش‌شده **بزرگ‌تر** درآمد: `AttribForAccountCode` علاوه بر `controlId`، سه فیلد `flag`/`attribSum`/`attribBoxNo` هم داشت که `z.boolean()` بودند.
+
+- **`src/types/legacyEnums.ts` (جدید)** — منبع واحد مقدار↔برچسب برای هر ۹ enum، با همان شکل `accountCodeEnums.ts` (`*_OPTIONS` / `*_VALUES` / `*Value` / `get*Label`). برچسب‌ها **کلمه‌به‌کلمه از XML doc خودِ enumهای بک‌اند** برداشته شدند.
+- **`src/lib/validation/` (جدید)** — `enumFieldSchema` (nullable) و `nonNullableEnumFieldSchema`، چون `flag`/`attribSum` سمت بک‌اند non-nullable‌اند و نباید گزینهٔ «انتخاب نشده» بگیرند.
+- هر ۸ `TriStateToggle` بولی با `Select` جایگزین شد؛ «انتخاب نشده» → `null` (نه `0`، نه `""`).
+- `attribBoxNo` ورودی عددی شد با محدودهٔ ۰..۹ آینهٔ `InclusiveBetween(0,9)` بک‌اند.
+- صفحات فهرست (`TafsilGroupsListPage`, `PayReciveHeadsListPage`, `AttribForAccountCodesListPage`) برچسب فارسی نمایش می‌دهند نه بله/خیر.
+- `npx tsc --noEmit` تمیز، `npm run build` موفق.
+- **`TriStateToggle` حالا صفر مصرف‌کننده دارد** ولی به‌عمد حذف نشد.
+- **`AccountCodeInterface`/`PersonAction`/`WhiteAndBlackList` هیچ صفحه‌ای در فرانت ندارند** (بررسی شد) — پس دستهٔ ۳ نیازی به کار فرانت نداشت.
+
+#### اثبات‌نشده‌ها (با لحن صریح ثبت شد، نه قاطع)
+
+۱. **`TB_TAFSILI.VAHEDTYPE` → `VahedCategory`** — شاهد قوی از پروژهٔ مرجع، ولی روی دادهٔ خودمان راستی‌آزمایی نشد (دادهٔ فاز ۱۲ فقط `{1,3}` داشت).
+۲. **آیا `TB_TAFSILI.PERSONTYPE` ردیف با مقدار `0` دارد** — Oracle روی این ستون `DEFAULT 0` دارد و `0` در **هیچ‌کدام** از این enumها نیست. اگر چنین ردیف‌هایی باشند، `IsInEnum()` ویرایششان را از API مسدود می‌کند (هم‌الگوی ردیف `TYPEACTION=5` فاز ۲۵).
+
+هر دو مورد: تلاش برای کوئری زندهٔ Oracle **نتیجه نداد** (ایجنت گزارش محتوایی برنگرداند و دسترسی مستقیم `sqlplus` توسط permission classifier بلاک شد). عمداً جعل نشد.
+
+#### ✅ ابهام `TB_TAFSILI.OWNER` — حل شد
+
+کامنت ستون Oracle (`2=setad 1=vahed`) و enum پروژهٔ مرجع (`Global=1, Unit=2`) مستقیماً یکدیگر را نقض می‌کردند. **صاحب پروژه صریحاً تأیید کرد که پروژهٔ مرجع درست است و کامنت Oracle کهنه است** (۲۰۲۶-۰۹-۱۶). این تأیید در XML doc خودِ `Owners.cs` ثبت شد تا کسی بعداً بر اساس کامنت Oracle «تصحیحش» نکند.
+
+---
+
+### فاز ۲۶ — هماهنگ‌سازی فرانت با enumهای `TB_ACCOUNTCODE` (۲۰۲۶-۰۹-۱۵، ریپوی `AccountCoreAiProj_UI`، commit نشده)
+
+فاز ۲۵ قرارداد API چهار فیلد `TB_ACCOUNTCODE` را شکست (بولین → عدد صحیح) و عمداً فرانت را دست‌نخورده گذاشت. این فاز آن شکاف را بست.
+
+- **`src/features/chart-of-accounts/accountCodeEnums.ts` (جدید)** — منبع واحد مقدار↔برچسب برای `typeCode`/`typeActivity`/`typeAccCode`/`typeAction`، با `*_OPTIONS`، `*_VALUES`، تایپ `*Value` و `get*Label()`.
+- `get*Label()` عمداً **throw نمی‌کند**: `null`/`undefined` → «تعیین‌نشده» و مقدار خارج از فهرست → «نامشخص (n)». دلیل: دادهٔ Legacy ممکن است مقداری خارج از enum داشته باشد (ردیف `TYPEACTION=5` فاز ۲۵) و فهرست/فرم نباید بترکد.
+- `TriStateToggle` بولی با `Select` جایگزین شد؛ گزینهٔ «انتخاب نشده» → `null`، با `''` فقط به‌عنوان sentinel داخلی خودِ `Select`.
+- Zod با `enumFieldSchema(VALUES, message)` به مقادیر مجاز محدود شد و `.nullable()` ماند (آینهٔ `.IsInEnum()` بدون `.NotNull()` سمت بک‌اند).
+- `typeActivity` عمداً **کل بازهٔ ۱..۷** را می‌پذیرد صرف‌نظر از سطح ردیف — محدودسازی سطح‌محور پروژهٔ مرجع (گروه فقط ۱..۳) پیاده نشد، چون دادهٔ زندهٔ خودمان همین‌الان نقضش می‌کند (ریسک #۱۳).
+- برچسب‌ها کلمه‌به‌کلمه از XML doc enumهای بک‌اند، نه ترجمهٔ مستقل و نه از پروژهٔ مرجع.
+
+---
+
+### فاز ۲۵ — اصلاح ۴ ستون `bool?`→enum روی `TB_ACCOUNTCODE` (۲۰۲۶-۰۹-۱۵، برنچ `EntityCRUD`، commit نشده)
+
+انگیزه: دستور صریح صاحب پروژه برای بستن بخش `TB_ACCOUNTCODE` از ریسک 🔴 #۲. چهار ستون `NUMBER(1)` که در اسکافولد اولیه به‌غلط `bool?` شده بودند، در حالی که واقعاً enum چندمقداری‌اند.
+
+**دامنه عمداً محدود نگه داشته شد:** فقط نوع دادهٔ غلط اصلاح شد. الگوی پروژهٔ مرجع (سه Endpoint جدا Group/Kol/Moin + قفل‌کردن `TypeCode` در Handler) **پیاده نشد** — طبق «تصمیم معماری دوم»، Commandهای عمومی `CreateAccountCodeCommand`/`UpdateAccountCodeCommand` عمومی ماندند و هر چهار فیلد ورودی آزاد فراخوان باقی‌اند، فقط حالا با `IsInEnum()` محافظت می‌شوند.
+
+**۴ enum جدید** در `backend/src/Accounting.Domain/ValueObjects/` (POCO خالص، Domain همچنان صفر وابستگی):
+
+| Entity property | نوع جدید | مقادیر |
+|---|---|---|
+| `TYPECODE` | `TypeCodes?` | `Group=1, Kol=2, Moin=3` |
+| `TYPEACCCODE` | `TypeAccCode?` | `Temporary=1, Permanent=2` |
+| `TYPEACTION` | `TypeAction?` | `NotControlled=1, Warning=2, NotAdded=3` |
+| `TYPEACTIVITY` | `TypeActivity?` | `Debit=1, Credit=2, DebitCredit=3, DebitPer=4, CreditPer=5, DebitFin=6, CreditFin=7` |
+
+⚠️ **چرا `TypeCodes` جمع است:** مفرد `TypeCode` با `System.TypeCode` (که از طریق implicit usings در scope است) تداخل می‌کند و CS0104 می‌دهد. ضمناً خودِ پروژهٔ مرجع هم اسمش را `TypeCodes` گذاشته، پس جمع هم سازگارتر است. **نام پراپرتی‌ها (`TypeCode` مفرد) عوض نشد** — یعنی نام فیلد JSON در قرارداد API دست‌نخورده است.
+
+⚠️ **کامنت غلط ستون تصحیح شد:** کامنت قبلی `TYPEACTIVITY` («۱بستانکار۲بدهکار۳بد-بس») هم **ناقص** بود (۷ مقدار دارد نه ۳) و هم **۱/۲ را جابه‌جا** گزارش می‌کرد. مقدار درست: `1 = Debit = بدهکار`. این قبلاً در فاز ۱۲ با کوئری زنده حل شده بود (سند مرجع §۲۳-۱).
+
+**یافتهٔ فنی مهم — `.HasConversion<int?>()` اجباری است (تجربی، نه استدلالی):**
+فرض ساده‌لوحانه («EF خودش enum را به int نگاشت می‌کند») **روی Oracle باطل شد**. بدون conversion صریح، `SELECT` ساده درست materialize می‌شود، ولی هر predicate ای که این پراپرتی‌ها را با یک ثابت مقایسه کند (`a.TYPECODE == TypeCodes.Group`) با `InvalidCastException: Unable to cast ... TypeCodes to System.Boolean` داخل `OracleBoolTypeMapping.GenerateNonNullSqlLiteral` می‌ترکد. **ریشه:** قرارداد «`NUMBER(1)` ⇒ `bool`» درایور Oracle بر اساس **نام store type** تصمیم می‌گیرد، نه نوع CLR پراپرتی. راه‌حل اعمال‌شده: حذف `.HasColumnType("NUMBER(1)")` از این چهار + افزودن `.HasConversion<int?>()`.
+پیامدی که باید بدانید: مدل EF حالا برای این چهار ستون store type را `NUMBER(10)` استنتاج می‌کند در حالی که ستون فیزیکی `NUMBER(1)` است. بی‌خطر است (این پروژه هرگز DDL/migration تولید نمی‌کند و پارامتر int با ستون `NUMBER(1)` درست مقایسه می‌شود)، ولی یعنی مدل EF دیگر بازتاب دقیق precision فیزیکی نیست؛ دامنهٔ تک‌رقمی به‌جایش با `IsInEnum()` در Application تضمین می‌شود. ⚠️ `.HasColumnType("NUMBER(1)")` روی ستون‌های واقعاً بولین (مثل `ISDELETED`) دست‌نخورده است و نباید برای تقارن حذف شود.
+
+**راستی‌آزمایی روی Oracle زندهٔ `CENTRALACCOUNT`** (نه InMemory/SQLite) — انجام شد با یک harness یکبارمصرف که پس از استفاده حذف شد:
+- هر چهار enum از دادهٔ واقعی درست materialize می‌شوند: `TYPECODE` → Group=28/Kol=62/Moin=60؛ `TYPEACTIVITY` → هر شش مقدار ۱..۶ حاضرند (۷ در داده نیست ولی معتبر است)؛ `TYPEACCCODE` → Temporary=16/Permanent=12؛ `TYPEACTION` → NotControlled=53/Warning=6.
+- ترجمهٔ predicate (همان چیزی که قبلاً می‌ترکید) حالا کار می‌کند.
+- ⚠️ **مسیر نوشتن روی Oracle زنده اجرا نشد** — رجوع به «کارهای ناتمام» پایین.
+
+**دو ناسازگاری دادهٔ زنده که کشف/تأیید شد** (هر دو در `open-decisions.md` ثبت شدند):
+1. **جدید — یک ردیف با `TYPEACTION = 5`** که خارج از enum سه‌مقداری است (`id=0f27a77e-...`, `ACCCODE=006000`, نام `testestestetstetstetstets`, حذف‌نشده). یعنی `IsInEnum()` اجازهٔ ویرایش این ردیف از طریق API را نمی‌دهد (خواندنش مشکلی ندارد).
+2. **تأیید کمّی ریسک #۱۳** — دقیقاً ۳ ردیف سطح گروه با `TYPEACTIVITY ∈ {4,5,6}`: کدهای `01`(CreditPer), `55`(DebitPer), `96`(DebitFin). **هر سه آشکارا دادهٔ تستی‌اند** (`testetstest`, `access-test01`, `zia`)، نه دادهٔ تاریخی حسابداری — این شدت ریسک #۱۳ را به‌شکل معناداری کم می‌کند.
+
+**تست:** ۲۲۳۴ → **۲۴۳۳ تست سبز** (۲۰۶۴ Application + ۳۷ Domain + ۱۴۶ Api + ۱۸۶ Infrastructure)، ۰ خطای build. پوشش جدید: رد مقدار خارج از بازه برای هر چهار (`(TypeCodes)0` و `(TypeActivity)99` — توجه که `0` برای هر چهار خارج از بازه است، چون همه از ۱ شروع می‌شوند و دقیقاً به همین دلیل `bool` غلط بود)، پذیرش `null`، و پذیرش مقدار مرزی `CreditFin`=۷.
+
+**قرارداد API — تغییر شکسته و آگاهانه:** هیچ `JsonStringEnumConverter` ثبت نشده، پس این چهار فیلد به‌صورت **عدد صحیح** سریالایز/دیسریالایز می‌شوند (`"typeCode": 3`) — دقیقاً منطبق بر مقدار Oracle و پروژهٔ مرجع. کلاینتی که قبلاً `true`/`false` می‌فرستاد حالا ۴۰۰ می‌گیرد. **فرانت عمداً در این فاز دست نخورد** (به دستور صاحب پروژه، فاز جدا).
+
+**کارهای ناتمام / عمداً انجام‌نشده:**
+- 🔴 **مسیر نوشتن روی Oracle زنده تأیید نشد.** خواندن و ترجمهٔ predicate تأیید شدند، ولی `INSERT`/`UPDATE` واقعی اجرا نشد (تلاش برای probe نوشتن توسط permission classifier بلاک شد و عمداً دور زده نشد). تست HTTP واقعی (Create+Get) هم انجام نشد چون **توکن معتبر IDP در دسترس نبود** — و auth عمداً stub/غیرفعال نشد.
+- `UpdateAccountCodeCommandValidator` همچنان **در runtime اجرا نمی‌شود** (ریسک #۱-الف). پس `IsInEnum()` هایی که به آن اضافه شد امروز dead code اند و مقدار خارج از بازه از مسیر Update به Oracle می‌رسد. در XML doc همان فایل صریحاً ثبت شد؛ اصلاح `ValidationBehavior` خارج از دامنهٔ این فاز بود.
+- قاعدهٔ سطح‌محور پروژهٔ مرجع (گروه ۱..۳، معین ۱..۷) عمداً پیاده نشد — اختراع invariant جدید است و دادهٔ خودمان هم نقضش می‌کند (ریسک #۱۳).
+- `TB_VOUCHERSHEAD.DOCLIFE` و ۱۵ ستون دیگر از همین خانواده دست‌نخورده‌اند.
+- کامنت توجیه SQL خام در `TrialBalanceReadRepository` به‌روزرسانی شد (نیمهٔ `TYPECODE` دیگر معتبر نیست، نیمهٔ `DOCLIFE` هست)؛ خود SQL دست‌نخورده ماند چون هنوز با `DOCLIFE` موجه است.
+
+---
+
 ### فاز ۲۴ — رفع باگ دیده‌نشدن لینک‌های تفصیلی↔گروه‌تفصیلی در جستجوی صدور سند (۲۰۲۶-۰۹-۱۳)
 
 انگیزه: صاحب پروژه گزارش داد که در فرم صدور سند، وقتی معینی سطح تفصیلی فعال دارد، باکس انتخاب تفصیلی مربوطه یا خالی می‌ماند یا موردی نشان نمی‌دهد — و خواست پروژهٔ Angular/بک‌اند قدیمی (`D:\WorkSpace\projects\financial-account` و `D:\CentralAccount`) برای سرویس معادل بررسی و رفع شود.

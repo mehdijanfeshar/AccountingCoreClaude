@@ -13,5 +13,8 @@ public sealed class CreateAccountCodeInterfaceCommandValidator : AbstractValidat
     {
         RuleFor(x => x.AccountCodeId)
             .NotEqual(Guid.Empty);
+
+        RuleFor(x => x.Type)
+            .IsInEnum();
     }
 }

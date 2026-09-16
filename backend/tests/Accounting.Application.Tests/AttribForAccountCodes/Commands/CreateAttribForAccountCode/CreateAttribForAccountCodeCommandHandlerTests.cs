@@ -2,6 +2,7 @@ using Accounting.Application.AttribForAccountCodes.Commands.CreateAttribForAccou
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.AttribForAccountCodes.Commands.CreateAttribForAccountCode;
@@ -10,10 +11,10 @@ public sealed class CreateAttribForAccountCodeCommandHandlerTests
 {
     private static CreateAttribForAccountCodeCommand ValidCommand() => new(
         AccountCodeId: Guid.NewGuid(),
-        AttribBoxNo: true,
-        Flag: false,
+        AttribBoxNo: 3,
+        Flag: AttribFlag.Date,
         LenAtr: 4,
-        AttribSum: true,
+        AttribSum: AttribSum.Summable,
         ControlId: null,
         Year: "1404")
     {

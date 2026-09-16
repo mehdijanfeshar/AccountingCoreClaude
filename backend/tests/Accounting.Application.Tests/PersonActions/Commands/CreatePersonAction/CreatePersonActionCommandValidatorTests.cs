@@ -1,4 +1,5 @@
 using Accounting.Application.PersonActions.Commands.CreatePersonAction;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.PersonActions.Commands.CreatePersonAction;
 
@@ -12,7 +13,7 @@ public sealed class CreatePersonActionCommandValidatorTests
         FromDate: "14030101",
         ToDate: "14031231",
         Status: true,
-        OperatorRole: true,
+        OperatorRole: OperatorRole.MasolOmorMali,
         VahedCode: "0100");
 
     [Fact]
@@ -123,6 +124,27 @@ public sealed class CreatePersonActionCommandValidatorTests
     public void Validate_VahedCodeNull_Passes()
     {
         var command = ValidCommand() with { VahedCode = null };
+
+        var result = _validator.Validate(command);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_InvalidOperatorRoleEnumValue_Fails()
+    {
+        var command = ValidCommand() with { OperatorRole = (OperatorRole)999 };
+
+        var result = _validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreatePersonActionCommand.OperatorRole));
+    }
+
+    [Fact]
+    public void Validate_PreviouslyUnreachableOperatorRoleValue_JaneshinReyisVahed_Passes()
+    {
+        var command = ValidCommand() with { OperatorRole = OperatorRole.JaneshinReyisVahed };
 
         var result = _validator.Validate(command);
 

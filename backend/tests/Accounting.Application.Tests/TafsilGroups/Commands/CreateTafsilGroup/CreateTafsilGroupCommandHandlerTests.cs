@@ -1,6 +1,7 @@
 using Accounting.Application.TafsilGroups.Commands.CreateTafsilGroup;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.TafsilGroups.Commands.CreateTafsilGroup;
@@ -10,7 +11,7 @@ public sealed class CreateTafsilGroupCommandHandlerTests
     private static CreateTafsilGroupCommand ValidCommand() => new(
         TafsilGroupCode: "001",
         TafsilGroupName: "گروه تفصیلی یک",
-        PersonType: true);
+        PersonType: PersonTypes.Person);
 
     private static Mock<ICurrentUser> CurrentUserMock(string userId = "user1")
     {

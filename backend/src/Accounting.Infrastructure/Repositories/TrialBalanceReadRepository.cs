@@ -10,18 +10,24 @@ namespace Accounting.Infrastructure.Repositories;
 /// EF Core (Oracle) implementation of <see cref="ITrialBalanceReadRepository"/>. The one
 /// read-repository in this codebase that does NOT use plain LINQ against <see cref="LegacyDbContext"/>.
 ///
-/// <b>Why raw SQL.</b> <c>TB_ACCOUNTCODE.TYPECODE</c> and <c>TB_VOUCHERSHEAD.DOCLIFE</c> are Oracle
-/// <c>NUMBER(1)</c> columns but are mapped to <c>bool?</c> on <see cref="Domain.Entity.TB_ACCOUNTCODE"/>/
-/// <see cref="Domain.Entity.TB_VOUCHERSHEAD"/> (a known, out-of-scope-to-fix-here bug tracked in
-/// <c>CLAUDE.md</c> "فاز ۱۲" — risk #2). This report needs <c>a.TYPECODE = 3</c> (select only
-/// معین-level lines) and <c>h.DOCLIFE &gt;= :docLife</c> (an inclusive lower bound on a
-/// 0..4-valued life-cycle status), both of which are inexpressible through EF LINQ against a
-/// <c>bool?</c> property — there is no way to ask LINQ for "the underlying number is 3" when the
-/// CLR type has already collapsed to true/false/null. Parameterized raw SQL reads these two
-/// columns as numbers directly, sidestepping the bug without touching the write model, the entity,
-/// or <c>LegacyDbContext</c>. This also matches how the reference project (<c>D:\CentralAccount</c>)
-/// implements these exact three reports — hand-written SQL with explicit <c>OracleParameter</c>
-/// binds for the same two columns.
+/// <b>Why raw SQL.</b> <c>TB_VOUCHERSHEAD.DOCLIFE</c> is an Oracle <c>NUMBER(1)</c> column still
+/// mapped to <c>bool?</c> on <see cref="Domain.Entity.TB_VOUCHERSHEAD"/> (a known,
+/// out-of-scope-to-fix-here bug tracked in <c>CLAUDE.md</c> "فاز ۱۲" — risk #2). This report needs
+/// <c>h.DOCLIFE &gt;= :docLife</c> (an inclusive lower bound on a 0..4-valued life-cycle status),
+/// which is inexpressible through EF LINQ against a <c>bool?</c> property — there is no way to ask
+/// LINQ for "the underlying number is at least 2" when the CLR type has already collapsed to
+/// true/false/null. Parameterized raw SQL reads this column as a number directly, sidestepping the
+/// bug without touching the write model, the entity, or <c>LegacyDbContext</c>. This also matches
+/// how the reference project (<c>D:\CentralAccount</c>) implements these exact three reports —
+/// hand-written SQL with explicit <c>OracleParameter</c> binds.
+///
+/// <c>TB_ACCOUNTCODE.TYPECODE</c> is no longer part of this justification: it was retyped from
+/// <c>bool?</c> to the proper <see cref="Domain.ValueObjects.TypeCodes"/> enum (this same phase),
+/// so <c>a.TYPECODE == TypeCodes.Moin</c> is now perfectly expressible in EF LINQ. The raw SQL
+/// below still selects معین-level lines via <c>a.TYPECODE = 3</c> for now purely because this
+/// whole query is one hand-written SQL statement joining three tables — not because the enum
+/// forces it — and splitting just that one predicate back into LINQ would not remove the raw SQL
+/// dependency anyway (<c>DOCLIFE</c> alone still requires it). Left as-is; not a new bug.
 ///
 /// <b>Why <c>Database.SqlQueryRaw&lt;T&gt;</c> and not Dapper.</b> This project has no Dapper
 /// dependency anywhere and no raw SQL anywhere else; adding a new package for a single query is not

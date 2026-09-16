@@ -5,6 +5,7 @@ using Accounting.Application.AttribForAccountCodes.Commands.UpdateAttribForAccou
 using Accounting.Application.AttribForAccountCodes.Queries;
 using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodeById;
 using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -201,9 +202,9 @@ public sealed record DeleteAttribForAccountCodeResponse(Guid Id);
 /// </summary>
 public sealed record UpdateAttribForAccountCodeRequest(
     Guid AccountCodeId,
-    bool AttribBoxNo,
-    bool Flag,
+    short AttribBoxNo,
+    AttribFlag Flag,
     byte LenAtr,
-    bool AttribSum,
-    bool? ControlId,
+    AttribSum AttribSum,
+    AttribControl? ControlId,
     string Year);

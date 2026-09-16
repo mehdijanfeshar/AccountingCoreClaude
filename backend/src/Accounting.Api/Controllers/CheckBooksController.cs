@@ -5,6 +5,7 @@ using Accounting.Application.CheckBooks.Queries;
 using Accounting.Application.CheckBooks.Queries.GetCheckBookById;
 using Accounting.Application.CheckBooks.Queries.GetCheckBooks;
 using Accounting.Application.Common;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -45,11 +46,13 @@ namespace Accounting.Api.Controllers;
 /// <see cref="ProblemDetails"/>, no <c>errors</c> dictionary — naming the offending field would
 /// mean leaking the Oracle constraint name).
 ///
-/// ⚠️ <c>CheckBookType</c> is <c>NUMBER(1)</c> typed as <see cref="bool"/>? — an unverified
-/// sibling of the confirmed <c>TB_TAFSILI.ISACTIVE</c> enum bug (CLAUDE.md phase 12); see
-/// <see cref="CreateCheckBookCommand"/> XML doc. ⚠️ The permanently-embedded child <c>TB_CHECK</c>
-/// table is untouched by this controller entirely — soft-deleting a checkbook here does NOT
-/// cascade to it, leaving its cheque rows active (a known gap, not fixed here).
+/// <c>CheckBookType</c> is now <see cref="CheckType"/> (resolved in phase 27 batch 2 — see
+/// <see cref="CreateCheckBookCommand"/> XML doc and <c>docs/centralaccount-business-reference.md</c>
+/// §24-1 row 19). ⚠️ §24-3 caveat still open: the reference project treats this as a hardcoded
+/// server-side constant, never a caller input — this controller still accepts it from the
+/// request body. ⚠️ The permanently-embedded child <c>TB_CHECK</c> table is untouched by this
+/// controller entirely — soft-deleting a checkbook here does NOT cascade to it, leaving its
+/// cheque rows active (a known gap, not fixed here).
 /// </summary>
 [ApiController]
 [Route("api/check-books")]
@@ -208,5 +211,5 @@ public sealed record UpdateCheckBookRequest(
     string FromCheckNumber,
     string ToCheckNumber,
     Guid? CheckTypeId,
-    bool? CheckBookType,
+    CheckType? CheckBookType,
     string? Serial);

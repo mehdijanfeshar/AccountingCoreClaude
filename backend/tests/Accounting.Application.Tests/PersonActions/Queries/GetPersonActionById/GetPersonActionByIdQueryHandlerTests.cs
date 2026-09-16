@@ -1,6 +1,7 @@
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.PersonActions.Queries;
 using Accounting.Application.PersonActions.Queries.GetPersonActionById;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.PersonActions.Queries.GetPersonActionById;
@@ -14,7 +15,7 @@ public sealed class GetPersonActionByIdQueryHandlerTests
         FromDate: "14030101",
         ToDate: "14031231",
         Status: true,
-        OperatorRole: true,
+        OperatorRole: OperatorRole.JaneshinOmorMali,
         VahedCode: "0100",
         CreatedDate: DateTime.UtcNow,
         UpdatedDate: null,

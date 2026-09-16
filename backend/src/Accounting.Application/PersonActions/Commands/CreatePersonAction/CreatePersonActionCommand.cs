@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.PersonActions.Commands.CreatePersonAction;
@@ -19,16 +20,17 @@ namespace Accounting.Application.PersonActions.Commands.CreatePersonAction;
 /// <param name="UserId">USERID column (max 10 chars, required — participates in <c>UK_PERSON_ACTION</c>).</param>
 /// <param name="FromDate">FROMDATE column (max 8 chars — a Persian date string, participates in <c>UK_PERSON_ACTION</c>).</param>
 /// <param name="ToDate">TODATE column (max 8 chars — a Persian date string, participates in <c>UK_PERSON_ACTION</c>).</param>
-/// <param name="Status">STATUS column (<c>NUMBER(1)</c>, mapped as nullable <c>bool</c>).</param>
+/// <param name="Status">
+/// STATUS column (<c>NUMBER(1)</c>, mapped as nullable <c>bool</c>). Confirmed genuinely boolean
+/// — <c>docs/centralaccount-business-reference.md</c> §24-1 marks it ✅ درست and the reference
+/// entity declares it <c>bool?</c> too. Left untouched.
+/// </param>
 /// <param name="OperatorRole">
-/// OPERATORROLE column (<c>NUMBER(1)</c>, mapped as non-nullable <c>bool</c>). NOTE: this column
-/// is suspected to actually be a multi-valued enum (≈ <c>OperatorRole</c> 1..4) rather than a
-/// true boolean — it matches the shape of the <c>bool?</c>/<c>NUMBER(1)</c> bug pattern CLAUDE.md's
-/// Phase 12 documents (19 columns across 13 tables, only `TB_ACCOUNTCODE.TYPECODE`,
-/// `TB_VOUCHERSHEAD.DOCLIFE`, and `TB_TAFSILI.ISACTIVE` triaged so far), but this specific column
-/// has NOT itself been scanned/confirmed yet — no decision is recorded for it. Modeled as
-/// <c>bool</c> exactly as the current Domain entity declares it — confirming and fixing the
-/// underlying type is a separate, out-of-scope task and was deliberately not guessed here.
+/// OPERATORROLE column (<c>NUMBER(1)</c>, mapped as non-nullable <see cref="Accounting.Domain.ValueObjects.OperatorRole"/>).
+/// Resolved per <c>docs/centralaccount-business-reference.md</c> §24-1 (phase 27 batch 3) —
+/// previously an incorrect <c>bool</c>; see the historical note preserved in the open risk #2
+/// entry of CLAUDE.md. 🔴 Note that <c>TB_PERSON_ACTION</c> as a whole remains completely
+/// unprotected (open risk #1-ب) — this field's type is fixed here, but no authorization is added.
 /// </param>
 /// <param name="VahedCode">VAHEDCODE column (max 4 chars, optional organizational unit code).</param>
 public sealed record CreatePersonActionCommand(
@@ -37,5 +39,5 @@ public sealed record CreatePersonActionCommand(
     string? FromDate,
     string? ToDate,
     bool? Status,
-    bool OperatorRole,
+    OperatorRole OperatorRole,
     string? VahedCode) : IRequest<Guid>;

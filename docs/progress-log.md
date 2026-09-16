@@ -12,6 +12,16 @@
 
 ## ورودی‌ها
 
+- **2026-09-16** (فاز ۲۷، برنچ `EntityCRUD` + ریپوی فرانت، commit نشده): تعمیم `bool`→enum به **۱۴ ستون روی ۸ Entity** (۱۱ enum جدید) + هماهنگ‌سازی کامل فرانت (`legacyEnums.ts`؛ `TriStateToggle` صفر مصرف‌کننده شد). **۲۵۰۱ تست** (+۶۸). ⚠️ دسته‌های ۴/۵ به تصمیم صاحب پروژه انجام نشدند — **۸ ستون هنوز `bool` غلط‌اند**؛ ضمناً یک خطای تأییدشده در §۲۴-۱ سند مرجع کشف شد (`TB_CHECK.EBTAL`). جزئیات: `docs/phase-log.md` بخش «فاز ۲۷»؛ موارد باز: `docs/open-decisions.md`.
+
+- **2026-09-15** (فاز ۲۶، ریپوی `AccountCoreAiProj_UI`، commit نشده): هماهنگ‌سازی فرانت با enumهای `TB_ACCOUNTCODE` فاز ۲۵ — `accountCodeEnums.ts` منبع واحد مقدار↔برچسب، `Select` به‌جای `TriStateToggle` بولی، Zod محدودشده. جزئیات: `docs/phase-log.md` بخش «فاز ۲۶».
+
+- **2026-09-15** (فاز ۲۵، برنچ `EntityCRUD`، commit نشده): اصلاح ۴ ستون `bool?`→enum روی `TB_ACCOUNTCODE` (`TYPECODE`/`TYPEACCCODE`/`TYPEACTION`/`TYPEACTIVITY`) — بخش `TB_ACCOUNTCODE` از ریسک 🔴 #۲ بسته شد؛ روی Oracle زنده راستی‌آزمایی شد و معلوم شد `.HasConversion<int?>()` اجباری است. **۲۴۳۳ تست** (+۱۹۹). ⚠️ تغییر شکستهٔ قرارداد API (این فیلدها حالا عددند نه بولین) و مسیر *نوشتن* زنده هنوز تأیید نشده. جزئیات: `docs/phase-log.md` بخش «فاز ۲۵»؛ ۶ مورد باز جدید: `docs/open-decisions.md`.
+
+- **2026-09-13** (فاز ۲۴، برنچ `EntityCRUD`): رفع باگ دیده‌نشدن لینک‌های تفصیلی↔گروه‌تفصیلی در فرم صدور سند — فیلد صریح `TafsilGroupLinkVahedType` به `Create/UpdateTafsiliCommand` اضافه شد تا `VAHEDTYPE` لینک همیشه `null` (=فقط واحد سازنده) نباشد. جزئیات: `docs/phase-log.md` بخش «فاز ۲۴».
+
+- **2026-09-13** (فاز ۲۳، برنچ `EntityCRUD`): CRUD مستقل `Tafsili` (`api/tafsilis`، Vahed-scoped) + ۴ Endpoint parent-scoped «ارتباط معین با گروه تفصیلی» روی `AccountCodesController`. **۲۳۷۷ تست.** جزئیات: `docs/phase-log.md` بخش «فاز ۲۳».
+
 - **2026-09-10** (فاز ۲۲، ریپوی فرانت `AccountCoreAiProj_UI`، commit نشده): پوستهٔ بصری MUI + RTL کامل + فونت Vazirmatn محلی، و اولین فرم‌های واقعی — کدینگ حساب (Create/Edit) و **صدور سند با تفصیلی داینامیک** (وصل به دو Endpoint فاز ۲۱، سطوح ۱–۳ inline / ۴+ مودال، Zod پویا برای الزام تفصیلی). صفر تغییر بک‌اند؛ `tsc`/`build` تمیز. جزئیات: `docs/phase-log.md` بخش «فاز ۲۲»؛ ریسک جدید 🔴 #۲۱ (ذخیرهٔ غیراتمیک سند): `docs/open-decisions.md`.
 
 - **2026-09-10** (فاز ۲۱، برنچ `EntityCRUD`، commit نشده): دو Query تفصیلی داینامیک (فقط `GET`، روی `AccountCodesController`) — ریسک 🔴 #۱۸ / Issue #35 بسته شد و فرم صدور سند از انسداد درآمد. کشف کلیدی: فیلتر visibility تفصیلی تساویِ ساده نیست (`VAHEDCODE` **یا** `VAHEDTYPE=3` **یا** دستهٔ واحد). **۲۳۰۰ تست** (+۶۶) + اولین تست واقعی repository روی SQLite. جزئیات: `docs/phase-log.md` بخش «فاز ۲۱»؛ ۳ مورد باز جدید: `docs/open-decisions.md`.

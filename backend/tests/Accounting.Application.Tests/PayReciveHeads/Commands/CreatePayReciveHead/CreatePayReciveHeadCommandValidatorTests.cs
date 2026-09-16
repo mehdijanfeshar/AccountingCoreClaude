@@ -1,4 +1,5 @@
 using Accounting.Application.PayReciveHeads.Commands.CreatePayReciveHead;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.PayReciveHeads.Commands.CreatePayReciveHead;
 
@@ -10,7 +11,7 @@ public sealed class CreatePayReciveHeadCommandValidatorTests
         PayReciveCode: "00123",
         PayReciveDate: "14040101",
         PayReciveDescription: "شرح سند",
-        PayReciveType: true,
+        PayReciveType: PayRecivType.Pay,
         Year: "1404",
         VoucherHeadId: Guid.NewGuid())
     {
@@ -102,16 +103,29 @@ public sealed class CreatePayReciveHeadCommandValidatorTests
     }
 
     /// <summary>
-    /// No range rule is invented for <c>PayReciveType</c>: its CLR type is already known to be
-    /// wrong (see <c>CreatePayReciveHeadCommand</c> XML doc) and constraining it further would
-    /// fabricate a rule on top of a defect.
+    /// All three real enum values (plus NULL) must be accepted — this is the point of the
+    /// phase-27-batch-2 fix: <see cref="PayRecivType.All"/> was previously unreachable.
     /// </summary>
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
+    [InlineData(PayRecivType.Pay)]
+    [InlineData(PayRecivType.Recive)]
+    [InlineData(PayRecivType.All)]
     [InlineData(null)]
-    public void Validate_AnyPayReciveType_Passes(bool? payReciveType)
+    public void Validate_AnyValidPayReciveType_Passes(PayRecivType? payReciveType)
     {
         Assert.True(_validator.Validate(ValidCommand() with { PayReciveType = payReciveType }).IsValid);
+    }
+
+    /// <summary>
+    /// <c>.IsInEnum()</c> only rejects an out-of-range underlying integer — added in phase 27
+    /// batch 2 alongside the <c>bool?</c>-to-enum fix for this column.
+    /// </summary>
+    [Fact]
+    public void Validate_PayReciveTypeOutOfRange_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { PayReciveType = (PayRecivType)99 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreatePayReciveHeadCommand.PayReciveType));
     }
 }

@@ -1,6 +1,7 @@
 using Accounting.Application.WhiteAndBlackLists.Queries;
 using Accounting.Application.WhiteAndBlackLists.Queries.GetWhiteAndBlackListById;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.WhiteAndBlackLists.Queries.GetWhiteAndBlackListById;
@@ -20,7 +21,7 @@ public sealed class GetWhiteAndBlackListByIdQueryHandlerTests
         ToAuthorizedDate: "14031231",
         FromLimitationDate: "14030101",
         ToLimitationDate: "14031231",
-        State: true);
+        State: WhiteBlackListState.Blacklisted);
 
     [Fact]
     public async Task Handle_ExistingId_ReturnsRepositoryDto()

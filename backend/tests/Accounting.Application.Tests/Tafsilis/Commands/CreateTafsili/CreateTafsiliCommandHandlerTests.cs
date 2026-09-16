@@ -14,9 +14,9 @@ public sealed class CreateTafsiliCommandHandlerTests
         TafsiliCode: "001",
         TafsiliName: "تفصیلی یک",
         TafsilDesc: "توضیحات",
-        IsActive: true,
-        PersonType: true,
-        Owner: false,
+        IsActive: TafsiliActiveState.IsActive,
+        PersonType: PersonTypes.Person,
+        Owner: Owners.Unit,
         VahedType: null,
         TafsilGroupIds: tafsilGroupIds ?? Array.Empty<Guid>(),
         TafsilGroupLinkVahedType: tafsilGroupLinkVahedType)

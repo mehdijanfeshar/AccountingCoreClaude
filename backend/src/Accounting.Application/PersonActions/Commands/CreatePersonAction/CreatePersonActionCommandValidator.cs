@@ -26,5 +26,8 @@ public sealed class CreatePersonActionCommandValidator : AbstractValidator<Creat
 
         RuleFor(x => x.VahedCode)
             .MaximumLength(4);
+
+        RuleFor(x => x.OperatorRole)
+            .IsInEnum();
     }
 }

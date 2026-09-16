@@ -2,6 +2,7 @@ using Accounting.Application.Tafsilis.Queries;
 using Accounting.Application.Tafsilis.Queries.GetTafsilis;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.Tafsilis.Queries.GetTafsilis;
@@ -13,7 +14,7 @@ public sealed class GetTafsilisQueryHandlerTests
         TafsiliCode: "001",
         TafsiliName: "تفصیلی یک",
         TafsilDesc: null,
-        IsActive: true,
+        IsActive: TafsiliActiveState.IsActive,
         PersonType: null,
         Owner: null,
         VahedType: null,

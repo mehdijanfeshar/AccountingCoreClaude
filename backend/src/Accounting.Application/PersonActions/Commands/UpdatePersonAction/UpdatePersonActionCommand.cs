@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.PersonActions.Commands.UpdatePersonAction;
@@ -15,11 +16,11 @@ namespace Accounting.Application.PersonActions.Commands.UpdatePersonAction;
 /// <param name="UserId">USERID column (max 10 chars, required).</param>
 /// <param name="FromDate">FROMDATE column (max 8 chars).</param>
 /// <param name="ToDate">TODATE column (max 8 chars).</param>
-/// <param name="Status">STATUS column (nullable <c>bool</c>).</param>
+/// <param name="Status">STATUS column (nullable <c>bool</c>, genuinely boolean — left untouched).</param>
 /// <param name="OperatorRole">
-/// OPERATORROLE column (non-nullable <c>bool</c>). See
+/// OPERATORROLE column (non-nullable <see cref="Accounting.Domain.ValueObjects.OperatorRole"/>). See
 /// <see cref="Accounting.Application.PersonActions.Commands.CreatePersonAction.CreatePersonActionCommand.OperatorRole"/>
-/// for the open "may actually be a multi-valued enum" note.
+/// for the resolution reference (§24-1).
 /// </param>
 /// <param name="VahedCode">VAHEDCODE column (max 4 chars, optional).</param>
 public sealed record UpdatePersonActionCommand(
@@ -29,5 +30,5 @@ public sealed record UpdatePersonActionCommand(
     string? FromDate,
     string? ToDate,
     bool? Status,
-    bool OperatorRole,
+    OperatorRole OperatorRole,
     string? VahedCode) : IRequest;

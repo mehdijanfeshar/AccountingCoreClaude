@@ -1,4 +1,5 @@
 using Accounting.Application.CheckBooks.Commands.CreateCheckBook;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.CheckBooks.Commands.CreateCheckBook;
 
@@ -13,7 +14,7 @@ public sealed class CreateCheckBookCommandValidatorTests
         FromCheckNumber: "100000",
         ToCheckNumber: "100050",
         CheckTypeId: Guid.NewGuid(),
-        CheckBookType: true,
+        CheckBookType: CheckType.Real,
         Serial: "SER0001")
     {
         VahedCode = "0001",
@@ -138,5 +139,16 @@ public sealed class CreateCheckBookCommandValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateCheckBookCommand.Serial));
+    }
+
+    // --- CHECKBOOK_TYPE enum coverage (phase 27 batch 2) --------------------------------------
+
+    [Fact]
+    public void Validate_CheckBookTypeOutOfRange_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { CheckBookType = (CheckType)99 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateCheckBookCommand.CheckBookType));
     }
 }

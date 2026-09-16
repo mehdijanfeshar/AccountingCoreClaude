@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+
 namespace Accounting.Application.AccountCodeInterfaces.Queries;
 
 /// <summary>
@@ -7,8 +9,7 @@ namespace Accounting.Application.AccountCodeInterfaces.Queries;
 /// </summary>
 /// <param name="Id">ID column.</param>
 /// <param name="Type">
-/// TYPE column (<c>NUMBER(1)</c>, mapped as non-nullable <c>bool</c>). NOTE: suspected to
-/// actually be a multi-valued enum — see
+/// TYPE column (<c>NUMBER(1)</c>, mapped as non-nullable <see cref="InterfaceType"/>). See
 /// <see cref="Accounting.Application.AccountCodeInterfaces.Commands.CreateAccountCodeInterface.CreateAccountCodeInterfaceCommand.Type"/>.
 /// </param>
 /// <param name="AccountCodeId">ACCOUNTCODEID column — FK to <c>TB_ACCOUNTCODE</c>.</param>
@@ -23,7 +24,7 @@ namespace Accounting.Application.AccountCodeInterfaces.Queries;
 /// </param>
 public sealed record AccountCodeInterfaceDto(
     Guid Id,
-    bool Type,
+    InterfaceType Type,
     Guid AccountCodeId,
     DateTime? CreatedDate,
     DateTime? UpdatedDate,

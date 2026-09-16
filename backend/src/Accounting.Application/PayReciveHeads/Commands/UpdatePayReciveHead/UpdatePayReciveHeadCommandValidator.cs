@@ -45,5 +45,11 @@ public sealed class UpdatePayReciveHeadCommandValidator : AbstractValidator<Upda
         RuleFor(x => x.Year)
             .NotEmpty()
             .MaximumLength(4);
+
+        // .IsInEnum() only rejects an out-of-range underlying integer — added in phase 27 batch 2
+        // alongside the bool?-to-enum fix for this column.
+        RuleFor(x => x.PayReciveType)
+            .IsInEnum()
+            .When(x => x.PayReciveType.HasValue);
     }
 }

@@ -273,16 +273,59 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false)
                 .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
+            // ⚠️ Four columns below were retyped from bool? to nullable enums (open risk #2 in
+            // CLAUDE.md). EMPIRICALLY VERIFIED (2026-09-15) against LIVE Oracle
+            // (CENTRALACCOUNT), not InMemory/SQLite — and the naive assumption (EF Core's
+            // baseline enum-to-int convention "just works" here, no explicit conversion needed)
+            // was PROVEN WRONG by that verification, not merely reasoned about:
+            //
+            //   Without an explicit .HasConversion<int?>(), plain SELECTs materialise correctly
+            //   (EF's default enum handling does apply when reading), but any LINQ predicate that
+            //   compares one of these four properties to a constant (e.g.
+            //   `a.TYPECODE == TypeCodes.Group`) throws
+            //   `System.InvalidCastException: Unable to cast object of type
+            //   'Accounting.Domain.ValueObjects.TypeCodes' to type 'System.Boolean'` inside
+            //   `Oracle.EntityFrameworkCore.Storage.Internal.OracleBoolTypeMapping.GenerateNonNullSqlLiteral`.
+            //   Root cause: Oracle.EntityFrameworkCore's "NUMBER(1) ⇒ bool" convention keys off the
+            //   store type name from `.HasColumnType("NUMBER(1)")`, not off the property's CLR
+            //   type — so it silently picked `OracleBoolTypeMapping` for the SQL-literal side of the
+            //   comparison even though the property itself is an enum. Adding
+            //   `.HasConversion<int?>()` on all four (below) forces EF to resolve an int type
+            //   mapping instead, and the exact same query then both materialises rows AND
+            //   translates equality/inequality predicates correctly — re-verified via the
+            //   throwaway harness referenced in this phase's report (deleted after use), including
+            //   a live query for the risk-#13 group-level accounts with TYPEACTIVITY ∈ {4,5,6}.
+            //
+            //   Note what the four mappings below therefore do NOT carry any more:
+            //   `.HasColumnType("NUMBER(1)")` was REMOVED from all four (it is still present on
+            //   genuinely boolean columns such as ISDELETED, a few lines above — do not "restore"
+            //   it here for symmetry). It is precisely that store-type name which triggers the
+            //   bool convention described above, so dropping it removes the root cause instead of
+            //   fighting it. The configuration actually exercised against live Oracle is the one
+            //   written below: `.HasConversion<int?>()` and no explicit column type.
+            //   Consequence to be aware of: EF's *model* now infers a NUMBER(10) store type for
+            //   these four, while the *physical* Oracle columns remain NUMBER(1). That mismatch is
+            //   harmless here — this project never generates DDL or runs migrations against
+            //   CENTRALACCOUNT, and an int parameter compares fine against a NUMBER(1) column —
+            //   but it does mean the EF model is no longer a faithful record of the physical
+            //   precision for these columns. The single-digit domain is instead enforced in the
+            //   Application layer, by the `.IsInEnum()` rules on the Create/Update validators.
+            //
+            // NOTE: the .HasComment(...) strings below are EF model metadata only — they do NOT
+            // rewrite the live Oracle column comments (those still carry the original, partly
+            // wrong, Persian text). This change intentionally does not touch Oracle DDL/comments.
             entity.Property(e => e.TYPEACCCODE)
-                .HasComment("نوع حساب (1موقت2دائم)")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("نوع حساب — Accounting.Domain.ValueObjects.TypeAccCode (1=Temporary,2=Permanent)")
+                .HasConversion<int?>();
             entity.Property(e => e.TYPEACTION)
-                .HasComment("نوع خلاف ماهيت(کنترل نشود-اخطار دهد-ثبت نشود)")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("نوع خلاف ماهیت — Accounting.Domain.ValueObjects.TypeAction (1=NotControlled,2=Warning,3=NotAdded)")
+                .HasConversion<int?>();
             entity.Property(e => e.TYPEACTIVITY)
-                .HasComment("(1بستانکار2بدهکار3بد-بس)نوع فعاليت")
-                .HasColumnType("NUMBER(1)");
-            entity.Property(e => e.TYPECODE).HasColumnType("NUMBER(1)");
+                .HasComment("ماهیت بدهکار/بستانکار — Accounting.Domain.ValueObjects.TypeActivity (1..7؛ کامنت اصلی ستون Oracle نادرست/کهنه است و 1/2 را جابه‌جا گزارش می‌کند)")
+                .HasConversion<int?>();
+            entity.Property(e => e.TYPECODE)
+                .HasComment("سطح کدینگ — Accounting.Domain.ValueObjects.TypeCodes (1=Group,2=Kol,3=Moin)")
+                .HasConversion<int?>();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
 
             entity.HasOne(d => d.PARENT).WithMany(p => p.InversePARENT)
@@ -314,7 +357,17 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
-            entity.Property(e => e.TYPE).HasColumnType("NUMBER(1)");
+            // TYPE retyped from non-nullable bool to Accounting.Domain.ValueObjects.InterfaceType
+            // (phase 27 batch 3; open risk #2 in CLAUDE.md, resolved per
+            // docs/centralaccount-business-reference.md §24-1). Same load-bearing pattern as the
+            // TB_ACCOUNTCODE block above: .HasColumnType("NUMBER(1)") REMOVED (that store-type
+            // name is exactly what makes Oracle.EntityFrameworkCore pick OracleBoolTypeMapping for
+            // this column, which then throws InvalidCastException on any LINQ predicate comparing
+            // it to a constant) and .HasConversion<int>() added instead, forcing an int type
+            // mapping end-to-end.
+            entity.Property(e => e.TYPE)
+                .HasComment("نوع سند رابط — Accounting.Domain.ValueObjects.InterfaceType (1=افتتاحیه,2=اختتامیه)")
+                .HasConversion<int>();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
 
             entity.HasOne(d => d.ACCOUNTCODE).WithMany(p => p.TB_ACCOUNTCODE_INTERFACEs)
@@ -611,23 +664,39 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)
                 .IsUnicode(false);
+            // ⚠️ Four columns below were retyped from bool/bool? to a plain short (ATTRIBBOXNO —
+            // NOT an enum, a real count) or to non-nullable/nullable enums (open risk #2 in
+            // CLAUDE.md; docs/centralaccount-business-reference.md §24-1), phase 27 batch 2 —
+            // mirroring the exact TB_ACCOUNTCODE/TB_TAFSILI pattern proven in phase 25/27-batch-1:
+            // Oracle.EntityFrameworkCore's "NUMBER(1) ⇒ bool" convention keys off the store type
+            // name from `.HasColumnType("NUMBER(1)")`, not the property's CLR type, so any LINQ
+            // predicate comparing one of the ENUM columns (FLAG, ATTRIBSUM, CONTROLID) to a
+            // constant would throw InvalidCastException inside
+            // OracleBoolTypeMapping.GenerateNonNullSqlLiteral unless `.HasColumnType("NUMBER(1)")`
+            // is removed and `.HasConversion<int>()`/`.HasConversion<int?>()` is added instead.
+            // ATTRIBBOXNO is the ONE EXCEPTION: it is a plain short (not an enum), so it keeps
+            // `.HasColumnType("NUMBER(1)")` and gets NO `.HasConversion<>()` at all — exact
+            // precedent: TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE (short?, phase 20-b), proven safe in
+            // LINQ predicates without a conversion because plain short/short? never triggers the
+            // "NUMBER(1) ⇒ bool" convention (that convention only fires for CLR bool/bool?).
             entity.Property(e => e.ATTRIBBOXNO)
                 .HasComment("مشخصه تعداد شناسه ")
                 .HasColumnType("NUMBER(1)");
             entity.Property(e => e.ATTRIBSUM)
-                .HasComment("جمع پذير يا جمع ناپذير ")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("جمع پذير يا جمع ناپذير — Accounting.Domain.ValueObjects.AttribSum (1=Summable,2=UnSummable)")
+                .HasConversion<int>();
             entity.Property(e => e.CHANGEUSERID)
                 .HasMaxLength(10)
                 .IsUnicode(false);
             entity.Property(e => e.CONTROLID)
                 .IsRequired()
                 .HasDefaultValueSql("null ")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("Accounting.Domain.ValueObjects.AttribControl (1=NotZero,2=IsDate)")
+                .HasConversion<int?>();
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.FLAG)
-                .HasComment("مشخصه نوع شناسه ")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("مشخصه نوع شناسه — Accounting.Domain.ValueObjects.AttribFlag (1=Number,2=Date)")
+                .HasConversion<int>();
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.LENATR)
                 .HasPrecision(2)
@@ -1203,7 +1272,14 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.CHECKBOOK_TITLE)
                 .HasMaxLength(100)
                 .IsUnicode(false);
-            entity.Property(e => e.CHECKBOOK_TYPE).HasColumnType("NUMBER(1)");
+            // Retyped from bool? to a nullable enum (open risk #2 in CLAUDE.md;
+            // docs/centralaccount-business-reference.md §24-1 row 19), phase 27 batch 2 — same
+            // .HasConversion<int?>() + dropped .HasColumnType("NUMBER(1)") pattern as every other
+            // enum fix in this project (see the TB_ATTRIBFORACCOUNTCODE block above for the full
+            // root-cause narrative on why the store-type/conversion pairing must change together).
+            entity.Property(e => e.CHECKBOOK_TYPE)
+                .HasComment("Accounting.Domain.ValueObjects.CheckType (1=Sori,2=Real)")
+                .HasConversion<int?>();
             entity.Property(e => e.CHECKTYPE_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
@@ -2306,7 +2382,14 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(250)
                 .IsUnicode(false)
                 .HasDefaultValueSql("'-' ");
-            entity.Property(e => e.PAYRECIVTYPE).HasColumnType("NUMBER(1)");
+            // Retyped from bool? to a nullable enum (open risk #2 in CLAUDE.md;
+            // docs/centralaccount-business-reference.md §24-1 row 14), phase 27 batch 2 — same
+            // .HasConversion<int?>() + dropped .HasColumnType("NUMBER(1)") pattern as every other
+            // enum fix in this project (see the TB_ATTRIBFORACCOUNTCODE block above for the full
+            // root-cause narrative on why the store-type/conversion pairing must change together).
+            entity.Property(e => e.PAYRECIVTYPE)
+                .HasComment("Accounting.Domain.ValueObjects.PayRecivType (1=Pay,2=Recive,3=All)")
+                .HasConversion<int?>();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
                 .HasMaxLength(4)
@@ -2350,7 +2433,19 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(8)
                 .IsUnicode(false);
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
-            entity.Property(e => e.OPERATORROLE).HasColumnType("NUMBER(1)");
+            // OPERATORROLE retyped from non-nullable bool to
+            // Accounting.Domain.ValueObjects.OperatorRole (phase 27 batch 3; open risk #2 in
+            // CLAUDE.md, resolved per docs/centralaccount-business-reference.md §24-1). Same
+            // load-bearing pattern as the TB_ACCOUNTCODE block above: .HasColumnType("NUMBER(1)")
+            // REMOVED and .HasConversion<int>() added instead — see that block's comment for the
+            // full InvalidCastException root-cause explanation.
+            //
+            // STATUS is intentionally left untouched: it is genuinely boolean (confirmed by
+            // docs/centralaccount-business-reference.md §24-1, marked ✅ درست, and by the
+            // reference entity declaring it bool?) — changing it would be a regression, not a fix.
+            entity.Property(e => e.OPERATORROLE)
+                .HasComment("نقش امضادار — Accounting.Domain.ValueObjects.OperatorRole (1=مسئول امور مالی,2=رئیس واحد,3=جانشین امور مالی,4=جانشین رئیس واحد)")
+                .HasConversion<int>();
             entity.Property(e => e.STATUS).HasColumnType("NUMBER(1)");
             entity.Property(e => e.TODATE)
                 .HasMaxLength(8)
@@ -2735,17 +2830,30 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(10)
                 .IsUnicode(false);
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            // ⚠️ Four columns below were retyped from bool? to nullable enums (open risk #2 in
+            // CLAUDE.md; docs/centralaccount-business-reference.md §24-1), phase 27 batch 1 —
+            // mirroring the exact TB_ACCOUNTCODE pattern proven against LIVE Oracle in phase 25
+            // (see that block's comment a few hundred lines above for the full root-cause
+            // narrative: Oracle.EntityFrameworkCore's "NUMBER(1) ⇒ bool" convention keys off the
+            // store type name from `.HasColumnType("NUMBER(1)")`, not the property's CLR type, so
+            // any LINQ predicate comparing one of these to a constant would throw
+            // `InvalidCastException` inside `OracleBoolTypeMapping.GenerateNonNullSqlLiteral`
+            // unless `.HasColumnType("NUMBER(1)")` is removed and `.HasConversion<int?>()` is
+            // added instead). `HasDefaultValueSql`/`HasComment` are preserved as before; only the
+            // store-type/conversion pairing changes.
             entity.Property(e => e.ISACTIVE)
                 .HasDefaultValueSql("1")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("فعال/غیرفعال — Accounting.Domain.ValueObjects.TafsiliActiveState (1=IsActive,2=DeActive)")
+                .HasConversion<int?>();
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.OWNER)
                 .HasDefaultValueSql("1")
-                .HasComment("2=setad 1=vahed")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("مالکیت — Accounting.Domain.ValueObjects.Owners (1=Global,2=Unit؛ کامنت اصلی ستون Oracle نادرست/کهنه است و 1/2 را جابه‌جا گزارش می‌کند)")
+                .HasConversion<int?>();
             entity.Property(e => e.PERSONTYPE)
                 .HasDefaultValueSql("0 ")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("نوع شخص — Accounting.Domain.ValueObjects.PersonTypes (1=Person,2=Legal,3=Other)")
+                .HasConversion<int?>();
             entity.Property(e => e.TAFSILI_CODE)
                 .HasMaxLength(15)
                 .IsUnicode(false);
@@ -2759,7 +2867,9 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.VAHEDCODE)
                 .HasMaxLength(4)
                 .IsUnicode(false);
-            entity.Property(e => e.VAHEDTYPE).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.VAHEDTYPE)
+                .HasComment("دستهٔ واحد — Accounting.Domain.ValueObjects.VahedCategory (1=Insurance,2=Treatment,3=All؛ رجوع به XML doc آن enum برای سطح شواهد)")
+                .HasConversion<int?>();
 
             entity.HasOne(d => d.VAHEDCODENavigation).WithMany(p => p.TB_TAFSILIs)
                 .HasPrincipalKey(p => p.VAHEDCODE)
@@ -2818,7 +2928,16 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
-            entity.Property(e => e.PERSONTYPE).HasColumnType("NUMBER(1)");
+            // ⚠️ Retyped from bool? to a nullable enum (open risk #2 in CLAUDE.md;
+            // docs/centralaccount-business-reference.md §24-1), phase 27 batch 1 — same
+            // .HasConversion<int?>() + dropped .HasColumnType("NUMBER(1)") pattern as
+            // TB_ACCOUNTCODE (phase 25) and TB_TAFSILI (this phase, above): without this,
+            // Oracle.EntityFrameworkCore's "NUMBER(1) ⇒ bool" convention (keyed off the store
+            // type name, not the CLR type) would make any LINQ predicate comparing this property
+            // to a constant throw InvalidCastException inside OracleBoolTypeMapping.
+            entity.Property(e => e.PERSONTYPE)
+                .HasComment("نوع شخص — Accounting.Domain.ValueObjects.PersonTypes (1=Person,2=Legal,3=Other)")
+                .HasConversion<int?>();
             entity.Property(e => e.TAFSILGROUP_CODE)
                 .HasMaxLength(3)
                 .IsUnicode(false);
@@ -3330,7 +3449,15 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(8)
                 .IsUnicode(false);
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
-            entity.Property(e => e.STATE).HasColumnType("NUMBER(1)");
+            // STATE retyped from bool? to nullable Accounting.Domain.ValueObjects.WhiteBlackListState
+            // (phase 27 batch 3; open risk #2 in CLAUDE.md, resolved per
+            // docs/centralaccount-business-reference.md §24-1). Same load-bearing pattern as the
+            // TB_ACCOUNTCODE block above: .HasColumnType("NUMBER(1)") REMOVED and
+            // .HasConversion<int?>() added instead — see that block's comment for the full
+            // InvalidCastException root-cause explanation.
+            entity.Property(e => e.STATE)
+                .HasComment("وضعیت مجاز/غیرمجاز — Accounting.Domain.ValueObjects.WhiteBlackListState (1=مجاز به ثبت دستی و سیستمی,2=فقط مجاز به ثبت سیستمی,3=به‌طور کلی غیرمجاز)")
+                .HasConversion<int?>();
             entity.Property(e => e.TOAUTHORIZEDDATE)
                 .HasMaxLength(8)
                 .IsUnicode(false);

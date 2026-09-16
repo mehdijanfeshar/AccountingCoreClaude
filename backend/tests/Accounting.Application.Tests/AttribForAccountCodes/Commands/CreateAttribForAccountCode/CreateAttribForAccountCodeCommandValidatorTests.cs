@@ -1,4 +1,5 @@
 using Accounting.Application.AttribForAccountCodes.Commands.CreateAttribForAccountCode;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.AttribForAccountCodes.Commands.CreateAttribForAccountCode;
 
@@ -8,10 +9,10 @@ public sealed class CreateAttribForAccountCodeCommandValidatorTests
 
     private static CreateAttribForAccountCodeCommand ValidCommand() => new(
         AccountCodeId: Guid.NewGuid(),
-        AttribBoxNo: true,
-        Flag: false,
+        AttribBoxNo: 3,
+        Flag: AttribFlag.Date,
         LenAtr: 4,
-        AttribSum: true,
+        AttribSum: AttribSum.Summable,
         ControlId: null,
         Year: "1404")
     {
@@ -79,5 +80,59 @@ public sealed class CreateAttribForAccountCodeCommandValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateAttribForAccountCodeCommand.Year));
+    }
+
+    [Fact]
+    public void Validate_AttribBoxNoOutOfRange_Fails()
+    {
+        var command = ValidCommand() with { AttribBoxNo = 10 };
+
+        var result = _validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateAttribForAccountCodeCommand.AttribBoxNo));
+    }
+
+    [Fact]
+    public void Validate_InvalidFlagEnumValue_Fails()
+    {
+        var command = ValidCommand() with { Flag = (AttribFlag)99 };
+
+        var result = _validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateAttribForAccountCodeCommand.Flag));
+    }
+
+    [Fact]
+    public void Validate_InvalidAttribSumEnumValue_Fails()
+    {
+        var command = ValidCommand() with { AttribSum = (AttribSum)99 };
+
+        var result = _validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateAttribForAccountCodeCommand.AttribSum));
+    }
+
+    [Fact]
+    public void Validate_InvalidControlIdEnumValue_Fails()
+    {
+        var command = ValidCommand() with { ControlId = (AttribControl)99 };
+
+        var result = _validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateAttribForAccountCodeCommand.ControlId));
+    }
+
+    [Fact]
+    public void Validate_ControlIdNull_Passes()
+    {
+        var command = ValidCommand() with { ControlId = null };
+
+        var result = _validator.Validate(command);
+
+        Assert.True(result.IsValid);
     }
 }

@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.AccountCodeInterfaces.Commands.CreateAccountCodeInterface;
@@ -8,11 +9,10 @@ namespace Accounting.Application.AccountCodeInterfaces.Commands.CreateAccountCod
 /// the Domain entity. Returns the newly generated <see cref="Guid"/> ID.
 /// </summary>
 /// <param name="Type">
-/// TYPE column (<c>NUMBER(1)</c>, mapped as non-nullable <c>bool</c>). NOTE: this column is
-/// suspected to actually be a multi-valued enum (≈ <c>InterfaceType</c> 1..2) rather than a
-/// true boolean, per the open decision recorded in CLAUDE.md. Modeled as <c>bool</c> exactly as
-/// the current Domain entity declares it — fixing the underlying type is a separate,
-/// out-of-scope task and was deliberately not guessed here.
+/// TYPE column (<c>NUMBER(1)</c>, mapped as non-nullable <see cref="InterfaceType"/>). Resolved
+/// per <c>docs/centralaccount-business-reference.md</c> §24-1 (phase 27 batch 3) — previously an
+/// incorrect <c>bool</c>; see the historical note preserved in the open risk #2 entry of
+/// CLAUDE.md.
 /// </param>
 /// <param name="AccountCodeId">
 /// ACCOUNTCODEID column — required FK to <c>TB_ACCOUNTCODE</c> (constraint
@@ -22,5 +22,5 @@ namespace Accounting.Application.AccountCodeInterfaces.Commands.CreateAccountCod
 /// <see cref="Accounting.Application.Common.Exceptions.ForeignKeyViolationException"/> → 400.
 /// </param>
 public sealed record CreateAccountCodeInterfaceCommand(
-    bool Type,
+    InterfaceType Type,
     Guid AccountCodeId) : IRequest<Guid>;

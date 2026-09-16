@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.WhiteAndBlackLists.Commands.CreateWhiteAndBlackList;
@@ -14,12 +15,10 @@ namespace Accounting.Application.WhiteAndBlackLists.Commands.CreateWhiteAndBlack
 /// <param name="FromLimitationDate">FROMLIMITATIONDATE column (max 8 chars).</param>
 /// <param name="ToLimitationDate">TOLIMITATIONDATE column (max 8 chars).</param>
 /// <param name="State">
-/// STATE column. WARNING: the underlying Oracle column is <c>NUMBER(1)</c> and is documented
-/// (<c>docs/centralaccount-business-reference.md</c> section 10-2, row 12) as really being a
-/// 3-valued <c>StateEnum</c> (1=allowed, 2=system-only, 3=disallowed), not a boolean. Modeled as
-/// <c>bool?</c> here only because that is the entity's current (known-imprecise) CLR type —
-/// fixing this is a separate, explicitly out-of-scope task. Treat this field's contract as
-/// subject to change.
+/// STATE column (<c>NUMBER(1)</c>, mapped as nullable <see cref="Accounting.Domain.ValueObjects.WhiteBlackListState"/>).
+/// Resolved per <c>docs/centralaccount-business-reference.md</c> §24-1 (phase 27 batch 3) —
+/// previously an incorrect <c>bool?</c>; see the historical note preserved in the open risk #2
+/// entry of CLAUDE.md.
 /// </param>
 public sealed record CreateWhiteAndBlackListCommand(
     Guid AccountCodeId,
@@ -28,4 +27,4 @@ public sealed record CreateWhiteAndBlackListCommand(
     string? ToAuthorizedDate,
     string? FromLimitationDate,
     string? ToLimitationDate,
-    bool? State) : IRequest<Guid>;
+    WhiteBlackListState? State) : IRequest<Guid>;

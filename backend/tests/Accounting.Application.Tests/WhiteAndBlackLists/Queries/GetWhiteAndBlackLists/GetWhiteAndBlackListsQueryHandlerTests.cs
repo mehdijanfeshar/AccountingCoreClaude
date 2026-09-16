@@ -2,6 +2,7 @@ using Accounting.Application.WhiteAndBlackLists.Queries;
 using Accounting.Application.WhiteAndBlackLists.Queries.GetWhiteAndBlackLists;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.WhiteAndBlackLists.Queries.GetWhiteAndBlackLists;
@@ -21,7 +22,7 @@ public sealed class GetWhiteAndBlackListsQueryHandlerTests
         ToAuthorizedDate: "14031231",
         FromLimitationDate: "14030101",
         ToLimitationDate: "14031231",
-        State: true);
+        State: WhiteBlackListState.Blacklisted);
 
     [Fact]
     public async Task Handle_PassesPageNumberAndPageSizeToRepository_AndReturnsRepositoryResult()

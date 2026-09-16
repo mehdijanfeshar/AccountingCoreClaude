@@ -2,6 +2,7 @@ using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.PersonActions.Commands.UpdatePersonAction;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.PersonActions.Commands.UpdatePersonAction;
@@ -15,7 +16,7 @@ public sealed class UpdatePersonActionCommandHandlerTests
         FromDate: "14030201",
         ToDate: "14030228",
         Status: false,
-        OperatorRole: false,
+        OperatorRole: OperatorRole.ReyisVahed,
         VahedCode: "0200");
 
     private static TB_PERSON_ACTION ExistingEntity(Guid id, bool isDeleted = false) => new()
@@ -26,7 +27,7 @@ public sealed class UpdatePersonActionCommandHandlerTests
         FROMDATE = "14030101",
         TODATE = "14031231",
         STATUS = true,
-        OPERATORROLE = true,
+        OPERATORROLE = OperatorRole.MasolOmorMali,
         VAHEDCODE = "0100",
         ADDUSERID = "creator1",
         CREATEDDATE = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),

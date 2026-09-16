@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+
 namespace Accounting.Application.AttribForAccountCodes.Queries;
 
 /// <summary>
@@ -8,23 +10,24 @@ namespace Accounting.Application.AttribForAccountCodes.Queries;
 /// <param name="Id">ID column.</param>
 /// <param name="AccountCodeId">ACCOUNTCODE_ID column — link to <c>TB_ACCOUNTCODE</c> (<c>FK_ATTRIBFO_ACCOUNTCODE</c>).</param>
 /// <param name="AttribBoxNo">
-/// ATTRIBBOXNO column (<c>NUMBER(1)</c>, mapped as non-nullable <c>bool</c>). Unverified against
-/// the CLAUDE.md Phase 12 <c>bool?</c>/enum scaffolding-bug pattern — modeled as-is.
+/// ATTRIBBOXNO column (<c>NUMBER(1)</c>) — plain <see cref="short"/> (NOT an enum), resolved in
+/// phase 27 batch 2 from an incorrect non-nullable <c>bool</c>; see
+/// <c>docs/centralaccount-business-reference.md</c> §24-1.
 /// </param>
 /// <param name="Flag">
-/// FLAG column (<c>NUMBER(1)</c>, mapped as non-nullable <c>bool</c>). Same unverified-enum
-/// caveat as <see cref="AttribBoxNo"/>.
+/// FLAG column — <see cref="AttribFlag"/> (1=Number, 2=Date). Resolved in phase 27 batch 2 from
+/// an incorrect non-nullable <c>bool</c>; see <c>docs/centralaccount-business-reference.md</c>
+/// §24-1.
 /// </param>
 /// <param name="LenAtr">LENATR column (<c>NUMBER(2)</c>, attribute digit length).</param>
 /// <param name="AttribSum">
-/// ATTRIBSUM column (<c>NUMBER(1)</c>, mapped as non-nullable <c>bool</c>). Same unverified-enum
-/// caveat as <see cref="AttribBoxNo"/>.
+/// ATTRIBSUM column — <see cref="ValueObjects.AttribSum"/> (1=Summable, 2=UnSummable). Same
+/// phase-27-batch-2 fix as <see cref="Flag"/>.
 /// </param>
 /// <param name="ControlId">
-/// CONTROLID column — <c>bool?</c> in the CLR model despite the Fluent mapping marking it
-/// <c>.IsRequired()</c> with <c>HasDefaultValueSql("null ")</c> (an existing oddity in
-/// <c>LegacyDbContext</c>, not introduced here). Same unverified-enum caveat as
-/// <see cref="AttribBoxNo"/>.
+/// CONTROLID column — <see cref="AttribControl"/>? in the CLR model despite the Fluent mapping
+/// marking it <c>.IsRequired()</c> with <c>HasDefaultValueSql("null ")</c> (an existing oddity in
+/// <c>LegacyDbContext</c>, not introduced here). Same phase-27-batch-2 fix as <see cref="Flag"/>.
 /// </param>
 /// <param name="VahedCode">VAHEDCODE column — organizational unit code.</param>
 /// <param name="Year">YEAR column.</param>
@@ -36,11 +39,11 @@ namespace Accounting.Application.AttribForAccountCodes.Queries;
 public sealed record AttribForAccountCodeDto(
     Guid Id,
     Guid AccountCodeId,
-    bool AttribBoxNo,
-    bool Flag,
+    short AttribBoxNo,
+    AttribFlag Flag,
     byte LenAtr,
-    bool AttribSum,
-    bool? ControlId,
+    AttribSum AttribSum,
+    AttribControl? ControlId,
     string VahedCode,
     string Year,
     DateTime? CreatedDate,

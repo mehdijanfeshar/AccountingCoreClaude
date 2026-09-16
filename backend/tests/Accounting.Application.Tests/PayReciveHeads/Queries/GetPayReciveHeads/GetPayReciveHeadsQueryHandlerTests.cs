@@ -2,6 +2,7 @@ using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.PayReciveHeads.Queries;
 using Accounting.Application.PayReciveHeads.Queries.GetPayReciveHeads;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.PayReciveHeads.Queries.GetPayReciveHeads;
@@ -13,7 +14,7 @@ public sealed class GetPayReciveHeadsQueryHandlerTests
         PayReciveCode: "00123",
         PayReciveDate: "14040101",
         PayReciveDescription: "شرح سند",
-        PayReciveType: true,
+        PayReciveType: PayRecivType.Pay,
         VahedCode: "0001",
         Year: "1404",
         VoucherHeadId: null,

@@ -77,4 +77,108 @@ public sealed class UpdateTafsiliCommandValidatorTests
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateTafsiliCommand.TafsilGroupLinkVahedType));
     }
+
+    // --- ISACTIVE / PERSONTYPE / OWNER / VAHEDTYPE enum coverage (phase 27 batch 1) -----------
+
+    [Fact]
+    public void Validate_NullIsActivePersonTypeOwnerVahedType_Passes()
+    {
+        var result = _validator.Validate(ValidCommand());
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_IsActiveOutOfRange_Fails()
+    {
+        var command = ValidCommand() with { IsActive = (TafsiliActiveState)99 };
+
+        var result = _validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateTafsiliCommand.IsActive));
+    }
+
+    [Theory]
+    [InlineData(TafsiliActiveState.IsActive)]
+    [InlineData(TafsiliActiveState.DeActive)]
+    public void Validate_DefinedIsActive_Passes(TafsiliActiveState state)
+    {
+        var command = ValidCommand() with { IsActive = state };
+
+        var result = _validator.Validate(command);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_PersonTypeOutOfRange_Fails()
+    {
+        var command = ValidCommand() with { PersonType = (PersonTypes)99 };
+
+        var result = _validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateTafsiliCommand.PersonType));
+    }
+
+    [Theory]
+    [InlineData(PersonTypes.Person)]
+    [InlineData(PersonTypes.Legal)]
+    [InlineData(PersonTypes.Other)]
+    public void Validate_DefinedPersonType_Passes(PersonTypes personType)
+    {
+        var command = ValidCommand() with { PersonType = personType };
+
+        var result = _validator.Validate(command);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_OwnerOutOfRange_Fails()
+    {
+        var command = ValidCommand() with { Owner = (Owners)99 };
+
+        var result = _validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateTafsiliCommand.Owner));
+    }
+
+    [Theory]
+    [InlineData(Owners.Global)]
+    [InlineData(Owners.Unit)]
+    public void Validate_DefinedOwner_Passes(Owners owner)
+    {
+        var command = ValidCommand() with { Owner = owner };
+
+        var result = _validator.Validate(command);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_VahedTypeOutOfRange_Fails()
+    {
+        var command = ValidCommand() with { VahedType = (VahedCategory)99 };
+
+        var result = _validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateTafsiliCommand.VahedType));
+    }
+
+    [Theory]
+    [InlineData(VahedCategory.Insurance)]
+    [InlineData(VahedCategory.Treatment)]
+    [InlineData(VahedCategory.All)]
+    public void Validate_DefinedVahedType_Passes(VahedCategory category)
+    {
+        var command = ValidCommand() with { VahedType = category };
+
+        var result = _validator.Validate(command);
+
+        Assert.True(result.IsValid);
+    }
 }

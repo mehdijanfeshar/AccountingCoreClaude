@@ -17,10 +17,10 @@ public sealed class UpdateTafsiliCommandHandlerTests
         TafsiliCode: "002",
         TafsiliName: "تفصیلی دو",
         TafsilDesc: "توضیحات جدید",
-        IsActive: false,
-        PersonType: false,
-        Owner: true,
-        VahedType: true,
+        IsActive: TafsiliActiveState.DeActive,
+        PersonType: PersonTypes.Legal,
+        Owner: Owners.Global,
+        VahedType: VahedCategory.Insurance,
         TafsilGroupIds: tafsilGroupIds ?? Array.Empty<Guid>(),
         TafsilGroupLinkVahedType: tafsilGroupLinkVahedType);
 
@@ -30,7 +30,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         TAFSILI_CODE = "001",
         TAFSILI_NAME = "تفصیلی یک",
         TAFSIL_DESC = "قدیمی",
-        ISACTIVE = true,
+        ISACTIVE = TafsiliActiveState.IsActive,
         PERSONTYPE = null,
         OWNER = null,
         VAHEDTYPE = null,

@@ -1,41 +1,55 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
 public partial class TB_ATTRIBFORACCOUNTCODE
 {
     /// <summary>
-    /// اي دي كدهاي شناسه دار 
+    /// اي دي كدهاي شناسه دار
     /// </summary>
     public Guid ID { get; set; }
 
     /// <summary>
-    /// اي دي كدينگ مالي 
+    /// اي دي كدينگ مالي
     /// </summary>
     public Guid ACCOUNTCODE_ID { get; set; }
 
     /// <summary>
-    /// مشخصه تعداد شناسه 
+    /// مشخصه تعداد شناسه — تعداد/شمارهٔ خانهٔ صفت (عدد صحیح صرف، NOT enum). تا فاز ۲۷ (بچ ۲)
+    /// به‌اشتباه <c>bool</c> بود؛ در پروژهٔ مرجع <c>int AttribBoxNo</c> است. رجوع به
+    /// <c>docs/centralaccount-business-reference.md</c> §۲۴-۱ ("بدترین مورد این پاس — اصلاً enum
+    /// نیست، عدد است"). <c>short</c> انتخاب شد نه <c>int</c>، مطابق ستون فیزیکی Oracle
+    /// <c>NUMBER(1)</c> (هم‌الگوی <c>TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE</c>).
     /// </summary>
-    public bool ATTRIBBOXNO { get; set; }
+    public short ATTRIBBOXNO { get; set; }
 
     /// <summary>
-    /// مشخصه نوع شناسه 
+    /// مشخصه نوع شناسه — <see cref="ValueObjects.AttribFlag"/> (۱=عدد, ۲=تاریخ). تا فاز ۲۷ (بچ ۲)
+    /// به‌اشتباه <c>bool</c> بود؛ رجوع به <c>docs/centralaccount-business-reference.md</c> §۲۴-۱.
     /// </summary>
-    public bool FLAG { get; set; }
+    public AttribFlag FLAG { get; set; }
 
     /// <summary>
-    /// مشخصه طول شناسه 
+    /// مشخصه طول شناسه
     /// </summary>
     public byte LENATR { get; set; }
 
     /// <summary>
-    /// جمع پذير يا جمع ناپذير 
+    /// جمع پذير يا جمع ناپذير — <see cref="ValueObjects.AttribSum"/> (۱=جمع‌پذیر, ۲=جمع‌ناپذیر).
+    /// تا فاز ۲۷ (بچ ۲) به‌اشتباه <c>bool</c> بود؛ رجوع به
+    /// <c>docs/centralaccount-business-reference.md</c> §۲۴-۱.
     /// </summary>
-    public bool ATTRIBSUM { get; set; }
+    public AttribSum ATTRIBSUM { get; set; }
 
-    public bool? CONTROLID { get; set; }
+    /// <summary>
+    /// <see cref="ValueObjects.AttribControl"/> (۱=غیرصفر, ۲=تاریخ). تا فاز ۲۷ (بچ ۲) به‌اشتباه
+    /// <c>bool?</c> بود؛ رجوع به <c>docs/centralaccount-business-reference.md</c> §۲۴-۱. مپینگ
+    /// Fluent این ستون همچنان تناقض پیشین <c>.IsRequired()</c> + <c>HasDefaultValueSql("null ")</c>
+    /// را دارد — این فاز فقط نوع CLR را اصلاح کرد، نه آن تناقض را.
+    /// </summary>
+    public AttribControl? CONTROLID { get; set; }
 
     /// <summary>
     /// كد واحد 

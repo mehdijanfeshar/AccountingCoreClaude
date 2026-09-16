@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -7,7 +8,7 @@ public partial class TB_ACCOUNTCODE_INTERFACE
 {
     public Guid ID { get; set; }
 
-    public bool TYPE { get; set; }
+    public InterfaceType TYPE { get; set; }
 
     public Guid ACCOUNTCODEID { get; set; }
 

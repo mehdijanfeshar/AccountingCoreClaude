@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -13,7 +14,12 @@ public partial class TB_PAYRECIVHEAD
 
     public string PAYRECIVDESCRIPTION { get; set; } = null!;
 
-    public bool? PAYRECIVTYPE { get; set; }
+    /// <summary>
+    /// نوع سند دریافت/پرداخت — <see cref="ValueObjects.PayRecivType"/> (۱=پرداخت, ۲=دریافت,
+    /// ۳=همه). تا فاز ۲۷ (بچ ۲) به‌اشتباه <c>bool?</c> بود؛ مقدار سوم (۳=همه) با آن نوع اصلاً
+    /// قابل‌دسترس نبود. رجوع به <c>docs/centralaccount-business-reference.md</c> §۲۴-۱ ردیف ۱۴.
+    /// </summary>
+    public PayRecivType? PAYRECIVTYPE { get; set; }
 
     public DateTime CREATEDDATE { get; set; }
 

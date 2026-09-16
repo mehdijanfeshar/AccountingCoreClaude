@@ -2,6 +2,7 @@ using Accounting.Application.AttribForAccountCodes.Queries;
 using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
@@ -11,10 +12,10 @@ public sealed class GetAttribForAccountCodesQueryHandlerTests
     private static AttribForAccountCodeDto SampleDto(Guid id) => new(
         Id: id,
         AccountCodeId: Guid.NewGuid(),
-        AttribBoxNo: true,
-        Flag: false,
+        AttribBoxNo: 3,
+        Flag: AttribFlag.Date,
         LenAtr: 4,
-        AttribSum: true,
+        AttribSum: AttribSum.Summable,
         ControlId: null,
         VahedCode: "0001",
         Year: "1404",

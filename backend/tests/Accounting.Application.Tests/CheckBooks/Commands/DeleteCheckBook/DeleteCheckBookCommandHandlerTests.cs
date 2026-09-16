@@ -2,6 +2,7 @@ using Accounting.Application.CheckBooks.Commands.DeleteCheckBook;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.CheckBooks.Commands.DeleteCheckBook;
@@ -18,7 +19,7 @@ public sealed class DeleteCheckBookCommandHandlerTests
         TOCHECKNUMBER = "100050",
         CHECKTYPE_ID = Guid.NewGuid(),
         VAHEDCODE = "0001",
-        CHECKBOOK_TYPE = true,
+        CHECKBOOK_TYPE = CheckType.Real,
         SERIAL = "SER0001",
         ADDUSERID = "creator1",
         CREATEDDATE = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),

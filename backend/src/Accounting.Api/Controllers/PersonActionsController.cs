@@ -5,6 +5,7 @@ using Accounting.Application.PersonActions.Commands.UpdatePersonAction;
 using Accounting.Application.PersonActions.Queries;
 using Accounting.Application.PersonActions.Queries.GetPersonActionById;
 using Accounting.Application.PersonActions.Queries.GetPersonActions;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -178,5 +179,5 @@ public sealed record UpdatePersonActionRequest(
     string? FromDate,
     string? ToDate,
     bool? Status,
-    bool OperatorRole,
+    OperatorRole OperatorRole,
     string? VahedCode);

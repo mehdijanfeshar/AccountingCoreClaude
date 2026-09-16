@@ -59,7 +59,11 @@ public sealed class TafsilisController : ControllerBase
     }
 
     /// <summary>
-    /// Creates a new تفصیلی account (<c>TB_TAFSILI</c> row).
+    /// Creates a new تفصیلی account (<c>TB_TAFSILI</c> row). See
+    /// <see cref="CreateTafsiliCommand"/> XML doc for the four enum fields
+    /// (<c>IsActive</c>/<c>PersonType</c>/<c>Owner</c>/<c>VahedType</c>), which serialize as
+    /// plain JSON integers (no <c>JsonStringEnumConverter</c> registered) — same convention as
+    /// <c>CreateAccountCodeCommand</c> (phase 25).
     /// </summary>
     [HttpPost]
     [ProducesResponseType(typeof(CreateTafsiliResponse), StatusCodes.Status201Created)]
@@ -119,7 +123,9 @@ public sealed class TafsilisController : ControllerBase
     /// Fully replaces an existing تفصیلی account (<c>TB_TAFSILI</c> row) and reconciles its
     /// گروه‌تفصیلی link set. Exposed as <c>POST {id}/update</c>, not <c>PUT</c> — by explicit
     /// project-owner mandate. <c>Id</c> is taken from the route, never the body. Returns
-    /// <b>200</b> with the affected <c>Id</c> in the body (not 204).
+    /// <b>200</b> with the affected <c>Id</c> in the body (not 204). <see cref="UpdateTafsiliRequest"/>
+    /// carries the same four enum fields as <see cref="CreateTafsiliCommand"/> (see that class's
+    /// XML doc) — same plain-integer JSON wire format.
     /// </summary>
     [HttpPost("{id:guid}/update")]
     [ProducesResponseType(typeof(UpdateTafsiliResponse), StatusCodes.Status200OK)]
@@ -198,9 +204,9 @@ public sealed record UpdateTafsiliRequest(
     string TafsiliCode,
     string TafsiliName,
     string? TafsilDesc,
-    bool? IsActive,
-    bool? PersonType,
-    bool? Owner,
-    bool? VahedType,
+    TafsiliActiveState? IsActive,
+    PersonTypes? PersonType,
+    Owners? Owner,
+    VahedCategory? VahedType,
     IReadOnlyList<Guid> TafsilGroupIds,
     VahedCategory? TafsilGroupLinkVahedType = null);

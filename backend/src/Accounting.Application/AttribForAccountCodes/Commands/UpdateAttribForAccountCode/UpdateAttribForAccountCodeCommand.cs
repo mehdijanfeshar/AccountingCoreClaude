@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.AttribForAccountCodes.Commands.UpdateAttribForAccountCode;
@@ -29,20 +30,20 @@ namespace Accounting.Application.AttribForAccountCodes.Commands.UpdateAttribForA
 /// </summary>
 /// <param name="Id">The <c>TB_ATTRIBFORACCOUNTCODE.ID</c> to update (bound from the route, never the body).</param>
 /// <param name="AccountCodeId">Required link to <c>TB_ACCOUNTCODE</c> (<c>FK_ATTRIBFO_ACCOUNTCODE</c>).</param>
-/// <param name="AttribBoxNo">ATTRIBBOXNO column. See <see cref="Accounting.Application.AttribForAccountCodes.Commands.CreateAttribForAccountCode.CreateAttribForAccountCodeCommand.AttribBoxNo"/> for the unverified-enum caveat.</param>
-/// <param name="Flag">FLAG column. Same unverified-enum caveat as <see cref="AttribBoxNo"/>.</param>
+/// <param name="AttribBoxNo">ATTRIBBOXNO column — plain <see cref="short"/> (NOT an enum). See <see cref="Accounting.Application.AttribForAccountCodes.Commands.CreateAttribForAccountCode.CreateAttribForAccountCodeCommand.AttribBoxNo"/> for the full write-up.</param>
+/// <param name="Flag">FLAG column — <see cref="AttribFlag"/> (1=Number, 2=Date). Same phase-27-batch-2 fix as the Create command.</param>
 /// <param name="LenAtr">LENATR column (<c>NUMBER(2)</c>, attribute digit length).</param>
-/// <param name="AttribSum">ATTRIBSUM column. Same unverified-enum caveat as <see cref="AttribBoxNo"/>.</param>
-/// <param name="ControlId">CONTROLID column. Same odd-mapping and unverified-enum caveats as the Create command.</param>
+/// <param name="AttribSum">ATTRIBSUM column — <see cref="ValueObjects.AttribSum"/> (1=Summable, 2=UnSummable). Same phase-27-batch-2 fix as the Create command.</param>
+/// <param name="ControlId">CONTROLID column — <see cref="AttribControl"/>? (1=NotZero, 2=IsDate). Same odd-mapping caveat and phase-27-batch-2 fix as the Create command.</param>
 /// <param name="Year">YEAR column (max 4 chars, required).</param>
 public sealed record UpdateAttribForAccountCodeCommand(
     Guid Id,
     Guid AccountCodeId,
-    bool AttribBoxNo,
-    bool Flag,
+    short AttribBoxNo,
+    AttribFlag Flag,
     byte LenAtr,
-    bool AttribSum,
-    bool? ControlId,
+    AttribSum AttribSum,
+    AttribControl? ControlId,
     string Year) : IRequest, IVahedScopedCommand
 {
     /// <summary>

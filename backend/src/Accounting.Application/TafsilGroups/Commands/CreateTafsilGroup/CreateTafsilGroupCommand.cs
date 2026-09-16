@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.TafsilGroups.Commands.CreateTafsilGroup;
@@ -22,13 +23,11 @@ namespace Accounting.Application.TafsilGroups.Commands.CreateTafsilGroup;
 /// <param name="TafsilGroupCode">TAFSILGROUP_CODE column (max 3 chars, required — participates in <c>UK_TBTAFSILGROUP</c>).</param>
 /// <param name="TafsilGroupName">TAFSILGROUP_NAME column (max 200 chars, required).</param>
 /// <param name="PersonType">
-/// PERSONTYPE column (<c>NUMBER(1)</c>, mapped as nullable <c>bool</c>). This is a candidate for
-/// the known project-wide <c>bool?</c>/enum scaffolding bug documented in CLAUDE.md Phase 12 (19
-/// columns across 13 tables, only a handful triaged so far) — this specific column has NOT been
-/// scanned/confirmed yet, so it is modeled as-is (matching the current Domain entity) rather than
-/// guessed at. Fixing the underlying CLR type is a separate, out-of-scope task.
+/// PERSONTYPE column — <see cref="PersonTypes"/> (1=Person, 2=Legal, 3=Other). Resolved from the
+/// project-wide <c>bool?</c>/enum scaffolding bug documented in CLAUDE.md risk #2 in phase 27
+/// batch 1 — see <c>docs/centralaccount-business-reference.md</c> §24-1.
 /// </param>
 public sealed record CreateTafsilGroupCommand(
     string TafsilGroupCode,
     string TafsilGroupName,
-    bool? PersonType) : IRequest<Guid>;
+    PersonTypes? PersonType) : IRequest<Guid>;

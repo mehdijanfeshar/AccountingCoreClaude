@@ -5,6 +5,7 @@ using Accounting.Application.AccountCodeInterfaces.Queries;
 using Accounting.Application.AccountCodeInterfaces.Queries.GetAccountCodeInterfaceById;
 using Accounting.Application.AccountCodeInterfaces.Queries.GetAccountCodeInterfaces;
 using Accounting.Application.Common;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -166,5 +167,5 @@ public sealed record DeleteAccountCodeInterfaceResponse(Guid Id);
 /// route instead.
 /// </summary>
 public sealed record UpdateAccountCodeInterfaceRequest(
-    bool Type,
+    InterfaceType Type,
     Guid AccountCodeId);

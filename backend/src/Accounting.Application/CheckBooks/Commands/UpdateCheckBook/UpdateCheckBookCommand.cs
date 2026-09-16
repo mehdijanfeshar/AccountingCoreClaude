@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.CheckBooks.Commands.UpdateCheckBook;
@@ -30,7 +31,7 @@ namespace Accounting.Application.CheckBooks.Commands.UpdateCheckBook;
 /// <param name="FromCheckNumber">First cheque number in the book (required, max 14 chars); part of <c>UK_CHECKBOOK</c>.</param>
 /// <param name="ToCheckNumber">Last cheque number in the book (required, max 14 chars); part of <c>UK_CHECKBOOK</c>.</param>
 /// <param name="CheckTypeId">Optional link to <c>TB_CHECK_TYPE</c> (<c>FK_CHECKTYPE</c>).</param>
-/// <param name="CheckBookType">CHECKBOOK_TYPE column — see <c>CreateCheckBookCommand</c> XML doc for the unverified-enum note.</param>
+/// <param name="CheckBookType">CHECKBOOK_TYPE column — see <c>CreateCheckBookCommand</c> XML doc for the resolved-enum note and the still-open §24-3 caveat.</param>
 /// <param name="Serial">Optional checkbook serial number (max 20 chars).</param>
 public sealed record UpdateCheckBookCommand(
     Guid Id,
@@ -40,7 +41,7 @@ public sealed record UpdateCheckBookCommand(
     string FromCheckNumber,
     string ToCheckNumber,
     Guid? CheckTypeId,
-    bool? CheckBookType,
+    CheckType? CheckBookType,
     string? Serial) : IRequest, IVahedScopedCommand
 {
     /// <summary>

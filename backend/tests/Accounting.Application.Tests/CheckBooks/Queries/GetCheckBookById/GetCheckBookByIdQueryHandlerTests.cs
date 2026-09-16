@@ -1,6 +1,7 @@
 using Accounting.Application.CheckBooks.Queries;
 using Accounting.Application.CheckBooks.Queries.GetCheckBookById;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.CheckBooks.Queries.GetCheckBookById;
@@ -16,7 +17,7 @@ public sealed class GetCheckBookByIdQueryHandlerTests
         ToCheckNumber: "100050",
         CheckTypeId: Guid.NewGuid(),
         VahedCode: "0001",
-        CheckBookType: true,
+        CheckBookType: CheckType.Real,
         Serial: "SER0001",
         CreatedDate: DateTime.UtcNow,
         UpdatedDate: null,

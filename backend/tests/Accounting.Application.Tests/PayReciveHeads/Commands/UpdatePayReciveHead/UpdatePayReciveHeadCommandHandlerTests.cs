@@ -3,6 +3,7 @@ using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.PayReciveHeads.Commands.UpdatePayReciveHead;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Moq;
 
@@ -17,7 +18,7 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
         PayReciveCode: "00999",
         PayReciveDate: "14041231",
         PayReciveDescription: "شرح به‌روزشده",
-        PayReciveType: false,
+        PayReciveType: PayRecivType.Recive,
         Year: "1405",
         VoucherHeadId: Guid.Parse("22222222-2222-2222-2222-222222222222"))
     {
@@ -35,7 +36,7 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
         PAYRECIVCODE = "00001",
         PAYRECIVDATE = "14040101",
         PAYRECIVDESCRIPTION = "شرح اولیه",
-        PAYRECIVTYPE = true,
+        PAYRECIVTYPE = PayRecivType.Pay,
         VAHEDCODE = "0001",
         YEAR = "1404",
         VOUCHERSHEAD_ID = null,
@@ -197,7 +198,7 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
     public async Task Handle_NullOptionalFields_OverwritePreviousValuesWithNull()
     {
         var entity = ExistingEntity();
-        entity.PAYRECIVTYPE = true;
+        entity.PAYRECIVTYPE = PayRecivType.Pay;
         entity.VOUCHERSHEAD_ID = Guid.NewGuid();
         var (handler, _, _) = Build(entity);
 

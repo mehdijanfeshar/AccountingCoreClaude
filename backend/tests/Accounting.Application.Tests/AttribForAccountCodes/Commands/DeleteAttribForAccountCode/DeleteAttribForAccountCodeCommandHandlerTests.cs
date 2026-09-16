@@ -2,6 +2,7 @@ using Accounting.Application.AttribForAccountCodes.Commands.DeleteAttribForAccou
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.AttribForAccountCodes.Commands.DeleteAttribForAccountCode;
@@ -12,10 +13,10 @@ public sealed class DeleteAttribForAccountCodeCommandHandlerTests
     {
         ID = id,
         ACCOUNTCODE_ID = Guid.NewGuid(),
-        ATTRIBBOXNO = false,
-        FLAG = false,
+        ATTRIBBOXNO = 2,
+        FLAG = AttribFlag.Number,
         LENATR = 4,
-        ATTRIBSUM = false,
+        ATTRIBSUM = AttribSum.UnSummable,
         CONTROLID = null,
         VAHEDCODE = "0001",
         YEAR = "1404",

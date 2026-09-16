@@ -2,6 +2,7 @@ using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.PersonActions.Commands.DeletePersonAction;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.PersonActions.Commands.DeletePersonAction;
@@ -16,7 +17,7 @@ public sealed class DeletePersonActionCommandHandlerTests
         FROMDATE = "14030101",
         TODATE = "14031231",
         STATUS = true,
-        OPERATORROLE = true,
+        OPERATORROLE = OperatorRole.MasolOmorMali,
         VAHEDCODE = "0100",
         ADDUSERID = "creator1",
         CREATEDDATE = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),

@@ -2,6 +2,7 @@ using Accounting.Application.WhiteAndBlackLists.Commands.UpdateWhiteAndBlackList
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.WhiteAndBlackLists.Commands.UpdateWhiteAndBlackList;
@@ -16,7 +17,7 @@ public sealed class UpdateWhiteAndBlackListCommandHandlerTests
         ToAuthorizedDate: "14041231",
         FromLimitationDate: "14040101",
         ToLimitationDate: "14041231",
-        State: false);
+        State: WhiteBlackListState.SystemOnly);
 
     private static TB_WHITEANDBLACKLIST ExistingEntity(Guid id, bool? isDeleted = false) => new()
     {
@@ -32,7 +33,7 @@ public sealed class UpdateWhiteAndBlackListCommandHandlerTests
         TOAUTHORIZEDDATE = "14031231",
         FROMLIMITATIONDATE = "14030101",
         TOLIMITATIONDATE = "14031231",
-        STATE = true,
+        STATE = WhiteBlackListState.Allowed,
     };
 
     private static Mock<ICurrentUser> CurrentUserMock(string userId = "editor1")

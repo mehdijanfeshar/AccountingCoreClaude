@@ -49,5 +49,11 @@ public sealed class UpdateCheckBookCommandValidator : AbstractValidator<UpdateCh
 
         RuleFor(x => x.Serial)
             .MaximumLength(20);
+
+        // .IsInEnum() only rejects an out-of-range underlying integer (e.g. (CheckType)99) —
+        // added in phase 27 batch 2 alongside the bool?-to-enum fix for this column.
+        RuleFor(x => x.CheckBookType)
+            .IsInEnum()
+            .When(x => x.CheckBookType.HasValue);
     }
 }

@@ -3,6 +3,7 @@ using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Moq;
 
@@ -18,7 +19,7 @@ public sealed class UpdateCheckBookCommandHandlerTests
         FromCheckNumber: "200000",
         ToCheckNumber: "200050",
         CheckTypeId: Guid.NewGuid(),
-        CheckBookType: false,
+        CheckBookType: CheckType.Sori,
         Serial: "SER0002")
     {
         VahedCode = "0002",
@@ -34,7 +35,7 @@ public sealed class UpdateCheckBookCommandHandlerTests
         TOCHECKNUMBER = "100050",
         CHECKTYPE_ID = Guid.NewGuid(),
         VAHEDCODE = "0001",
-        CHECKBOOK_TYPE = true,
+        CHECKBOOK_TYPE = CheckType.Real,
         SERIAL = "SER0001",
         ADDUSERID = "creator1",
         CREATEDDATE = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
