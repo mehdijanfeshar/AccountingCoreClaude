@@ -47,5 +47,14 @@ public sealed class UpdateIdentitySubGroupCommandValidator : AbstractValidator<U
 
         RuleFor(x => x.SubgrpsLen)
             .LessThanOrEqualTo((byte)99);
+
+        // .IsInEnum() only rejects an out-of-range underlying integer (e.g. (IdentitySubGroupKind)99) —
+        // mirrors CreateIdentitySubGroupCommandValidator.
+        RuleFor(x => x.Fixed)
+            .IsInEnum();
+
+        RuleFor(x => x.SubgrpsType)
+            .IsInEnum()
+            .When(x => x.SubgrpsType.HasValue);
     }
 }

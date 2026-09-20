@@ -3,6 +3,7 @@ using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Moq;
 
@@ -12,7 +13,7 @@ public sealed class UpdateReceiptCommandHandlerTests
 {
     private static UpdateReceiptCommand ValidCommand(Guid id) => new(
         Id: id,
-        ReceiptKind: false,
+        ReceiptKind: ReceiptType.Havale,
         ReceiptDate: "14030101",
         ReceiptNo: "R0000002",
         DateRsid: "14030102",
@@ -24,7 +25,7 @@ public sealed class UpdateReceiptCommandHandlerTests
     private static TB_RECEIP ExistingEntity(Guid id, bool isDeleted = false) => new()
     {
         ID = id,
-        RECEIPT_KIND = true,
+        RECEIPT_KIND = ReceiptType.Fish,
         RECEIPT_DATE = "14020101",
         RECEIPT_NO = "R0000001",
         DATE_RSID = "14020102",

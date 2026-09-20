@@ -39,5 +39,11 @@ public sealed class UpdateBankCartDetailCommandValidator : AbstractValidator<Upd
 
         RuleFor(x => x.Year)
             .MaximumLength(4);
+
+        // .IsInEnum() only rejects an out-of-range underlying integer (e.g. (CheckReceiptType)99) —
+        // mirrors CreateBankCartDetailCommandValidator.
+        RuleFor(x => x.CheckReceiptType)
+            .IsInEnum()
+            .When(x => x.CheckReceiptType.HasValue);
     }
 }

@@ -1,6 +1,7 @@
 using Accounting.Application.BankCartDetails.Queries;
 using Accounting.Application.BankCartDetails.Queries.GetBankCartDetailById;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.BankCartDetails.Queries.GetBankCartDetailById;
@@ -17,7 +18,7 @@ public sealed class GetBankCartDetailByIdQueryHandlerTests
         Month: "01",
         Cheqno: "12345678",
         RecivDate: "14020101",
-        CheckReceiptType: true,
+        CheckReceiptType: CheckReceiptType.RealCheck,
         Debtor: 1000m,
         Creditor: 0m,
         VahedCode: "0001",

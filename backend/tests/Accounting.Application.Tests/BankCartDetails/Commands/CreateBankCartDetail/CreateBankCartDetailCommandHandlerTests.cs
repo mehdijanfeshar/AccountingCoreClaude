@@ -2,6 +2,7 @@ using Accounting.Application.BankCartDetails.Commands.CreateBankCartDetail;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.BankCartDetails.Commands.CreateBankCartDetail;
@@ -17,7 +18,7 @@ public sealed class CreateBankCartDetailCommandHandlerTests
         Month: "01",
         Cheqno: "12345678",
         RecivDate: "14020101",
-        CheckReceiptType: true,
+        CheckReceiptType: CheckReceiptType.RealCheck,
         Debtor: 1000m,
         Creditor: 0m,
         Year: "1402",

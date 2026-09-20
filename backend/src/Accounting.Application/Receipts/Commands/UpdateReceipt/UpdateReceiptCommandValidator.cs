@@ -42,5 +42,10 @@ public sealed class UpdateReceiptCommandValidator : AbstractValidator<UpdateRece
         RuleFor(x => x.Year)
             .NotEmpty()
             .MaximumLength(4);
+
+        // .IsInEnum() only rejects an out-of-range underlying integer (e.g. (ReceiptType)99) —
+        // mirrors CreateReceiptCommandValidator.
+        RuleFor(x => x.ReceiptKind)
+            .IsInEnum();
     }
 }

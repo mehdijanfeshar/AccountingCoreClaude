@@ -2,6 +2,7 @@ using Accounting.Application.IdentitySubGroups.Commands.CreateIdentitySubGroup;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.IdentitySubGroups.Commands.CreateIdentitySubGroup;
@@ -13,8 +14,8 @@ public sealed class CreateIdentitySubGroupCommandHandlerTests
         SubgrpsDesc: "Sub group",
         SubgrpsLen: 4,
         SumFlag: true,
-        Fixed: false,
-        SubgrpsType: true,
+        Fixed: IdentitySubGroupKind.Variable,
+        SubgrpsType: IdentitySubGroupType.PersianLetter,
         Year: "1403",
         IdentySubGroupsCode: "01")
     {

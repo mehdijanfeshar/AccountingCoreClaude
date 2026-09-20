@@ -1,4 +1,5 @@
 using Accounting.Application.Receipts.Commands.CreateReceipt;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.Receipts.Commands.CreateReceipt;
 
@@ -7,7 +8,7 @@ public sealed class CreateReceiptCommandValidatorTests
     private readonly CreateReceiptCommandValidator _validator = new();
 
     private static CreateReceiptCommand ValidCommand() => new(
-        ReceiptKind: true,
+        ReceiptKind: ReceiptType.Fish,
         ReceiptDate: "14020101",
         ReceiptNo: "R0000001",
         DateRsid: "14020102",
@@ -111,5 +112,16 @@ public sealed class CreateReceiptCommandValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateReceiptCommand.Year));
+    }
+
+    // --- RECEIPT_KIND enum coverage (bool-to-enum fix) ----------------------------------------
+
+    [Fact]
+    public void Validate_ReceiptKindOutOfRange_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { ReceiptKind = (ReceiptType)99 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateReceiptCommand.ReceiptKind));
     }
 }

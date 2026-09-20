@@ -2,6 +2,7 @@ using Accounting.Application.BankCartDetails.Commands.DeleteBankCartDetail;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.BankCartDetails.Commands.DeleteBankCartDetail;
@@ -19,7 +20,7 @@ public sealed class DeleteBankCartDetailCommandHandlerTests
         MONTH = "01",
         CHEQNO = "11111111",
         RECIVDATE = "14010101",
-        CHECKRECEIPTTYPE = true,
+        CHECKRECEIPTTYPE = CheckReceiptType.RealCheck,
         DEBTOR = 500m,
         CREDITOR = 0m,
         VAHEDCODE = "0001",

@@ -3,6 +3,7 @@ using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Moq;
 
@@ -16,8 +17,8 @@ public sealed class UpdateIdentitySubGroupCommandHandlerTests
         SubgrpsDesc: "Updated sub group",
         SubgrpsLen: 6,
         SumFlag: false,
-        Fixed: true,
-        SubgrpsType: false,
+        Fixed: IdentitySubGroupKind.Fixed,
+        SubgrpsType: IdentitySubGroupType.Number,
         Year: "1404",
         IdentySubGroupsCode: "02")
     {
@@ -31,8 +32,8 @@ public sealed class UpdateIdentitySubGroupCommandHandlerTests
         SUBGRPS_DESC = "old desc",
         SUBGRPS_LEN = 4,
         SUMFLAG = true,
-        FIXED = false,
-        SUBGRPS_TYPE = true,
+        FIXED = IdentitySubGroupKind.Variable,
+        SUBGRPS_TYPE = IdentitySubGroupType.PersianLetter,
         VAHEDCODE = "0100",
         YEAR = "1403",
         IDENTYSUBGROUPS_CODE = "01",

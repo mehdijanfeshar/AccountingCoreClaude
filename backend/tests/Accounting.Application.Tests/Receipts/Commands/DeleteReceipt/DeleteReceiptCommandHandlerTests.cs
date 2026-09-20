@@ -2,6 +2,7 @@ using Accounting.Application.Receipts.Commands.DeleteReceipt;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.Receipts.Commands.DeleteReceipt;
@@ -11,7 +12,7 @@ public sealed class DeleteReceiptCommandHandlerTests
     private static TB_RECEIP ExistingEntity(Guid id, bool isDeleted = false) => new()
     {
         ID = id,
-        RECEIPT_KIND = true,
+        RECEIPT_KIND = ReceiptType.Fish,
         RECEIPT_DATE = "14020101",
         RECEIPT_NO = "R0000001",
         DATE_RSID = "14020102",

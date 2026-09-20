@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.BankCartDetails.Commands.CreateBankCartDetail;
@@ -26,12 +27,11 @@ namespace Accounting.Application.BankCartDetails.Commands.CreateBankCartDetail;
 /// CHECKRECEIPTTYPE, DEBTOR, CREDITOR, VAHEDCODE, YEAR</c> — every participating column is
 /// nullable. Mapped centrally to 409 by <c>UnitOfWork.SaveChangesAsync</c> when it triggers.
 ///
-/// ⚠️ <c>CheckReceiptType</c> is <c>NUMBER(1)</c> mapped as <see cref="bool"/>?, and its own
-/// Oracle column comment reads «نوع مدرك بانكي (فيش يا حواله)» — i.e. a <em>kind</em>
-/// (receipt-vs-transfer), not a true/false flag. This schema has a confirmed track record of
-/// <c>NUMBER(1)</c> columns actually being multi-valued enums (CLAUDE.md phase 12). Flagged here,
-/// not fixed — the CLR type is deliberately left as <see cref="bool"/>?; re-typing it is a
-/// separate, not-yet-made decision.
+/// <c>CheckReceiptType</c> — <see cref="Accounting.Domain.ValueObjects.CheckReceiptType"/>
+/// (1=SoriCheck/چک صوری, 2=RealCheck/چک واقعی, 3=Fish/فیش, 4=Havale/حواله). Resolved from the
+/// project-wide <c>bool?</c>/enum scaffolding bug (CLAUDE.md open risk #2) — see
+/// <c>docs/centralaccount-business-reference.md</c> §24-1. ⚠️ Four-valued: the previous
+/// <c>bool?</c> mapping could only ever express two of these four real values (plus NULL).
 ///
 /// ⚠️ <c>Debtor</c> and <c>Creditor</c> are both nullable and completely independent — nothing at
 /// this layer enforces that exactly one is populated or that any balance holds across rows. The
@@ -46,7 +46,7 @@ namespace Accounting.Application.BankCartDetails.Commands.CreateBankCartDetail;
 /// <param name="Month">MONTH column (optional, max 2 chars).</param>
 /// <param name="Cheqno">CHEQNO column (optional, max 8 chars).</param>
 /// <param name="RecivDate">RECIVDATE column (optional, max 8 chars).</param>
-/// <param name="CheckReceiptType">CHECKRECEIPTTYPE column — see the unverified-enum note above.</param>
+/// <param name="CheckReceiptType">CHECKRECEIPTTYPE column — see the resolved-enum note above.</param>
 /// <param name="Debtor">DEBTOR column (<c>NUMBER(25)</c>, optional); see the balance note above.</param>
 /// <param name="Creditor">CREDITOR column (<c>NUMBER(25)</c>, optional); see the balance note above.</param>
 /// <param name="Year">Fiscal year (optional, max 4 chars).</param>
@@ -60,7 +60,7 @@ public sealed record CreateBankCartDetailCommand(
     string? Month,
     string? Cheqno,
     string? RecivDate,
-    bool? CheckReceiptType,
+    CheckReceiptType? CheckReceiptType,
     decimal? Debtor,
     decimal? Creditor,
     string? Year,

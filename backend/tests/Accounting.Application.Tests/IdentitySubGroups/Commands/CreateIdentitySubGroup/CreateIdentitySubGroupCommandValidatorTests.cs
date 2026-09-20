@@ -1,4 +1,5 @@
 using Accounting.Application.IdentitySubGroups.Commands.CreateIdentitySubGroup;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.IdentitySubGroups.Commands.CreateIdentitySubGroup;
 
@@ -11,8 +12,8 @@ public sealed class CreateIdentitySubGroupCommandValidatorTests
         SubgrpsDesc: "Sub group",
         SubgrpsLen: 4,
         SumFlag: true,
-        Fixed: false,
-        SubgrpsType: true,
+        Fixed: IdentitySubGroupKind.Variable,
+        SubgrpsType: IdentitySubGroupType.PersianLetter,
         Year: "1403",
         IdentySubGroupsCode: "01")
     {
@@ -109,5 +110,25 @@ public sealed class CreateIdentitySubGroupCommandValidatorTests
         var result = _validator.Validate(ValidCommand() with { SubgrpsLen = 99 });
 
         Assert.True(result.IsValid);
+    }
+
+    // --- FIXED / SUBGRPS_TYPE enum coverage (bool-to-enum fix) --------------------------------
+
+    [Fact]
+    public void Validate_FixedOutOfRange_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { Fixed = (IdentitySubGroupKind)99 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateIdentitySubGroupCommand.Fixed));
+    }
+
+    [Fact]
+    public void Validate_SubgrpsTypeOutOfRange_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { SubgrpsType = (IdentitySubGroupType)99 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateIdentitySubGroupCommand.SubgrpsType));
     }
 }

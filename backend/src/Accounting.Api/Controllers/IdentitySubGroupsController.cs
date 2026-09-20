@@ -5,6 +5,7 @@ using Accounting.Application.IdentitySubGroups.Commands.UpdateIdentitySubGroup;
 using Accounting.Application.IdentitySubGroups.Queries;
 using Accounting.Application.IdentitySubGroups.Queries.GetIdentitySubGroupById;
 using Accounting.Application.IdentitySubGroups.Queries.GetIdentitySubGroups;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -198,7 +199,7 @@ public sealed record UpdateIdentitySubGroupRequest(
     string SubgrpsDesc,
     byte SubgrpsLen,
     bool SumFlag,
-    bool Fixed,
-    bool? SubgrpsType,
+    IdentitySubGroupKind Fixed,
+    IdentitySubGroupType? SubgrpsType,
     string Year,
     string? IdentySubGroupsCode);

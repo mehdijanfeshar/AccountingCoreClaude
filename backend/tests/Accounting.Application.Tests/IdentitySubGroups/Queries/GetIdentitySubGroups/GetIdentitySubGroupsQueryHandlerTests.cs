@@ -2,6 +2,7 @@ using Accounting.Application.IdentitySubGroups.Queries;
 using Accounting.Application.IdentitySubGroups.Queries.GetIdentitySubGroups;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.IdentitySubGroups.Queries.GetIdentitySubGroups;
@@ -14,8 +15,8 @@ public sealed class GetIdentitySubGroupsQueryHandlerTests
         SubgrpsDesc: "desc",
         SubgrpsLen: 4,
         SumFlag: true,
-        Fixed: false,
-        SubgrpsType: true,
+        Fixed: IdentitySubGroupKind.Variable,
+        SubgrpsType: IdentitySubGroupType.PersianLetter,
         VahedCode: "0100",
         Year: "1403",
         IdentySubGroupsCode: "01",

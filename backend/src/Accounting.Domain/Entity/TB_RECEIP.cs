@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -7,7 +8,7 @@ public partial class TB_RECEIP
 {
     public Guid ID { get; set; }
 
-    public bool RECEIPT_KIND { get; set; }
+    public ReceiptType RECEIPT_KIND { get; set; }
 
     public string RECEIPT_DATE { get; set; } = null!;
 

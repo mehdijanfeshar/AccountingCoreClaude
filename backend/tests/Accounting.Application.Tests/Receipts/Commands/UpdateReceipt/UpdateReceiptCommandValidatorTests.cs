@@ -1,4 +1,5 @@
 using Accounting.Application.Receipts.Commands.UpdateReceipt;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.Receipts.Commands.UpdateReceipt;
 
@@ -8,7 +9,7 @@ public sealed class UpdateReceiptCommandValidatorTests
 
     private static UpdateReceiptCommand ValidCommand(Guid? id = null) => new(
         Id: id ?? Guid.NewGuid(),
-        ReceiptKind: false,
+        ReceiptKind: ReceiptType.Havale,
         ReceiptDate: "14030101",
         ReceiptNo: "R0000002",
         DateRsid: "14030102",
@@ -121,5 +122,16 @@ public sealed class UpdateReceiptCommandValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateReceiptCommand.Year));
+    }
+
+    // --- RECEIPT_KIND enum coverage (bool-to-enum fix) ----------------------------------------
+
+    [Fact]
+    public void Validate_ReceiptKindOutOfRange_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { ReceiptKind = (ReceiptType)99 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateReceiptCommand.ReceiptKind));
     }
 }

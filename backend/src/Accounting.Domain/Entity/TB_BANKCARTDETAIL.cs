@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -51,9 +52,9 @@ public partial class TB_BANKCARTDETAIL
     public string? RECIVDATE { get; set; }
 
     /// <summary>
-    /// نوع مدرك بانكي (فيش يا حواله)   
+    /// نوع مدرك بانكي (فيش يا حواله)
     /// </summary>
-    public bool? CHECKRECEIPTTYPE { get; set; }
+    public CheckReceiptType? CHECKRECEIPTTYPE { get; set; }
 
     /// <summary>
     /// مبلغ بدهكاري 

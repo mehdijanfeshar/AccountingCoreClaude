@@ -3,6 +3,7 @@ using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Moq;
 
@@ -20,7 +21,7 @@ public sealed class UpdateBankCartDetailCommandHandlerTests
         Month: "02",
         Cheqno: "87654321",
         RecivDate: "14020202",
-        CheckReceiptType: false,
+        CheckReceiptType: CheckReceiptType.SoriCheck,
         Debtor: 0m,
         Creditor: 2000m,
         Year: "1403",
@@ -40,7 +41,7 @@ public sealed class UpdateBankCartDetailCommandHandlerTests
         MONTH = "01",
         CHEQNO = "11111111",
         RECIVDATE = "14010101",
-        CHECKRECEIPTTYPE = true,
+        CHECKRECEIPTTYPE = CheckReceiptType.RealCheck,
         DEBTOR = 500m,
         CREDITOR = 0m,
         VAHEDCODE = "0001",

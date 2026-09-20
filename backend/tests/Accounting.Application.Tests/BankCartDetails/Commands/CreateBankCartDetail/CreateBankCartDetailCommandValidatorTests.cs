@@ -1,4 +1,5 @@
 using Accounting.Application.BankCartDetails.Commands.CreateBankCartDetail;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.BankCartDetails.Commands.CreateBankCartDetail;
 
@@ -15,7 +16,7 @@ public sealed class CreateBankCartDetailCommandValidatorTests
         Month: "01",
         Cheqno: "12345678",
         RecivDate: "14020101",
-        CheckReceiptType: true,
+        CheckReceiptType: CheckReceiptType.RealCheck,
         Debtor: 1000m,
         Creditor: 0m,
         Year: "1402",
@@ -124,5 +125,16 @@ public sealed class CreateBankCartDetailCommandValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateBankCartDetailCommand.Year));
+    }
+
+    // --- CHECKRECEIPTTYPE enum coverage (bool-to-enum fix) ------------------------------------
+
+    [Fact]
+    public void Validate_CheckReceiptTypeOutOfRange_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { CheckReceiptType = (CheckReceiptType)99 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateBankCartDetailCommand.CheckReceiptType));
     }
 }

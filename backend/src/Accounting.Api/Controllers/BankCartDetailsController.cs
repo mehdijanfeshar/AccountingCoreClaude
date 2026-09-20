@@ -5,6 +5,7 @@ using Accounting.Application.BankCartDetails.Commands.UpdateBankCartDetail;
 using Accounting.Application.BankCartDetails.Queries;
 using Accounting.Application.BankCartDetails.Queries.GetBankCartDetailById;
 using Accounting.Application.BankCartDetails.Queries.GetBankCartDetails;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -48,9 +49,9 @@ namespace Accounting.Api.Controllers;
 /// value for any of them is written silently; the central FK→400 mapping does not help there. See
 /// <see cref="CreateBankCartDetailCommand"/> XML doc.
 ///
-/// ⚠️ <c>CheckReceiptType</c> is writable and typed as <see cref="bool"/>? here, but is very
-/// likely a multi-valued enum in disguise (CLAUDE.md phase 12 pattern) — see
-/// <see cref="CreateBankCartDetailCommand"/> XML doc; the CLR type is deliberately left unchanged.
+/// <c>CheckReceiptType</c> is writable and typed as
+/// <see cref="Accounting.Domain.ValueObjects.CheckReceiptType"/>? here — see
+/// <see cref="CreateBankCartDetailCommand"/> XML doc for the resolved-enum note.
 /// ⚠️ <c>Debtor</c>/<c>Creditor</c> are independent nullable amounts — no balance is enforced.
 /// </summary>
 [ApiController]
@@ -216,7 +217,7 @@ public sealed record UpdateBankCartDetailRequest(
     string? Month,
     string? Cheqno,
     string? RecivDate,
-    bool? CheckReceiptType,
+    CheckReceiptType? CheckReceiptType,
     decimal? Debtor,
     decimal? Creditor,
     string? Year,

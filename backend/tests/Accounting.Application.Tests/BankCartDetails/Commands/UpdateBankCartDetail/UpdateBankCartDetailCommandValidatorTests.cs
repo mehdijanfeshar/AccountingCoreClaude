@@ -1,4 +1,5 @@
 using Accounting.Application.BankCartDetails.Commands.UpdateBankCartDetail;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.BankCartDetails.Commands.UpdateBankCartDetail;
 
@@ -16,7 +17,7 @@ public sealed class UpdateBankCartDetailCommandValidatorTests
         Month: "02",
         Cheqno: "87654321",
         RecivDate: "14020202",
-        CheckReceiptType: false,
+        CheckReceiptType: CheckReceiptType.SoriCheck,
         Debtor: 0m,
         Creditor: 2000m,
         Year: "1403",
@@ -135,5 +136,16 @@ public sealed class UpdateBankCartDetailCommandValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateBankCartDetailCommand.Year));
+    }
+
+    // --- CHECKRECEIPTTYPE enum coverage (bool-to-enum fix) ------------------------------------
+
+    [Fact]
+    public void Validate_CheckReceiptTypeOutOfRange_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { CheckReceiptType = (CheckReceiptType)99 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateBankCartDetailCommand.CheckReceiptType));
     }
 }

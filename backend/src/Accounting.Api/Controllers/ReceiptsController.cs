@@ -5,6 +5,7 @@ using Accounting.Application.Receipts.Commands.UpdateReceipt;
 using Accounting.Application.Receipts.Queries;
 using Accounting.Application.Receipts.Queries.GetReceiptById;
 using Accounting.Application.Receipts.Queries.GetReceipts;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -32,9 +33,8 @@ namespace Accounting.Api.Controllers;
 /// <b>No FK exists on this table's own columns either</b>, so 400 here only ever comes from
 /// FluentValidation failures — never from the central FK→400 mapping.
 ///
-/// ⚠️ <c>ReceiptKind</c> is writable and typed as <see cref="bool"/> here, but is very likely a
-/// multi-valued enum in disguise (CLAUDE.md phase 12 pattern) — see
-/// <see cref="CreateReceiptCommand"/> XML doc; the CLR type is deliberately left unchanged.
+/// <c>ReceiptKind</c> is writable and typed as <see cref="ReceiptType"/> here — see
+/// <see cref="CreateReceiptCommand"/> XML doc for the resolved-enum note.
 ///
 /// ⚠️ Three other tables point AT this one (<c>TB_BANKCARTDETAIL</c>, <c>TB_PAYRECIVDETAIL</c>,
 /// <c>TB_VOUCHERSDETAIL</c>). Soft-deleting a receipt via <see cref="Delete"/> does NOT cascade —
@@ -195,7 +195,7 @@ public sealed record DeleteReceiptResponse(Guid Id);
 /// body at all, not even as an ignored field).
 /// </summary>
 public sealed record UpdateReceiptRequest(
-    bool ReceiptKind,
+    ReceiptType ReceiptKind,
     string ReceiptDate,
     string ReceiptNo,
     string? DateRsid,

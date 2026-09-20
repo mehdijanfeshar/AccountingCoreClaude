@@ -2,6 +2,7 @@ using Accounting.Application.IdentitySubGroups.Commands.DeleteIdentitySubGroup;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.IdentitySubGroups.Commands.DeleteIdentitySubGroup;
@@ -15,8 +16,8 @@ public sealed class DeleteIdentitySubGroupCommandHandlerTests
         SUBGRPS_DESC = "desc",
         SUBGRPS_LEN = 4,
         SUMFLAG = true,
-        FIXED = false,
-        SUBGRPS_TYPE = true,
+        FIXED = IdentitySubGroupKind.Variable,
+        SUBGRPS_TYPE = IdentitySubGroupType.PersianLetter,
         VAHEDCODE = "0100",
         YEAR = "1403",
         IDENTYSUBGROUPS_CODE = "01",

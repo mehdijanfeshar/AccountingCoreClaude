@@ -902,8 +902,8 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false)
                 .HasComment("كاربر تغيير دهنده");
             entity.Property(e => e.CHECKRECEIPTTYPE)
-                .HasComment("نوع مدرك بانكي (فيش يا حواله)   ")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("نوع مدرك بانكي — Accounting.Domain.ValueObjects.CheckReceiptType (1=SoriCheck,2=RealCheck,3=Fish,4=Havale)")
+                .HasConversion<int?>();
             entity.Property(e => e.CHECK_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
@@ -2157,8 +2157,8 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.FIXED)
-                .HasComment("ثابت يا متغير بودن ")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("ثابت يا متغير بودن — Accounting.Domain.ValueObjects.IdentitySubGroupKind (1=Fixed,2=Variable)")
+                .HasConversion<int>();
             entity.Property(e => e.IDENTYGROUPS_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
@@ -2177,8 +2177,8 @@ public partial class LegacyDbContext : DbContext
                 .HasPrecision(2)
                 .HasComment("طول ");
             entity.Property(e => e.SUBGRPS_TYPE)
-                .HasComment("نوع : حروف, اعداد, يا هردو ")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("نوع : حروف, اعداد, يا هردو — Accounting.Domain.ValueObjects.IdentitySubGroupType (1=Date,2=PersianLetter,3=Number,4=LatinLetter)")
+                .HasConversion<int?>();
             entity.Property(e => e.SUMFLAG)
                 .HasComment("جمع پذير يا ناپذير بودن ")
                 .HasColumnType("NUMBER(1)");
@@ -2668,7 +2668,9 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.RECEIPT_DATE)
                 .HasMaxLength(8)
                 .IsUnicode(false);
-            entity.Property(e => e.RECEIPT_KIND).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.RECEIPT_KIND)
+                .HasComment("Accounting.Domain.ValueObjects.ReceiptType (1=Fish,2=Havale)")
+                .HasConversion<int>();
             entity.Property(e => e.RECEIPT_NO)
                 .HasMaxLength(8)
                 .IsUnicode(false);

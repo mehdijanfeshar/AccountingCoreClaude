@@ -1,6 +1,7 @@
 using Accounting.Application.Receipts.Queries;
 using Accounting.Application.Receipts.Queries.GetReceiptById;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.Receipts.Queries.GetReceiptById;
@@ -9,7 +10,7 @@ public sealed class GetReceiptByIdQueryHandlerTests
 {
     private static ReceiptDto SampleDto(Guid id) => new(
         Id: id,
-        ReceiptKind: true,
+        ReceiptKind: ReceiptType.Fish,
         ReceiptDate: "14020101",
         ReceiptNo: "R0000001",
         DateRsid: "14020102",

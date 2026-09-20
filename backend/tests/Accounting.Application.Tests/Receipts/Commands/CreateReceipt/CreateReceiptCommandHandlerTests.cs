@@ -2,6 +2,7 @@ using Accounting.Application.Receipts.Commands.CreateReceipt;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.Receipts.Commands.CreateReceipt;
@@ -9,7 +10,7 @@ namespace Accounting.Application.Tests.Receipts.Commands.CreateReceipt;
 public sealed class CreateReceiptCommandHandlerTests
 {
     private static CreateReceiptCommand ValidCommand() => new(
-        ReceiptKind: true,
+        ReceiptKind: ReceiptType.Fish,
         ReceiptDate: "14020101",
         ReceiptNo: "R0000001",
         DateRsid: "14020102",

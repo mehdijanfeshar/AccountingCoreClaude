@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.Receipts.Commands.CreateReceipt;
@@ -14,23 +15,21 @@ namespace Accounting.Application.Receipts.Commands.CreateReceipt;
 /// <c>LegacyDbContext</c> — see <c>Accounting.Api.Controllers.ReceiptsController</c> XML doc for
 /// why 409 is never declared and why 400-from-FK cannot arise here.
 ///
-/// ⚠️ <c>ReceiptKind</c> is <c>NUMBER(1)</c> mapped as a non-nullable <see cref="bool"/>, and its
-/// name says <em>kind</em> (فيش‌ vs حواله, mirroring <c>TB_BANKCARTDETAIL.CHECKRECEIPTTYPE</c>),
-/// not a true/false flag — a strong candidate for the same multi-valued-enum bug pattern
-/// confirmed elsewhere in this schema (CLAUDE.md phase 12). Flagged here, not fixed; the CLR type
-/// is deliberately left as <see cref="bool"/>.
+/// <c>ReceiptKind</c> — <see cref="ReceiptType"/> (1=Fish/فیش, 2=Havale/حواله). Resolved from the
+/// project-wide <c>bool</c>/enum scaffolding bug (CLAUDE.md open risk #2) — see
+/// <c>docs/centralaccount-business-reference.md</c> §24-1.
 ///
 /// ⚠️ Three other tables point AT this one (<c>TB_BANKCARTDETAIL</c>, <c>TB_PAYRECIVDETAIL</c>,
 /// <c>TB_VOUCHERSDETAIL</c>). Soft-deleting a receipt leaves any referencing rows active and
 /// silent — no cascade is implemented here, and none was asked for.
 /// </summary>
-/// <param name="ReceiptKind">RECEIPT_KIND column — see the unverified-enum note above.</param>
+/// <param name="ReceiptKind">RECEIPT_KIND column — see the resolved-enum note above.</param>
 /// <param name="ReceiptDate">RECEIPT_DATE column (required, max 8 chars).</param>
 /// <param name="ReceiptNo">RECEIPT_NO column (required, max 8 chars).</param>
 /// <param name="DateRsid">DATE_RSID column (optional, max 8 chars).</param>
 /// <param name="Year">Fiscal year (required, max 4 chars).</param>
 public sealed record CreateReceiptCommand(
-    bool ReceiptKind,
+    ReceiptType ReceiptKind,
     string ReceiptDate,
     string ReceiptNo,
     string? DateRsid,
