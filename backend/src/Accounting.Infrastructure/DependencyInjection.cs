@@ -71,6 +71,7 @@ public static class DependencyInjection
         services.AddScoped<IAttribForAccountCodeRepository, AttribForAccountCodeRepository>();
         services.AddScoped<IChequeTypeRepository, ChequeTypeRepository>();
         services.AddScoped<IIdentityGroupRepository, IdentityGroupRepository>();
+        services.AddScoped<IIdentityHeadRepository, IdentityHeadRepository>();
         services.AddScoped<IIdentitySubGroupRepository, IdentitySubGroupRepository>();
         services.AddScoped<ILevelTafsilRepository, LevelTafsilRepository>();
         services.AddScoped<ITafsilGroupRepository, TafsilGroupRepository>();
@@ -80,6 +81,7 @@ public static class DependencyInjection
         services.AddScoped<IAttribForAccountCodeReadRepository, AttribForAccountCodeReadRepository>();
         services.AddScoped<IChequeTypeReadRepository, ChequeTypeReadRepository>();
         services.AddScoped<IIdentityGroupReadRepository, IdentityGroupReadRepository>();
+        services.AddScoped<IIdentityHeadReadRepository, IdentityHeadReadRepository>();
         services.AddScoped<IIdentitySubGroupReadRepository, IdentitySubGroupReadRepository>();
         services.AddScoped<ILevelTafsilReadRepository, LevelTafsilReadRepository>();
         services.AddScoped<ITafsilGroupReadRepository, TafsilGroupReadRepository>();
