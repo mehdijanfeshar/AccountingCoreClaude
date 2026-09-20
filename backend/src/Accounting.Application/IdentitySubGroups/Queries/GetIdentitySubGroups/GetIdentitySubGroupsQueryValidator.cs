@@ -25,5 +25,19 @@ public sealed class GetIdentitySubGroupsQueryValidator : AbstractValidator<GetId
 
         RuleFor(x => x.PageSize)
             .InclusiveBetween(1, MaxPageSize);
+
+        // Both filters are optional: null passes (the filter simply is not applied). Only a
+        // supplied-but-meaningless value is rejected.
+        // Explicit `!= Guid.Empty` rather than .NotEmpty(): on a *nullable* Guid, FluentValidation's
+        // NotEmpty() compares against default(Guid?) — which is null, not Guid.Empty — so an
+        // all-zero Guid would slip straight through it. (Caught by
+        // Validate_EmptyIdentityGroupId_Fails, which passed against the naive rule.)
+        RuleFor(x => x.IdentityGroupId)
+            .Must(id => id != Guid.Empty)
+            .When(x => x.IdentityGroupId.HasValue)
+            .WithMessage("شناسهٔ گروه شناسنامه نمی‌تواند خالی باشد.");
+
+        RuleFor(x => x.Kind)
+            .IsInEnum();
     }
 }

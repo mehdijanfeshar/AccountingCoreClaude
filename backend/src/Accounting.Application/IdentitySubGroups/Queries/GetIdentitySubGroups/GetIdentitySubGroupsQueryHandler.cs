@@ -22,5 +22,11 @@ public sealed class GetIdentitySubGroupsQueryHandler : IRequestHandler<GetIdenti
     }
 
     public Task<PagedResult<IdentitySubGroupDto>> Handle(GetIdentitySubGroupsQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, request.VahedCode, cancellationToken);
+        => _readRepository.GetPagedAsync(
+            request.PageNumber,
+            request.PageSize,
+            request.VahedCode,
+            request.IdentityGroupId,
+            request.Kind,
+            cancellationToken);
 }

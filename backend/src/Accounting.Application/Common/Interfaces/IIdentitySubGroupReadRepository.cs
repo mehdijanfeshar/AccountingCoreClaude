@@ -1,5 +1,6 @@
 using Accounting.Application.IdentitySubGroups.Queries;
 using Accounting.Application.Common;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Interfaces;
 
@@ -25,10 +26,21 @@ public interface IIdentitySubGroupReadRepository
     /// doc).
     /// </param>
     /// <param name="cancellationToken">Propagated to the underlying EF Core query.</param>
+    /// <param name="identityGroupId">
+    /// Optional: restrict to the subgroups of one <c>TB_IDENTITYGROUP</c>. Null means "do not
+    /// narrow", never "match nothing".
+    /// </param>
+    /// <param name="kind">
+    /// Optional: restrict to fixed (<see cref="IdentitySubGroupKind.Fixed"/>) or variable
+    /// subgroups. Together with <paramref name="identityGroupId"/> this is what the شناسنامه
+    /// entry form needs — the reference app's <c>getFixed?Groupid=</c> call.
+    /// </param>
     Task<PagedResult<IdentitySubGroupDto>> GetPagedAsync(
         int pageNumber,
         int pageSize,
         string vahedCode,
+        Guid? identityGroupId = null,
+        IdentitySubGroupKind? kind = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -38,7 +38,7 @@ public sealed class GetIdentitySubGroupsQueryHandlerTests
             TotalCount = 51,
         };
         readRepository
-            .Setup(r => r.GetPagedAsync(2, 25, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(2, 25, It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<IdentitySubGroupKind?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetIdentitySubGroupsQueryHandler(readRepository.Object);
@@ -50,7 +50,7 @@ public sealed class GetIdentitySubGroupsQueryHandlerTests
         Assert.Equal(2, result.PageNumber);
         Assert.Equal(25, result.PageSize);
         Assert.Equal(51, result.TotalCount);
-        readRepository.Verify(r => r.GetPagedAsync(2, 25, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(2, 25, It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<IdentitySubGroupKind?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public sealed class GetIdentitySubGroupsQueryHandlerTests
         // unit code, so the handler must forward exactly that value, not derive its own.
         var readRepository = new Mock<IIdentitySubGroupReadRepository>();
         readRepository
-            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), "0007", It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), "0007", It.IsAny<Guid?>(), It.IsAny<IdentitySubGroupKind?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedResult<IdentitySubGroupDto>());
 
         var handler = new GetIdentitySubGroupsQueryHandler(readRepository.Object);
@@ -70,7 +70,7 @@ public sealed class GetIdentitySubGroupsQueryHandlerTests
         await handler.Handle(query, CancellationToken.None);
 
         readRepository.Verify(
-            r => r.GetPagedAsync(1, 20, "0007", It.IsAny<CancellationToken>()),
+            r => r.GetPagedAsync(1, 20, "0007", It.IsAny<Guid?>(), It.IsAny<IdentitySubGroupKind?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -81,7 +81,7 @@ public sealed class GetIdentitySubGroupsQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetPagedAsync(1, 20, "0100", token))
+            .Setup(r => r.GetPagedAsync(1, 20, "0100", It.IsAny<Guid?>(), It.IsAny<IdentitySubGroupKind?>(), token))
             .ReturnsAsync(new PagedResult<IdentitySubGroupDto>());
 
         var handler = new GetIdentitySubGroupsQueryHandler(readRepository.Object);
@@ -89,7 +89,7 @@ public sealed class GetIdentitySubGroupsQueryHandlerTests
 
         await handler.Handle(query, token);
 
-        readRepository.Verify(r => r.GetPagedAsync(1, 20, "0100", token), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(1, 20, "0100", It.IsAny<Guid?>(), It.IsAny<IdentitySubGroupKind?>(), token), Times.Once);
     }
 
     [Fact]
