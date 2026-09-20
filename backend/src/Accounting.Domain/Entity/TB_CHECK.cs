@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -38,7 +39,7 @@ public partial class TB_CHECK
     /// <summary>
     /// ابطال 
     /// </summary>
-    public bool EBTAL { get; set; }
+    public CheckCancelStatus EBTAL { get; set; }
 
     /// <summary>
     /// دروجه
@@ -48,7 +49,7 @@ public partial class TB_CHECK
     /// <summary>
     /// چاپ
     /// </summary>
-    public bool PRINT { get; set; }
+    public CheckPrintStatus PRINT { get; set; }
 
     /// <summary>
     /// تاريخ ايجاد

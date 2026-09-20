@@ -1214,8 +1214,8 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false)
                 .HasComment("تاريخ اجرا ");
             entity.Property(e => e.EBTAL)
-                .HasComment("ابطال ")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("ابطال — Accounting.Domain.ValueObjects.CheckCancelStatus (1=Canceled,2=NotCanceled)")
+                .HasConversion<int>();
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.PAPER_DESC)
                 .HasMaxLength(800)
@@ -1226,8 +1226,8 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false)
                 .HasComment("دروجه");
             entity.Property(e => e.PRINT)
-                .HasComment("چاپ")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("چاپ — Accounting.Domain.ValueObjects.CheckPrintStatus (1=None,2=Printed)")
+                .HasConversion<int>();
             entity.Property(e => e.UPDATEDDATE)
                 .HasPrecision(6)
                 .HasComment("تاريخ تغيير");
