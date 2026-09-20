@@ -30,7 +30,8 @@ public sealed class GetVoucherHeadsQueryHandler : IRequestHandler<GetVoucherHead
                 request.DocNumTo,
                 request.DateDocFrom,
                 request.DateDocTo,
-                request.SystemTypeId),
+                request.SystemTypeId,
+                request.DocLife),
             request.VahedCode,
             cancellationToken);
 }

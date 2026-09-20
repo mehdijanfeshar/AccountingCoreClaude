@@ -31,6 +31,17 @@ public sealed class VoucherHeadRepository : IVoucherHeadRepository
             .FirstOrDefaultAsync(h => h.ID == id, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<TB_VOUCHERSHEAD>> GetManyForUpdateAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken cancellationToken = default)
+    {
+        // Tracked, like the single-id form above: the state-change handler mutates what comes
+        // back and lets EF generate the UPDATEs on SaveChanges.
+        return await _dbContext.TB_VOUCHERSHEADs
+            .Where(h => ids.Contains(h.ID))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<int> SoftDeleteDetailTreeAsync(
         Guid headId,
         string? changeUserId,

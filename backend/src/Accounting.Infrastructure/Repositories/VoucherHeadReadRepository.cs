@@ -93,6 +93,14 @@ public sealed class VoucherHeadReadRepository : IVoucherHeadReadRepository
             query = query.Where(v => v.SYSTEM_TYPE == systemTypeId);
         }
 
+        // Exact match, NOT the ">=" the trial-balance reports use on this same column. A کارتابل
+        // tab asks "which vouchers are in *this* state right now", so a document that has moved
+        // on must disappear from the tab it came from. See VoucherHeadFilter.DocLife.
+        if (filter.DocLife is { } docLife)
+        {
+            query = query.Where(v => v.DOCLIFE == docLife);
+        }
+
         // DATE_DOC is a fixed-width Legacy "YYYYMMDD" string, so a plain lexicographic
         // comparison IS the chronological one — no parsing or conversion needed.
         if (!string.IsNullOrEmpty(filter.DateDocFrom))

@@ -21,6 +21,20 @@ public interface IVoucherHeadRepository
     Task<TB_VOUCHERSHEAD?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Batch form of <see cref="GetForUpdateAsync"/> — tracked, one round trip, for the کارتابل's
+    /// bulk state change. Soft-deleted rows are returned here too; the caller decides.
+    ///
+    /// <para>
+    /// <b>Returns only the rows that exist.</b> A caller that needs to know an id was missing
+    /// must compare counts itself — that is deliberate, because "some ids were not found" is a
+    /// caller-level decision (reject the whole batch vs. skip), not a repository one.
+    /// </para>
+    /// </summary>
+    Task<IReadOnlyList<TB_VOUCHERSHEAD>> GetManyForUpdateAsync(
+        IReadOnlyList<Guid> ids,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Soft-deletes the entire detail subtree of the voucher head identified by
     /// <paramref name="headId"/> — BOTH levels below the head in one call:
     /// <list type="number">
