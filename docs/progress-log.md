@@ -12,6 +12,10 @@
 
 ## ورودی‌ها
 
+- **2026-09-20** (فاز ۲۸-ب، ریپوی `AccountCoreAiProj_UI` برنچ `develop`، commit `4c03082`): جایگزینی نوار دستی توکن با **جریان SSO واقعی سازمان** — پورت‌شده از `TaminSecurityService` نصب‌شده، نه حدس. صفر تغییر بک‌اند؛ `tsc`/`build` تمیز. ⚠️ **هیچ لاگین واقعی اجرا نشده**؛ پورت dev عمداً ۹۲۰۰→۴۲۰۰. جزئیات: `docs/phase-log.md` بخش «فاز ۲۸».
+
+- **2026-09-16/20** (فاز ۲۸-الف، برنچ `EntityCRUD`، commitهای `8c5d455`/`02447ed`/`01bc120`/`804131d`): ۹ ستون آخر `bool`→enum (دسته‌های ۴ و ۵ + `TB_VOUCHERSHEAD.DOCLIFE`) — **ریسک 🔴 #۲ کاملاً بسته شد.** **۲۵۳۳ تست** (+۳۲)، شامل `LegacyEnumMappingConventionTests` که یافتهٔ فاز ۲۵ را از «چیزی که باید یادت باشد» به گارد تبدیل می‌کند. تناقض `ELAMHDRAMAD_TYPE` با تأیید صاحب پروژه حل شد. جزئیات: `docs/phase-log.md` بخش «فاز ۲۸»؛ ۵ مورد باز جدید: `docs/open-decisions.md`.
+
 - **2026-09-16** (فاز ۲۷، برنچ `EntityCRUD` + ریپوی فرانت، commit نشده): تعمیم `bool`→enum به **۱۴ ستون روی ۸ Entity** (۱۱ enum جدید) + هماهنگ‌سازی کامل فرانت (`legacyEnums.ts`؛ `TriStateToggle` صفر مصرف‌کننده شد). **۲۵۰۱ تست** (+۶۸). ⚠️ دسته‌های ۴/۵ به تصمیم صاحب پروژه انجام نشدند — **۸ ستون هنوز `bool` غلط‌اند**؛ ضمناً یک خطای تأییدشده در §۲۴-۱ سند مرجع کشف شد (`TB_CHECK.EBTAL`). جزئیات: `docs/phase-log.md` بخش «فاز ۲۷»؛ موارد باز: `docs/open-decisions.md`.
 
 - **2026-09-15** (فاز ۲۶، ریپوی `AccountCoreAiProj_UI`، commit نشده): هماهنگ‌سازی فرانت با enumهای `TB_ACCOUNTCODE` فاز ۲۵ — `accountCodeEnums.ts` منبع واحد مقدار↔برچسب، `Select` به‌جای `TriStateToggle` بولی، Zod محدودشده. جزئیات: `docs/phase-log.md` بخش «فاز ۲۶».
