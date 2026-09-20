@@ -55,5 +55,12 @@ public sealed class CreateVoucherHeadCommandValidator : AbstractValidator<Create
         RuleForEach(x => x.InitialDetails)
             .SetValidator(new CreateVoucherHeadDetailInputValidator())
             .When(x => x.InitialDetails is not null);
+
+        // .IsInEnum() only rejects an out-of-range underlying integer (e.g. (DocLife)99). Null
+        // still passes — the column is optional. ⚠️ Note this rule also rejects 0, which is the
+        // Oracle column's own DEFAULT; see the DocLife XML doc for why 0 was not added to the
+        // enum and what that means for editing any pre-existing row that carries it.
+        RuleFor(x => x.DocLife)
+            .IsInEnum();
     }
 }

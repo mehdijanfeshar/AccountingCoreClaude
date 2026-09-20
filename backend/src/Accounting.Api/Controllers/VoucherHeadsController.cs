@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common;
 using Accounting.Application.Vouchers.Commands.CreateVoucherHead;
 using Accounting.Application.Vouchers.Commands.DeleteVoucherHead;
@@ -233,7 +234,7 @@ public sealed record DeleteVoucherHeadResponse(Guid Id);
 public sealed record UpdateVoucherHeadRequest(
     string DocNum,
     string DateDoc,
-    bool? DocLife,
+    DocLife? DocLife,
     string? HeadDesc,
     string? Apendix,
     Guid? SystemTypeId,

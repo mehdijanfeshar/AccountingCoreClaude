@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Api.Controllers;
 using Accounting.Application.Common;
 using Accounting.Application.Vouchers.Commands.CreateVoucherHead;
@@ -248,7 +249,7 @@ public sealed class VoucherHeadsControllerTests
     private static UpdateVoucherHeadRequest ValidUpdateRequest() => new(
         DocNum: "000002",
         DateDoc: "14030202",
-        DocLife: true,
+        DocLife: DocLife.Temporary,
         HeadDesc: "سند اصلاحی",
         Apendix: null,
         SystemTypeId: null,

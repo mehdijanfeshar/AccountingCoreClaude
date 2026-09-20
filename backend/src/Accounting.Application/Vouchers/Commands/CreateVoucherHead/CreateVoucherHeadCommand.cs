@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using MediatR;
@@ -16,7 +17,7 @@ namespace Accounting.Application.Vouchers.Commands.CreateVoucherHead;
 /// </summary>
 /// <param name="DocNum">DOC_NUM column — شماره واقعی سند (max 6 chars). Combined with Year/VahedCode must be unique (<c>UK_VOUCHERHEAD_NUMBER</c>).</param>
 /// <param name="DateDoc">DATE_DOC column — تاریخ سند (max 8 chars, legacy string date format).</param>
-/// <param name="DocLife">DOCLIFE column — وضعیت سند.</param>
+/// <param name="DocLife">DOCLIFE column — وضعیت سند (<see cref="Accounting.Domain.ValueObjects.DocLife"/>: 1=یادداشت، 2=موقت، 3=بررسی‌شده، 4=تأیید دائم). ⚠️ Re-typed from <see cref="bool"/>? on ۲۰۲۶-۰۹-۲۰ — a breaking contract change; see that enum's XML doc.</param>
 /// <param name="HeadDesc">HEAD_DESC column — شرح سند (max 250 chars).</param>
 /// <param name="Apendix">APENDIX column — پیوست (max 800 chars).</param>
 /// <param name="SystemTypeId">Optional FK to <c>TB_SYSTYPE</c> — نوع سیستم.</param>
@@ -56,7 +57,7 @@ namespace Accounting.Application.Vouchers.Commands.CreateVoucherHead;
 public sealed record CreateVoucherHeadCommand(
     string DocNum,
     string DateDoc,
-    bool? DocLife,
+    DocLife? DocLife,
     string? HeadDesc,
     string? Apendix,
     Guid? SystemTypeId,

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -23,7 +24,7 @@ public partial class TB_VOUCHERSHEAD
     /// <summary>
     /// وضعيت سند
     /// </summary>
-    public bool? DOCLIFE { get; set; }
+    public DocLife? DOCLIFE { get; set; }
 
     /// <summary>
     /// شرح سند

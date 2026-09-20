@@ -3363,10 +3363,14 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(8)
                 .IsUnicode(false)
                 .HasComment("تاريخ سند");
+            // HasDefaultValueSql("0 ") is deliberately KEPT even though 0 is not a DocLife value:
+            // it describes what Oracle actually does on an omitted insert, and removing it would
+            // change insert behaviour rather than document it. See the enum's XML doc for the
+            // still-unverified question of whether live rows carry that 0.
             entity.Property(e => e.DOCLIFE)
                 .HasDefaultValueSql("0 ")
-                .HasComment("وضعيت سند")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("وضعيت سند — Accounting.Domain.ValueObjects.DocLife (1=Draft,2=Temporary,3=Reviewed,4=Accepted; ordinal — reports filter with >=)")
+                .HasConversion<int?>();
             entity.Property(e => e.DOC_NUM)
                 .HasMaxLength(6)
                 .IsUnicode(false)

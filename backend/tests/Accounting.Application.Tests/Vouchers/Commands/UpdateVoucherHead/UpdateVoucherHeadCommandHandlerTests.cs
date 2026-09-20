@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
@@ -14,7 +15,7 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
         Id: id,
         DocNum: "000002",
         DateDoc: "14030202",
-        DocLife: true,
+        DocLife: DocLife.Temporary,
         HeadDesc: "سند اصلاحی",
         Apendix: "پیوست جدید",
         SystemTypeId: null,

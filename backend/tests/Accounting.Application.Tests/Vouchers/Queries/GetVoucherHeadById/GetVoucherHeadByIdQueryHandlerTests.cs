@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Queries;
 using Accounting.Application.Vouchers.Queries.GetVoucherHeadById;
@@ -11,7 +12,7 @@ public sealed class GetVoucherHeadByIdQueryHandlerTests
         Id: id,
         DocNum: "000001",
         DateDoc: "14050101",
-        DocLife: true,
+        DocLife: DocLife.Temporary,
         HeadDesc: "سند افتتاحیه",
         Apendix: null,
         SystemTypeId: null,

@@ -60,5 +60,16 @@ public sealed class UpdateVoucherHeadCommandValidator : AbstractValidator<Update
 
         RuleFor(x => x.AtfNum)
             .MaximumLength(15);
+
+        // .IsInEnum() only rejects an out-of-range underlying integer (e.g. (DocLife)99). Null
+        // still passes — the column is optional. ⚠️ Note this rule also rejects 0, which is the
+        // Oracle column's own DEFAULT; see the DocLife XML doc for why 0 was not added to the
+        // enum and what that means for editing any pre-existing row that carries it.
+        //
+        // ⚠️ This rule does NOT address the separate open risk that this command lets DOCLIFE be
+        // changed at all: the reference project keeps state transitions in their own
+        // ChangeState command and its update path never touches the column.
+        RuleFor(x => x.DocLife)
+            .IsInEnum();
     }
 }

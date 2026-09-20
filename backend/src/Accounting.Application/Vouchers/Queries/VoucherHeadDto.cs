@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+
 namespace Accounting.Application.Vouchers.Queries;
 
 /// <summary>
@@ -11,7 +13,7 @@ namespace Accounting.Application.Vouchers.Queries;
 /// <param name="Id">ID column — آي دي سند.</param>
 /// <param name="DocNum">DOC_NUM column — شماره واقعی سند.</param>
 /// <param name="DateDoc">DATE_DOC column — تاریخ سند (legacy string date format).</param>
-/// <param name="DocLife">DOCLIFE column — وضعیت سند.</param>
+/// <param name="DocLife">DOCLIFE column — وضعیت سند (<see cref="Accounting.Domain.ValueObjects.DocLife"/>: 1=یادداشت، 2=موقت، 3=بررسی‌شده، 4=تأیید دائم). ⚠️ Re-typed from <see cref="bool"/>? on ۲۰۲۶-۰۹-۲۰ — a breaking contract change; see that enum's XML doc.</param>
 /// <param name="HeadDesc">HEAD_DESC column — شرح سند.</param>
 /// <param name="Apendix">APENDIX column — پیوست.</param>
 /// <param name="SystemTypeId">Optional FK to <c>TB_SYSTYPE</c> — نوع سیستم.</param>
@@ -37,7 +39,7 @@ public sealed record VoucherHeadDto(
     Guid Id,
     string? DocNum,
     string? DateDoc,
-    bool? DocLife,
+    DocLife? DocLife,
     string? HeadDesc,
     string? Apendix,
     Guid? SystemTypeId,

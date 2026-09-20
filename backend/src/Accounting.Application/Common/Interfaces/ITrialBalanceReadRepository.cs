@@ -13,8 +13,12 @@ namespace Accounting.Application.Common.Interfaces;
 ///
 /// This is the one Query in the codebase whose Read side cannot reasonably use plain EF Core LINQ
 /// (see <c>TrialBalanceReadRepository</c> XML doc for why — <c>TB_ACCOUNTCODE.TYPECODE</c> and
-/// <c>TB_VOUCHERSHEAD.DOCLIFE</c> are mapped to <c>bool?</c> but the report needs to compare them
-/// as numbers). It still honours rule #2 in <c>CLAUDE.md</c> ("سمت Read باید از View/Materialized
+/// <c>TB_VOUCHERSHEAD.DOCLIFE</c> were mapped to <c>bool?</c> but the report needs to compare them
+/// as numbers). ⚠️ <b>That original justification has since expired:</b> both columns are real
+/// enums now (phase 25 and ۲۰۲۶-۰۹-۲۰ respectively), so an ordinal <c>&gt;=</c> comparison is
+/// expressible in LINQ today. The raw SQL was deliberately left in place — rewriting a working,
+/// tested report is a separate decision with its own risk — but the reason it exists is no longer
+/// the reason it stays. It still honours rule #2 in <c>CLAUDE.md</c> ("سمت Read باید از View/Materialized
 /// View مجزا بخواند... نه مستقیماً از مدل نوشتن") in spirit as far as this schema allows: it reads
 /// the same base tables the write model uses (there is no View for this yet), exactly like the
 /// pre-existing narrow exception already taken by <c>VoucherHeadReadRepository</c>/
