@@ -1653,11 +1653,11 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.ELAMHDRAMAD_TYPE)
-                .HasComment(" 3حق بيمه نوع اعلاميه 1ذي حسابي 2سايردرآمد")
-                .HasColumnType("NUMBER(1)");
+                .HasComment(" 3حق بيمه نوع اعلاميه 1ذي حسابي 2سايردرآمد — Accounting.Domain.ValueObjects.DaramElamhType (1=PersonalDramadElam,2=ZeeDramadElam,3=OtherDramadElam) ⚠️ labels follow the reference project, NOT this Oracle comment — see the enum's XML doc")
+                .HasConversion<int?>();
             entity.Property(e => e.ELAMH_CASE)
-                .HasComment("نوع اعلاميه 1بد     2بس")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("نوع اعلاميه 1بد     2بس — Accounting.Domain.ValueObjects.ElamCase (1=Debtor,2=Creditor)")
+                .HasConversion<int?>();
             entity.Property(e => e.ELAMH_CODE)
                 .HasMaxLength(6)
                 .IsUnicode(false);

@@ -5,6 +5,7 @@ using Accounting.Application.ElamHeads.Commands.UpdateElamHead;
 using Accounting.Application.ElamHeads.Queries;
 using Accounting.Application.ElamHeads.Queries.GetElamHeadById;
 using Accounting.Application.ElamHeads.Queries.GetElamHeads;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -56,13 +57,13 @@ namespace Accounting.Api.Controllers;
 /// either are written silently; the 400 above does NOT cover them. See
 /// <see cref="CreateElamHeadCommand"/> XML doc.
 ///
-/// ⚠️⚠️ <b>Two confirmed <c>bool?</c>-should-be-enum columns, flagged not fixed</b>:
-/// <c>Case</c> (<c>ELAMH_CASE</c> — real values 1/2, comment «نوع اعلاميه 1بد 2بس») and
-/// <c>DramadType</c> (<c>ELAMHDRAMAD_TYPE</c> — real values 1/2/3, comment
-/// « 3حق بيمه نوع اعلاميه 1ذي حسابي 2سايردرآمد», the third value unreachable through
-/// <see cref="bool"/>?). See <see cref="CreateElamHeadCommand"/> XML doc for the full
-/// phase-12-pattern write-up. Re-typing either is a breaking API-contract change and out of
-/// scope for this batch.
+/// ⚠️⚠️ <b>Breaking contract change on ۲۰۲۶-۰۹-۲۰:</b> the two <c>bool?</c>-should-be-enum
+/// columns were re-typed and now travel as <b>integers</b>, not booleans — <c>Case</c>
+/// (<c>ELAMH_CASE</c> → <c>ElamCase</c>, 1=بدهکار / 2=بستانکار) and <c>DramadType</c>
+/// (<c>ELAMHDRAMAD_TYPE</c> → <c>DaramElamhType</c>, three values, the third of which was
+/// previously unreachable through this API at all). A caller still sending <c>true</c>/
+/// <c>false</c> now gets a 400. See <see cref="CreateElamHeadCommand"/> XML doc for the
+/// evidence behind each, including the unresolved label ordering on <c>DramadType</c>.
 /// </summary>
 [ApiController]
 [Route("api/elam-heads")]
@@ -238,7 +239,7 @@ public sealed record UpdateElamHeadRequest(
     string? DabirNo,
     string? DabirDate,
     short? PrintNo,
-    bool? Case,
+    ElamCase? Case,
     string? SerialNoInput,
     byte? WebStat,
     string? Date,
@@ -248,7 +249,7 @@ public sealed record UpdateElamHeadRequest(
     string? RcvDt,
     string? LstMon,
     string? PayNo,
-    bool? DramadType,
+    DaramElamhType? DramadType,
     string? PeimanNo,
     string? WorkShopCode,
     string? WorkShopName,

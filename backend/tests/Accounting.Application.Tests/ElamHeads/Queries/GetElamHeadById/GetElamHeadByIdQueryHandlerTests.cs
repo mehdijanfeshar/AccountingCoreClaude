@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.ElamHeads.Queries;
 using Accounting.Application.ElamHeads.Queries.GetElamHeadById;
 using Accounting.Application.Common.Interfaces;
@@ -15,7 +16,7 @@ public sealed class GetElamHeadByIdQueryHandlerTests
         DabirNo: null,
         DabirDate: null,
         PrintNo: null,
-        Case: true,
+        Case: ElamCase.Debtor,
         SerialNoInput: null,
         WebStat: 2,
         Date: null,
@@ -25,7 +26,7 @@ public sealed class GetElamHeadByIdQueryHandlerTests
         RcvDt: null,
         LstMon: null,
         PayNo: null,
-        DramadType: false,
+        DramadType: DaramElamhType.ZeeDramadElam,
         PeimanNo: null,
         WorkShopCode: null,
         WorkShopName: null,

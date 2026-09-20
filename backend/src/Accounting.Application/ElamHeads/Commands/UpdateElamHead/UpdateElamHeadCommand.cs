@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.ElamHeads.Commands.UpdateElamHead;
@@ -17,9 +18,10 @@ namespace Accounting.Application.ElamHeads.Commands.UpdateElamHead;
 /// never from client input.
 ///
 /// ⚠️ HEAD ONLY — see <c>CreateElamHeadCommand</c> XML doc for the full explanation of the two
-/// unverified <see cref="bool"/>?-should-be-enum columns (<c>Case</c>, <c>DramadType</c>) and
-/// the two FK-less columns (<c>WorkShopId</c>, <c>ElamSenderId</c>), all of which apply
-/// identically here.
+/// now-enum columns (<c>Case</c> → <see cref="ElamCase"/>, <c>DramadType</c> →
+/// <see cref="DaramElamhType"/>, both converted ۲۰۲۶-۰۹-۲۰ — a breaking contract change) and the
+/// two FK-less columns (<c>WorkShopId</c>, <c>ElamSenderId</c>), all of which apply identically
+/// here.
 ///
 /// ⚠️ <b>Scope note:</b> <see cref="IVahedScopedCommand"/> here only guarantees that
 /// <c>VAHEDCODE</c> cannot be *changed* to an arbitrary unit by the caller. It does
@@ -34,7 +36,7 @@ namespace Accounting.Application.ElamHeads.Commands.UpdateElamHead;
 /// <param name="DabirNo">ELAMH_DABIRNO column (optional, max 10 chars).</param>
 /// <param name="DabirDate">ELAMH_DABIRDATE column (optional, max 8 chars).</param>
 /// <param name="PrintNo">ELAMH_PRINTNO column (optional, <see cref="short"/>).</param>
-/// <param name="Case">ELAMH_CASE column (optional <see cref="bool"/>) — see <c>CreateElamHeadCommand</c> XML doc for the unverified-enum flag.</param>
+/// <param name="Case">ELAMH_CASE column (optional <see cref="ElamCase"/> — 1=بدهکار، 2=بستانکار).</param>
 /// <param name="SerialNoInput">SERIALNO_INPUT column (optional, max 6 chars).</param>
 /// <param name="WebStat">WEB_STAT column (optional <see cref="byte"/>).</param>
 /// <param name="Date">ELAMH_DATE column (optional, max 8 chars).</param>
@@ -44,7 +46,7 @@ namespace Accounting.Application.ElamHeads.Commands.UpdateElamHead;
 /// <param name="RcvDt">ELAMH_RCVDT column (optional, max 8 chars).</param>
 /// <param name="LstMon">ELAMH_LSTMON column (optional, max 2 chars).</param>
 /// <param name="PayNo">PAY_NO column (optional, max 15 chars).</param>
-/// <param name="DramadType">ELAMHDRAMAD_TYPE column (optional <see cref="bool"/>) — see <c>CreateElamHeadCommand</c> XML doc for the unverified-enum flag (three real values, only two reachable).</param>
+/// <param name="DramadType">ELAMHDRAMAD_TYPE column (optional <see cref="DaramElamhType"/> — three values; ⚠️ label ordering follows the reference project, see <c>CreateElamHeadCommand</c> XML doc).</param>
 /// <param name="PeimanNo">PEIMAN_NO column (optional, max 12 chars).</param>
 /// <param name="WorkShopCode">ELAMH_WORKSHOPCODE column (optional, max 10 chars).</param>
 /// <param name="WorkShopName">ELAMH_WORKSHOPNAME column (optional, max 100 chars).</param>
@@ -60,7 +62,7 @@ public sealed record UpdateElamHeadCommand(
     string? DabirNo,
     string? DabirDate,
     short? PrintNo,
-    bool? Case,
+    ElamCase? Case,
     string? SerialNoInput,
     byte? WebStat,
     string? Date,
@@ -70,7 +72,7 @@ public sealed record UpdateElamHeadCommand(
     string? RcvDt,
     string? LstMon,
     string? PayNo,
-    bool? DramadType,
+    DaramElamhType? DramadType,
     string? PeimanNo,
     string? WorkShopCode,
     string? WorkShopName,

@@ -80,5 +80,14 @@ public sealed class UpdateElamHeadCommandValidator : AbstractValidator<UpdateEla
 
         RuleFor(x => x.Year)
             .MaximumLength(4);
+
+        // .IsInEnum() only rejects an out-of-range underlying integer (e.g. (ElamCase)99); it says
+        // nothing about whether the stored Legacy value is meaningful. Nullable properties pass
+        // when null, so "not supplied" stays valid — same shape as the phase 27 batches.
+        RuleFor(x => x.Case)
+            .IsInEnum();
+
+        RuleFor(x => x.DramadType)
+            .IsInEnum();
     }
 }
