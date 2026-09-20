@@ -9,6 +9,16 @@ namespace Accounting.Application.AttribForAccountCodes.Queries;
 /// </summary>
 /// <param name="Id">ID column.</param>
 /// <param name="AccountCodeId">ACCOUNTCODE_ID column — link to <c>TB_ACCOUNTCODE</c> (<c>FK_ATTRIBFO_ACCOUNTCODE</c>).</param>
+/// <param name="MoinCode">
+/// <c>ACCCODE</c> of the linked account, projected through the required <c>ACCOUNTCODE</c>
+/// navigation. Denormalized on purpose: the list this DTO feeds is "حساب‌های شناسه‌دار", so the
+/// معین is its defining column — returning only the opaque <see cref="Guid"/> forced the client
+/// into an N+1 lookup just to render a row. Nullable because <c>TB_ACCOUNTCODE.ACCCODE</c> is
+/// itself nullable in Legacy, not because the link can be missing (the FK is required).
+/// </param>
+/// <param name="MoinName">
+/// <c>ACCCODENAME</c> of the linked account — same rationale as <paramref name="MoinCode"/>.
+/// </param>
 /// <param name="AttribBoxNo">
 /// ATTRIBBOXNO column (<c>NUMBER(1)</c>) — plain <see cref="short"/> (NOT an enum), resolved in
 /// phase 27 batch 2 from an incorrect non-nullable <c>bool</c>; see
@@ -39,6 +49,8 @@ namespace Accounting.Application.AttribForAccountCodes.Queries;
 public sealed record AttribForAccountCodeDto(
     Guid Id,
     Guid AccountCodeId,
+    string? MoinCode,
+    string? MoinName,
     short AttribBoxNo,
     AttribFlag Flag,
     byte LenAtr,

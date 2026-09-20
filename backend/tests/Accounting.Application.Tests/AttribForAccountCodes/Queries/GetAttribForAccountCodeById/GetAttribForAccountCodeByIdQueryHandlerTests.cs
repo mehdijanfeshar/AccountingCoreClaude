@@ -1,3 +1,4 @@
+using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
 using Accounting.Application.AttribForAccountCodes.Queries;
 using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodeById;
 using Accounting.Application.Common.Interfaces;
@@ -11,6 +12,8 @@ public sealed class GetAttribForAccountCodeByIdQueryHandlerTests
     private static AttribForAccountCodeDto SampleDto(Guid id) => new(
         Id: id,
         AccountCodeId: Guid.NewGuid(),
+        MoinCode: "110101",
+        MoinName: "حساب معین تستی",
         AttribBoxNo: 3,
         Flag: AttribFlag.Date,
         LenAtr: 4,

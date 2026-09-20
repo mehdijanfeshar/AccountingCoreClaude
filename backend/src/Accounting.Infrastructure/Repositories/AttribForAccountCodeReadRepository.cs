@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Accounting.Application.AttribForAccountCodes.Queries;
+using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
@@ -25,6 +26,11 @@ public sealed class AttribForAccountCodeReadRepository : IAttribForAccountCodeRe
     private static readonly Expression<Func<TB_ATTRIBFORACCOUNTCODE, AttribForAccountCodeDto>> ToDto = a => new AttribForAccountCodeDto(
         a.ID,
         a.ACCOUNTCODE_ID,
+        // Projected through the required ACCOUNTCODE navigation, so EF emits a single JOIN rather
+        // than a second round trip per row. Deliberately NOT ".Include(a => a.ACCOUNTCODE)": that
+        // would materialize the whole account entity; this stays a column-level projection.
+        a.ACCOUNTCODE.ACCCODE,
+        a.ACCOUNTCODE.ACCCODENAME,
         a.ATTRIBBOXNO,
         a.FLAG,
         a.LENATR,
@@ -49,6 +55,7 @@ public sealed class AttribForAccountCodeReadRepository : IAttribForAccountCodeRe
         int pageNumber,
         int pageSize,
         string vahedCode,
+        AttribForAccountCodeFilter? filter = null,
         CancellationToken cancellationToken = default)
     {
         // VahedCode filter: deliberately unconditional — no "if (!string.IsNullOrEmpty(vahedCode))"
@@ -65,13 +72,56 @@ public sealed class AttribForAccountCodeReadRepository : IAttribForAccountCodeRe
             .AsNoTracking()
             .Where(a => a.ISDELETED != true && a.VAHEDCODE == vahedCode);
 
+        if (filter is not null)
+        {
+            // Each filter is opt-in: a null/blank value means "do not narrow", never "match
+            // nothing". Note this is the opposite of the VAHEDCODE guard above — narrowing
+            // filters are safe to skip, a security scope is not.
+            if (!string.IsNullOrWhiteSpace(filter.Year))
+            {
+                query = query.Where(a => a.YEAR == filter.Year);
+            }
+
+            if (filter.AttribSum is not null)
+            {
+                query = query.Where(a => a.ATTRIBSUM == filter.AttribSum);
+            }
+
+            if (filter.Flag is not null)
+            {
+                query = query.Where(a => a.FLAG == filter.Flag);
+            }
+
+            // Plain lexicographic range, deliberately: a معین ACCCODE is always exactly 6 digits
+            // (see AttribForAccountCodeFilter XML doc), so unlike the voucher list's DOC_NUM range
+            // no length comparison is needed. Rows whose account is a group (2 digits) or kol
+            // (4 digits) simply fall outside any 6-digit bound, which is the desired behaviour for
+            // a list that is about معین accounts.
+            if (!string.IsNullOrWhiteSpace(filter.MoinCodeFrom))
+            {
+                query = query.Where(a =>
+                    a.ACCOUNTCODE.ACCCODE != null
+                    && string.Compare(a.ACCOUNTCODE.ACCCODE, filter.MoinCodeFrom) >= 0);
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.MoinCodeTo))
+            {
+                query = query.Where(a =>
+                    a.ACCOUNTCODE.ACCCODE != null
+                    && string.Compare(a.ACCOUNTCODE.ACCCODE, filter.MoinCodeTo) <= 0);
+            }
+        }
+
         var totalCount = await query.CountAsync(cancellationToken);
 
         var items = await query
-            // VAHEDCODE/YEAR participate in AK_AK_ATTRIBFORMAINCO_ATTRIBFO alongside
-            // ACCOUNTCODE_ID but neither is itself unique, so rows are ordered by VAHEDCODE then
-            // YEAR (both string columns) with ID as a pure tie-breaker for stable paging.
-            .OrderBy(a => a.VAHEDCODE)
+            // Ordered by the معین code first: this list is "حساب‌های شناسه‌دار", so that is the
+            // column a user scans, and it makes the from/to range filter above read naturally.
+            // VAHEDCODE is no longer part of the ordering because every row in this result already
+            // shares the caller's own unit (see the scope filter above), so it could only ever
+            // have been a constant. YEAR then ID remain, the latter as a pure tie-breaker for
+            // stable paging — ACCCODE is unique (UK_ACCOUNTCODE) but the attrib row is not.
+            .OrderBy(a => a.ACCOUNTCODE.ACCCODE)
             .ThenBy(a => a.YEAR)
             .ThenBy(a => a.ID)
             .Skip((pageNumber - 1) * pageSize)
