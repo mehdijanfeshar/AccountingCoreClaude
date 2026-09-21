@@ -17,5 +17,5 @@ public sealed class GetPersonActionByIdQueryHandler : IRequestHandler<GetPersonA
     }
 
     public Task<PersonActionDto?> Handle(GetPersonActionByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

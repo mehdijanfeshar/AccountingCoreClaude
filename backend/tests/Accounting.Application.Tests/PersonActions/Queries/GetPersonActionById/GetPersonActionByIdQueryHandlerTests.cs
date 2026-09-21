@@ -16,7 +16,7 @@ public sealed class GetPersonActionByIdQueryHandlerTests
         ToDate: "14031231",
         Status: true,
         OperatorRole: OperatorRole.JaneshinOmorMali,
-        VahedCode: "0100",
+        VahedCode: "0042",
         CreatedDate: DateTime.UtcNow,
         UpdatedDate: null,
         AddUserId: "user1",
@@ -30,7 +30,7 @@ public sealed class GetPersonActionByIdQueryHandlerTests
         var expected = SampleDto(id);
         var readRepository = new Mock<IPersonActionReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetPersonActionByIdQueryHandler(readRepository.Object);
@@ -46,7 +46,7 @@ public sealed class GetPersonActionByIdQueryHandlerTests
         var id = Guid.NewGuid();
         var readRepository = new Mock<IPersonActionReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((PersonActionDto?)null);
 
         var handler = new GetPersonActionByIdQueryHandler(readRepository.Object);
@@ -64,14 +64,14 @@ public sealed class GetPersonActionByIdQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetByIdAsync(id, token))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), token))
             .ReturnsAsync((PersonActionDto?)null);
 
         var handler = new GetPersonActionByIdQueryHandler(readRepository.Object);
 
         await handler.Handle(new GetPersonActionByIdQuery(id), token);
 
-        readRepository.Verify(r => r.GetByIdAsync(id, token), Times.Once);
+        readRepository.Verify(r => r.GetByIdAsync(id, It.IsAny<string>(), token), Times.Once);
     }
 
     [Fact]

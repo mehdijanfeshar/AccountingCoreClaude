@@ -27,24 +27,25 @@ namespace Accounting.Application.Tests.Common.Security;
 /// <c>TB_WHITEANDBLACKLIST</c>). There is nothing to scope — implementing
 /// <see cref="IVahedScoped"/> would require inventing a column that does not exist. This group is
 /// permanent; it only changes if one of these tables ever gains a <c>VAHEDCODE</c> column.</description></item>
-/// <item><description><b>Group B — exempted by explicit project-owner decision</b> (2 entities):
-/// <list type="bullet">
-/// <item><description><c>VahedInfo</c> (<c>TB_VAHED_INFO</c>) — this table IS the organizational
-/// unit reference table itself. Forcing Create to overwrite <c>VahedCode</c> with the caller's own
-/// unit would make it impossible to ever create a NEW unit (and would immediately collide with the
-/// UNIQUE constraint <c>UK_VAHEDINFO</c> the moment a second row was attempted); forcing the list
-/// Query to filter by the caller's unit would make it impossible for any UI to populate a unit
-/// picker or resolve <c>ParentId</c>. Permanent admin/global-table exemption.</description></item>
-/// <item><description><c>PersonAction</c> (<c>TB_PERSON_ACTION</c>) — ⚠️ <b>TEMPORARY, pending a
-/// project-owner decision.</b> The owner wants this entity scoped by <c>VahedType</c> rather than
-/// <c>VahedCode</c>, but <c>TB_PERSON_ACTION</c> has been verified (both the Domain entity and the
-/// Fluent mapping in <c>LegacyDbContext.cs</c>) to have NO <c>VAHEDTYPE_ID</c> column at all. There
-/// is currently no column to scope by, of either kind, so this is left unscoped rather than
-/// guessing a mechanism. <b>Whoever resolves that open decision must revisit this exemption</b> —
-/// either remove it (if a scoping column is added) or replace it with a durable comment explaining
-/// why <c>PersonAction</c> stays permanently unscoped.</description></item>
-/// </list></description></item>
+/// <item><description><b>Group B — exempted by explicit project-owner decision</b> (1 entity):
+/// <c>VahedInfo</c> (<c>TB_VAHED_INFO</c>) — this table IS the organizational unit reference table
+/// itself. Forcing Create to overwrite <c>VahedCode</c> with the caller's own unit would make it
+/// impossible to ever create a NEW unit (and would immediately collide with the UNIQUE constraint
+/// <c>UK_VAHEDINFO</c> the moment a second row was attempted); forcing the list Query to filter by
+/// the caller's unit would make it impossible for any UI to populate a unit picker or resolve
+/// <c>ParentId</c>. Permanent admin/global-table exemption.</description></item>
 /// </list>
+///
+/// <para>
+/// <b><c>PersonAction</c> left Group B on 2026-09-21 and is now scoped like everything else.</b>
+/// It had sat there because the owner wanted it scoped by <c>VahedType</c> rather than
+/// <c>VahedCode</c>, and <c>TB_PERSON_ACTION</c> has no <c>VAHEDTYPE_ID</c> column — verified
+/// twice, in the Domain entity and in the Fluent mapping. Rather than invent a column, the
+/// question went back to the owner, who answered: use the unit code the logged-in user carries.
+/// That closes open risk #1-ب, which was the one risk in the register that got <i>worse</i> with
+/// time — every row planted today with a forged unit would have become a real permission the day
+/// RBAC started reading this table.
+/// </para>
 ///
 /// If a future entity gains an actual <c>VAHEDCODE</c> column and its Create/Update
 /// command/list-Query is NOT added to either group and does NOT implement <see cref="IVahedScoped"/>,
@@ -101,9 +102,6 @@ public sealed class VahedScopeConventionTests
         // TB_VAHED_INFO — permanent admin/global-table exemption.
         "CreateVahedInfoCommand",
         "UpdateVahedInfoCommand",
-        // TB_PERSON_ACTION — TEMPORARY, pending project-owner decision (no VAHEDTYPE_ID column exists).
-        "CreatePersonActionCommand",
-        "UpdatePersonActionCommand",
     };
 
     /// <summary>Group A, applied to list Queries instead of commands (same 8 entities).</summary>
@@ -123,7 +121,6 @@ public sealed class VahedScopeConventionTests
     private static readonly HashSet<string> ProjectOwnerDecisionExemptQueries = new(StringComparer.Ordinal)
     {
         "GetVahedInfosQuery",
-        "GetPersonActionsQuery",
     };
 
     private static IEnumerable<Type> ConcreteApplicationTypes =>
@@ -372,7 +369,6 @@ public sealed class VahedScopeConventionTests
         "DeleteAccountExceptionCommand",
         "DeleteAttribForAccountCodeCommand",
         "DeleteLevelTafsilCommand",
-        "DeletePersonActionCommand",
         "DeleteRabetCommand",
         "DeleteTafsilGroupCommand",
         "DeleteWhiteAndBlackListCommand",
@@ -382,7 +378,6 @@ public sealed class VahedScopeConventionTests
         "GetAccountExceptionByIdQuery",
         "GetAttribForAccountCodeByIdQuery",
         "GetLevelTafsilByIdQuery",
-        "GetPersonActionByIdQuery",
         "GetRabetByIdQuery",
         "GetTafsilGroupByIdQuery",
         "GetVahedInfoByIdQuery",

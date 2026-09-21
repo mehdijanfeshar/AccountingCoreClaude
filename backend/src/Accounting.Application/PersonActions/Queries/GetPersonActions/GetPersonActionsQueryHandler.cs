@@ -18,5 +18,5 @@ public sealed class GetPersonActionsQueryHandler : IRequestHandler<GetPersonActi
     }
 
     public Task<PagedResult<PersonActionDto>> Handle(GetPersonActionsQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, cancellationToken);
+        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, request.VahedCode, cancellationToken);
 }

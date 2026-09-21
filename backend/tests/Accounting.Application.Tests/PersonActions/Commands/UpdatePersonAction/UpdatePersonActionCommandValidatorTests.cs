@@ -14,8 +14,7 @@ public sealed class UpdatePersonActionCommandValidatorTests
         FromDate: "14030101",
         ToDate: "14031231",
         Status: true,
-        OperatorRole: OperatorRole.MasolOmorMali,
-        VahedCode: "0100");
+        OperatorRole: OperatorRole.MasolOmorMali);
 
     [Fact]
     public void Validate_ValidCommand_Passes()

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using Accounting.Domain.ValueObjects;
 using MediatR;
 
@@ -30,5 +32,14 @@ public sealed record UpdatePersonActionCommand(
     string? FromDate,
     string? ToDate,
     bool? Status,
-    OperatorRole OperatorRole,
-    string? VahedCode) : IRequest;
+    OperatorRole OperatorRole) : IRequest, IVahedScopedCommand
+{
+    /// <summary>
+    /// VAHEDCODE column, server-assigned by <c>VahedScopeBehavior</c> from the authenticated
+    /// caller - see <c>CreatePersonActionCommand.VahedCode</c> for why it is no longer a
+    /// constructor parameter. On update it matters twice over: it both stops a caller moving an
+    /// existing row into another unit, and is the value the ownership guard compares against.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

@@ -122,8 +122,7 @@ public sealed class PersonActionsController : ControllerBase
             request.FromDate,
             request.ToDate,
             request.Status,
-            request.OperatorRole,
-            request.VahedCode);
+            request.OperatorRole);
 
         await _mediator.Send(command, cancellationToken);
 
@@ -173,11 +172,16 @@ public sealed record DeletePersonActionResponse(Guid Id);
 /// <see cref="UpdatePersonActionCommand"/> except <c>Id</c>, which is bound from the route
 /// instead.
 /// </summary>
+/// <remarks>
+/// No VahedCode here, deliberately. It used to be a field of this request, which meant the
+/// caller chose which unit the row belonged to; from 2026-09-21 the server assigns it from the
+/// authenticated user. Removing it from the request type is what makes that unforgeable rather
+/// than merely discouraged.
+/// </remarks>
 public sealed record UpdatePersonActionRequest(
     string? UserName,
     string UserId,
     string? FromDate,
     string? ToDate,
     bool? Status,
-    OperatorRole OperatorRole,
-    string? VahedCode);
+    OperatorRole OperatorRole);
