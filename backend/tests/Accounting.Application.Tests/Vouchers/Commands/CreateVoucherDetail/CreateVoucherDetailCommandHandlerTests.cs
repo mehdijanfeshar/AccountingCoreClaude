@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.Vouchers.Commands.Common;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
@@ -59,7 +60,8 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
         var command = ValidCommand(headId);
 
         var result = await handler.Handle(command, CancellationToken.None);
@@ -93,7 +95,8 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => handler.Handle(ValidCommand(headId), CancellationToken.None));
@@ -112,7 +115,8 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => handler.Handle(ValidCommand(headId), CancellationToken.None));
@@ -136,7 +140,8 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("srvusr01");
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(headId), CancellationToken.None);
 
@@ -164,7 +169,8 @@ public sealed class CreateVoucherDetailCommandHandlerTests
             .Callback(() => callOrder.Add("SaveChangesAsync"))
             .ReturnsAsync(1);
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(headId), CancellationToken.None);
 
@@ -186,7 +192,8 @@ public sealed class CreateVoucherDetailCommandHandlerTests
 
         headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), token)).ReturnsAsync(ExistingHead(headId));
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(headId), token);
 
@@ -213,7 +220,8 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
         var command = ValidCommand(headId) with { VahedCode = "0009" };
 
         await handler.Handle(command, CancellationToken.None);
@@ -242,7 +250,8 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         var currentUser = CurrentUserMock();
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
         var behavior = new VahedScopeBehavior<CreateVoucherDetailCommand, Guid>(currentUser.Object);
         var forgedCommand = ValidCommand(headId) with { VahedCode = "9999" };
 

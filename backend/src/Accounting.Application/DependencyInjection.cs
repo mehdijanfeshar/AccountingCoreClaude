@@ -1,6 +1,7 @@
 using System.Reflection;
 using Accounting.Application.Accounts.Commands.Common;
 using Accounting.Application.Common.Behaviors;
+using Accounting.Application.Vouchers.Commands.Common;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,6 +52,11 @@ public static class DependencyInjection
         // by the three «ارتباط معین با گروه تفصیلی» handlers, which keeps TB_ACCOUNT_LINK_LEVEL in
         // step with TB_ACCOUNT_LINK_TAFSILGROUP. Scoped, so it joins the caller's unit of work.
         services.AddScoped<AccountLevelLinkSynchronizer>();
+
+        // Scoped, not transient, on purpose: it memoises the per-معین level lookup for the
+        // lifetime of one request, which is what keeps a composite create with many lines from
+        // issuing one database read per line.
+        services.AddScoped<IVoucherTafsiliLevelGuard, VoucherTafsiliLevelGuard>();
 
         return services;
     }

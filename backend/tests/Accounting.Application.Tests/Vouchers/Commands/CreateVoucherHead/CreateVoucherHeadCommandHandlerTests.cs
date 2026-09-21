@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.Vouchers.Commands.Common;
 using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
@@ -47,7 +48,8 @@ public sealed class CreateVoucherHeadCommandHandlerTests
             .Callback<TB_VOUCHERSHEAD, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
         var command = ValidCommand();
 
         await handler.Handle(command, CancellationToken.None);
@@ -82,7 +84,8 @@ public sealed class CreateVoucherHeadCommandHandlerTests
             .Callback<TB_VOUCHERSHEAD, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -104,7 +107,8 @@ public sealed class CreateVoucherHeadCommandHandlerTests
             .Callback<TB_VOUCHERSHEAD, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -126,7 +130,8 @@ public sealed class CreateVoucherHeadCommandHandlerTests
             .Callback<TB_VOUCHERSHEAD, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -143,7 +148,8 @@ public sealed class CreateVoucherHeadCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -171,7 +177,8 @@ public sealed class CreateVoucherHeadCommandHandlerTests
             .Callback(() => callOrder.Add("SaveChangesAsync"))
             .ReturnsAsync(1);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -188,7 +195,8 @@ public sealed class CreateVoucherHeadCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(), token);
 
@@ -212,7 +220,8 @@ public sealed class CreateVoucherHeadCommandHandlerTests
             .Callback<TB_VOUCHERSHEAD, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
         var command = ValidCommand() with { VahedCode = "0009" };
 
         await handler.Handle(command, CancellationToken.None);
@@ -241,7 +250,8 @@ public sealed class CreateVoucherHeadCommandHandlerTests
             .Callback<TB_VOUCHERSHEAD, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
         var behavior = new VahedScopeBehavior<CreateVoucherHeadCommand, Guid>(currentUser.Object);
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 

@@ -86,6 +86,18 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Bad Request",
                     "One or more referenced records do not exist.")),
 
+            // The only mapping here that returns a per-exception detail rather than a fixed
+            // string. That is deliberate and safe: what it carries is a تفصیلی level's business
+            // name, which the caller already sees on the form — not a Legacy table, column or
+            // constraint name. See TafsiliLevelRuleException for the reasoning.
+            TafsiliLevelRuleException tafsiliLevelRuleException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    tafsiliLevelRuleException.PublicDetail)),
+
             NotFoundException => (
                 StatusCodes.Status404NotFound,
                 BuildProblemDetails(

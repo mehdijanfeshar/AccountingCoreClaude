@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.Vouchers.Commands.Common;
 using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
@@ -95,7 +96,8 @@ public sealed class CreateVoucherHeadCommandHandlerInitialDetailsTests
             HeadRepository.Object,
             DetailRepository.Object,
             UnitOfWork.Object,
-            CurrentUser.Object);
+            CurrentUser.Object,
+            TafsiliLevelGuards.Permissive());
     }
 
     [Fact]

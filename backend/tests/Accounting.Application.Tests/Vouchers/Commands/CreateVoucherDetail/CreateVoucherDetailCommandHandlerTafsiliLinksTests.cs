@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.Vouchers.Commands.Common;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.Common;
@@ -98,7 +99,8 @@ public sealed class CreateVoucherDetailCommandHandlerTafsiliLinksTests
         currentUser.SetupGet(u => u.UserId).Returns(userId);
 
         var handler = new CreateVoucherDetailCommandHandler(
-            headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+            headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         return new Harness(handler, detailRepository, unitOfWork, stagedDetails, stagedLinks, callOrder);
     }
@@ -311,7 +313,8 @@ public sealed class CreateVoucherDetailCommandHandlerTafsiliLinksTests
         unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         var handler = new CreateVoucherDetailCommandHandler(
-            headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+            headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
         var behavior = new VahedScopeBehavior<CreateVoucherDetailCommand, Guid>(currentUser.Object);
         var forgedCommand = CommandWithLinks(headId, new[]
         {
