@@ -42,6 +42,25 @@ public sealed class VoucherDetailReadRepositoryTafsiliLinkTests : IDisposable
         );
         """;
 
+    private const string CreateTafsiliTableSql = """
+        CREATE TABLE TB_TAFSILI (
+            ID TEXT PRIMARY KEY,
+            TAFSILI_CODE TEXT,
+            TAFSILI_NAME TEXT,
+            CREATEDDATE TEXT NOT NULL,
+            UPDATEDDATE TEXT,
+            ADDUSERID TEXT,
+            CHANGEUSERID TEXT,
+            VAHEDCODE TEXT,
+            ISDELETED INTEGER,
+            TAFSIL_DESC TEXT,
+            ISACTIVE INTEGER,
+            PERSONTYPE INTEGER,
+            OWNER INTEGER,
+            VAHEDTYPE INTEGER
+        );
+        """;
+
     private const string CreateLinkTableSql = """
         CREATE TABLE TB_VOUCHERDETAIL_LINK_TAFSILI (
             ID TEXT PRIMARY KEY,
@@ -72,6 +91,7 @@ public sealed class VoucherDetailReadRepositoryTafsiliLinkTests : IDisposable
         using var setup = CreateContext();
         setup.Database.ExecuteSqlRaw(CreateVoucherDetailTableSql);
         setup.Database.ExecuteSqlRaw(CreateLinkTableSql);
+        setup.Database.ExecuteSqlRaw(CreateTafsiliTableSql);
     }
 
     public void Dispose() => _connection.Dispose();
@@ -113,19 +133,59 @@ public sealed class VoucherDetailReadRepositoryTafsiliLinkTests : IDisposable
         await context.SaveChangesAsync();
     }
 
-    [Fact]
-    public async Task GetByIdAsync_ReturnsActiveLinks()
+    private static TB_TAFSILI Tafsili(Guid id, string code, string name) => new()
     {
-        var tafsili = Guid.NewGuid();
+        ID = id,
+        TAFSILI_CODE = code,
+        TAFSILI_NAME = name,
+        CREATEDDATE = new DateTime(2019, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+        ADDUSERID = "seed",
+        ISDELETED = false,
+        VAHEDCODE = Unit,
+    };
+
+    [Fact]
+    public async Task GetByIdAsync_ReturnsActiveLinks_WithTheTafsiliName()
+    {
+        // The chain the form depends on end to end:
+        // TB_VOUCHERSDETAIL → TB_VOUCHERDETAIL_LINK_TAFSILI → TB_TAFSILI.
+        var tafsiliId = Guid.NewGuid();
         var level = Guid.NewGuid();
-        await SeedAsync(Detail(DetailId), Link(DetailId, tafsili, level));
+        await SeedAsync(
+            Detail(DetailId),
+            Tafsili(tafsiliId, "1023", "شعبهٔ مرکزی"),
+            Link(DetailId, tafsiliId, level));
 
         await using var context = CreateContext();
         var dto = await new VoucherDetailReadRepository(context).GetByIdAsync(DetailId, Unit);
 
         var link = Assert.Single(dto!.TafsiliLinks);
-        Assert.Equal(tafsili, link.TafsiliId);
+        Assert.Equal(tafsiliId, link.TafsiliId);
         Assert.Equal(level, link.LevelId);
+        Assert.Equal("1023", link.TafsiliCode);
+        Assert.Equal("شعبهٔ مرکزی", link.TafsiliName);
+        // Same composition as the تفصیلی lookup, so an existing assignment and a freshly picked
+        // one look identical in the same control.
+        Assert.Equal("1023 - شعبهٔ مرکزی", link.Label);
+    }
+
+    [Fact]
+    public async Task ALinkPointingAtNothing_StillSurfaces_WithNoName()
+    {
+        // TAFSILI_ID has no foreign key, so this row is possible. An inner join would make the
+        // assignment disappear from the edit form while the link is still in the database — and
+        // the form would then save the line back without it. Surfacing it nameless is the answer
+        // that lets someone notice.
+        var dangling = Guid.NewGuid();
+        await SeedAsync(Detail(DetailId), Link(DetailId, dangling, Guid.NewGuid()));
+
+        await using var context = CreateContext();
+        var dto = await new VoucherDetailReadRepository(context).GetByIdAsync(DetailId, Unit);
+
+        var link = Assert.Single(dto!.TafsiliLinks);
+        Assert.Equal(dangling, link.TafsiliId);
+        Assert.Null(link.TafsiliCode);
+        Assert.Null(link.TafsiliName);
     }
 
     [Fact]

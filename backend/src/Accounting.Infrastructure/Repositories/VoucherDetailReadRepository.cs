@@ -24,7 +24,7 @@ public sealed class VoucherDetailReadRepository : IVoucherDetailReadRepository
     /// <see cref="Expression"/> (not a compiled delegate/method call), EF Core can translate it
     /// into a column-level SQL projection instead of loading the full entity.
     /// </summary>
-    private static readonly Expression<Func<TB_VOUCHERSDETAIL, VoucherDetailDto>> ToDto = d => new VoucherDetailDto(
+    private Expression<Func<TB_VOUCHERSDETAIL, VoucherDetailDto>> ToDto => d => new VoucherDetailDto(
         d.ID,
         d.VOUCHERSHEAD_ID,
         d.ACCOUNT_ID,
@@ -43,13 +43,28 @@ public sealed class VoucherDetailReadRepository : IVoucherDetailReadRepository
         d.VAHEDCODE,
         d.YEAR,
         d.ISDELETED,
-        // A correlated sub-projection, not an Include: EF translates this into a second SQL
-        // statement per query (not per row), and the result still materialises straight into the
-        // DTO without the entity ever being tracked. ISDELETED is non-nullable on the link table,
-        // so "== false" is the complete predicate for "currently applies".
-        d.TB_VOUCHERDETAIL_LINK_TAFSILIs
-            .Where(link => link.ISDELETED == false)
-            .Select(link => new VoucherDetailTafsiliLinkDto(link.TAFSILI_ID, link.LEVEL_ID))
+        // A correlated sub-projection, not an Include: nothing is tracked and the links
+        // materialise straight into the DTO. ISDELETED is non-nullable on the link table, so
+        // "== false" is the complete predicate for "currently applies".
+        //
+        // The join to TB_TAFSILI is written out by hand, and left, for one reason: TAFSILI_ID has
+        // no foreign key (a recorded schema gap), so a link can point at a row that no longer
+        // exists. An inner join would make such a line's تفصیلی silently vanish from an edit form
+        // while the link is still in the database, which is the worst of both answers — the form
+        // would save the line back without it. Left join surfaces it with null code and name
+        // instead, and the caller can see that something is wrong.
+        (from link in d.TB_VOUCHERDETAIL_LINK_TAFSILIs
+         where link.ISDELETED == false
+         join tafsili in _dbContext.TB_TAFSILIs on link.TAFSILI_ID equals tafsili.ID into matches
+         from tafsili in matches.DefaultIfEmpty()
+         select new VoucherDetailTafsiliLinkDto(
+             link.TAFSILI_ID,
+             link.LEVEL_ID,
+             tafsili.TAFSILI_CODE,
+             tafsili.TAFSILI_NAME,
+             // Composed exactly as TafsiliLookupReadRepository composes it, so a stored assignment
+             // and a freshly picked one render identically in the same control.
+             (tafsili.TAFSILI_CODE ?? string.Empty) + " - " + (tafsili.TAFSILI_NAME ?? string.Empty)))
             .ToList());
 
     private readonly LegacyDbContext _dbContext;

@@ -20,6 +20,23 @@ namespace Accounting.Application.Vouchers.Queries;
 /// </summary>
 /// <param name="TafsiliId">The تفصیلی assigned (<c>TB_VOUCHERDETAIL_LINK_TAFSILI.TAFSILI_ID</c>).</param>
 /// <param name="LevelId">Which تفصیلی level it fills (<c>LEVEL_ID</c>).</param>
+/// <param name="TafsiliCode">The assigned تفصیلی's code, or <see langword="null"/> if the link
+/// points at a row that no longer exists — <c>TAFSILI_ID</c> has no foreign key (open risk in
+/// CLAUDE.md), so a dangling link is possible and the projection does not pretend otherwise.</param>
+/// <param name="TafsiliName">The assigned تفصیلی's name, on the same terms.</param>
+/// <param name="Label">
+/// <c>"{code} - {name}"</c>, composed server-side to match what the تفصیلی lookup returns, so a
+/// form can display a stored assignment the same way it displays a freshly picked one.
+///
+/// <para>
+/// This is the difference between an edit form showing «۱۰۲۳ - شعبهٔ مرکزی» and showing an empty
+/// box with a hidden id behind it. The second is worse than useless: it reads as "nothing is
+/// assigned" while something is.
+/// </para>
+/// </param>
 public sealed record VoucherDetailTafsiliLinkDto(
     Guid TafsiliId,
-    Guid LevelId);
+    Guid LevelId,
+    string? TafsiliCode,
+    string? TafsiliName,
+    string Label);
