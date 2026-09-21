@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Search;
 using Accounting.Application.Reports.TrialBalance;
 
 namespace Accounting.Application.Common.Interfaces;
@@ -66,6 +67,19 @@ public interface ITrialBalanceReadRepository
     /// <c>TB_VOUCHERSHEAD.DOCLIFE</c> number (read as a number here specifically to route around
     /// the <c>bool?</c> mapping bug — see the class remarks). <see langword="null"/> means no
     /// filtering by document life-cycle status at all.</param>
+    /// <param name="filters">
+    /// Optional generic report filters (<c>Property</c> / <c>Operator</c> / <c>Value</c>), the same
+    /// shape the project owner's previous system used. Applied in the <c>WHERE</c> clause, so
+    /// filtering happens <b>before</b> aggregation rather than on rows already computed and sent.
+    ///
+    /// <para>
+    /// ⚠️ <c>Property</c> is a logical field name from <c>TrialBalanceSearchFields</c>, never a
+    /// column name. A column name cannot be a bind variable, so letting a caller choose one is the
+    /// one place a generic filter could become an injection point. Implementations map allowed
+    /// names to SQL expressions they own, take operators from the closed
+    /// <see cref="SearchOperator"/> enum, and bind every value.
+    /// </para>
+    /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<TrialBalanceAggregateRow>> GetAggregatesAsync(
         TrialBalanceLevel level,
@@ -74,5 +88,6 @@ public interface ITrialBalanceReadRepository
         string? toDate,
         string vahedCode,
         int? docLife,
+        IReadOnlyList<SearchParam>? filters,
         CancellationToken cancellationToken = default);
 }

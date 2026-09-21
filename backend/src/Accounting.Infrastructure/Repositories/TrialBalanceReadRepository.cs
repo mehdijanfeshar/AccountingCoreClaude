@@ -1,4 +1,5 @@
 using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Common.Search;
 using Accounting.Application.Reports.TrialBalance;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;
@@ -165,6 +166,7 @@ public sealed class TrialBalanceReadRepository : ITrialBalanceReadRepository
         string? toDate,
         string vahedCode,
         int? docLife,
+        IReadOnlyList<SearchParam>? filters,
         CancellationToken cancellationToken = default)
     {
         var (codeExpr, nameExpr) = ColumnExprFor(level);
@@ -173,6 +175,18 @@ public sealed class TrialBalanceReadRepository : ITrialBalanceReadRepository
         // for why this exact construction (not an independently-derived condition) is what makes
         // Total = Opening + Period true unconditionally.
         var periodPredicate = $"({TotalWindowPredicate}) AND NOT ({OpeningWindowPredicate})";
+
+        // Caller-supplied filters become SQL text here, which is the one place in this file where
+        // that is true — so it is the one place worth reading carefully. Nothing the caller typed
+        // reaches the statement: field names are looked up in a map this class owns, operators come
+        // from a closed enum, and every value is bound. See BuildSearchClauses.
+        var fieldMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [TrialBalanceSearchFields.Code] = codeExpr,
+            [TrialBalanceSearchFields.Description] = nameExpr,
+        };
+
+        var (searchSql, searchParameters) = BuildSearchClauses(filters, fieldMap);
 
         var sql = $"""
             SELECT
@@ -194,7 +208,7 @@ public sealed class TrialBalanceReadRepository : ITrialBalanceReadRepository
               AND (h.ISDELETED IS NULL OR h.ISDELETED = 0)
               AND (d.ISDELETED IS NULL OR d.ISDELETED = 0)
               AND h.VAHEDCODE = :vahedCode
-              AND (:docLife   IS NULL OR h.DOCLIFE  >= :docLife)
+              AND (:docLife   IS NULL OR h.DOCLIFE  >= :docLife){searchSql}
             GROUP BY {codeExpr}
             ORDER BY {codeExpr}
             """;
@@ -208,6 +222,11 @@ public sealed class TrialBalanceReadRepository : ITrialBalanceReadRepository
             new() { ParameterName = "toDate", OracleDbType = OracleDbType.Varchar2, Value = (object?)toDate ?? DBNull.Value },
         };
 
+        if (searchParameters.Count > 0)
+        {
+            parameters = [.. parameters, .. searchParameters];
+        }
+
         var rows = await _dbContext.Database
             .SqlQueryRaw<TrialBalanceAggregateRow>(sql, parameters)
             .ToListAsync(cancellationToken);
@@ -216,10 +235,148 @@ public sealed class TrialBalanceReadRepository : ITrialBalanceReadRepository
     }
 
     /// <summary>
+    /// Turns the caller's <see cref="SearchParam"/> list into SQL that is appended to the
+    /// <c>WHERE</c> clause, plus the binds that go with it.
+    ///
+    /// <para>
+    /// <b>Three separate things keep this safe, and all three are needed.</b>
+    /// </para>
+    /// <list type="number">
+    /// <item><description><b>The field name is never used as a column name.</b> It is a key into
+    /// <paramref name="fieldMap"/>, which this class built from expressions it chose itself. A name
+    /// that is not in the map throws rather than being skipped — the validator should already have
+    /// rejected it, so reaching here means the two lists drifted apart, and a report that silently
+    /// ignores a filter returns more rows than the caller asked for while looking correct.</description></item>
+    /// <item><description><b>The operator is a token from a <c>switch</c> over a closed enum</b>, so
+    /// no caller text ever becomes SQL syntax.</description></item>
+    /// <item><description><b>Every value is an <see cref="OracleParameter"/> bind.</b> Values are
+    /// never concatenated, including each element of an <c>IN</c> list, which gets its own bind
+    /// rather than being pasted in as a comma-separated string.</description></item>
+    /// </list>
+    ///
+    /// <para>
+    /// <c>LIKE</c> wraps the term in <c>%…%</c> and escapes the term's own wildcards. That escaping
+    /// is not about injection — binding already settles that — it is about meaning: unescaped, a
+    /// search for <c>%</c> matches the entire unit and <c>1_0</c> quietly matches <c>110</c> and
+    /// <c>120</c>. Someone typing those characters means them literally.
+    /// </para>
+    /// </summary>
+    public static (string Sql, IReadOnlyList<OracleParameter> Parameters) BuildSearchClauses(
+        IReadOnlyList<SearchParam>? filters,
+        IReadOnlyDictionary<string, string> fieldMap)
+    {
+        if (filters is null || filters.Count == 0)
+        {
+            return (string.Empty, []);
+        }
+
+        var sql = new System.Text.StringBuilder();
+        var parameters = new List<OracleParameter>();
+
+        for (var i = 0; i < filters.Count; i++)
+        {
+            var filter = filters[i];
+
+            if (!fieldMap.TryGetValue(filter.Property ?? string.Empty, out var columnExpr))
+            {
+                throw new ArgumentException(
+                    $"'{filter.Property}' is not a filterable field of this report. The validator " +
+                    "should have rejected it; if it did not, TrialBalanceSearchFields and this " +
+                    "repository's field map have drifted apart.",
+                    nameof(filters));
+            }
+
+            if (filter.Operator == SearchOperator.IN)
+            {
+                var items = (filter.Value ?? string.Empty)
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                if (items.Length == 0)
+                {
+                    // An IN with nothing in it matches nothing. Emitting "IN ()" is a syntax error
+                    // in Oracle and silently dropping the clause would widen the report, so say so.
+                    throw new ArgumentException(
+                        $"Filter on '{filter.Property}' uses IN with no values.", nameof(filters));
+                }
+
+                var binds = new List<string>(items.Length);
+
+                for (var j = 0; j < items.Length; j++)
+                {
+                    var name = $"f{i}_{j}";
+                    binds.Add($":{name}");
+                    parameters.Add(new OracleParameter
+                    {
+                        ParameterName = name,
+                        OracleDbType = OracleDbType.Varchar2,
+                        Value = items[j],
+                    });
+                }
+
+                sql.Append($"\n              AND {columnExpr} IN ({string.Join(", ", binds)})");
+                continue;
+            }
+
+            var parameterName = $"f{i}";
+            var value = filter.Value ?? string.Empty;
+
+            if (filter.Operator == SearchOperator.LIKE)
+            {
+                sql.Append(
+                    $"\n              AND UPPER({columnExpr}) LIKE '%' || UPPER(:{parameterName}) || '%' ESCAPE '\\'");
+                value = EscapeLikeTerm(value);
+            }
+            else
+            {
+                sql.Append($"\n              AND {columnExpr} {SqlOperatorFor(filter.Operator)} :{parameterName}");
+            }
+
+            parameters.Add(new OracleParameter
+            {
+                ParameterName = parameterName,
+                OracleDbType = OracleDbType.Varchar2,
+                Value = value,
+            });
+        }
+
+        return (sql.ToString(), parameters);
+    }
+
+    /// <summary>
+    /// The only place a <see cref="SearchOperator"/> becomes SQL. Exhaustive on purpose: adding an
+    /// operator to the enum without deciding its SQL form throws here instead of quietly comparing
+    /// with the wrong one.
+    /// </summary>
+    private static string SqlOperatorFor(SearchOperator op) => op switch
+    {
+        SearchOperator.EQ => "=",
+        SearchOperator.NEQ => "<>",
+        SearchOperator.GT => ">",
+        SearchOperator.LT => "<",
+        SearchOperator.GTE => ">=",
+        SearchOperator.LTE => "<=",
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(op), op, "Operator has no SQL form in the trial balance report."),
+    };
+
+    /// <summary>
+    /// Makes a search term literal inside a <c>LIKE</c> pattern. Pairs with <c>ESCAPE '\'</c> in the
+    /// generated SQL — changing one without the other silently breaks the guarantee. The backslash
+    /// is escaped first, or escaping the wildcards afterwards would double-escape their new
+    /// prefixes.
+    /// </summary>
+    private static string EscapeLikeTerm(string term) =>
+        term
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
+
+    /// <summary>
     /// Hardcoded mapping from <see cref="TrialBalanceLevel"/> to the <c>ACCCODE</c>/<c>ACCCODENAME</c>
     /// column pair at that level of the <c>TB_ACCOUNTCODE</c> self-join chain
-    /// (<c>a</c> = معین, <c>ak</c> = کل, <c>ag</c> = گروه). See the class remarks for why this is
-    /// safe against SQL injection despite being interpolated into the query text.
+    /// (<c>a</c> = معین, <c>ak</c> = کل, <c>ag</c> = گروه). Safe to interpolate into the query text
+    /// precisely because it is hardcoded here: these strings are written by this class, never by a
+    /// caller. The same reasoning is what makes the generic filter safe — see BuildSearchClauses.
     /// </summary>
     private static (string CodeExpr, string NameExpr) ColumnExprFor(TrialBalanceLevel level) => level switch
     {

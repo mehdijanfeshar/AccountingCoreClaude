@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Search;
 using FluentValidation;
 
 namespace Accounting.Application.Reports.TrialBalance.GetTrialBalance4;
@@ -29,6 +30,16 @@ public sealed class GetTrialBalance4QueryValidator : AbstractValidator<GetTrialB
             .Length(8).WithMessage("ToDate must be exactly 8 characters (Jalali YYYYMMDD).")
             .Matches("^[0-9]{8}$").WithMessage("ToDate must contain only digits.")
             .When(x => x.ToDate is not null);
+
+        // Bounded so a caller cannot ask for an unlimited number of filter clauses; ten is far
+        // more than any real report needs and keeps the generated WHERE clause readable.
+        RuleFor(x => x.Filters)
+            .Must(f => f is null || f.Count <= 10)
+            .WithMessage("At most 10 filters may be supplied.");
+
+        RuleForEach(x => x.Filters)
+            .SetValidator(new TrialBalanceFilterValidator())
+            .When(x => x.Filters is not null);
 
         // Required for the Opening ⊆ Total containment to hold: the opening predicate {O} is
         // "strictly before FromDate" and the total predicate {T} is "up to and including

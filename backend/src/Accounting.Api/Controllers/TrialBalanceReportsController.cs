@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Search;
 using Accounting.Application.Reports.TrialBalance;
 using Accounting.Application.Reports.TrialBalance.GetTrialBalance4;
 using Accounting.Application.Reports.TrialBalance.GetTrialBalance6;
@@ -62,6 +63,9 @@ public sealed class TrialBalanceReportsController : ControllerBase
     /// <param name="level">Which row of the coding hierarchy to aggregate by.</param>
     /// <param name="docLife">Optional inclusive lower bound on the raw <c>DOCLIFE</c> number (0..4).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="filters">Optional generic report filters (<c>Property</c>/<c>Operator</c>/<c>Value</c>),
+    /// bound from the query string as <c>filters[0].property=code&amp;filters[0].operator=LIKE&amp;filters[0].value=11</c>.
+    /// <c>Property</c> must name a field of <c>TrialBalanceSearchFields</c>; anything else is a 400.</param>
     [HttpGet("trial-balance-4")]
     [ProducesResponseType(typeof(IReadOnlyList<TrialBalance4RowDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -74,10 +78,11 @@ public sealed class TrialBalanceReportsController : ControllerBase
         [FromQuery] string? toDate = null,
         [FromQuery] TrialBalanceLevel level = default,
         [FromQuery] int? docLife = null,
+        [FromQuery] List<SearchParam>? filters = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetTrialBalance4Query(year, fromDate, toDate, level, docLife),
+            new GetTrialBalance4Query(year, fromDate, toDate, level, docLife, filters),
             cancellationToken);
 
         return Ok(result);
@@ -95,6 +100,9 @@ public sealed class TrialBalanceReportsController : ControllerBase
     /// <param name="level">Which row of the coding hierarchy to aggregate by.</param>
     /// <param name="docLife">Optional inclusive lower bound on the raw <c>DOCLIFE</c> number (0..4).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="filters">Optional generic report filters (<c>Property</c>/<c>Operator</c>/<c>Value</c>),
+    /// bound from the query string as <c>filters[0].property=code&amp;filters[0].operator=LIKE&amp;filters[0].value=11</c>.
+    /// <c>Property</c> must name a field of <c>TrialBalanceSearchFields</c>; anything else is a 400.</param>
     [HttpGet("trial-balance-6")]
     [ProducesResponseType(typeof(IReadOnlyList<TrialBalance6RowDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -107,10 +115,11 @@ public sealed class TrialBalanceReportsController : ControllerBase
         [FromQuery] string? toDate = null,
         [FromQuery] TrialBalanceLevel level = default,
         [FromQuery] int? docLife = null,
+        [FromQuery] List<SearchParam>? filters = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetTrialBalance6Query(year, fromDate, toDate, level, docLife),
+            new GetTrialBalance6Query(year, fromDate, toDate, level, docLife, filters),
             cancellationToken);
 
         return Ok(result);
@@ -129,6 +138,9 @@ public sealed class TrialBalanceReportsController : ControllerBase
     /// <param name="level">Which row of the coding hierarchy to aggregate by.</param>
     /// <param name="docLife">Optional inclusive lower bound on the raw <c>DOCLIFE</c> number (0..4).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="filters">Optional generic report filters (<c>Property</c>/<c>Operator</c>/<c>Value</c>),
+    /// bound from the query string as <c>filters[0].property=code&amp;filters[0].operator=LIKE&amp;filters[0].value=11</c>.
+    /// <c>Property</c> must name a field of <c>TrialBalanceSearchFields</c>; anything else is a 400.</param>
     [HttpGet("trial-balance-8")]
     [ProducesResponseType(typeof(IReadOnlyList<TrialBalance8RowDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -141,10 +153,11 @@ public sealed class TrialBalanceReportsController : ControllerBase
         [FromQuery] string? toDate = null,
         [FromQuery] TrialBalanceLevel level = default,
         [FromQuery] int? docLife = null,
+        [FromQuery] List<SearchParam>? filters = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetTrialBalance8Query(year, fromDate, toDate, level, docLife),
+            new GetTrialBalance8Query(year, fromDate, toDate, level, docLife, filters),
             cancellationToken);
 
         return Ok(result);

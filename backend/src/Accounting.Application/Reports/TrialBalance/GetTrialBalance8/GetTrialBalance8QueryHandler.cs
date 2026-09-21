@@ -45,6 +45,7 @@ public sealed class GetTrialBalance8QueryHandler
             request.ToDate,
             request.VahedCode,
             request.DocLife,
+            request.Filters,
             cancellationToken);
 
         return rows
