@@ -34,7 +34,7 @@ public sealed class UpdateChequeTypeCommandHandler : IRequestHandler<UpdateChequ
 
     public async Task Handle(UpdateChequeTypeCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _chequeTypeRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _chequeTypeRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null || entity.ISDELETED)
         {

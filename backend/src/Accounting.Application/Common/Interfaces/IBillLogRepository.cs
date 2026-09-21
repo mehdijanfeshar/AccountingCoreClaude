@@ -15,5 +15,5 @@ public interface IBillLogRepository
     /// (deliberately no <c>AsNoTracking()</c>). Returns <see langword="null"/> when no row with
     /// that <c>ID</c> exists — soft-deleted rows are still returned here.
     /// </summary>
-    Task<TB_BILL_LOG?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TB_BILL_LOG?> GetForUpdateAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

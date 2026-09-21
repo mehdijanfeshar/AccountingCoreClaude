@@ -42,7 +42,7 @@ public sealed class UpdateBankAccountCommandHandler : IRequestHandler<UpdateBank
 
     public async Task Handle(UpdateBankAccountCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _bankAccountRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _bankAccountRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null || entity.ISDELETED == true)
         {

@@ -63,7 +63,7 @@ public sealed class GetChequeTypeByIdQueryHandlerTests
         var expected = SampleDto(id);
         var readRepository = new Mock<IChequeTypeReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetChequeTypeByIdQueryHandler(readRepository.Object);
@@ -79,7 +79,7 @@ public sealed class GetChequeTypeByIdQueryHandlerTests
         var id = Guid.NewGuid();
         var readRepository = new Mock<IChequeTypeReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChequeTypeDto?)null);
 
         var handler = new GetChequeTypeByIdQueryHandler(readRepository.Object);
@@ -97,14 +97,14 @@ public sealed class GetChequeTypeByIdQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetByIdAsync(id, token))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), token))
             .ReturnsAsync((ChequeTypeDto?)null);
 
         var handler = new GetChequeTypeByIdQueryHandler(readRepository.Object);
 
         await handler.Handle(new GetChequeTypeByIdQuery(id), token);
 
-        readRepository.Verify(r => r.GetByIdAsync(id, token), Times.Once);
+        readRepository.Verify(r => r.GetByIdAsync(id, It.IsAny<string>(), token), Times.Once);
     }
 
     [Fact]

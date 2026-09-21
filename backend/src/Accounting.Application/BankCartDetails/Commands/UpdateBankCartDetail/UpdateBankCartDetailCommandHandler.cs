@@ -40,7 +40,7 @@ public sealed class UpdateBankCartDetailCommandHandler : IRequestHandler<UpdateB
 
     public async Task Handle(UpdateBankCartDetailCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _bankCartDetailRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _bankCartDetailRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null || entity.ISDELETED == true)
         {

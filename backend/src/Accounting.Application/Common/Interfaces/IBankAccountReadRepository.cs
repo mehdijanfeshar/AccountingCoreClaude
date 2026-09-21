@@ -34,5 +34,5 @@ public interface IBankAccountReadRepository
     /// Returns the bank account row with the given <paramref name="id"/> regardless of its
     /// logical-delete state, or <see langword="null"/> if no such row exists.
     /// </summary>
-    Task<BankAccountDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<BankAccountDto?> GetByIdAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

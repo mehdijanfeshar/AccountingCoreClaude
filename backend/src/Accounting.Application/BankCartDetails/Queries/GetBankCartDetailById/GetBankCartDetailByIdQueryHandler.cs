@@ -17,5 +17,5 @@ public sealed class GetBankCartDetailByIdQueryHandler : IRequestHandler<GetBankC
     }
 
     public Task<BankCartDetailDto?> Handle(GetBankCartDetailByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

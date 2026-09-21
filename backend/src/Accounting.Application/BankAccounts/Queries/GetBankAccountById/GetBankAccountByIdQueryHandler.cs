@@ -17,5 +17,5 @@ public sealed class GetBankAccountByIdQueryHandler : IRequestHandler<GetBankAcco
     }
 
     public Task<BankAccountDto?> Handle(GetBankAccountByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

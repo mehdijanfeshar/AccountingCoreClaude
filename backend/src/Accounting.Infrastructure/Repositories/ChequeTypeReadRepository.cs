@@ -120,11 +120,26 @@ public sealed class ChequeTypeReadRepository : IChequeTypeReadRepository
         };
     }
 
-    public Task<ChequeTypeDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<ChequeTypeDto?> GetByIdAsync(
+        Guid id,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
     {
+        // The owning unit is read first as a scalar so the access decision can tell "no such
+        // row" (null, caller gets null, 404) from "another unit's row" (403). Projecting it
+        // alongside the DTO in one query is not possible while ToDto stays a reusable
+        // Expression, and this is a single-record edit-form fetch, not a hot path.
+        var ownerVahedCode = await _dbContext.TB_CHECK_TYPEs
+            .AsNoTracking()
+            .Where(c => c.ID == id)
+            .Select(c => c.VAHEDCODE)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        VahedOwnership.EnsureOwned(ownerVahedCode, vahedCode, id, "ChequeType");
+
         // No ISDELETED filter here on purpose: GetById returns the row regardless of its
         // deletion state; the caller decides what to do based on ChequeTypeDto.IsDeleted.
-        return _dbContext.TB_CHECK_TYPEs
+        return await _dbContext.TB_CHECK_TYPEs
             .AsNoTracking()
             .Where(c => c.ID == id)
             .Select(ToDto)

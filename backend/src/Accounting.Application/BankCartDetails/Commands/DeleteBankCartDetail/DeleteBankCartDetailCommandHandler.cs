@@ -35,7 +35,7 @@ public sealed class DeleteBankCartDetailCommandHandler : IRequestHandler<DeleteB
 
     public async Task Handle(DeleteBankCartDetailCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _bankCartDetailRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _bankCartDetailRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null)
         {

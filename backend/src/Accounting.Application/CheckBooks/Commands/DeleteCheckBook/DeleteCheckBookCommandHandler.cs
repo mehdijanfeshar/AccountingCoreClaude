@@ -35,7 +35,7 @@ public sealed class DeleteCheckBookCommandHandler : IRequestHandler<DeleteCheckB
 
     public async Task Handle(DeleteCheckBookCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _checkBookRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _checkBookRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null)
         {
