@@ -10,14 +10,14 @@ namespace Accounting.Application.ElamHeads.Commands.UpdateElamHead;
 /// <c>VahedCode</c> gets <c>NotEmpty</c> unlike every other field here, matching
 /// <c>CreateElamHeadCommandValidator</c> — see its XML doc for the full rationale.
 ///
-/// ⚠️ Unlike the Create-side validator, the <c>RuleFor(x => x.VahedCode)</c> rule below currently
-/// does NOT execute at runtime: <c>ValidationBehavior</c>'s <c>where TRequest : IRequest&lt;TResponse&gt;</c>
-/// constraint is never satisfied for this void (<c>: IRequest</c>) command in MediatR 14.2.0, so
-/// the DI container silently skips this validator for every <c>Update</c>/<c>Delete</c> request
-/// project-wide — see <c>docs/open-decisions.md</c> and <c>VahedScopeBehavior.cs</c> (which
-/// deliberately avoids the same constraint for this exact reason). This is safe at runtime only
-/// because <c>VahedScopeBehavior</c> unconditionally overwrites <c>VahedCode</c> before the
-/// handler runs, not because of this rule.
+/// ✅ <b>These rules really do run now — fixed in phase 31; they did not before.</b>
+/// <c>ValidationBehavior</c> used to declare <c>where TRequest : IRequest&lt;TResponse&gt;</c>,
+/// which MediatR 14 never satisfies for a void (<c>: IRequest</c>) command, so the DI container
+/// skipped the validator for every <c>Update</c>/<c>Delete</c> request project-wide — silently,
+/// from phase 8 to phase 30. The constraint is gone and
+/// <c>BehaviorPipelineConstraintTests</c> fails if it ever comes back. Practical consequence:
+/// rules here were written and unit-tested but never exercised against real traffic, so a 400
+/// that appears for the first time is most likely this validator finally firing, not a new bug.
 /// </summary>
 public sealed class UpdateElamHeadCommandValidator : AbstractValidator<UpdateElamHeadCommand>
 {

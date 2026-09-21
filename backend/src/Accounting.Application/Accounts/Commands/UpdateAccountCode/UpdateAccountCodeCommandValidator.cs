@@ -17,16 +17,14 @@ namespace Accounting.Application.Accounts.Commands.UpdateAccountCode;
 /// <c>TYPEACTIVITY ∈ {4,5,6}</c>, open risk #13 in <c>CLAUDE.md</c>). This omission is
 /// deliberate, not an oversight.
 ///
-/// ⚠️ None of the rules below (not just <c>IsInEnum()</c> — <c>Id</c>, <c>ParentId</c>,
-/// <c>AccCode</c>, <c>AccCodeName</c>, <c>MoInforClose</c> too) currently execute at runtime:
-/// <c>ValidationBehavior</c>'s <c>where TRequest : IRequest&lt;TResponse&gt;</c> constraint is
-/// never satisfied for this void (<c>: IRequest</c>) command in MediatR 14.2.0, so the DI
-/// container silently skips this validator for every <c>Update</c>/<c>Delete</c> request
-/// project-wide — see <c>docs/open-decisions.md</c>, open risk #1-الف in <c>CLAUDE.md</c>, and
-/// <c>UpdatePreDescribCommandValidator</c> (same precedent). Concretely: an out-of-range integer
-/// (e.g. <c>TYPEACTIVITY = 99</c>) sent to <c>POST /api/account-codes/{id}/update</c> reaches
-/// Oracle unvalidated today. Fixing <c>ValidationBehavior</c> is explicitly out of scope for this
-/// task; this comment only documents the trap for the next person.
+/// ✅ <b>These rules really do run now — fixed in phase 31; they did not before.</b>
+/// <c>ValidationBehavior</c> used to declare <c>where TRequest : IRequest&lt;TResponse&gt;</c>,
+/// which MediatR 14 never satisfies for a void (<c>: IRequest</c>) command, so the DI container
+/// skipped the validator for every <c>Update</c>/<c>Delete</c> request project-wide — silently,
+/// from phase 8 to phase 30. The constraint is gone and
+/// <c>BehaviorPipelineConstraintTests</c> fails if it ever comes back. Practical consequence:
+/// rules here were written and unit-tested but never exercised against real traffic, so a 400
+/// that appears for the first time is most likely this validator finally firing, not a new bug.
 /// </summary>
 public sealed class UpdateAccountCodeCommandValidator : AbstractValidator<UpdateAccountCodeCommand>
 {

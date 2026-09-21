@@ -7,10 +7,10 @@ namespace Accounting.Application.IdentityHeads.Commands.UpdateIdentityHead;
 /// Surface-level (syntactic) validation only, mirroring
 /// <see cref="CreateIdentityHeadCommandValidator"/> for the parts both paths share.
 ///
-/// ⚠️ <b>Not dead code, despite appearances.</b> <c>ValidationBehavior</c> currently never runs
-/// for non-generic <c>IRequest</c> commands (open risk #1-الف), so this validator is not reached
-/// today. It is kept — and kept correct — because that bug is a pipeline defect to be fixed, not
-/// a reason to stop validating; the moment it is fixed this starts applying.
+/// ✅ <b>Reached at last (phase 31).</b> This validator used to be unreachable:
+/// <c>ValidationBehavior</c> did not run for non-generic <c>IRequest</c> commands (old risk
+/// #1-الف), so it was written, kept correct, and never invoked. The pipeline defect is fixed and
+/// <c>BehaviorPipelineConstraintTests</c> guards it, so these rules now apply to real traffic.
 /// </summary>
 public sealed class UpdateIdentityHeadCommandValidator : AbstractValidator<UpdateIdentityHeadCommand>
 {
