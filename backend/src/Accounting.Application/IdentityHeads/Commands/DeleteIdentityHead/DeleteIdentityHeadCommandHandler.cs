@@ -22,7 +22,7 @@ public sealed class DeleteIdentityHeadCommandHandler : IRequestHandler<DeleteIde
 
     public async Task Handle(DeleteIdentityHeadCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _identityHeadRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _identityHeadRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
         if (entity is null)
         {
             throw new NotFoundException("IdentityHead", request.Id);

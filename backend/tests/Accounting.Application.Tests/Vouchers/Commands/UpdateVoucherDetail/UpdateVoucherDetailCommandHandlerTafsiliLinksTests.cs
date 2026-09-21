@@ -80,7 +80,7 @@ public sealed class UpdateVoucherDetailCommandHandlerTafsiliLinksTests
 
         var detailRepository = new Mock<IVoucherDetailRepository>();
         detailRepository
-            .Setup(r => r.GetForUpdateAsync(detailId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(detailId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(entity);
         detailRepository
             .Setup(r => r.GetActiveTafsiliLinksAsync(detailId, It.IsAny<CancellationToken>()))

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.Vouchers.Queries.GetVoucherDetailById;
@@ -9,4 +11,13 @@ namespace Accounting.Application.Vouchers.Queries.GetVoucherDetailById;
 /// <c>ISDELETED</c>, and <see cref="VoucherDetailDto.IsDeleted"/> lets the caller decide.
 /// </summary>
 /// <param name="Id">ID column to look up.</param>
-public sealed record GetVoucherDetailByIdQuery(Guid Id) : IRequest<VoucherDetailDto?>;
+public sealed record GetVoucherDetailByIdQuery(Guid Id) : IRequest<VoucherDetailDto?>, IVahedScopedQuery
+{
+    /// <summary>
+    /// Caller's own organizational unit, server-assigned by <c>VahedScopeBehavior</c> — never
+    /// client input. Used to refuse a row belonging to another unit; see
+    /// <c>VahedOwnership</c> and IDOR risk #1.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

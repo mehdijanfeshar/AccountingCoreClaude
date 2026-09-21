@@ -67,7 +67,15 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
 
     public async Task<Guid> Handle(CreateVoucherDetailCommand request, CancellationToken cancellationToken)
     {
-        var head = await _voucherHeadRepository.GetForUpdateAsync(request.VoucherHeadId, cancellationToken);
+        // Passing the caller's unit here closes risk #1-ج, which was a cross-unit *write*, not
+        // just a read: the parent-head lookup used to be unscoped, so a caller who knew a voucher
+        // head's id could attach a line to another unit's voucher. The line itself was always
+        // stamped with the caller's own VahedCode, which made the result worse than a plain leak —
+        // a voucher whose head and lines disagreed about who owns them.
+        var head = await _voucherHeadRepository.GetForUpdateAsync(
+            request.VoucherHeadId,
+            request.VahedCode,
+            cancellationToken);
 
         if (head is null || head.ISDELETED == true)
         {

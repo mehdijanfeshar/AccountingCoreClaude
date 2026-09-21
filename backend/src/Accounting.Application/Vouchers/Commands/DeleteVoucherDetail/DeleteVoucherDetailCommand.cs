@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.Vouchers.Commands.DeleteVoucherDetail;
@@ -17,4 +19,13 @@ namespace Accounting.Application.Vouchers.Commands.DeleteVoucherDetail;
 /// for deleting ONE detail line on its own, independent of its head's lifecycle.
 /// </summary>
 /// <param name="Id">The <c>TB_VOUCHERSDETAIL.ID</c> to soft-delete (bound from the route).</param>
-public sealed record DeleteVoucherDetailCommand(Guid Id) : IRequest;
+public sealed record DeleteVoucherDetailCommand(Guid Id) : IRequest, IVahedScopedCommand
+{
+    /// <summary>
+    /// Caller's own organizational unit, server-assigned by <c>VahedScopeBehavior</c> — never
+    /// client input. Used to refuse a row belonging to another unit; see
+    /// <c>VahedOwnership</c> and IDOR risk #1.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

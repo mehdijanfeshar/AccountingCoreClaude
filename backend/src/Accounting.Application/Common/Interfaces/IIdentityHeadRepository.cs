@@ -21,7 +21,7 @@ public interface IIdentityHeadRepository
 {
     Task AddAsync(TB_IDENTITYHEAD identityHead, CancellationToken cancellationToken = default);
 
-    Task<TB_IDENTITYHEAD?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TB_IDENTITYHEAD?> GetForUpdateAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// <b>Deliberately named <c>AddFixItemAsync</c>, not <c>AddAsync</c>.</b> Same reasoning as

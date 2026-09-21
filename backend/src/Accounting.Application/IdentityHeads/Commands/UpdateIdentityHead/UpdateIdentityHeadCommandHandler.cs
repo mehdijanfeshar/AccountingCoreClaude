@@ -24,7 +24,7 @@ public sealed class UpdateIdentityHeadCommandHandler : IRequestHandler<UpdateIde
 
     public async Task Handle(UpdateIdentityHeadCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _identityHeadRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _identityHeadRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
         if (entity is null || entity.ISDELETED)
         {
             throw new NotFoundException("IdentityHead", request.Id);

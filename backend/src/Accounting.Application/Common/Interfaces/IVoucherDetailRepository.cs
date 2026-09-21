@@ -30,7 +30,7 @@ public interface IVoucherDetailRepository
     /// still returned here (the caller decides how to treat <c>ISDELETED</c>), mirroring
     /// <see cref="IVoucherHeadRepository.GetForUpdateAsync"/>.
     /// </summary>
-    Task<TB_VOUCHERSDETAIL?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TB_VOUCHERSDETAIL?> GetForUpdateAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Soft-deletes every non-deleted <see cref="TB_VOUCHERDETAIL_LINK_TAFSILI"/> row that

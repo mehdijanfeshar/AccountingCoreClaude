@@ -41,7 +41,7 @@ public sealed class DeleteVoucherHeadCommandHandler : IRequestHandler<DeleteVouc
 
     public async Task Handle(DeleteVoucherHeadCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _voucherHeadRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _voucherHeadRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null)
         {

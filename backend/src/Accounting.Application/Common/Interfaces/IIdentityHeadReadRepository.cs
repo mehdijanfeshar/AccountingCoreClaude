@@ -34,5 +34,5 @@ public interface IIdentityHeadReadRepository
     /// Returns the row with the given <paramref name="id"/> regardless of its logical-delete
     /// state, or <see langword="null"/> if no such row exists.
     /// </summary>
-    Task<IdentityHeadDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IdentityHeadDto?> GetByIdAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

@@ -63,7 +63,7 @@ public sealed class CreateVoucherDetailCommandHandlerTafsiliLinksTests
     {
         var headRepository = new Mock<IVoucherHeadRepository>();
         headRepository
-            .Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ExistingHead(headId));
 
         var stagedDetails = new List<TB_VOUCHERSDETAIL>();
@@ -293,7 +293,7 @@ public sealed class CreateVoucherDetailCommandHandlerTafsiliLinksTests
 
         var headRepository = new Mock<IVoucherHeadRepository>();
         headRepository
-            .Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ExistingHead(headId));
 
         var stagedDetails = new List<TB_VOUCHERSDETAIL>();

@@ -27,7 +27,7 @@ public sealed class DeleteTmpVoucherHeadCommandHandlerTests
     {
         var repository = new Mock<ITmpVoucherHeadRepository>();
         repository
-            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = new Mock<ICurrentUser>();
@@ -122,7 +122,7 @@ public sealed class DeleteTmpVoucherHeadCommandHandlerTests
 
         await handler.Handle(new DeleteTmpVoucherHeadCommand(ExistingId), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(ExistingId, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(ExistingId, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 }

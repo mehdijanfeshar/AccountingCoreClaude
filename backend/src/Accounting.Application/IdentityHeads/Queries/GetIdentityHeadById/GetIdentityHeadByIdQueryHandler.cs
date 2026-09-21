@@ -14,5 +14,5 @@ public sealed class GetIdentityHeadByIdQueryHandler : IRequestHandler<GetIdentit
     }
 
     public Task<IdentityHeadDto?> Handle(GetIdentityHeadByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

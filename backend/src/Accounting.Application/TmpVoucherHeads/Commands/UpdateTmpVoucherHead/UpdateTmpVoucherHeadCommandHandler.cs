@@ -45,7 +45,7 @@ public sealed class UpdateTmpVoucherHeadCommandHandler : IRequestHandler<UpdateT
 
     public async Task Handle(UpdateTmpVoucherHeadCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _tmpVoucherHeadRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _tmpVoucherHeadRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null || entity.ISDELETED == true)
         {

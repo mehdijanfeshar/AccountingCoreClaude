@@ -73,7 +73,7 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
 
     public async Task Handle(UpdateVoucherDetailCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _voucherDetailRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _voucherDetailRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null || entity.ISDELETED == true)
         {

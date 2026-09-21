@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.IdentityHeads.Commands.DeleteIdentityHead;
@@ -12,4 +14,13 @@ namespace Accounting.Application.IdentityHeads.Commands.DeleteIdentityHead;
 /// deliberate opposite of the voucher cascade added in phase 9, for the deliberate reason that
 /// the aggregate boundary is different. See <c>IdentityHeadsController</c>.
 /// </summary>
-public sealed record DeleteIdentityHeadCommand(Guid Id) : IRequest;
+public sealed record DeleteIdentityHeadCommand(Guid Id) : IRequest, IVahedScopedCommand
+{
+    /// <summary>
+    /// Caller's own organizational unit, server-assigned by <c>VahedScopeBehavior</c> — never
+    /// client input. Used to refuse a row belonging to another unit; see
+    /// <c>VahedOwnership</c> and IDOR risk #1.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

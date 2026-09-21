@@ -219,9 +219,8 @@ public sealed class VahedScopeConventionTests
     /// the marker.
     ///
     /// <para>
-    /// <see cref="NotYetOwnershipScoped"/> is migration debt, not an exemption list. Each entity
-    /// moves over with its repository signatures in one batch, and this list shrinks to empty.
-    /// A name left in it is a query that can still read any unit's row by id.
+    /// The migration is complete: the rule is unconditional, so a new by-id query that forgets
+    /// the marker fails here immediately rather than inheriting an exemption.
     /// </para>
     /// </summary>
     [Fact]
@@ -234,7 +233,6 @@ public sealed class VahedScopeConventionTests
         var offenders = byIdQueries
             .Where(t => !ImplementsInterface(t, typeof(IVahedScoped)))
             .Where(t => !NoVahedCodeColumnExemptByIdAndDelete.Contains(t.Name))
-            .Where(t => !NotYetOwnershipScoped.Contains(t.Name))
             .Select(t => t.FullName ?? t.Name)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToList();
@@ -246,9 +244,7 @@ public sealed class VahedScopeConventionTests
                 + "the second half of IDOR risk #1: "
                 + string.Join(", ", offenders)
                 + ". Make each one implement IVahedScopedQuery and give its read repository's "
-                + "GetByIdAsync a required vahedCode parameter. Adding a name to "
-                + $"{nameof(NotYetOwnershipScoped)} is only for work queued in a later batch — it "
-                + "is not a way to make this failure go away.");
+                + "GetByIdAsync a required vahedCode parameter, the way every other entity does.");
 
         // Sanity check: the scan must not be vacuous.
         Assert.NotEmpty(byIdQueries);
@@ -341,7 +337,6 @@ public sealed class VahedScopeConventionTests
         var offenders = deleteCommands
             .Where(t => !ImplementsInterface(t, typeof(IVahedScoped)))
             .Where(t => !NoVahedCodeColumnExemptByIdAndDelete.Contains(t.Name))
-            .Where(t => !NotYetOwnershipScoped.Contains(t.Name))
             .Select(t => t.FullName ?? t.Name)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToList();
@@ -352,8 +347,7 @@ public sealed class VahedScopeConventionTests
                 + "whatever row the caller's id names, in any unit: "
                 + string.Join(", ", offenders)
                 + ". Make each one implement IVahedScopedCommand and give its repository's "
-                + $"GetForUpdateAsync a required vahedCode parameter. {nameof(NotYetOwnershipScoped)} "
-                + "is migration debt queued for a later batch, not an exemption.");
+                + "GetForUpdateAsync a required vahedCode parameter, the way every other entity does.");
 
         // Sanity check: the scan must not be vacuous.
         Assert.NotEmpty(deleteCommands);
@@ -394,34 +388,5 @@ public sealed class VahedScopeConventionTests
         "GetVahedInfoByIdQuery",
         "GetWhiteAndBlackListByIdQuery",
         "GetWhiteListByIdQuery",
-    };
-
-    /// <summary>
-    /// Entities whose by-id lookups have not yet been moved onto record-ownership checking. Every
-    /// name here is a live instance of the open half of IDOR risk #1: knowing an id is enough to
-    /// read, edit or delete that unit's row from another unit.
-    ///
-    /// <para>
-    /// The migration runs entity by entity — query/command marker, repository signature, handler,
-    /// tests — and each batch deletes its names from this list. <b>When the list is empty, delete
-    /// it and the two <c>NotYetOwnershipScoped.Contains</c> filters above</b>, so the rule becomes
-    /// unconditional and nothing can be queued again.
-    /// </para>
-    ///
-    /// <para>
-    /// It is a literal list rather than a computed one on purpose: a new entity added tomorrow
-    /// must fail these tests immediately, not inherit an exemption nobody reviewed.
-    /// </para>
-    /// </summary>
-    private static readonly HashSet<string> NotYetOwnershipScoped = new(StringComparer.Ordinal)
-    {
-        "DeleteIdentityHeadCommand",
-        "DeleteTmpVoucherHeadCommand",
-        "DeleteVoucherDetailCommand",
-        "DeleteVoucherHeadCommand",
-        "GetIdentityHeadByIdQuery",
-        "GetTmpVoucherHeadByIdQuery",
-        "GetVoucherDetailByIdQuery",
-        "GetVoucherHeadByIdQuery",
     };
 }

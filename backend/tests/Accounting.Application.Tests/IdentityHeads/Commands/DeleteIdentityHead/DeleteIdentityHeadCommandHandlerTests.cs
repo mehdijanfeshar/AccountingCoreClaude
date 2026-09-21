@@ -46,7 +46,7 @@ public sealed class DeleteIdentityHeadCommandHandlerTests
         currentUser.SetupGet(u => u.UserId).Returns("remover");
 
         repository
-            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(head);
         repository
             .Setup(r => r.GetActiveFixItemsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))

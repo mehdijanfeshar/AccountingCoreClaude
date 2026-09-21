@@ -43,5 +43,5 @@ public interface IVoucherDetailReadRepository
     /// logical-delete state, or <see langword="null"/> if no such row exists. Deliberately no
     /// <c>ISDELETED</c> filter — mirrors <see cref="IVoucherHeadReadRepository.GetByIdAsync"/>.
     /// </summary>
-    Task<VoucherDetailDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<VoucherDetailDto?> GetByIdAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

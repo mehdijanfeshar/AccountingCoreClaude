@@ -165,11 +165,26 @@ public sealed class VoucherHeadReadRepository : IVoucherHeadReadRepository
         };
     }
 
-    public Task<VoucherHeadDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<VoucherHeadDto?> GetByIdAsync(
+        Guid id,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
     {
+        // The owning unit is read first as a scalar so the access decision can tell "no such
+        // row" (null, caller gets null, 404) from "another unit's row" (403). Projecting it
+        // alongside the DTO in one query is not possible while ToDto stays a reusable
+        // Expression, and this is a single-record edit-form fetch, not a hot path.
+        var ownerVahedCode = await _dbContext.TB_VOUCHERSHEADs
+            .AsNoTracking()
+            .Where(v => v.ID == id)
+            .Select(v => v.VAHEDCODE)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        VahedOwnership.EnsureOwned(ownerVahedCode, vahedCode, id, "VoucherHead");
+
         // No ISDELETED filter here on purpose: GetById returns the row regardless of its
         // deletion state; the caller decides what to do based on VoucherHeadDto.IsDeleted.
-        return _dbContext.TB_VOUCHERSHEADs
+        return await _dbContext.TB_VOUCHERSHEADs
             .AsNoTracking()
             .Where(v => v.ID == id)
             .Select(ToDto)

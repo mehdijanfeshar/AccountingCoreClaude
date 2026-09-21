@@ -49,7 +49,7 @@ public sealed class CreateVoucherDetailCommandHandlerTests
     {
         var headId = Guid.NewGuid();
         var headRepository = new Mock<IVoucherHeadRepository>();
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
         var detailRepository = new Mock<IVoucherDetailRepository>();
         TB_VOUCHERSDETAIL? staged = null;
         detailRepository
@@ -88,7 +88,7 @@ public sealed class CreateVoucherDetailCommandHandlerTests
     {
         var headId = Guid.NewGuid();
         var headRepository = new Mock<IVoucherHeadRepository>();
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync((TB_VOUCHERSHEAD?)null);
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_VOUCHERSHEAD?)null);
         var detailRepository = new Mock<IVoucherDetailRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
@@ -107,7 +107,7 @@ public sealed class CreateVoucherDetailCommandHandlerTests
     {
         var headId = Guid.NewGuid();
         var headRepository = new Mock<IVoucherHeadRepository>();
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId, isDeleted: true));
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId, isDeleted: true));
         var detailRepository = new Mock<IVoucherDetailRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
@@ -126,7 +126,7 @@ public sealed class CreateVoucherDetailCommandHandlerTests
     {
         var headId = Guid.NewGuid();
         var headRepository = new Mock<IVoucherHeadRepository>();
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
         var detailRepository = new Mock<IVoucherDetailRepository>();
         TB_VOUCHERSDETAIL? staged = null;
         detailRepository
@@ -149,7 +149,7 @@ public sealed class CreateVoucherDetailCommandHandlerTests
     {
         var headId = Guid.NewGuid();
         var headRepository = new Mock<IVoucherHeadRepository>();
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
         var detailRepository = new Mock<IVoucherDetailRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
@@ -184,13 +184,13 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, token)).ReturnsAsync(ExistingHead(headId));
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), token)).ReturnsAsync(ExistingHead(headId));
 
         var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(headId), token);
 
-        headRepository.Verify(r => r.GetForUpdateAsync(headId, token), Times.Once);
+        headRepository.Verify(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), token), Times.Once);
         detailRepository.Verify(r => r.AddAsync(It.IsAny<TB_VOUCHERSDETAIL>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
@@ -203,7 +203,7 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         // the dedicated pipeline test below); this test only proves the mapping is faithful.
         var headId = Guid.NewGuid();
         var headRepository = new Mock<IVoucherHeadRepository>();
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
         var detailRepository = new Mock<IVoucherDetailRepository>();
         TB_VOUCHERSDETAIL? staged = null;
         detailRepository
@@ -231,7 +231,7 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         // unconditionally with ICurrentUser.VahedCode before the handler ever sees it.
         var headId = Guid.NewGuid();
         var headRepository = new Mock<IVoucherHeadRepository>();
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
         var detailRepository = new Mock<IVoucherDetailRepository>();
         TB_VOUCHERSDETAIL? staged = null;
         detailRepository

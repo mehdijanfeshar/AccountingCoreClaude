@@ -33,7 +33,7 @@ public sealed class DeleteVoucherDetailCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         repository
             .Setup(r => r.SoftDeleteTafsiliLinksAsync(id, It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
@@ -56,7 +56,7 @@ public sealed class DeleteVoucherDetailCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         repository
             .Setup(r => r.SoftDeleteTafsiliLinksAsync(id, It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(3);
@@ -79,7 +79,7 @@ public sealed class DeleteVoucherDetailCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         var callOrder = new List<string>();
@@ -116,7 +116,7 @@ public sealed class DeleteVoucherDetailCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -124,7 +124,7 @@ public sealed class DeleteVoucherDetailCommandHandlerTests
 
         await handler.Handle(new DeleteVoucherDetailCommand(id), CancellationToken.None);
 
-        Assert.Same(entity, await repository.Object.GetForUpdateAsync(id, CancellationToken.None));
+        Assert.Same(entity, await repository.Object.GetForUpdateAsync(id, It.IsAny<string>(), CancellationToken.None));
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public sealed class DeleteVoucherDetailCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_VOUCHERSDETAIL?)null);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_VOUCHERSDETAIL?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -154,7 +154,7 @@ public sealed class DeleteVoucherDetailCommandHandlerTests
         entity.UPDATEDDATE = updatedAt;
 
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("newDeleter");
 
@@ -179,7 +179,7 @@ public sealed class DeleteVoucherDetailCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, isDeleted: null);
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         repository
             .Setup(r => r.SoftDeleteTafsiliLinksAsync(id, It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
@@ -207,7 +207,7 @@ public sealed class DeleteVoucherDetailCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
         repository
             .Setup(r => r.SoftDeleteTafsiliLinksAsync(id, It.IsAny<string?>(), It.IsAny<DateTime>(), token))
             .ReturnsAsync(0);
@@ -216,7 +216,7 @@ public sealed class DeleteVoucherDetailCommandHandlerTests
 
         await handler.Handle(new DeleteVoucherDetailCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         repository.Verify(r => r.SoftDeleteTafsiliLinksAsync(id, It.IsAny<string?>(), It.IsAny<DateTime>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
