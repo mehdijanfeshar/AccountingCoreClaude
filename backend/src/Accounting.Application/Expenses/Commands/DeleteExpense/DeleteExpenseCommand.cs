@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
 using MediatR;
 
 namespace Accounting.Application.Expenses.Commands.DeleteExpense;
@@ -10,4 +12,13 @@ namespace Accounting.Application.Expenses.Commands.DeleteExpense;
 /// exists in this feature at all.
 /// </summary>
 /// <param name="Id">The <c>TB_EXPENCE.ID</c> to soft-delete (bound from the route).</param>
-public sealed record DeleteExpenseCommand(Guid Id) : IRequest;
+public sealed record DeleteExpenseCommand(Guid Id) : IRequest, IVahedScopedCommand
+{
+    /// <summary>
+    /// Caller's own organizational unit, server-assigned by <c>VahedScopeBehavior</c> — never
+    /// client input. Used to refuse a row belonging to another unit; see
+    /// <c>VahedOwnership</c> and IDOR risk #1.
+    /// </summary>
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

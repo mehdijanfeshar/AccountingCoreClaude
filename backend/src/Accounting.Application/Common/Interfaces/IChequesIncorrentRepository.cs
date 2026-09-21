@@ -18,5 +18,5 @@ public interface IChequesIncorrentRepository
     /// <see langword="null"/> when no row with that <c>ID</c> exists — soft-deleted rows are
     /// still returned here (the caller decides how to treat <c>ISDELETED</c>).
     /// </summary>
-    Task<TB_CHEQUES_INCORRENT?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TB_CHEQUES_INCORRENT?> GetForUpdateAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

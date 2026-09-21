@@ -85,9 +85,24 @@ public sealed class PreDescribReadRepository : IPreDescribReadRepository
         };
     }
 
-    public Task<PreDescribDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<PreDescribDto?> GetByIdAsync(
+        Guid id,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
     {
-        return _dbContext.TB_PREDESCRIBs
+        // The owning unit is read first as a scalar so the access decision can tell "no such
+        // row" (null, caller gets null, 404) from "another unit's row" (403). Projecting it
+        // alongside the DTO in one query is not possible while ToDto stays a reusable
+        // Expression, and this is a single-record edit-form fetch, not a hot path.
+        var ownerVahedCode = await _dbContext.TB_PREDESCRIBs
+            .AsNoTracking()
+            .Where(p => p.ID == id)
+            .Select(p => p.VAHEDCODE)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        VahedOwnership.EnsureOwned(ownerVahedCode, vahedCode, id, "PreDescrib");
+
+        return await _dbContext.TB_PREDESCRIBs
             .AsNoTracking()
             .Where(p => p.ID == id)
             .Select(ToDto)

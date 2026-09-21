@@ -25,9 +25,18 @@ public sealed class IdentitySubGroupRepository : IIdentitySubGroupRepository
         await _dbContext.TB_IDENTITYSUBGRPs.AddAsync(identitySubGroup, cancellationToken);
     }
 
-    public async Task<TB_IDENTITYSUBGRP?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<TB_IDENTITYSUBGRP?> GetForUpdateAsync(
+        Guid id,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
     {
-        return await _dbContext.TB_IDENTITYSUBGRPs
+        var entity = await _dbContext.TB_IDENTITYSUBGRPs
             .FirstOrDefaultAsync(s => s.ID == id, cancellationToken);
+
+        // Fetched by ID alone, then judged — a WHERE on VAHEDCODE could not tell "no such row"
+        // apart from "another unit's row", and those answer 404 and 403 respectively.
+        VahedOwnership.EnsureOwned(entity?.VAHEDCODE, vahedCode, id, "IdentitySubGroup");
+
+        return entity;
     }
 }

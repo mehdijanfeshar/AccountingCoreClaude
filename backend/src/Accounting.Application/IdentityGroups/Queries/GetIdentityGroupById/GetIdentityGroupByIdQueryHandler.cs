@@ -17,5 +17,5 @@ public sealed class GetIdentityGroupByIdQueryHandler : IRequestHandler<GetIdenti
     }
 
     public Task<IdentityGroupDto?> Handle(GetIdentityGroupByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

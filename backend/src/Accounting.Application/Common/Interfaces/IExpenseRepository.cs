@@ -21,7 +21,7 @@ public interface IExpenseRepository
     /// no row with that <c>ID</c> exists — soft-deleted rows are still returned here (the caller
     /// decides how to treat <c>ISDELETED</c>).
     /// </summary>
-    Task<TB_EXPENCE?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TB_EXPENCE?> GetForUpdateAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Stages a new <see cref="TB_EXPENCE_LINK_TAFSILI"/> row for insert as part of its parent

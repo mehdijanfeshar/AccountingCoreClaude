@@ -35,7 +35,7 @@ public sealed class UpdatePreDescribCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IPreDescribRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
 
         var handler = new UpdatePreDescribCommandHandler(repository.Object, unitOfWork.Object);
@@ -58,7 +58,7 @@ public sealed class UpdatePreDescribCommandHandlerTests
         var originalAddUserId = entity.ADDUSERID;
 
         var repository = new Mock<IPreDescribRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
 
         var handler = new UpdatePreDescribCommandHandler(repository.Object, unitOfWork.Object);
@@ -74,7 +74,7 @@ public sealed class UpdatePreDescribCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<IPreDescribRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_PREDESCRIB?)null);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_PREDESCRIB?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
 
         var handler = new UpdatePreDescribCommandHandler(repository.Object, unitOfWork.Object);
@@ -90,7 +90,7 @@ public sealed class UpdatePreDescribCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IPreDescribRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
 
         var handler = new UpdatePreDescribCommandHandler(repository.Object, unitOfWork.Object);
@@ -110,13 +110,13 @@ public sealed class UpdatePreDescribCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
         var handler = new UpdatePreDescribCommandHandler(repository.Object, unitOfWork.Object);
 
         await handler.Handle(ValidCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 
@@ -146,7 +146,7 @@ public sealed class UpdatePreDescribCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IPreDescribRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = new Mock<ICurrentUser>();
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");

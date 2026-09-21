@@ -42,7 +42,7 @@ public sealed class UpdateExpenseCommandHandler : IRequestHandler<UpdateExpenseC
 
     public async Task Handle(UpdateExpenseCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _expenseRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _expenseRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null || entity.ISDELETED == true)
         {

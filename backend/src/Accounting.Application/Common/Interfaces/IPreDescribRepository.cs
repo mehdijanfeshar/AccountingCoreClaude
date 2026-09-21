@@ -23,5 +23,5 @@ public interface IPreDescribRepository
     /// UPDATE on <see cref="IUnitOfWork.SaveChangesAsync"/>. Returns <see langword="null"/>
     /// when no row with that <c>ID</c> exists.
     /// </summary>
-    Task<TB_PREDESCRIB?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TB_PREDESCRIB?> GetForUpdateAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

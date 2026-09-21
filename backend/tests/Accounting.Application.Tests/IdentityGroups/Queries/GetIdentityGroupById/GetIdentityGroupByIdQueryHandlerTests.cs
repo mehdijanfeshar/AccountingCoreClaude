@@ -26,7 +26,7 @@ public sealed class GetIdentityGroupByIdQueryHandlerTests
         var expected = SampleDto(id);
         var readRepository = new Mock<IIdentityGroupReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetIdentityGroupByIdQueryHandler(readRepository.Object);
@@ -42,7 +42,7 @@ public sealed class GetIdentityGroupByIdQueryHandlerTests
         var id = Guid.NewGuid();
         var readRepository = new Mock<IIdentityGroupReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IdentityGroupDto?)null);
 
         var handler = new GetIdentityGroupByIdQueryHandler(readRepository.Object);
@@ -60,14 +60,14 @@ public sealed class GetIdentityGroupByIdQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetByIdAsync(id, token))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), token))
             .ReturnsAsync((IdentityGroupDto?)null);
 
         var handler = new GetIdentityGroupByIdQueryHandler(readRepository.Object);
 
         await handler.Handle(new GetIdentityGroupByIdQuery(id), token);
 
-        readRepository.Verify(r => r.GetByIdAsync(id, token), Times.Once);
+        readRepository.Verify(r => r.GetByIdAsync(id, It.IsAny<string>(), token), Times.Once);
     }
 
     [Fact]
