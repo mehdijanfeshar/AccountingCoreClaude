@@ -1,5 +1,7 @@
+using Accounting.Application.Accounts.Commands.Common;
 using Accounting.Application.Accounts.Commands.LinkAccountCodeToTafsilGroup;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Tests.Accounts.Commands.Common;
 using Accounting.Domain.Entity;
 using Moq;
 
@@ -22,7 +24,7 @@ public sealed class LinkAccountCodeToTafsilGroupCommandHandlerTests
     [Fact]
     public async Task Handle_MapsCommandFieldsOntoStagedEntity()
     {
-        var repository = new Mock<IAccountCodeRepository>();
+        var repository = new Mock<IAccountCodeRepository>().WithNoExistingLevelLinks();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         TB_ACCOUNT_LINK_TAFSILGROUP? staged = null;
@@ -31,7 +33,11 @@ public sealed class LinkAccountCodeToTafsilGroupCommandHandlerTests
             .Callback<TB_ACCOUNT_LINK_TAFSILGROUP, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new LinkAccountCodeToTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new LinkAccountCodeToTafsilGroupCommandHandler(
+            repository.Object,
+            unitOfWork.Object,
+            currentUser.Object,
+            new AccountLevelLinkSynchronizer(repository.Object, currentUser.Object));
         var command = ValidCommand();
 
         await handler.Handle(command, CancellationToken.None);
@@ -45,7 +51,7 @@ public sealed class LinkAccountCodeToTafsilGroupCommandHandlerTests
     [Fact]
     public async Task Handle_SetsAddUserIdFromCurrentUser_IsDeletedFalse_AndNonDefaultCreatedDate()
     {
-        var repository = new Mock<IAccountCodeRepository>();
+        var repository = new Mock<IAccountCodeRepository>().WithNoExistingLevelLinks();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("srvusr01");
         TB_ACCOUNT_LINK_TAFSILGROUP? staged = null;
@@ -54,7 +60,11 @@ public sealed class LinkAccountCodeToTafsilGroupCommandHandlerTests
             .Callback<TB_ACCOUNT_LINK_TAFSILGROUP, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new LinkAccountCodeToTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new LinkAccountCodeToTafsilGroupCommandHandler(
+            repository.Object,
+            unitOfWork.Object,
+            currentUser.Object,
+            new AccountLevelLinkSynchronizer(repository.Object, currentUser.Object));
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -67,7 +77,7 @@ public sealed class LinkAccountCodeToTafsilGroupCommandHandlerTests
     [Fact]
     public async Task Handle_ReturnsSameGuidAssignedToStagedEntity_AndCallsSaveChangesOnce()
     {
-        var repository = new Mock<IAccountCodeRepository>();
+        var repository = new Mock<IAccountCodeRepository>().WithNoExistingLevelLinks();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         TB_ACCOUNT_LINK_TAFSILGROUP? staged = null;
@@ -76,7 +86,11 @@ public sealed class LinkAccountCodeToTafsilGroupCommandHandlerTests
             .Callback<TB_ACCOUNT_LINK_TAFSILGROUP, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new LinkAccountCodeToTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new LinkAccountCodeToTafsilGroupCommandHandler(
+            repository.Object,
+            unitOfWork.Object,
+            currentUser.Object,
+            new AccountLevelLinkSynchronizer(repository.Object, currentUser.Object));
 
         var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -88,13 +102,17 @@ public sealed class LinkAccountCodeToTafsilGroupCommandHandlerTests
     [Fact]
     public async Task Handle_PropagatesCancellationTokenToBothDependencies()
     {
-        var repository = new Mock<IAccountCodeRepository>();
+        var repository = new Mock<IAccountCodeRepository>().WithNoExistingLevelLinks();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        var handler = new LinkAccountCodeToTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new LinkAccountCodeToTafsilGroupCommandHandler(
+            repository.Object,
+            unitOfWork.Object,
+            currentUser.Object,
+            new AccountLevelLinkSynchronizer(repository.Object, currentUser.Object));
 
         await handler.Handle(ValidCommand(), token);
 

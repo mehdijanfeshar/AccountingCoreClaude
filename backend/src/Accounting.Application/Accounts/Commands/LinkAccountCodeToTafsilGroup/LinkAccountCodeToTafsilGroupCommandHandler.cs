@@ -1,3 +1,4 @@
+using Accounting.Application.Accounts.Commands.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using MediatR;
@@ -10,6 +11,11 @@ namespace Accounting.Application.Accounts.Commands.LinkAccountCodeToTafsilGroup;
 /// transaction boundary by calling <see cref="IUnitOfWork.SaveChangesAsync"/> exactly once.
 /// <c>ADDUSERID</c> is sourced from <see cref="ICurrentUser"/> — never from the request.
 ///
+/// Between staging the link and saving, <see cref="AccountLevelLinkSynchronizer"/> brings this
+/// معین's <c>TB_ACCOUNT_LINK_LEVEL</c> rows in line — linking a گروه تفصیلی for a level is what
+/// makes that level required on the voucher form, and the two tables are written in one
+/// transaction so they cannot drift apart again. See that class for the rule and its history.
+///
 /// Deliberately does NOT check that <see cref="LinkAccountCodeToTafsilGroupCommand.AccountCodeId"/>
 /// exists/is-not-deleted before staging the insert — the real FK (<c>FK_TAFSILGOUP_ACCOUNTCODE</c>)
 /// already guarantees referential integrity, and pre-checking would just be a redundant
@@ -21,15 +27,18 @@ public sealed class LinkAccountCodeToTafsilGroupCommandHandler
     private readonly IAccountCodeRepository _accountCodeRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly AccountLevelLinkSynchronizer _levelLinkSynchronizer;
 
     public LinkAccountCodeToTafsilGroupCommandHandler(
         IAccountCodeRepository accountCodeRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        AccountLevelLinkSynchronizer levelLinkSynchronizer)
     {
         _accountCodeRepository = accountCodeRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _levelLinkSynchronizer = levelLinkSynchronizer;
     }
 
     public async Task<Guid> Handle(LinkAccountCodeToTafsilGroupCommand request, CancellationToken cancellationToken)
@@ -46,6 +55,7 @@ public sealed class LinkAccountCodeToTafsilGroupCommandHandler
         };
 
         await _accountCodeRepository.AddTafsilGroupLinkAsync(link, cancellationToken);
+        await _levelLinkSynchronizer.SyncAsync(request.AccountCodeId, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return link.ID;

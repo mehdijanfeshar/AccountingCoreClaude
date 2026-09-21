@@ -46,4 +46,41 @@ public interface IAccountCodeRepository
     /// rather than an independent write path.
     /// </summary>
     Task AddTafsilGroupLinkAsync(TB_ACCOUNT_LINK_TAFSILGROUP link, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Every <see cref="TB_ACCOUNT_LINK_TAFSILGROUP"/> row this معین <b>will have</b> once the
+    /// current unit of work is committed — soft-deleted rows included, as change-tracked entities.
+    ///
+    /// <b>"Will have", not "has", and that is the point.</b> A row already staged for insert in
+    /// this same unit of work (see <see cref="AddTafsilGroupLinkAsync"/>) is not in the database
+    /// yet and a plain query would not return it, so the implementation merges pending inserts in.
+    /// Without that, <c>AccountLevelLinkSynchronizer</c> would reconcile against the state from
+    /// before the caller's own change and immediately undo it.
+    ///
+    /// Rows are change-tracked on purpose: a caller that has already mutated one (an update or an
+    /// unlink) gets back that same instance through EF's identity map, so the set it computes
+    /// reflects the change it just made rather than the row as stored.
+    /// </summary>
+    Task<IReadOnlyList<TB_ACCOUNT_LINK_TAFSILGROUP>> GetTafsilGroupLinksForSyncAsync(
+        Guid accountCodeId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Every <see cref="TB_ACCOUNT_LINK_LEVEL"/> row of this معین — soft-deleted ones included,
+    /// change-tracked. The deleted rows matter: the synchronizer revives one rather than inserting
+    /// a second row for the same level, so a level switched off and back on keeps a single row
+    /// with its original <c>CREATEDDATE</c>.
+    /// </summary>
+    Task<IReadOnlyList<TB_ACCOUNT_LINK_LEVEL>> GetLevelLinksForSyncAsync(
+        Guid accountCodeId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stages new <see cref="TB_ACCOUNT_LINK_LEVEL"/> rows. Parent-scoped like the گروه تفصیلی
+    /// links above: <c>TB_ACCOUNT_LINK_LEVEL</c> has no write path of its own and is never
+    /// addressed except through the معین that owns it.
+    /// </summary>
+    Task AddLevelLinksAsync(
+        IReadOnlyCollection<TB_ACCOUNT_LINK_LEVEL> links,
+        CancellationToken cancellationToken = default);
 }

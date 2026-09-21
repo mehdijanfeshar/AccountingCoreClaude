@@ -1,4 +1,5 @@
 using System.Reflection;
+using Accounting.Application.Accounts.Commands.Common;
 using Accounting.Application.Common.Behaviors;
 using FluentValidation;
 using MediatR;
@@ -45,6 +46,11 @@ public static class DependencyInjection
 
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(VahedScopeBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
+        // Not a pipeline behavior and not a repository: a piece of write-side domain logic shared
+        // by the three «ارتباط معین با گروه تفصیلی» handlers, which keeps TB_ACCOUNT_LINK_LEVEL in
+        // step with TB_ACCOUNT_LINK_TAFSILGROUP. Scoped, so it joins the caller's unit of work.
+        services.AddScoped<AccountLevelLinkSynchronizer>();
 
         return services;
     }
