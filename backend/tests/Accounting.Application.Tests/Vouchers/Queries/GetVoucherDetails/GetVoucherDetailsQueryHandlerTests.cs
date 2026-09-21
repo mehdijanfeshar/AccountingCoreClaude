@@ -26,7 +26,8 @@ public sealed class GetVoucherDetailsQueryHandlerTests
         ChangeUserId: null,
         VahedCode: "0001",
         Year: "1405",
-        IsDeleted: false);
+        IsDeleted: false,
+        TafsiliLinks: Array.Empty<VoucherDetailTafsiliLinkDto>());
 
     [Fact]
     public async Task Handle_PassesPagingAndFiltersToRepository_AndReturnsRepositoryResult()

@@ -46,4 +46,10 @@ public sealed record VoucherDetailDto(
     string? ChangeUserId,
     string? VahedCode,
     string? Year,
-    bool? IsDeleted);
+    bool? IsDeleted,
+    /// <summary>
+    /// The line's active تفصیلی assignments. Never <see langword="null"/> — an empty list means
+    /// the line has none, which is a different statement from "unknown", and an edit form has to
+    /// be able to tell those apart before deciding what to send back.
+    /// </summary>
+    IReadOnlyList<VoucherDetailTafsiliLinkDto> TafsiliLinks);

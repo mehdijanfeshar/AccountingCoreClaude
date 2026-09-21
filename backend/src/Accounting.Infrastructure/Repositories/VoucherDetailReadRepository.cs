@@ -42,7 +42,15 @@ public sealed class VoucherDetailReadRepository : IVoucherDetailReadRepository
         d.CHANGEUSERID,
         d.VAHEDCODE,
         d.YEAR,
-        d.ISDELETED);
+        d.ISDELETED,
+        // A correlated sub-projection, not an Include: EF translates this into a second SQL
+        // statement per query (not per row), and the result still materialises straight into the
+        // DTO without the entity ever being tracked. ISDELETED is non-nullable on the link table,
+        // so "== false" is the complete predicate for "currently applies".
+        d.TB_VOUCHERDETAIL_LINK_TAFSILIs
+            .Where(link => link.ISDELETED == false)
+            .Select(link => new VoucherDetailTafsiliLinkDto(link.TAFSILI_ID, link.LEVEL_ID))
+            .ToList());
 
     private readonly LegacyDbContext _dbContext;
 
