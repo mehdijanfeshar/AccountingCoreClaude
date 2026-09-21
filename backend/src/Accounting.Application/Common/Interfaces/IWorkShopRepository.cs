@@ -17,8 +17,18 @@ public interface IWorkShopRepository
     /// generate the correct UPDATE on <see cref="IUnitOfWork.SaveChangesAsync"/>. Returns
     /// <see langword="null"/> when no row with that <c>ID</c> exists — soft-deleted rows are
     /// still returned here (the caller decides how to treat <c>ISDELETED</c>).
+    ///
+    /// <para>
+    /// <paramref name="vahedCode"/> is the caller's own unit, server-assigned by
+    /// <c>VahedScopeBehavior</c> — never client input. If the row exists but belongs to another
+    /// unit this throws
+    /// <see cref="Accounting.Application.Common.Exceptions.UnitAccessDeniedException"/> (403)
+    /// instead of handing back a row the caller may then edit or delete. Required rather than
+    /// optional on purpose: an update/delete lookup that does not state whose row it may return is
+    /// exactly the hole IDOR risk #1 describes.
+    /// </para>
     /// </summary>
-    Task<TB_WORKSHOP?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TB_WORKSHOP?> GetForUpdateAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Stages a new <see cref="TB_WORKSHOP_LINK_TAFSILI"/> row for insert as part of its parent

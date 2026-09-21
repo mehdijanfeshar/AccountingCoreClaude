@@ -102,6 +102,19 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Forbidden",
                     "The authenticated caller has no usable organizational-unit scope for this operation.")),
 
+            // Deliberately a different detail string from MissingVahedScopeException above, even
+            // though both are 403: that one means "we could not work out which unit you are", this
+            // one means "we know which unit you are, and this record is not yours". Collapsing them
+            // would make a misconfigured token and a cross-unit access attempt indistinguishable in
+            // support. Neither body names the owning unit — that stays in the log.
+            UnitAccessDeniedException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    "This record belongs to a different organizational unit.")),
+
             _ => (
                 StatusCodes.Status500InternalServerError,
                 BuildProblemDetails(

@@ -17,5 +17,5 @@ public sealed class GetWorkShopByIdQueryHandler : IRequestHandler<GetWorkShopByI
     }
 
     public Task<WorkShopDto?> Handle(GetWorkShopByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

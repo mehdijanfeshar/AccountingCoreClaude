@@ -211,37 +211,44 @@ public sealed class VahedScopeConventionTests
     }
 
     /// <summary>
-    /// Deliberately OUT of scope, by explicit project-owner decision: single-record
-    /// <c>Get...ByIdQuery</c> lookups are never <see cref="IVahedScoped"/> — record-ownership
-    /// verification on direct-by-id access is a separate, not-yet-closed IDOR gap (see
-    /// <c>UpdateWorkShopCommand</c>'s XML doc "Scope note" and CLAUDE.md risk #1), not something
-    /// this convention test should silently paper over by requiring the marker. If a
-    /// <c>Get...ByIdQuery</c> ever DOES gain the marker, that is itself a change worth a second
-    /// look (does the repository now filter by unit for a by-id lookup? was that intentional?) —
-    /// so this test fails loudly in that direction too, rather than just ignoring by-id queries
-    /// entirely.
+    /// <b>This assertion was inverted on 2026-09-21 by explicit project-owner decision, and the
+    /// direction matters.</b> It used to assert that no <c>Get...ByIdQuery</c> implements
+    /// <see cref="IVahedScoped"/>, pinning the phase 19 decision to leave by-id access
+    /// unscoped — the open half of IDOR risk #1. The owner has now reversed that: a by-id lookup
+    /// must state whose record it may return, so every <c>Get...ByIdQuery</c> is required to carry
+    /// the marker.
+    ///
+    /// <para>
+    /// <see cref="NotYetOwnershipScoped"/> is migration debt, not an exemption list. Each entity
+    /// moves over with its repository signatures in one batch, and this list shrinks to empty.
+    /// A name left in it is a query that can still read any unit's row by id.
+    /// </para>
     /// </summary>
     [Fact]
-    public void NoGetByIdQuery_ImplementsIVahedScoped()
+    public void EveryGetByIdQuery_ImplementsIVahedScoped()
     {
         var byIdQueries = ConcreteApplicationTypes
             .Where(t => t.Name.EndsWith("ByIdQuery", StringComparison.Ordinal))
             .ToList();
 
         var offenders = byIdQueries
-            .Where(t => ImplementsInterface(t, typeof(IVahedScoped)))
+            .Where(t => !ImplementsInterface(t, typeof(IVahedScoped)))
+            .Where(t => !NoVahedCodeColumnExemptByIdAndDelete.Contains(t.Name))
+            .Where(t => !NotYetOwnershipScoped.Contains(t.Name))
             .Select(t => t.FullName ?? t.Name)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToList();
 
         Assert.True(
             offenders.Count == 0,
-            "The following Get...ByIdQuery type(s) unexpectedly implement IVahedScoped, which is "
-                + "deliberately out of scope for by-id lookups (project-owner decision): "
+            "The following Get...ByIdQuery type(s) do not implement IVahedScoped, so they hand "
+                + "back whatever row the caller's id names, regardless of which unit owns it — "
+                + "the second half of IDOR risk #1: "
                 + string.Join(", ", offenders)
-                + ". If this is an intentional new decision to scope by-id access, update this "
-                + "test (and its XML doc) to reflect that decision explicitly rather than deleting "
-                + "the assertion.");
+                + ". Make each one implement IVahedScopedQuery and give its read repository's "
+                + "GetByIdAsync a required vahedCode parameter. Adding a name to "
+                + $"{nameof(NotYetOwnershipScoped)} is only for work queued in a later batch — it "
+                + "is not a way to make this failure go away.");
 
         // Sanity check: the scan must not be vacuous.
         Assert.NotEmpty(byIdQueries);
@@ -315,8 +322,16 @@ public sealed class VahedScopeConventionTests
         Assert.NotEmpty(vahedScopedTypes);
     }
 
+    /// <summary>
+    /// <b>Also inverted on 2026-09-21, same owner decision.</b> The old assertion said no Delete
+    /// command may be <see cref="IVahedScoped"/>, and its reasoning was sound as far as it went:
+    /// a soft delete does not write <c>VAHEDCODE</c>, so there is nothing for
+    /// <c>VahedScopeBehavior</c> to stamp. What that reasoning missed is that the unit is needed
+    /// not to <i>write</i> the column but to decide whether this caller may delete this row at
+    /// all — without it, any valid id deletes any unit's record.
+    /// </summary>
     [Fact]
-    public void NoDeleteCommand_ImplementsIVahedScoped()
+    public void EveryDeleteCommand_ImplementsIVahedScoped()
     {
         var deleteCommands = ConcreteApplicationTypes
             .Where(t => t.Name.EndsWith("Command", StringComparison.Ordinal))
@@ -324,20 +339,118 @@ public sealed class VahedScopeConventionTests
             .ToList();
 
         var offenders = deleteCommands
-            .Where(t => ImplementsInterface(t, typeof(IVahedScoped)))
+            .Where(t => !ImplementsInterface(t, typeof(IVahedScoped)))
+            .Where(t => !NoVahedCodeColumnExemptByIdAndDelete.Contains(t.Name))
+            .Where(t => !NotYetOwnershipScoped.Contains(t.Name))
             .Select(t => t.FullName ?? t.Name)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToList();
 
         Assert.True(
             offenders.Count == 0,
-            "The following Delete command(s) unexpectedly implement IVahedScoped, which is "
-                + "deliberately out of scope for Delete (soft-delete does not touch VAHEDCODE): "
+            "The following Delete command(s) do not implement IVahedScoped, so they delete "
+                + "whatever row the caller's id names, in any unit: "
                 + string.Join(", ", offenders)
-                + ". If this is an intentional new decision to scope Delete commands, update this "
-                + "test to reflect that decision explicitly rather than deleting the assertion.");
+                + ". Make each one implement IVahedScopedCommand and give its repository's "
+                + $"GetForUpdateAsync a required vahedCode parameter. {nameof(NotYetOwnershipScoped)} "
+                + "is migration debt queued for a later batch, not an exemption.");
 
         // Sanity check: the scan must not be vacuous.
         Assert.NotEmpty(deleteCommands);
     }
+
+    /// <summary>
+    /// By-id queries and Delete commands that can never be ownership-scoped, because their Legacy
+    /// table has no <c>VAHEDCODE</c> column at all (the same 8 entities as
+    /// <see cref="NoVahedCodeColumnExemptCommands"/>), or because the project owner exempted the
+    /// entity permanently (<c>VahedInfo</c>) or pending a decision (<c>PersonAction</c>).
+    ///
+    /// <para>
+    /// ⚠️ These rows are <b>not</b> protected by unit ownership and never will be by this
+    /// mechanism. For the tables with no column that is simply the schema; for
+    /// <c>PersonAction</c> it is open risk #1-ب, which needs its own answer.
+    /// </para>
+    /// </summary>
+    private static readonly HashSet<string> NoVahedCodeColumnExemptByIdAndDelete = new(StringComparer.Ordinal)
+    {
+        "DeleteAccountCodeCommand",
+        "DeleteAccountCodeInterfaceCommand",
+        "DeleteAccountExceptionCommand",
+        "DeleteAttribForAccountCodeCommand",
+        "DeleteLevelTafsilCommand",
+        "DeletePersonActionCommand",
+        "DeleteRabetCommand",
+        "DeleteTafsilGroupCommand",
+        "DeleteWhiteAndBlackListCommand",
+        "DeleteWhiteListCommand",
+        "GetAccountCodeByIdQuery",
+        "GetAccountCodeInterfaceByIdQuery",
+        "GetAccountExceptionByIdQuery",
+        "GetAttribForAccountCodeByIdQuery",
+        "GetLevelTafsilByIdQuery",
+        "GetPersonActionByIdQuery",
+        "GetRabetByIdQuery",
+        "GetTafsilGroupByIdQuery",
+        "GetVahedInfoByIdQuery",
+        "GetWhiteAndBlackListByIdQuery",
+        "GetWhiteListByIdQuery",
+    };
+
+    /// <summary>
+    /// Entities whose by-id lookups have not yet been moved onto record-ownership checking. Every
+    /// name here is a live instance of the open half of IDOR risk #1: knowing an id is enough to
+    /// read, edit or delete that unit's row from another unit.
+    ///
+    /// <para>
+    /// The migration runs entity by entity — query/command marker, repository signature, handler,
+    /// tests — and each batch deletes its names from this list. <b>When the list is empty, delete
+    /// it and the two <c>NotYetOwnershipScoped.Contains</c> filters above</b>, so the rule becomes
+    /// unconditional and nothing can be queued again.
+    /// </para>
+    ///
+    /// <para>
+    /// It is a literal list rather than a computed one on purpose: a new entity added tomorrow
+    /// must fail these tests immediately, not inherit an exemption nobody reviewed.
+    /// </para>
+    /// </summary>
+    private static readonly HashSet<string> NotYetOwnershipScoped = new(StringComparer.Ordinal)
+    {
+        "DeleteBankAccountCommand",
+        "DeleteBankCartDetailCommand",
+        "DeleteBillLogCommand",
+        "DeleteCheckBookCommand",
+        "DeleteChequeTypeCommand",
+        "DeleteChequesIncorrentCommand",
+        "DeleteElamHeadCommand",
+        "DeleteExpenseCommand",
+        "DeleteIdentityGroupCommand",
+        "DeleteIdentityHeadCommand",
+        "DeleteIdentitySubGroupCommand",
+        "DeletePayReciveHeadCommand",
+        "DeleteReceiptCommand",
+        "DeleteRevolvingFundCommand",
+        "DeleteTafsiliCommand",
+        "DeleteTmpVoucherHeadCommand",
+        "DeleteVoucherDetailCommand",
+        "DeleteVoucherHeadCommand",
+        "GetBankAccountByIdQuery",
+        "GetBankCartDetailByIdQuery",
+        "GetBillLogByIdQuery",
+        "GetCheckBookByIdQuery",
+        "GetChequeTypeByIdQuery",
+        "GetChequesIncorrentByIdQuery",
+        "GetElamHeadByIdQuery",
+        "GetExpenseByIdQuery",
+        "GetIdentityGroupByIdQuery",
+        "GetIdentityHeadByIdQuery",
+        "GetIdentitySubGroupByIdQuery",
+        "GetPayReciveHeadByIdQuery",
+        "GetPreDescribByIdQuery",
+        "GetReceiptByIdQuery",
+        "GetRevolvingFundByIdQuery",
+        "GetTafsiliByIdQuery",
+        "GetTmpVoucherHeadByIdQuery",
+        "GetVoucherDetailByIdQuery",
+        "GetVoucherHeadByIdQuery",
+    };
 }
