@@ -31,7 +31,7 @@ public sealed class GetPayReciveHeadByIdQueryHandlerTests
         var expected = SampleDto();
         var readRepository = new Mock<IPayReciveHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(TargetId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(TargetId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetPayReciveHeadByIdQueryHandler(readRepository.Object);
@@ -46,7 +46,7 @@ public sealed class GetPayReciveHeadByIdQueryHandlerTests
     {
         var readRepository = new Mock<IPayReciveHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((PayReciveHeadDto?)null);
 
         var handler = new GetPayReciveHeadByIdQueryHandler(readRepository.Object);
@@ -65,7 +65,7 @@ public sealed class GetPayReciveHeadByIdQueryHandlerTests
     {
         var readRepository = new Mock<IPayReciveHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(TargetId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(TargetId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SampleDto(isDeleted: true));
 
         var handler = new GetPayReciveHeadByIdQueryHandler(readRepository.Object);
@@ -81,7 +81,7 @@ public sealed class GetPayReciveHeadByIdQueryHandlerTests
     {
         var readRepository = new Mock<IPayReciveHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SampleDto());
         using var cts = new CancellationTokenSource();
 
@@ -89,6 +89,6 @@ public sealed class GetPayReciveHeadByIdQueryHandlerTests
 
         await handler.Handle(new GetPayReciveHeadByIdQuery(TargetId), cts.Token);
 
-        readRepository.Verify(r => r.GetByIdAsync(TargetId, cts.Token), Times.Once);
+        readRepository.Verify(r => r.GetByIdAsync(TargetId, It.IsAny<string>(), cts.Token), Times.Once);
     }
 }

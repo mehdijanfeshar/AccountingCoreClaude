@@ -415,21 +415,11 @@ public sealed class VahedScopeConventionTests
     /// </summary>
     private static readonly HashSet<string> NotYetOwnershipScoped = new(StringComparer.Ordinal)
     {
-        "DeleteElamHeadCommand",
         "DeleteIdentityHeadCommand",
-        "DeletePayReciveHeadCommand",
-        "DeleteReceiptCommand",
-        "DeleteRevolvingFundCommand",
-        "DeleteTafsiliCommand",
         "DeleteTmpVoucherHeadCommand",
         "DeleteVoucherDetailCommand",
         "DeleteVoucherHeadCommand",
-        "GetElamHeadByIdQuery",
         "GetIdentityHeadByIdQuery",
-        "GetPayReciveHeadByIdQuery",
-        "GetReceiptByIdQuery",
-        "GetRevolvingFundByIdQuery",
-        "GetTafsiliByIdQuery",
         "GetTmpVoucherHeadByIdQuery",
         "GetVoucherDetailByIdQuery",
         "GetVoucherHeadByIdQuery",

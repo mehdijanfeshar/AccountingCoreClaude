@@ -47,7 +47,7 @@ public sealed class UpdatePayReciveHeadCommandHandler : IRequestHandler<UpdatePa
 
     public async Task Handle(UpdatePayReciveHeadCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _payReciveHeadRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _payReciveHeadRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null || entity.ISDELETED)
         {

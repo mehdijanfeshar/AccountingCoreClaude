@@ -24,10 +24,19 @@ public sealed class TafsiliRepository : ITafsiliRepository
         await _dbContext.TB_TAFSILIs.AddAsync(tafsili, cancellationToken);
     }
 
-    public async Task<TB_TAFSILI?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<TB_TAFSILI?> GetForUpdateAsync(
+        Guid id,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
     {
-        return await _dbContext.TB_TAFSILIs
+        var entity = await _dbContext.TB_TAFSILIs
             .FirstOrDefaultAsync(t => t.ID == id, cancellationToken);
+
+        // Fetched by ID alone, then judged — a WHERE on VAHEDCODE could not tell "no such row"
+        // apart from "another unit's row", and those answer 404 and 403 respectively.
+        VahedOwnership.EnsureOwned(entity?.VAHEDCODE, vahedCode, id, "Tafsili");
+
+        return entity;
     }
 
     public async Task<IReadOnlyList<TB_TAFSIL_LINK_TAFSILGROUP>> GetTafsiliGroupLinksAsync(

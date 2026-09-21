@@ -30,7 +30,7 @@ public sealed class GetRevolvingFundByIdQueryHandlerTests
         var expected = SampleDto(id);
         var readRepository = new Mock<IRevolvingFundReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetRevolvingFundByIdQueryHandler(readRepository.Object);
@@ -46,7 +46,7 @@ public sealed class GetRevolvingFundByIdQueryHandlerTests
         var id = Guid.NewGuid();
         var readRepository = new Mock<IRevolvingFundReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((RevolvingFundDto?)null);
 
         var handler = new GetRevolvingFundByIdQueryHandler(readRepository.Object);
@@ -64,14 +64,14 @@ public sealed class GetRevolvingFundByIdQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetByIdAsync(id, token))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), token))
             .ReturnsAsync((RevolvingFundDto?)null);
 
         var handler = new GetRevolvingFundByIdQueryHandler(readRepository.Object);
 
         await handler.Handle(new GetRevolvingFundByIdQuery(id), token);
 
-        readRepository.Verify(r => r.GetByIdAsync(id, token), Times.Once);
+        readRepository.Verify(r => r.GetByIdAsync(id, It.IsAny<string>(), token), Times.Once);
     }
 
     [Fact]

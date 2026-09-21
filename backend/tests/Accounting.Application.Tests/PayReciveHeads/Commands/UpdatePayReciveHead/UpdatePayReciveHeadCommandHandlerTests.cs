@@ -57,7 +57,7 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
     {
         var repository = new Mock<IPayReciveHeadRepository>();
         repository
-            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
         var unitOfWork = new Mock<IUnitOfWork>();
         var handler = new UpdatePayReciveHeadCommandHandler(
@@ -172,7 +172,7 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
-        repository.Verify(r => r.GetForUpdateAsync(ExistingId, It.IsAny<CancellationToken>()), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(ExistingId, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -185,7 +185,7 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
 
         await handler.Handle(ValidCommand(), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(ExistingId, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(ExistingId, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 
@@ -235,7 +235,7 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
         var entity = ExistingEntity();
         var repository = new Mock<IPayReciveHeadRepository>();
         repository
-            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();

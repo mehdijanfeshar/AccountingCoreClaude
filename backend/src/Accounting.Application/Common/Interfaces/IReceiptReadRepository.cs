@@ -34,5 +34,5 @@ public interface IReceiptReadRepository
     /// Returns the receipt row with the given <paramref name="id"/> regardless of its
     /// logical-delete state, or <see langword="null"/> if no such row exists.
     /// </summary>
-    Task<ReceiptDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<ReceiptDto?> GetByIdAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

@@ -38,7 +38,7 @@ public sealed class DeleteReceiptCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IReceiptRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter9");
 
@@ -70,7 +70,7 @@ public sealed class DeleteReceiptCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<IReceiptRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_RECEIP?)null);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_RECEIP?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -92,7 +92,7 @@ public sealed class DeleteReceiptCommandHandlerTests
         entity.UPDATEDDATE = updatedAt;
 
         var repository = new Mock<IReceiptRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("newDeleter");
 
@@ -119,13 +119,13 @@ public sealed class DeleteReceiptCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
         var handler = new DeleteReceiptCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(new DeleteReceiptCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 }

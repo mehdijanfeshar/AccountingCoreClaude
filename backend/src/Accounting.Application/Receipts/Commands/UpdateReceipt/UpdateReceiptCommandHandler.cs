@@ -38,7 +38,7 @@ public sealed class UpdateReceiptCommandHandler : IRequestHandler<UpdateReceiptC
 
     public async Task Handle(UpdateReceiptCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _receiptRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _receiptRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null || entity.ISDELETED)
         {

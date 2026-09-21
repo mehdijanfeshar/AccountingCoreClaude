@@ -35,7 +35,7 @@ public sealed class DeleteTafsiliCommandHandler : IRequestHandler<DeleteTafsiliC
 
     public async Task Handle(DeleteTafsiliCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _tafsiliRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _tafsiliRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null)
         {

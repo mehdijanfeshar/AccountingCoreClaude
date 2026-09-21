@@ -133,7 +133,7 @@ public sealed class RevolvingFundTafsiliLinkWriteTests
 
         var repository = new Mock<IRevolvingFundRepository>();
         repository
-            .Setup(r => r.GetForUpdateAsync(parentId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(parentId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TB_REVOLVING_FUND { ID = parentId, ISDELETED = false });
         repository
             .Setup(r => r.GetActiveTafsiliLinksAsync(parentId, It.IsAny<CancellationToken>()))
@@ -187,7 +187,7 @@ public sealed class RevolvingFundTafsiliLinkWriteTests
 
         var repository = new Mock<IRevolvingFundRepository>();
         repository
-            .Setup(r => r.GetForUpdateAsync(parentId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(parentId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TB_REVOLVING_FUND { ID = parentId, ISDELETED = false });
         repository
             .Setup(r => r.GetActiveTafsiliLinksAsync(parentId, It.IsAny<CancellationToken>()))

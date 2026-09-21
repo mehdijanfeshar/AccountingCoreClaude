@@ -38,7 +38,7 @@ public sealed class DeleteRevolvingFundCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IRevolvingFundRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter9");
 
@@ -67,7 +67,7 @@ public sealed class DeleteRevolvingFundCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IRevolvingFundRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -75,7 +75,7 @@ public sealed class DeleteRevolvingFundCommandHandlerTests
 
         await handler.Handle(new DeleteRevolvingFundCommand(id), CancellationToken.None);
 
-        Assert.Same(entity, await repository.Object.GetForUpdateAsync(id, CancellationToken.None));
+        Assert.Same(entity, await repository.Object.GetForUpdateAsync(id, It.IsAny<string>(), CancellationToken.None));
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class DeleteRevolvingFundCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<IRevolvingFundRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_REVOLVING_FUND?)null);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_REVOLVING_FUND?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -105,7 +105,7 @@ public sealed class DeleteRevolvingFundCommandHandlerTests
         entity.UPDATEDDATE = updatedAt;
 
         var repository = new Mock<IRevolvingFundRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("newDeleter");
 
@@ -127,7 +127,7 @@ public sealed class DeleteRevolvingFundCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, isDeleted: null);
         var repository = new Mock<IRevolvingFundRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter5");
 
@@ -152,13 +152,13 @@ public sealed class DeleteRevolvingFundCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
         var handler = new DeleteRevolvingFundCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(new DeleteRevolvingFundCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 }

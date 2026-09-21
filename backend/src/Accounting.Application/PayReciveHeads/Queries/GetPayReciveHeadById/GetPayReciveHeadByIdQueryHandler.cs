@@ -20,5 +20,5 @@ public sealed class GetPayReciveHeadByIdQueryHandler
     public Task<PayReciveHeadDto?> Handle(
         GetPayReciveHeadByIdQuery request,
         CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

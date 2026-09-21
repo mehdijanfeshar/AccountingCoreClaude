@@ -17,5 +17,5 @@ public sealed class GetElamHeadByIdQueryHandler : IRequestHandler<GetElamHeadByI
     }
 
     public Task<ElamHeadDto?> Handle(GetElamHeadByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

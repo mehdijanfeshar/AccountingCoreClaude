@@ -18,7 +18,7 @@ public interface ITafsiliRepository
     /// with that <c>ID</c> exists — soft-deleted rows are still returned here (the caller
     /// decides how to treat <c>ISDELETED</c>).
     /// </summary>
-    Task<TB_TAFSILI?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TB_TAFSILI?> GetForUpdateAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns every non-soft-deleted <c>TB_TAFSIL_LINK_TAFSILGROUP</c> row belonging to

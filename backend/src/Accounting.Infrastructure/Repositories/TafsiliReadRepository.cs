@@ -73,13 +73,22 @@ public sealed class TafsiliReadRepository : ITafsiliReadRepository
         };
     }
 
-    public async Task<TafsiliDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<TafsiliDto?> GetByIdAsync(
+        Guid id,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
     {
-        // No ISDELETED/VAHEDCODE filter here on purpose: GetById returns the row regardless of
-        // its deletion state or owning unit; the caller decides what to do with TafsiliDto.IsDeleted.
+        // Still no ISDELETED filter: GetById returns the row regardless of its deletion state and
+        // the caller decides what to do with TafsiliDto.IsDeleted. The owning unit, however, is no
+        // longer ignored — that part of this comment described the open half of IDOR risk #1.
         var entity = await _dbContext.TB_TAFSILIs
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.ID == id, cancellationToken);
+
+        // Tafsili is the entity that makes the blank-VAHEDCODE rule load-bearing: the reference
+        // project writes VahedCode = "" for Owner = Global records, and those must stay visible to
+        // every unit. VahedOwnership.EnsureOwned treats blank as shared rather than as denied.
+        VahedOwnership.EnsureOwned(entity?.VAHEDCODE, vahedCode, id, "Tafsili");
 
         if (entity is null)
         {
