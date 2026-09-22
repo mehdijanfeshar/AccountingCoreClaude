@@ -116,4 +116,26 @@ public interface IVoucherHeadRepository
         string? changeUserId,
         DateTime updatedDate,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The next free شماره سند for a (unit, year), as a 6-digit zero-padded string — one past the
+    /// highest existing numeric <c>DOC_NUM</c>, or <c>"000001"</c> when the year is empty.
+    ///
+    /// Non-numeric values (such as the temporary tokens مرتب‌سازی parks rows on mid-operation) are
+    /// ignored rather than parsed, so a sort running concurrently cannot hand out a broken number.
+    /// </summary>
+    Task<string> GetNextDocNumAsync(
+        string vahedCode,
+        string? year,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Every non-deleted voucher head for a (unit, year), change-tracked so the caller can
+    /// renumber them. Used by مرتب‌سازی, which needs the whole year — not just the selected range —
+    /// to work out where numbering should resume from.
+    /// </summary>
+    Task<IReadOnlyList<TB_VOUCHERSHEAD>> GetActiveByYearAsync(
+        string vahedCode,
+        string year,
+        CancellationToken cancellationToken = default);
 }

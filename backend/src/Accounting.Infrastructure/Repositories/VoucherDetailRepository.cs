@@ -84,4 +84,16 @@ public sealed class VoucherDetailRepository : IVoucherDetailRepository
             .Where(l => l.VOUCHERSDETAIL_ID == detailId && l.ISDELETED == false)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<TB_VOUCHERSDETAIL>> GetActiveByHeadAsync(
+        Guid voucherHeadId,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.TB_VOUCHERSDETAILs
+            .Where(d => d.VOUCHERSHEAD_ID == voucherHeadId && d.ISDELETED != true)
+            .OrderBy(d => d.RADIF)
+            .ThenBy(d => d.ID)
+            .ToListAsync(cancellationToken);
+    }
 }

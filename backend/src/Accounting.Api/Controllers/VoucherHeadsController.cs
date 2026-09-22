@@ -4,6 +4,8 @@ using Accounting.Application.Vouchers.Commands.ChangeVoucherState;
 using Accounting.Application.Vouchers.Commands.CreateVoucherHead;
 using Accounting.Application.Vouchers.Commands.DeleteVoucherHead;
 using Accounting.Application.Vouchers.Commands.UpdateVoucherHead;
+using Accounting.Application.Vouchers.Commands.ReverseVoucher;
+using Accounting.Application.Vouchers.Commands.SortVouchers;
 using Accounting.Application.Vouchers.Queries;
 using Accounting.Application.Vouchers.Queries.GetVoucherHeadById;
 using Accounting.Application.Vouchers.Queries.GetVoucherHeads;
@@ -241,6 +243,52 @@ public sealed class VoucherHeadsController : ControllerBase
 
         return Ok(new ChangeVoucherStateResponse(command.VoucherHeadIds.Count, command.NewState));
     }
+
+    /// <summary>
+    /// معکوس سند — creates a NEW draft voucher mirroring this one with بدهکار/بستانکار swapped.
+    /// The source is not modified, which is precisely why this is allowed in <b>any</b> state,
+    /// including تأیید دائم: reversal is how a finalized voucher is undone without deleting it, so
+    /// phase 38's editability lock deliberately does not apply. Lines linked to a receipt or a
+    /// cheque are not carried over. Returns <b>201</b> with the new voucher's id.
+    /// </summary>
+    [HttpPost("{id:guid}/reverse")]
+    [ProducesResponseType(typeof(ReverseVoucherResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Reverse(Guid id, CancellationToken cancellationToken)
+    {
+        var newId = await _mediator.Send(new ReverseVoucherCommand(id), cancellationToken);
+
+        return CreatedAtAction(nameof(GetById), new { id = newId }, new ReverseVoucherResponse(newId));
+    }
+
+    /// <summary>
+    /// مرتب‌سازی اسناد — renumbers a range of vouchers into تاریخ سند order, so that شماره سند runs
+    /// in the same sequence as the dates. The range is either a شماره سند span or a تاریخ سند span
+    /// (<c>sortType</c> selects which pair of bounds applies); <c>VAHEDCODE</c> is server-assigned.
+    ///
+    /// Returns <b>409</b> when any voucher in the range is بررسی‌شده or تأیید دائم — a finalized
+    /// document may not be renumbered. Returns <b>200</b> with how many were renumbered, which is
+    /// <c>0</c> for an empty range.
+    /// </summary>
+    [HttpPost("sort")]
+    [ProducesResponseType(typeof(SortVouchersResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Sort(
+        [FromBody] SortVouchersCommand command,
+        CancellationToken cancellationToken)
+    {
+        var renumbered = await _mediator.Send(command, cancellationToken);
+
+        return Ok(new SortVouchersResponse(renumbered));
+    }
 }
 
 /// <summary>
@@ -248,6 +296,14 @@ public sealed class VoucherHeadsController : ControllerBase
 /// and where to. Returns a count rather than the id list the caller already has.
 /// </summary>
 public sealed record ChangeVoucherStateResponse(int MovedCount, DocLife NewState);
+
+/// <summary>Response body for <see cref="VoucherHeadsController.Reverse"/>.</summary>
+/// <param name="Id">The newly created reversing voucher.</param>
+public sealed record ReverseVoucherResponse(Guid Id);
+
+/// <summary>Response body for <see cref="VoucherHeadsController.Sort"/>.</summary>
+/// <param name="RenumberedCount">How many vouchers were renumbered; 0 when the range was empty.</param>
+public sealed record SortVouchersResponse(int RenumberedCount);
 
 /// <summary>
 /// Response body for a successful <see cref="VoucherHeadsController.Create"/> call.

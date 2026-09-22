@@ -143,13 +143,21 @@ public sealed class VoucherHeadReadRepository : IVoucherHeadReadRepository
         var totalCount = await query.CountAsync(cancellationToken);
 
         var items = await query
-            // NOTE: DOC_NUM and YEAR are string columns, so this is an alphabetical sort, not
-            // a numeric one (e.g. "10" sorts before "2"). This mirrors how the data is stored
-            // in Legacy and is intentionally left as-is here. ID is a pure tie-breaker so
-            // paging stays stable across identical Year/VahedCode/DocNum values.
-            .OrderBy(v => v.YEAR)
-            .ThenBy(v => v.VAHEDCODE)
-            .ThenBy(v => v.DOC_NUM)
+            // Newest first — the cartable is a work queue, and the voucher someone needs is
+            // almost always one of the most recent, not voucher 000001 from last Farvardin.
+            //
+            // Sorting on strings is safe for these particular columns and is why no conversion is
+            // needed: DATE_DOC is fixed-width YYYYMMDD and YEAR is fixed-width YYYY, so
+            // alphabetical order IS chronological order. DOC_NUM is the exception — it is a
+            // variable-width numeric string, so "10" sorts before "2" — but it only breaks ties
+            // between vouchers already sharing a date, where being off by a few is harmless.
+            // Converting it would cost a full-table function scan on every page.
+            //
+            // ID stays the final tie-breaker so paging is stable across rows that match on
+            // everything else.
+            .OrderByDescending(v => v.YEAR)
+            .ThenByDescending(v => v.DATE_DOC)
+            .ThenByDescending(v => v.DOC_NUM)
             .ThenBy(v => v.ID)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)

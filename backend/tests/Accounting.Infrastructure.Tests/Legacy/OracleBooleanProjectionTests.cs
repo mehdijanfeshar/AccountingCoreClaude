@@ -104,6 +104,57 @@ public sealed class OracleBooleanProjectionTests
         AssertNoBooleanLiteral(sql);
     }
 
+    /// <summary>
+    /// The predicate half of the same defect, and the half this class originally missed.
+    ///
+    /// <para>
+    /// Phase 37 fixed a projected boolean and guarded only projections. Phase 40 then shipped
+    /// <c>Where(v =&gt; v.ISDELETED != true)</c> against the view and hit
+    /// <c>ORA-00904: "TRUE": invalid identifier</c> at runtime — a comparison operand renders a
+    /// literal just as readily as a projection does.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>The precise root cause, which is narrower than "never use bool".</b> Every Legacy TABLE
+    /// maps its <c>ISDELETED</c> with <c>HasColumnType("NUMBER(1)")</c>, and the Oracle provider's
+    /// "NUMBER(1) ⇒ bool" convention (the phase-25 finding) then gives it a numeric store type, so
+    /// <c>!= true</c> on those renders as a number comparison and is safe — this test proves that.
+    /// The view entity declared a bare <c>bool?</c> with no store type at all, leaving the provider
+    /// nothing to map to and a literal as its fallback. It is the mirror image of phase 25: there
+    /// the store type forced bool when we wanted int, here its absence produced a literal.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public void A_legacy_table_bool_is_safe_because_its_store_type_is_declared()
+    {
+        using var context = CreateOracleContext();
+
+        var sql = context.TB_VOUCHERSHEADs
+            .AsNoTracking()
+            .Where(v => v.ISDELETED != true)
+            .Select(v => v.ID)
+            .ToQueryString();
+
+        AssertNoBooleanLiteral(sql);
+    }
+
+    [Fact]
+    public void The_shipped_matrix_report_predicate_emits_no_boolean_literal()
+    {
+        using var context = CreateOracleContext();
+
+        // The shape MatrixReportReadRepository actually uses now: ISDELETED read and compared as a
+        // number, so nothing boolean reaches the SQL.
+        var sql = context.VW_CONSOLIDATE_REPORTs
+            .AsNoTracking()
+            .Where(v => v.ISDELETED == null || v.ISDELETED != 1)
+            .Where(v => v.YEAR == "1404")
+            .Select(v => new { v.MOINCODE, v.MOINNAME, v.DEBTOR, v.CREDITOR })
+            .ToQueryString();
+
+        AssertNoBooleanLiteral(sql);
+    }
+
     [Fact]
     public void The_shipped_year_projection_emits_no_boolean_literal()
     {

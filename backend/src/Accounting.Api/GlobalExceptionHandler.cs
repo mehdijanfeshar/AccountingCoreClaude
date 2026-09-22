@@ -101,6 +101,16 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             // State-based refusal, not a permissions one: the caller MAY edit this voucher, just
             // not while it is reviewed/accepted — and they can fix that themselves via
             // change-state. See VoucherNotEditableException for why 409 rather than 403.
+            // Terminal-state refusal: تأیید دائم can never be moved. Separate from
+            // VoucherNotEditableException because that one offers a way out and this one cannot.
+            VoucherStateChangeDeniedException voucherStateChangeDeniedException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    voucherStateChangeDeniedException.PublicDetail)),
+
             VoucherNotEditableException voucherNotEditableException => (
                 StatusCodes.Status409Conflict,
                 BuildProblemDetails(

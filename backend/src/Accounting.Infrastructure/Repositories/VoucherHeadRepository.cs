@@ -99,4 +99,42 @@ public sealed class VoucherHeadRepository : IVoucherHeadRepository
 
         return detailLinesToSoftDelete.Count + linkRowsToSoftDelete.Count;
     }
+
+    public async Task<string> GetNextDocNumAsync(
+        string vahedCode,
+        string? year,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await _dbContext.TB_VOUCHERSHEADs
+            .AsNoTracking()
+            .Where(v => v.VAHEDCODE == vahedCode && v.YEAR == year && v.ISDELETED != true)
+            .Select(v => v.DOC_NUM)
+            .ToListAsync(cancellationToken);
+
+        // Parsed client-side rather than with a SQL MAX: DOC_NUM is a varchar and may legitimately
+        // hold a non-numeric temporary token while مرتب‌سازی is mid-flight, which MAX would either
+        // pick as the winner (it sorts above digits) or fail to convert.
+        var highest = 0;
+
+        foreach (var docNum in existing)
+        {
+            if (int.TryParse(docNum, out var parsed) && parsed > highest)
+            {
+                highest = parsed;
+            }
+        }
+
+        return (highest + 1).ToString("000000");
+    }
+
+    public async Task<IReadOnlyList<TB_VOUCHERSHEAD>> GetActiveByYearAsync(
+        string vahedCode,
+        string year,
+        CancellationToken cancellationToken = default)
+    {
+        // Change-tracked on purpose: مرتب‌سازی writes DOC_NUM straight back onto these instances.
+        return await _dbContext.TB_VOUCHERSHEADs
+            .Where(v => v.VAHEDCODE == vahedCode && v.YEAR == year && v.ISDELETED != true)
+            .ToListAsync(cancellationToken);
+    }
 }

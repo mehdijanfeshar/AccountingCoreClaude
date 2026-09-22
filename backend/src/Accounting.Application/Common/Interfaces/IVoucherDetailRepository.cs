@@ -99,4 +99,14 @@ public interface IVoucherDetailRepository
     Task<IReadOnlyList<TB_VOUCHERDETAIL_LINK_TAFSILI>> GetActiveTafsiliLinksAsync(
         Guid detailId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Every active (non-deleted) line of one voucher, change-tracked. <c>vahedCode</c> is a
+    /// required parameter for the same reason it is on every by-id lookup in this project: the
+    /// caller must state whose rows they are entitled to read.
+    /// </summary>
+    Task<IReadOnlyList<TB_VOUCHERSDETAIL>> GetActiveByHeadAsync(
+        Guid voucherHeadId,
+        string vahedCode,
+        CancellationToken cancellationToken = default);
 }

@@ -116,7 +116,8 @@ public sealed class VoucherHeadReadRepositoryFilterTests : IDisposable
 
         var docNums = await DocNumsAsync(new VoucherHeadFilter());
 
-        Assert.Equal(new[] { "000001", "000002" }, docNums);
+        // Newest first (by DATE_DOC) — see Ordering_PutsTheNewestVoucherFirst below.
+        Assert.Equal(new[] { "000002", "000001" }, docNums);
     }
 
     [Fact]
@@ -130,7 +131,38 @@ public sealed class VoucherHeadReadRepositoryFilterTests : IDisposable
 
         var docNums = await DocNumsAsync(new VoucherHeadFilter(DateDocFrom: "14040215", DateDocTo: "14040331"));
 
-        Assert.Equal(new[] { "000002", "000003" }, docNums);
+        // Both bounds are included; the pair comes back newest-first.
+        Assert.Equal(new[] { "000003", "000002" }, docNums);
+    }
+
+    [Fact]
+    public async Task Ordering_PutsTheNewestVoucherFirst()
+    {
+        // Seeded deliberately out of order, and with DOC_NUM running opposite to DATE_DOC, so a
+        // result ordered by number would be visibly different from one ordered by date.
+        await SeedAsync(
+            Head("000001", "14040310"),
+            Head("000002", "14040115"),
+            Head("000003", "14040220"));
+
+        var docNums = await DocNumsAsync(new VoucherHeadFilter());
+
+        // The cartable is a work queue: the voucher someone needs is almost always one of the
+        // most recent, never 000001 from last Farvardin.
+        Assert.Equal(new[] { "000001", "000003", "000002" }, docNums);
+    }
+
+    [Fact]
+    public async Task Ordering_BreaksTiesOnTheSameDateByDocNumDescending()
+    {
+        await SeedAsync(
+            Head("000007", "14040101"),
+            Head("000009", "14040101"),
+            Head("000008", "14040101"));
+
+        var docNums = await DocNumsAsync(new VoucherHeadFilter());
+
+        Assert.Equal(new[] { "000009", "000008", "000007" }, docNums);
     }
 
     [Fact]

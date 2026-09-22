@@ -1,4 +1,5 @@
 using Accounting.Application.Common.Exceptions;
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Interfaces;
 using MediatR;
 
@@ -36,6 +37,18 @@ public sealed class ChangeVoucherStateCommandHandler : IRequestHandler<ChangeVou
         {
             var missing = request.VoucherHeadIds.First(id => found.All(h => h.ID != id));
             throw new NotFoundException("VoucherHead", missing);
+        }
+
+        // تأیید دائم is terminal — «دائم» is the point of the state. Checked for the whole batch
+        // before anything is written, so the all-or-nothing contract above still holds: one
+        // permanently-approved voucher in the selection refuses the entire move rather than
+        // silently skipping that row.
+        foreach (var head in found)
+        {
+            if (head.DOCLIFE == DocLife.Accepted)
+            {
+                throw new VoucherStateChangeDeniedException(head.ID);
+            }
         }
 
         var now = DateTime.UtcNow;

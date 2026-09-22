@@ -1,4 +1,6 @@
 using Accounting.Application.Common.Search;
+using Accounting.Application.Reports.MatrixReport;
+using Accounting.Application.Reports.MatrixReport.GetMatrixReport;
 using Accounting.Application.Reports.TrialBalance;
 using Accounting.Application.Reports.TrialBalance.GetTrialBalance4;
 using Accounting.Application.Reports.TrialBalance.GetTrialBalance6;
@@ -158,6 +160,64 @@ public sealed class TrialBalanceReportsController : ControllerBase
     {
         var result = await _mediator.Send(
             new GetTrialBalance8Query(year, fromDate, toDate, level, docLife, filters),
+            cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// گزارش ماتریسی (تلفیقی) — aggregates voucher activity at one level of the coding hierarchy
+    /// (گروه/کل/معین) or at one of the seven تفصیلی levels, chosen by <paramref name="level"/>,
+    /// optionally narrowed to a path through the levels above it.
+    ///
+    /// <para>
+    /// <b><paramref name="scope"/> is what makes this a browsable report rather than a second
+    /// trial balance.</b> Bound from the query string as
+    /// <c>scope[0].level=1&amp;scope[0].code=1&amp;scope[1].level=2&amp;scope[1].code=10</c>, it
+    /// pins the higher levels so «level=معین» means «the معین rows inside that کل». Appending a
+    /// step is the way down (کل به جزء); dropping one is the way up.
+    /// </para>
+    ///
+    /// <para>
+    /// Reads the Oracle view <c>VW_CONSOLIDATE_REPORT</c> rather than the write model — the one
+    /// report in the project that satisfies team working-rule #2 without the documented exception.
+    /// </para>
+    ///
+    /// <para>
+    /// Not paged, for the same reason as the trial balance: a partial aggregate is not a smaller
+    /// answer, it is a wrong one. Scoped to the caller's effective unit via
+    /// <c>IVahedScopedQuery</c>, hence the <b>403</b>.
+    /// </para>
+    /// </summary>
+    [HttpGet("matrix")]
+    [ProducesResponseType(typeof(MatrixReportResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetMatrixReport(
+        [FromQuery] string year = "",
+        [FromQuery] MatrixReportLevel level = MatrixReportLevel.Moin,
+        [FromQuery] string? fromDate = null,
+        [FromQuery] string? toDate = null,
+        [FromQuery] string? fromVoucherNo = null,
+        [FromQuery] string? toVoucherNo = null,
+        [FromQuery] int? docLife = null,
+        [FromQuery] Guid? systemTypeId = null,
+        [FromQuery] List<MatrixReportScopeItem>? scope = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(
+            new GetMatrixReportQuery(
+                year,
+                level,
+                scope,
+                fromDate,
+                toDate,
+                fromVoucherNo,
+                toVoucherNo,
+                docLife,
+                systemTypeId),
             cancellationToken);
 
         return Ok(result);

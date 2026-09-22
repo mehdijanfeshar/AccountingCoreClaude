@@ -144,20 +144,25 @@ public sealed class ChangeVoucherStateCommandHandlerTests
     }
 
     /// <summary>
-    /// Pins the deliberate absence of a transition guard — see the command's XML doc. If a rule
-    /// is ever introduced, this test is the one that should fail and force the decision to be
-    /// made explicitly rather than discovered in production.
+    /// This test used to be <c>Handle_AcceptedBackToDraft_IsCurrentlyAllowed</c>, pinning the
+    /// deliberate absence of a transition guard and saying that if a rule were ever introduced,
+    /// it should be the test that fails and forces the decision to be explicit. That is exactly
+    /// what happened: تأیید دائم became terminal by project-owner decision (2026-09-22), so the
+    /// assertion is inverted rather than deleted.
+    ///
+    /// The broader rule and its batch behaviour live in <c>AcceptedIsTerminalTests</c>.
     /// </summary>
     [Fact]
-    public async Task Handle_AcceptedBackToDraft_IsCurrentlyAllowed()
+    public async Task Handle_AcceptedBackToDraft_IsRefused()
     {
         var head = Head(Guid.NewGuid(), DocLife.Accepted);
         var harness = CreateHarness(new[] { head });
 
-        await harness.Handler.Handle(
-            new ChangeVoucherStateCommand(new[] { head.ID }, DocLife.Draft),
-            CancellationToken.None);
+        await Assert.ThrowsAsync<VoucherStateChangeDeniedException>(
+            () => harness.Handler.Handle(
+                new ChangeVoucherStateCommand(new[] { head.ID }, DocLife.Draft),
+                CancellationToken.None));
 
-        Assert.Equal(DocLife.Draft, head.DOCLIFE);
+        Assert.Equal(DocLife.Accepted, head.DOCLIFE);
     }
 }

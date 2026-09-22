@@ -146,6 +146,9 @@ public partial class LegacyDbContext : DbContext
 
     public virtual DbSet<TB_YEAR> TB_YEARs { get; set; }
 
+    /// <summary>گزارش ماتریسی — keyless, read-only projection of the Oracle view.</summary>
+    public virtual DbSet<VW_CONSOLIDATE_REPORT> VW_CONSOLIDATE_REPORTs { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
@@ -3642,6 +3645,34 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false)
                 .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
+        });
+
+        // The project's first view mapping. Keyless because a view has no primary key, and
+        // ToView (not ToTable) so EF never attempts DDL or a write against it — this type is
+        // read-only by construction, not merely by convention.
+        modelBuilder.Entity<VW_CONSOLIDATE_REPORT>(entity =>
+        {
+            entity.HasNoKey();
+            entity.ToView("VW_CONSOLIDATE_REPORT");
+
+            entity.Property(e => e.SYSID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+
+            // Added once live column metadata was read (2026-09-22): DOCLIFE and ISDELETED are
+            // NUMBER(1), the exact store type behind the phase-25 "NUMBER(1) ⇒ bool" finding, so
+            // both pin their provider type explicitly rather than relying on EF inferring one
+            // from the CLR property. Same declaration as the two views added alongside this one.
+            entity.Property(e => e.DOCLIFE).HasConversion<int?>();
+            entity.Property(e => e.ISDELETED).HasConversion<int?>();
+
+            // NUMBER(25,0) — a real precision, not the 22-byte storage length Oracle reports for
+            // an unconstrained NUMBER. Declaring it silences EF's "may lead to precision loss"
+            // model warning on a money column, which is not a warning to leave standing.
+            entity.Property(e => e.DEBTOR).HasPrecision(25, 0);
+            entity.Property(e => e.CREDITOR).HasPrecision(25, 0);
         });
 
         modelBuilder.Entity<TB_YEAR>(entity =>
