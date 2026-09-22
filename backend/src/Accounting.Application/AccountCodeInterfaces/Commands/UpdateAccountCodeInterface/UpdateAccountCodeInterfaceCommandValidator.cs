@@ -15,5 +15,8 @@ public sealed class UpdateAccountCodeInterfaceCommandValidator : AbstractValidat
 
         RuleFor(x => x.AccountCodeId)
             .NotEqual(Guid.Empty);
+
+        RuleFor(x => x.Type)
+            .IsInEnum();
     }
 }

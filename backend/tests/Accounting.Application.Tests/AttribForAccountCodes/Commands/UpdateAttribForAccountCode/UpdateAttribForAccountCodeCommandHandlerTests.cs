@@ -1,8 +1,10 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.AttribForAccountCodes.Commands.UpdateAttribForAccountCode;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Moq;
 
@@ -13,11 +15,11 @@ public sealed class UpdateAttribForAccountCodeCommandHandlerTests
     private static UpdateAttribForAccountCodeCommand ValidCommand(Guid id) => new(
         Id: id,
         AccountCodeId: Guid.NewGuid(),
-        AttribBoxNo: true,
-        Flag: true,
+        AttribBoxNo: 5,
+        Flag: AttribFlag.Number,
         LenAtr: 6,
-        AttribSum: false,
-        ControlId: true,
+        AttribSum: AttribSum.Summable,
+        ControlId: AttribControl.NotZero,
         Year: "1405")
     {
         VahedCode = "0002",
@@ -27,10 +29,10 @@ public sealed class UpdateAttribForAccountCodeCommandHandlerTests
     {
         ID = id,
         ACCOUNTCODE_ID = Guid.NewGuid(),
-        ATTRIBBOXNO = false,
-        FLAG = false,
+        ATTRIBBOXNO = 2,
+        FLAG = AttribFlag.Date,
         LENATR = 4,
-        ATTRIBSUM = false,
+        ATTRIBSUM = AttribSum.UnSummable,
         CONTROLID = null,
         VAHEDCODE = "0001",
         YEAR = "1404",
@@ -225,7 +227,7 @@ public sealed class UpdateAttribForAccountCodeCommandHandlerTests
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
         var handler = new UpdateAttribForAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<UpdateAttribForAccountCodeCommand, Unit>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdateAttribForAccountCodeCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(id) with { VahedCode = "9999" };
 
         await behavior.Handle(

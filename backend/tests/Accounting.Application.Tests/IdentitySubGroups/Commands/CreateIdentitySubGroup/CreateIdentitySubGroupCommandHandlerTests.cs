@@ -1,7 +1,9 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.IdentitySubGroups.Commands.CreateIdentitySubGroup;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.IdentitySubGroups.Commands.CreateIdentitySubGroup;
@@ -13,8 +15,8 @@ public sealed class CreateIdentitySubGroupCommandHandlerTests
         SubgrpsDesc: "Sub group",
         SubgrpsLen: 4,
         SumFlag: true,
-        Fixed: false,
-        SubgrpsType: true,
+        Fixed: IdentitySubGroupKind.Variable,
+        SubgrpsType: IdentitySubGroupType.PersianLetter,
         Year: "1403",
         IdentySubGroupsCode: "01")
     {
@@ -220,7 +222,7 @@ public sealed class CreateIdentitySubGroupCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         var handler = new CreateIdentitySubGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateIdentitySubGroupCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateIdentitySubGroupCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

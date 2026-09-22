@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+
 namespace Accounting.Application.BankCartDetails.Queries;
 
 /// <summary>
@@ -16,7 +18,7 @@ namespace Accounting.Application.BankCartDetails.Queries;
 /// <param name="Month">MONTH column.</param>
 /// <param name="Cheqno">CHEQNO column.</param>
 /// <param name="RecivDate">RECIVDATE column.</param>
-/// <param name="CheckReceiptType">CHECKRECEIPTTYPE column — see the unverified-enum note on <c>CreateBankCartDetailCommand</c>.</param>
+/// <param name="CheckReceiptType">CHECKRECEIPTTYPE column — see the resolved-enum note on <c>CreateBankCartDetailCommand</c>.</param>
 /// <param name="Debtor">DEBTOR column.</param>
 /// <param name="Creditor">CREDITOR column.</param>
 /// <param name="VahedCode">VAHEDCODE column.</param>
@@ -37,7 +39,7 @@ public sealed record BankCartDetailDto(
     string? Month,
     string? Cheqno,
     string? RecivDate,
-    bool? CheckReceiptType,
+    CheckReceiptType? CheckReceiptType,
     decimal? Debtor,
     decimal? Creditor,
     string? VahedCode,

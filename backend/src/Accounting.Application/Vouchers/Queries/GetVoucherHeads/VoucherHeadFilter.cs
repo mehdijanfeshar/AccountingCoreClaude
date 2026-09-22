@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+
 namespace Accounting.Application.Vouchers.Queries.GetVoucherHeads;
 
 /// <summary>
@@ -16,10 +18,21 @@ namespace Accounting.Application.Vouchers.Queries.GetVoucherHeads;
 /// <param name="DateDocFrom">Inclusive lower bound of the DATE_DOC range (Legacy <c>YYYYMMDD</c> string).</param>
 /// <param name="DateDocTo">Inclusive upper bound of the DATE_DOC range (Legacy <c>YYYYMMDD</c> string).</param>
 /// <param name="SystemTypeId">Exact-match filter on SYSTEM_TYPE (نوع سند — FK to <c>TB_SYSTYPE</c>).</param>
+/// <param name="DocLife">
+/// Exact-match filter on DOCLIFE (وضعیت سند) — this is what backs the کارتابل's per-status tabs.
+///
+/// ⚠️ <b>Exact match, deliberately, and not the <c>&gt;=</c> the trial-balance reports use.</b>
+/// <see cref="Accounting.Domain.ValueObjects.DocLife"/> is an ordinal enum and the reports
+/// legitimately ask for "at least this degree of finality"; a کارتابل tab asks the opposite
+/// question — "which vouchers are sitting in *this* state right now" — so a document that has
+/// moved on must leave the tab it came from. Both readings are correct for their own caller;
+/// do not unify them.
+/// </param>
 public sealed record VoucherHeadFilter(
     string? Year = null,
     string? DocNumFrom = null,
     string? DocNumTo = null,
     string? DateDocFrom = null,
     string? DateDocTo = null,
-    Guid? SystemTypeId = null);
+    Guid? SystemTypeId = null,
+    DocLife? DocLife = null);

@@ -33,6 +33,16 @@ public interface IWorkShopReadRepository
     /// <summary>
     /// Returns the workshop row with the given <paramref name="id"/> regardless of its
     /// logical-delete state, or <see langword="null"/> if no such row exists.
+    ///
+    /// <para>
+    /// <paramref name="vahedCode"/> is the caller's own unit, server-assigned by
+    /// <c>VahedScopeBehavior</c> — never client input. If the row exists but belongs to another
+    /// unit this throws
+    /// <see cref="Accounting.Application.Common.Exceptions.UnitAccessDeniedException"/> (403)
+    /// rather than returning it. The parameter is required rather than optional on purpose: a
+    /// lookup that does not state whose row it may return is exactly the hole that IDOR risk #1
+    /// describes, so it must not be expressible.
+    /// </para>
     /// </summary>
-    Task<WorkShopDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<WorkShopDto?> GetByIdAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

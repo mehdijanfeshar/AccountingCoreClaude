@@ -8,8 +8,8 @@ namespace Accounting.Application.PayReciveHeads.Commands.CreatePayReciveHead;
 /// decision, accounting invariants must NOT be re-created here — in particular the reference
 /// project's duplicate-document-number guard is deliberately absent (see
 /// <see cref="CreatePayReciveHeadCommand"/> XML doc: the table has no UNIQUE constraint to back
-/// it). <c>PayReciveType</c> carries no range rule either; inventing one would be fabricating a
-/// business rule on a column whose CLR type is already known to be wrong.
+/// it). <c>PayReciveType</c> gets <c>.IsInEnum()</c> — added in phase 27 batch 2 alongside the
+/// <c>bool?</c>-to-enum fix for this column, mirroring <c>CreateAccountCodeCommandValidator</c>.
 ///
 /// The five <c>NotEmpty</c> rules below are not invented: they mirror NOT NULL columns in the
 /// Oracle schema (<c>PAYRECIVCODE</c>, <c>PAYRECIVDATE</c>, <c>PAYRECIVDESCRIPTION</c>,
@@ -45,5 +45,9 @@ public sealed class CreatePayReciveHeadCommandValidator : AbstractValidator<Crea
         RuleFor(x => x.Year)
             .NotEmpty()
             .MaximumLength(4);
+
+        RuleFor(x => x.PayReciveType)
+            .IsInEnum()
+            .When(x => x.PayReciveType.HasValue);
     }
 }

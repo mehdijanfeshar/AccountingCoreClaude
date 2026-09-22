@@ -1,7 +1,9 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.PayReciveHeads.Commands.CreatePayReciveHead;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.PayReciveHeads.Commands.CreatePayReciveHead;
@@ -17,7 +19,7 @@ public sealed class CreatePayReciveHeadCommandHandlerTests
         PayReciveCode: "00123",
         PayReciveDate: "14040101",
         PayReciveDescription: "شرح سند دریافت و پرداخت تستی",
-        PayReciveType: true,
+        PayReciveType: PayRecivType.Pay,
         Year: "1404",
         VoucherHeadId: Guid.NewGuid())
     {
@@ -243,16 +245,16 @@ public sealed class CreatePayReciveHeadCommandHandlerTests
     }
 
     /// <summary>
-    /// Documents the CONFIRMED <c>bool?</c>-should-be-enum defect on <c>PAYRECIVTYPE</c>: the
-    /// real Legacy domain is three-valued (1 = payment, 2 = receipt, 3 = both), and a
-    /// <see cref="bool"/>? can only express two of those three states plus NULL. This test does
-    /// not assert the bug is fixed — it pins the current, deliberately unfixed behaviour so that
-    /// whoever re-types the column has to come here and make the change visible.
+    /// Confirms the phase-27-batch-2 fix for the formerly CONFIRMED <c>bool?</c>-should-be-enum
+    /// defect on <c>PAYRECIVTYPE</c>: the real Legacy domain is three-valued (1 = payment,
+    /// 2 = receipt, 3 = both) and all three are now reachable and round-trip faithfully —
+    /// including <see cref="PayRecivType.All"/>, which a <see cref="bool"/>? could never express.
     /// </summary>
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Handle_PayReciveType_RoundTripsOnlyTwoOfItsThreeRealValues(bool payReciveType)
+    [InlineData(PayRecivType.Pay)]
+    [InlineData(PayRecivType.Recive)]
+    [InlineData(PayRecivType.All)]
+    public async Task Handle_PayReciveType_RoundTripsAllThreeRealValues(PayRecivType payReciveType)
     {
         var repository = CapturingRepository(out var staged);
         var unitOfWork = new Mock<IUnitOfWork>();
@@ -265,10 +267,9 @@ public sealed class CreatePayReciveHeadCommandHandlerTests
         Assert.NotNull(entity);
         Assert.Equal(payReciveType, entity!.PAYRECIVTYPE);
 
-        // Pins the current (wrong) CLR type. When the enum fix lands, this line fails and forces
-        // the change to be acknowledged here rather than slipping through silently.
+        // Confirms the CLR type is now the real enum, not the previously-wrong bool?.
         Assert.Equal(
-            typeof(bool?),
+            typeof(PayRecivType?),
             typeof(CreatePayReciveHeadCommand)
                 .GetProperty(nameof(CreatePayReciveHeadCommand.PayReciveType))!.PropertyType);
     }
@@ -305,7 +306,7 @@ public sealed class CreatePayReciveHeadCommandHandlerTests
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
         var handler = new CreatePayReciveHeadCommandHandler(
             repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreatePayReciveHeadCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreatePayReciveHeadCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

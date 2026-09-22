@@ -1,4 +1,5 @@
 using Accounting.Application.AttribForAccountCodes.Queries;
+using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;
@@ -26,11 +27,18 @@ public interface IAttribForAccountCodeReadRepository
     /// are never returned to anyone, by deliberate fail-closed design (see implementation XML
     /// doc).
     /// </param>
+    /// <param name="filter">
+    /// Optional narrowing filters (معین range, جمع‌پذیری, نوع مقدار, سال مالی). Null, or any null
+    /// member of it, means "do not narrow on that" — never "match nothing". Note the asymmetry
+    /// with <paramref name="vahedCode"/>, which is a security scope and is therefore applied
+    /// unconditionally.
+    /// </param>
     /// <param name="cancellationToken">Propagated to the underlying EF Core query.</param>
     Task<PagedResult<AttribForAccountCodeDto>> GetPagedAsync(
         int pageNumber,
         int pageSize,
         string vahedCode,
+        AttribForAccountCodeFilter? filter = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -17,5 +17,5 @@ public sealed class GetTafsiliByIdQueryHandler : IRequestHandler<GetTafsiliByIdQ
     }
 
     public Task<TafsiliDto?> Handle(GetTafsiliByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

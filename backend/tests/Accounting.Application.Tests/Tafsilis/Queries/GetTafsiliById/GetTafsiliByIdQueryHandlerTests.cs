@@ -1,6 +1,7 @@
 using Accounting.Application.Tafsilis.Queries;
 using Accounting.Application.Tafsilis.Queries.GetTafsiliById;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.Tafsilis.Queries.GetTafsiliById;
@@ -12,7 +13,7 @@ public sealed class GetTafsiliByIdQueryHandlerTests
         TafsiliCode: "001",
         TafsiliName: "تفصیلی یک",
         TafsilDesc: null,
-        IsActive: true,
+        IsActive: TafsiliActiveState.IsActive,
         PersonType: null,
         Owner: null,
         VahedType: null,
@@ -31,7 +32,7 @@ public sealed class GetTafsiliByIdQueryHandlerTests
         var expected = SampleDto(id);
         var readRepository = new Mock<ITafsiliReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetTafsiliByIdQueryHandler(readRepository.Object);
@@ -47,7 +48,7 @@ public sealed class GetTafsiliByIdQueryHandlerTests
         var id = Guid.NewGuid();
         var readRepository = new Mock<ITafsiliReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((TafsiliDto?)null);
 
         var handler = new GetTafsiliByIdQueryHandler(readRepository.Object);

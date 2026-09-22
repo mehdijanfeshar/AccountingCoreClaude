@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Expenses.Commands.CreateExpense;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
@@ -216,7 +217,7 @@ public sealed class CreateExpenseCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateExpenseCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateExpenseCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

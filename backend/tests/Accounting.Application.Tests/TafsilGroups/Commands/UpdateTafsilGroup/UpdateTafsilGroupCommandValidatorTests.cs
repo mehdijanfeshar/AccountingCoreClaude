@@ -1,4 +1,5 @@
 using Accounting.Application.TafsilGroups.Commands.UpdateTafsilGroup;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.TafsilGroups.Commands.UpdateTafsilGroup;
 
@@ -39,5 +40,27 @@ public sealed class UpdateTafsilGroupCommandValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateTafsilGroupCommand.TafsilGroupName));
+    }
+
+    // --- PERSONTYPE enum coverage (phase 27 batch 1) ------------------------------------------
+
+    [Fact]
+    public void Validate_PersonTypeOutOfRange_Fails()
+    {
+        var result = _validator.Validate(new UpdateTafsilGroupCommand(Guid.NewGuid(), "001", "گروه تفصیلی یک", (PersonTypes)99));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateTafsilGroupCommand.PersonType));
+    }
+
+    [Theory]
+    [InlineData(PersonTypes.Person)]
+    [InlineData(PersonTypes.Legal)]
+    [InlineData(PersonTypes.Other)]
+    public void Validate_DefinedPersonType_Passes(PersonTypes personType)
+    {
+        var result = _validator.Validate(new UpdateTafsilGroupCommand(Guid.NewGuid(), "001", "گروه تفصیلی یک", personType));
+
+        Assert.True(result.IsValid);
     }
 }

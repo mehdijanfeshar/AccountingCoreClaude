@@ -42,7 +42,7 @@ public sealed class UpdateRevolvingFundCommandHandler : IRequestHandler<UpdateRe
 
     public async Task Handle(UpdateRevolvingFundCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _revolvingFundRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _revolvingFundRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null || entity.ISDELETED == true)
         {

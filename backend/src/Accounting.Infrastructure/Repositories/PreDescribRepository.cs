@@ -25,9 +25,18 @@ public sealed class PreDescribRepository : IPreDescribRepository
         await _dbContext.TB_PREDESCRIBs.AddAsync(preDescrib, cancellationToken);
     }
 
-    public async Task<TB_PREDESCRIB?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<TB_PREDESCRIB?> GetForUpdateAsync(
+        Guid id,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
     {
-        return await _dbContext.TB_PREDESCRIBs
+        var entity = await _dbContext.TB_PREDESCRIBs
             .FirstOrDefaultAsync(p => p.ID == id, cancellationToken);
+
+        // Fetched by ID alone, then judged — a WHERE on VAHEDCODE could not tell "no such row"
+        // apart from "another unit's row", and those answer 404 and 403 respectively.
+        VahedOwnership.EnsureOwned(entity?.VAHEDCODE, vahedCode, id, "PreDescrib");
+
+        return entity;
     }
 }

@@ -81,9 +81,24 @@ public sealed class BillLogReadRepository : IBillLogReadRepository
         };
     }
 
-    public Task<BillLogDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<BillLogDto?> GetByIdAsync(
+        Guid id,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
     {
-        return _dbContext.TB_BILL_LOGs
+        // The owning unit is read first as a scalar so the access decision can tell "no such
+        // row" (null, caller gets null, 404) from "another unit's row" (403). Projecting it
+        // alongside the DTO in one query is not possible while ToDto stays a reusable
+        // Expression, and this is a single-record edit-form fetch, not a hot path.
+        var ownerVahedCode = await _dbContext.TB_BILL_LOGs
+            .AsNoTracking()
+            .Where(b => b.ID == id)
+            .Select(b => b.VAHEDCODE)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        VahedOwnership.EnsureOwned(ownerVahedCode, vahedCode, id, "BillLog");
+
+        return await _dbContext.TB_BILL_LOGs
             .AsNoTracking()
             .Where(b => b.ID == id)
             .Select(ToDto)

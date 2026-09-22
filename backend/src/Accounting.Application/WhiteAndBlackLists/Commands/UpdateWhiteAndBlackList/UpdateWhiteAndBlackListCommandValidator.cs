@@ -29,5 +29,9 @@ public sealed class UpdateWhiteAndBlackListCommandValidator : AbstractValidator<
 
         RuleFor(x => x.ToLimitationDate)
             .MaximumLength(8);
+
+        RuleFor(x => x.State)
+            .IsInEnum()
+            .When(x => x.State is not null);
     }
 }

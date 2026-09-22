@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.AccountCodeInterfaces.Commands.UpdateAccountCodeInterface;
@@ -13,9 +14,9 @@ namespace Accounting.Application.AccountCodeInterfaces.Commands.UpdateAccountCod
 /// </summary>
 /// <param name="Id">The <c>TB_ACCOUNTCODE_INTERFACE.ID</c> to update (bound from the route, never the body).</param>
 /// <param name="Type">
-/// TYPE column (<c>NUMBER(1)</c>, mapped as non-nullable <c>bool</c>). See
+/// TYPE column (<c>NUMBER(1)</c>, mapped as non-nullable <see cref="InterfaceType"/>). See
 /// <see cref="Accounting.Application.AccountCodeInterfaces.Commands.CreateAccountCodeInterface.CreateAccountCodeInterfaceCommand.Type"/>
-/// for the open "may actually be a multi-valued enum" note.
+/// for the resolution reference (§24-1).
 /// </param>
 /// <param name="AccountCodeId">
 /// ACCOUNTCODEID column — required FK to <c>TB_ACCOUNTCODE</c>. Reassigning this to a different
@@ -26,5 +27,5 @@ namespace Accounting.Application.AccountCodeInterfaces.Commands.UpdateAccountCod
 /// </param>
 public sealed record UpdateAccountCodeInterfaceCommand(
     Guid Id,
-    bool Type,
+    InterfaceType Type,
     Guid AccountCodeId) : IRequest;

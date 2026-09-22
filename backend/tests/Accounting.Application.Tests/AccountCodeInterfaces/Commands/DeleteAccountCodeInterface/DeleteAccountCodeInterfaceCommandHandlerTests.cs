@@ -2,6 +2,7 @@ using Accounting.Application.AccountCodeInterfaces.Commands.DeleteAccountCodeInt
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.AccountCodeInterfaces.Commands.DeleteAccountCodeInterface;
@@ -11,7 +12,7 @@ public sealed class DeleteAccountCodeInterfaceCommandHandlerTests
     private static TB_ACCOUNTCODE_INTERFACE ExistingEntity(Guid id, bool isDeleted = false) => new()
     {
         ID = id,
-        TYPE = true,
+        TYPE = InterfaceType.OpenVoucher,
         ACCOUNTCODEID = Guid.NewGuid(),
         ADDUSERID = "creator1",
         CREATEDDATE = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),

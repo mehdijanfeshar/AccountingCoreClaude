@@ -132,7 +132,7 @@ public sealed class WorkShopTafsiliLinkWriteTests
 
         var repository = new Mock<IWorkShopRepository>();
         repository
-            .Setup(r => r.GetForUpdateAsync(parentId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(parentId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TB_WORKSHOP { ID = parentId, ISDELETED = false });
         repository
             .Setup(r => r.GetActiveTafsiliLinksAsync(parentId, It.IsAny<CancellationToken>()))
@@ -186,7 +186,7 @@ public sealed class WorkShopTafsiliLinkWriteTests
 
         var repository = new Mock<IWorkShopRepository>();
         repository
-            .Setup(r => r.GetForUpdateAsync(parentId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(parentId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TB_WORKSHOP { ID = parentId, ISDELETED = false });
         repository
             .Setup(r => r.GetActiveTafsiliLinksAsync(parentId, It.IsAny<CancellationToken>()))

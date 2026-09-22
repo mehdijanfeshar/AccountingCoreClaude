@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.IdentitySubGroups.Queries.GetIdentitySubGroups;
@@ -14,7 +15,11 @@ namespace Accounting.Application.IdentitySubGroups.Queries.GetIdentitySubGroups;
 /// </summary>
 /// <param name="PageNumber">1-based page number.</param>
 /// <param name="PageSize">Page size, capped by <see cref="GetIdentitySubGroupsQueryValidator.MaxPageSize"/>.</param>
-public sealed record GetIdentitySubGroupsQuery(int PageNumber, int PageSize)
+public sealed record GetIdentitySubGroupsQuery(
+    int PageNumber,
+    int PageSize,
+    Guid? IdentityGroupId = null,
+    IdentitySubGroupKind? Kind = null)
     : IRequest<PagedResult<IdentitySubGroupDto>>, IVahedScopedQuery
 {
     /// <summary>

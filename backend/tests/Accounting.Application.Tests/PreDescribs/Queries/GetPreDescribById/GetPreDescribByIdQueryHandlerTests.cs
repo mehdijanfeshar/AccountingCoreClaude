@@ -22,7 +22,7 @@ public sealed class GetPreDescribByIdQueryHandlerTests
         var expected = SampleDto(id);
         var readRepository = new Mock<IPreDescribReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetPreDescribByIdQueryHandler(readRepository.Object);
@@ -38,7 +38,7 @@ public sealed class GetPreDescribByIdQueryHandlerTests
         var id = Guid.NewGuid();
         var readRepository = new Mock<IPreDescribReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((PreDescribDto?)null);
 
         var handler = new GetPreDescribByIdQueryHandler(readRepository.Object);
@@ -56,14 +56,14 @@ public sealed class GetPreDescribByIdQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetByIdAsync(id, token))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), token))
             .ReturnsAsync((PreDescribDto?)null);
 
         var handler = new GetPreDescribByIdQueryHandler(readRepository.Object);
 
         await handler.Handle(new GetPreDescribByIdQuery(id), token);
 
-        readRepository.Verify(r => r.GetByIdAsync(id, token), Times.Once);
+        readRepository.Verify(r => r.GetByIdAsync(id, It.IsAny<string>(), token), Times.Once);
     }
 
     [Fact]

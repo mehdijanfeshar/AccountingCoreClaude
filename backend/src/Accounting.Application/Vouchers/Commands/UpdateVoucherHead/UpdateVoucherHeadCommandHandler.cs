@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Security;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using MediatR;
@@ -42,12 +43,16 @@ public sealed class UpdateVoucherHeadCommandHandler : IRequestHandler<UpdateVouc
 
     public async Task Handle(UpdateVoucherHeadCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _voucherHeadRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _voucherHeadRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null || entity.ISDELETED == true)
         {
             throw new NotFoundException("VoucherHead", request.Id);
         }
+
+        // Phase 38: a reviewed/accepted voucher is view-only. Team working-rule #1 — this rule
+        // must not live only in the cartable UI.
+        VoucherEditability.EnsureEditable(entity.ID, entity.DOCLIFE);
 
         entity.DOC_NUM = request.DocNum;
         entity.DATE_DOC = request.DateDoc;

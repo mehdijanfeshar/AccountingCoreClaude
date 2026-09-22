@@ -5,6 +5,7 @@ using Accounting.Application.AttribForAccountCodes.Commands.UpdateAttribForAccou
 using Accounting.Application.AttribForAccountCodes.Queries;
 using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodeById;
 using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -83,8 +84,22 @@ public sealed class AttribForAccountCodesController : ControllerBase
     }
 
     /// <summary>
-    /// Returns a page of per-account-code identification-digit attribute definitions.
+    /// Returns a page of per-account-code identification-digit attribute definitions
+    /// (حساب‌های شناسه‌دار), optionally narrowed by the search panel's filters.
     /// </summary>
+    /// <param name="pageNumber">1-based page number.</param>
+    /// <param name="pageSize">Page size.</param>
+    /// <param name="moinCodeFrom">Inclusive lower bound on the linked account's 6-digit <c>ACCCODE</c>.</param>
+    /// <param name="moinCodeTo">Inclusive upper bound on the linked account's 6-digit <c>ACCCODE</c>.</param>
+    /// <param name="attribSum">Exact match on جمع‌پذیری.</param>
+    /// <param name="flag">Exact match on نوع مقدار.</param>
+    /// <param name="year">Exact match on سال مالی.</param>
+    /// <param name="cancellationToken">Request cancellation.</param>
+    /// <remarks>
+    /// The organizational unit is deliberately NOT a parameter: every query is scoped to the
+    /// caller's own unit by <c>VahedScopeBehavior</c>. The reference Angular app did send it as a
+    /// client-supplied search param — that is exactly open risk #1 and is not reproduced here.
+    /// </remarks>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<AttribForAccountCodeDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -94,9 +109,23 @@ public sealed class AttribForAccountCodesController : ControllerBase
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? moinCodeFrom = null,
+        [FromQuery] string? moinCodeTo = null,
+        [FromQuery] AttribSum? attribSum = null,
+        [FromQuery] AttribFlag? flag = null,
+        [FromQuery] string? year = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetAttribForAccountCodesQuery(pageNumber, pageSize), cancellationToken);
+        var result = await _mediator.Send(
+            new GetAttribForAccountCodesQuery(
+                pageNumber,
+                pageSize,
+                moinCodeFrom,
+                moinCodeTo,
+                attribSum,
+                flag,
+                year),
+            cancellationToken);
 
         return Ok(result);
     }
@@ -201,9 +230,9 @@ public sealed record DeleteAttribForAccountCodeResponse(Guid Id);
 /// </summary>
 public sealed record UpdateAttribForAccountCodeRequest(
     Guid AccountCodeId,
-    bool AttribBoxNo,
-    bool Flag,
+    short AttribBoxNo,
+    AttribFlag Flag,
     byte LenAtr,
-    bool AttribSum,
-    bool? ControlId,
+    AttribSum AttribSum,
+    AttribControl? ControlId,
     string Year);

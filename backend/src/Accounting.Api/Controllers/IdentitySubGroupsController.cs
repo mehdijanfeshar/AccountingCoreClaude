@@ -5,6 +5,7 @@ using Accounting.Application.IdentitySubGroups.Commands.UpdateIdentitySubGroup;
 using Accounting.Application.IdentitySubGroups.Queries;
 using Accounting.Application.IdentitySubGroups.Queries.GetIdentitySubGroupById;
 using Accounting.Application.IdentitySubGroups.Queries.GetIdentitySubGroups;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -86,12 +87,26 @@ public sealed class IdentitySubGroupsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    /// <param name="pageNumber">1-based page number.</param>
+    /// <param name="pageSize">Page size.</param>
+    /// <param name="identityGroupId">Optional: only the subgroups of this identity group.</param>
+    /// <param name="kind">Optional: only fixed (1) or only variable (2) subgroups.</param>
+    /// <param name="cancellationToken">Request cancellation.</param>
+    /// <remarks>
+    /// <paramref name="identityGroupId"/> + <paramref name="kind"/> together are what the
+    /// شناسنامه entry form needs ("the FIXED subgroups of this group") — the reference app's
+    /// <c>getFixed?Groupid=</c> call.
+    /// </remarks>
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] Guid? identityGroupId = null,
+        [FromQuery] IdentitySubGroupKind? kind = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetIdentitySubGroupsQuery(pageNumber, pageSize), cancellationToken);
+        var result = await _mediator.Send(
+            new GetIdentitySubGroupsQuery(pageNumber, pageSize, identityGroupId, kind),
+            cancellationToken);
 
         return Ok(result);
     }
@@ -198,7 +213,7 @@ public sealed record UpdateIdentitySubGroupRequest(
     string SubgrpsDesc,
     byte SubgrpsLen,
     bool SumFlag,
-    bool Fixed,
-    bool? SubgrpsType,
+    IdentitySubGroupKind Fixed,
+    IdentitySubGroupType? SubgrpsType,
     string Year,
     string? IdentySubGroupsCode);

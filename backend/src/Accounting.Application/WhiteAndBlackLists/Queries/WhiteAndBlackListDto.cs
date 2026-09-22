@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+
 namespace Accounting.Application.WhiteAndBlackLists.Queries;
 
 /// <summary>
@@ -22,10 +24,8 @@ namespace Accounting.Application.WhiteAndBlackLists.Queries;
 /// <param name="FromLimitationDate">FROMLIMITATIONDATE column.</param>
 /// <param name="ToLimitationDate">TOLIMITATIONDATE column.</param>
 /// <param name="State">
-/// STATE column. WARNING: documented as a 3-valued <c>StateEnum</c> in
-/// <c>docs/centralaccount-business-reference.md</c> section 10-2, row 12, but currently
-/// projected as <c>bool?</c> because that is the entity's current CLR type. Fixing this is a
-/// separate, explicitly out-of-scope task — treat this field's contract as subject to change.
+/// STATE column (nullable <see cref="Accounting.Domain.ValueObjects.WhiteBlackListState"/>).
+/// Resolved per <c>docs/centralaccount-business-reference.md</c> §24-1 (phase 27 batch 3).
 /// </param>
 public sealed record WhiteAndBlackListDto(
     Guid Id,
@@ -40,4 +40,4 @@ public sealed record WhiteAndBlackListDto(
     string? ToAuthorizedDate,
     string? FromLimitationDate,
     string? ToLimitationDate,
-    bool? State);
+    WhiteBlackListState? State);

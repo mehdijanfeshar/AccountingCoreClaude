@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.ElamHeads.Queries;
 using Accounting.Application.ElamHeads.Queries.GetElamHeadById;
 using Accounting.Application.Common.Interfaces;
@@ -15,7 +16,7 @@ public sealed class GetElamHeadByIdQueryHandlerTests
         DabirNo: null,
         DabirDate: null,
         PrintNo: null,
-        Case: true,
+        Case: ElamCase.Debtor,
         SerialNoInput: null,
         WebStat: 2,
         Date: null,
@@ -25,7 +26,7 @@ public sealed class GetElamHeadByIdQueryHandlerTests
         RcvDt: null,
         LstMon: null,
         PayNo: null,
-        DramadType: false,
+        DramadType: DaramElamhType.ZeeDramadElam,
         PeimanNo: null,
         WorkShopCode: null,
         WorkShopName: null,
@@ -47,7 +48,7 @@ public sealed class GetElamHeadByIdQueryHandlerTests
         var expected = SampleDto(id);
         var readRepository = new Mock<IElamHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetElamHeadByIdQueryHandler(readRepository.Object);
@@ -63,7 +64,7 @@ public sealed class GetElamHeadByIdQueryHandlerTests
         var id = Guid.NewGuid();
         var readRepository = new Mock<IElamHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ElamHeadDto?)null);
 
         var handler = new GetElamHeadByIdQueryHandler(readRepository.Object);
@@ -81,14 +82,14 @@ public sealed class GetElamHeadByIdQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetByIdAsync(id, token))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), token))
             .ReturnsAsync((ElamHeadDto?)null);
 
         var handler = new GetElamHeadByIdQueryHandler(readRepository.Object);
 
         await handler.Handle(new GetElamHeadByIdQuery(id), token);
 
-        readRepository.Verify(r => r.GetByIdAsync(id, token), Times.Once);
+        readRepository.Verify(r => r.GetByIdAsync(id, It.IsAny<string>(), token), Times.Once);
     }
 
     [Fact]

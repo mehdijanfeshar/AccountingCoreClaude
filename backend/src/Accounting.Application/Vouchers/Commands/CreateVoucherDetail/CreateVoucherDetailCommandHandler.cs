@@ -1,5 +1,7 @@
+using Accounting.Application.Common.Security;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Vouchers.Commands.Common;
 using Accounting.Domain.Entity;
 using MediatR;
 
@@ -52,27 +54,49 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
     private readonly IVoucherDetailRepository _voucherDetailRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IVoucherTafsiliLevelGuard _tafsiliLevelGuard;
 
     public CreateVoucherDetailCommandHandler(
         IVoucherHeadRepository voucherHeadRepository,
         IVoucherDetailRepository voucherDetailRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IVoucherTafsiliLevelGuard tafsiliLevelGuard)
     {
         _voucherHeadRepository = voucherHeadRepository;
         _voucherDetailRepository = voucherDetailRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _tafsiliLevelGuard = tafsiliLevelGuard;
     }
 
     public async Task<Guid> Handle(CreateVoucherDetailCommand request, CancellationToken cancellationToken)
     {
-        var head = await _voucherHeadRepository.GetForUpdateAsync(request.VoucherHeadId, cancellationToken);
+        // Passing the caller's unit here closes risk #1-ج, which was a cross-unit *write*, not
+        // just a read: the parent-head lookup used to be unscoped, so a caller who knew a voucher
+        // head's id could attach a line to another unit's voucher. The line itself was always
+        // stamped with the caller's own VahedCode, which made the result worse than a plain leak —
+        // a voucher whose head and lines disagreed about who owns them.
+        var head = await _voucherHeadRepository.GetForUpdateAsync(
+            request.VoucherHeadId,
+            request.VahedCode,
+            cancellationToken);
 
         if (head is null || head.ISDELETED == true)
         {
             throw new NotFoundException("VoucherHead", request.VoucherHeadId);
         }
+
+        // Phase 38: lines may not be added to a voucher that is no longer editable.
+        VoucherEditability.EnsureEditable(head.ID, head.DOCLIFE);
+
+        // Before anything is staged, so a line that violates «تفصیلی الزامی» never reaches the
+        // database even partially. On create the command's list IS the line's final تفصیلی state,
+        // so it can be checked as given.
+        await _tafsiliLevelGuard.EnsureSatisfiedAsync(
+            request.AccountId,
+            request.TafsiliLinks ?? [],
+            cancellationToken);
 
         var now = DateTime.UtcNow;
 

@@ -1,3 +1,4 @@
+using Accounting.Application.Accounts.Commands.Common;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using MediatR;
@@ -11,21 +12,29 @@ namespace Accounting.Application.Accounts.Commands.UpdateAccountTafsilGroupLink;
 /// owns the transaction boundary via <see cref="IUnitOfWork.SaveChangesAsync"/>. Throws
 /// <see cref="NotFoundException"/> — mapped to 404 — when no such link exists under that معین or
 /// it is already soft-deleted (<c>ISDELETED</c> is non-nullable <c>bool</c> on this table).
+///
+/// Moving a link from one level to another moves the requirement with it:
+/// <see cref="AccountLevelLinkSynchronizer"/> runs before the save, so the level left behind is
+/// retired (unless another link still needs it) and the level moved to becomes required, both in
+/// the same transaction as the link itself.
 /// </summary>
 public sealed class UpdateAccountTafsilGroupLinkCommandHandler : IRequestHandler<UpdateAccountTafsilGroupLinkCommand>
 {
     private readonly IAccountCodeRepository _accountCodeRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly AccountLevelLinkSynchronizer _levelLinkSynchronizer;
 
     public UpdateAccountTafsilGroupLinkCommandHandler(
         IAccountCodeRepository accountCodeRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        AccountLevelLinkSynchronizer levelLinkSynchronizer)
     {
         _accountCodeRepository = accountCodeRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _levelLinkSynchronizer = levelLinkSynchronizer;
     }
 
     public async Task Handle(UpdateAccountTafsilGroupLinkCommand request, CancellationToken cancellationToken)
@@ -45,6 +54,7 @@ public sealed class UpdateAccountTafsilGroupLinkCommandHandler : IRequestHandler
         link.CHANGEUSERID = _currentUser.UserId;
         link.UPDATEDDATE = DateTime.UtcNow;
 
+        await _levelLinkSynchronizer.SyncAsync(request.AccountCodeId, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

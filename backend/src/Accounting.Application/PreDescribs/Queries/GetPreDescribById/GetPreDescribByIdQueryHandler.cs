@@ -19,5 +19,5 @@ public sealed class GetPreDescribByIdQueryHandler : IRequestHandler<GetPreDescri
     }
 
     public Task<PreDescribDto?> Handle(GetPreDescribByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.CheckBooks.Commands.CreateCheckBook;
@@ -14,11 +15,13 @@ namespace Accounting.Application.CheckBooks.Commands.CreateCheckBook;
 /// (<c>FK_CHECKTYPE</c> to <c>TB_CHECK_TYPE</c>). Both are mapped centrally to 400 by
 /// <c>UnitOfWork.SaveChangesAsync</c> on violation.
 ///
-/// ⚠️ <c>CheckBookType</c> is <c>NUMBER(1)</c> typed as <see cref="bool"/>? — this schema has a
-/// confirmed track record of <c>NUMBER(1)</c> columns actually being multi-valued enums
-/// (CLAUDE.md phase 12; <c>TB_TAFSILI.ISACTIVE</c> is the confirmed dangerous case). Flagged
-/// (not fixed) here — the CLR type is deliberately left as <see cref="bool"/>?; re-typing it is a
-/// separate, not-yet-made decision.
+/// <c>CheckBookType</c> — <see cref="CheckType"/> (1=Sori/چک صوری, 2=Real/چک واقعی). Resolved from
+/// the project-wide <c>bool?</c>/enum scaffolding bug (CLAUDE.md open risk #2) in phase 27 batch 2
+/// — see <c>docs/centralaccount-business-reference.md</c> §24-1 row 19. ⚠️ §24-3 caveat, still
+/// open: in the reference project this column is a hardcoded server-side constant
+/// (<c>CheckType.real</c>) on both Create and Update and is never a caller input at all. This
+/// batch fixed only the CLR type — the field remains caller-supplied here, deliberately not
+/// changed alongside the type fix.
 ///
 /// ⚠️ The child <c>TB_CHECK</c> table is permanently embedded (mirrors the reference project's
 /// <c>AddCheckPapers</c> builder method) — this project builds no cascade to it. Soft-deleting a
@@ -31,7 +34,7 @@ namespace Accounting.Application.CheckBooks.Commands.CreateCheckBook;
 /// <param name="FromCheckNumber">First cheque number in the book (required, max 14 chars); part of <c>UK_CHECKBOOK</c>.</param>
 /// <param name="ToCheckNumber">Last cheque number in the book (required, max 14 chars); part of <c>UK_CHECKBOOK</c>.</param>
 /// <param name="CheckTypeId">Optional link to <c>TB_CHECK_TYPE</c> (<c>FK_CHECKTYPE</c>).</param>
-/// <param name="CheckBookType">CHECKBOOK_TYPE column — see the unverified-enum note above.</param>
+/// <param name="CheckBookType">CHECKBOOK_TYPE column — see the class XML doc for the resolved-enum note and the still-open §24-3 caveat.</param>
 /// <param name="Serial">Optional checkbook serial number (max 20 chars).</param>
 public sealed record CreateCheckBookCommand(
     Guid AccountId,
@@ -40,7 +43,7 @@ public sealed record CreateCheckBookCommand(
     string FromCheckNumber,
     string ToCheckNumber,
     Guid? CheckTypeId,
-    bool? CheckBookType,
+    CheckType? CheckBookType,
     string? Serial) : IRequest<Guid>, IVahedScopedCommand
 {
     /// <summary>

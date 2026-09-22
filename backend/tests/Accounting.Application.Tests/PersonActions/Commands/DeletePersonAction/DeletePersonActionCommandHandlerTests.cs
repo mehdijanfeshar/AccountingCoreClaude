@@ -2,6 +2,7 @@ using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.PersonActions.Commands.DeletePersonAction;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.PersonActions.Commands.DeletePersonAction;
@@ -16,7 +17,7 @@ public sealed class DeletePersonActionCommandHandlerTests
         FROMDATE = "14030101",
         TODATE = "14031231",
         STATUS = true,
-        OPERATORROLE = true,
+        OPERATORROLE = OperatorRole.MasolOmorMali,
         VAHEDCODE = "0100",
         ADDUSERID = "creator1",
         CREATEDDATE = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
@@ -38,7 +39,7 @@ public sealed class DeletePersonActionCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IPersonActionRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter9");
 
@@ -67,7 +68,7 @@ public sealed class DeletePersonActionCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IPersonActionRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -75,7 +76,7 @@ public sealed class DeletePersonActionCommandHandlerTests
 
         await handler.Handle(new DeletePersonActionCommand(id), CancellationToken.None);
 
-        Assert.Same(entity, await repository.Object.GetForUpdateAsync(id, CancellationToken.None));
+        Assert.Same(entity, await repository.Object.GetForUpdateAsync(id, It.IsAny<string>(), CancellationToken.None));
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public sealed class DeletePersonActionCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<IPersonActionRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_PERSON_ACTION?)null);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_PERSON_ACTION?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -105,7 +106,7 @@ public sealed class DeletePersonActionCommandHandlerTests
         entity.UPDATEDDATE = updatedAt;
 
         var repository = new Mock<IPersonActionRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("newDeleter");
 
@@ -132,13 +133,13 @@ public sealed class DeletePersonActionCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
         var handler = new DeletePersonActionCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(new DeletePersonActionCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 }

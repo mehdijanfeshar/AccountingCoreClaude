@@ -8,6 +8,7 @@ using Accounting.Application.Accounts.Queries.GetAccountCodes;
 using Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems;
 using Accounting.Application.AccountCodes.Queries.GetTafsiliLevels;
 using Accounting.Application.Common;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -22,14 +23,14 @@ namespace Accounting.Api.Tests.Controllers;
 public sealed class AccountCodesControllerTests
 {
     private static CreateAccountCodeCommand ValidCommand() => new(
-        TypeCode: true,
+        TypeCode: TypeCodes.Moin,
         ParentId: null,
         AccCode: "100100",
         AccCodeName: "بانک ملی",
-        TypeActivity: true,
+        TypeActivity: TypeActivity.Debit,
         SourceAndConsumeId: null,
         IdentyGroupsId: null,
-        TypeAccCode: true,
+        TypeAccCode: TypeAccCode.Permanent,
         MoInforClose: null,
         TypeAction: null);
 
@@ -161,14 +162,14 @@ public sealed class AccountCodesControllerTests
         var id = Guid.NewGuid();
         var dto = new AccountCodeDto(
             Id: id,
-            TypeCode: true,
+            TypeCode: TypeCodes.Moin,
             ParentId: null,
             AccCode: "100100",
             AccCodeName: "بانک ملی",
-            TypeActivity: true,
+            TypeActivity: TypeActivity.Debit,
             SourceAndConsumeId: null,
             IdentyGroupsId: null,
-            TypeAccCode: true,
+            TypeAccCode: TypeAccCode.Permanent,
             CreatedDate: DateTime.UtcNow,
             UpdatedDate: null,
             AddUserId: "user1",
@@ -228,14 +229,14 @@ public sealed class AccountCodesControllerTests
     }
 
     private static UpdateAccountCodeRequest ValidUpdateRequest() => new(
-        TypeCode: true,
+        TypeCode: TypeCodes.Moin,
         ParentId: null,
         AccCode: "100200",
         AccCodeName: "بانک ملت",
-        TypeActivity: true,
+        TypeActivity: TypeActivity.Debit,
         SourceAndConsumeId: null,
         IdentyGroupsId: null,
-        TypeAccCode: true,
+        TypeAccCode: TypeAccCode.Permanent,
         MoInforClose: null,
         TypeAction: null);
 

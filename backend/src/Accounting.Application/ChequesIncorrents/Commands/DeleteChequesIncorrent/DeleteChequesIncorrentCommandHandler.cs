@@ -34,7 +34,7 @@ public sealed class DeleteChequesIncorrentCommandHandler : IRequestHandler<Delet
 
     public async Task Handle(DeleteChequesIncorrentCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _chequesIncorrentRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _chequesIncorrentRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null)
         {

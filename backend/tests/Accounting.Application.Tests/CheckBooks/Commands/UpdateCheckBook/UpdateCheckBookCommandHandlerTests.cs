@@ -1,8 +1,10 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.CheckBooks.Commands.UpdateCheckBook;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Moq;
 
@@ -18,7 +20,7 @@ public sealed class UpdateCheckBookCommandHandlerTests
         FromCheckNumber: "200000",
         ToCheckNumber: "200050",
         CheckTypeId: Guid.NewGuid(),
-        CheckBookType: false,
+        CheckBookType: CheckType.Sori,
         Serial: "SER0002")
     {
         VahedCode = "0002",
@@ -34,7 +36,7 @@ public sealed class UpdateCheckBookCommandHandlerTests
         TOCHECKNUMBER = "100050",
         CHECKTYPE_ID = Guid.NewGuid(),
         VAHEDCODE = "0001",
-        CHECKBOOK_TYPE = true,
+        CHECKBOOK_TYPE = CheckType.Real,
         SERIAL = "SER0001",
         ADDUSERID = "creator1",
         CREATEDDATE = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
@@ -56,7 +58,7 @@ public sealed class UpdateCheckBookCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<ICheckBookRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -82,7 +84,7 @@ public sealed class UpdateCheckBookCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<ICheckBookRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("srvusr02");
 
@@ -106,7 +108,7 @@ public sealed class UpdateCheckBookCommandHandlerTests
         var originalIsDeleted = entity.ISDELETED;
 
         var repository = new Mock<ICheckBookRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -125,7 +127,7 @@ public sealed class UpdateCheckBookCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<ICheckBookRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_CHECKBOOK?)null);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_CHECKBOOK?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -142,7 +144,7 @@ public sealed class UpdateCheckBookCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, isDeleted: true);
         var repository = new Mock<ICheckBookRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -159,7 +161,7 @@ public sealed class UpdateCheckBookCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<ICheckBookRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -181,13 +183,13 @@ public sealed class UpdateCheckBookCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
         var handler = new UpdateCheckBookCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 
@@ -200,7 +202,7 @@ public sealed class UpdateCheckBookCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<ICheckBookRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -222,13 +224,13 @@ public sealed class UpdateCheckBookCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<ICheckBookRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
         var handler = new UpdateCheckBookCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<UpdateCheckBookCommand, Unit>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdateCheckBookCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(id) with { VahedCode = "9999" };
 
         await behavior.Handle(

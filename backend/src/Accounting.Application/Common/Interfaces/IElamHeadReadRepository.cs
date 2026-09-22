@@ -37,5 +37,5 @@ public interface IElamHeadReadRepository
     /// Returns the announcement-header row with the given <paramref name="id"/> regardless of
     /// its logical-delete state, or <see langword="null"/> if no such row exists.
     /// </summary>
-    Task<ElamHeadDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<ElamHeadDto?> GetByIdAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

@@ -1,5 +1,7 @@
 using System.Reflection;
+using Accounting.Application.Accounts.Commands.Common;
 using Accounting.Application.Common.Behaviors;
+using Accounting.Application.Vouchers.Commands.Common;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,16 +25,17 @@ public static class DependencyInjection
     /// sent — if <c>ValidationBehavior</c> ran first, it would validate a value that
     /// <c>VahedScopeBehavior</c> is about to discard and replace.
     ///
-    /// ⚠️ <b>Separately discovered, pre-existing bug — recorded here, not fixed here (out of
-    /// this change's scope):</b> <c>ValidationBehavior&lt;TRequest,TResponse&gt;</c> declares
-    /// <c>where TRequest : IRequest&lt;TResponse&gt;</c>. Verified empirically against this
-    /// project's actual MediatR 14.2.0 that a void command (<c>: IRequest</c>, no generic
-    /// response — every <c>Update</c>/<c>Delete</c> command in this project) does not implement
-    /// <c>IRequest&lt;Unit&gt;</c> in this MediatR version, so the .NET DI container's
-    /// open-generic resolution silently skips <c>ValidationBehavior</c> for every such request —
-    /// it currently never runs for any Update/Delete command in the whole application. See
-    /// <c>VahedScopeBehavior</c>'s XML doc for the full mechanism and why that class deliberately
-    /// avoids the same constraint.
+    /// ✅ <b>Fixed in phase 31 — both behaviors now declare only <c>where TRequest : notnull</c>.</b>
+    /// <c>ValidationBehavior</c> used to declare <c>where TRequest : IRequest&lt;TResponse&gt;</c>,
+    /// which (verified empirically against this project's actual MediatR 14.2.0) is not satisfied
+    /// by a void command — <c>: IRequest</c> with no generic response, i.e. every
+    /// <c>Update</c>/<c>Delete</c> command here — because <c>IRequest</c> does not implement
+    /// <c>IRequest&lt;Unit&gt;</c> in this MediatR version. The .NET DI container's open-generic
+    /// resolution skipped the registration silently, so from phase 8 to phase 30 no Update or
+    /// Delete command was ever validated by the pipeline. <b>Do not reintroduce that constraint
+    /// on either behavior</b> — on <c>ValidationBehavior</c> it disables validation, on
+    /// <c>VahedScopeBehavior</c> it reopens IDOR risk #1; <c>BehaviorPipelineConstraintTests</c>
+    /// fails if either one grows a constraint again.
     /// </summary>
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
@@ -44,6 +47,16 @@ public static class DependencyInjection
 
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(VahedScopeBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
+        // Not a pipeline behavior and not a repository: a piece of write-side domain logic shared
+        // by the three «ارتباط معین با گروه تفصیلی» handlers, which keeps TB_ACCOUNT_LINK_LEVEL in
+        // step with TB_ACCOUNT_LINK_TAFSILGROUP. Scoped, so it joins the caller's unit of work.
+        services.AddScoped<AccountLevelLinkSynchronizer>();
+
+        // Scoped, not transient, on purpose: it memoises the per-معین level lookup for the
+        // lifetime of one request, which is what keeps a composite create with many lines from
+        // issuing one database read per line.
+        services.AddScoped<IVoucherTafsiliLevelGuard, VoucherTafsiliLevelGuard>();
 
         return services;
     }

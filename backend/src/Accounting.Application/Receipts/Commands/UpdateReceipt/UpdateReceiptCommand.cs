@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.Receipts.Commands.UpdateReceipt;
@@ -15,7 +16,7 @@ namespace Accounting.Application.Receipts.Commands.UpdateReceipt;
 /// <c>Id</c>, bound from the route and never the body) has the exact same column/type/length
 /// meaning as the identically-named parameter on
 /// <see cref="Accounting.Application.Receipts.Commands.CreateReceipt.CreateReceiptCommand"/>; see
-/// that command's XML doc for the unverified-enum flag on <c>ReceiptKind</c>.
+/// that command's XML doc for the resolved-enum note on <c>ReceiptKind</c>.
 ///
 /// ⚠️ <b>Scope note:</b> <see cref="IVahedScopedCommand"/> here only guarantees that
 /// <c>VAHEDCODE</c> cannot be *changed* to an arbitrary unit by the caller. It does
@@ -27,7 +28,7 @@ namespace Accounting.Application.Receipts.Commands.UpdateReceipt;
 /// </summary>
 public sealed record UpdateReceiptCommand(
     Guid Id,
-    bool ReceiptKind,
+    ReceiptType ReceiptKind,
     string ReceiptDate,
     string ReceiptNo,
     string? DateRsid,

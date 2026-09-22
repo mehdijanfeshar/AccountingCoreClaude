@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.Vouchers.Queries.GetVoucherHeads;
@@ -23,6 +24,7 @@ namespace Accounting.Application.Vouchers.Queries.GetVoucherHeads;
 /// <param name="DateDocFrom">Optional inclusive lower bound of the DATE_DOC range (<c>YYYYMMDD</c>).</param>
 /// <param name="DateDocTo">Optional inclusive upper bound of the DATE_DOC range (<c>YYYYMMDD</c>).</param>
 /// <param name="SystemTypeId">Optional exact-match filter on SYSTEM_TYPE (نوع سند).</param>
+/// <param name="DocLife">Optional exact-match filter on DOCLIFE (وضعیت سند) — backs the کارتابل status tabs.</param>
 public sealed record GetVoucherHeadsQuery(
     int PageNumber,
     int PageSize,
@@ -31,7 +33,8 @@ public sealed record GetVoucherHeadsQuery(
     string? DocNumTo = null,
     string? DateDocFrom = null,
     string? DateDocTo = null,
-    Guid? SystemTypeId = null) : IRequest<PagedResult<VoucherHeadDto>>, IVahedScopedQuery
+    Guid? SystemTypeId = null,
+    DocLife? DocLife = null) : IRequest<PagedResult<VoucherHeadDto>>, IVahedScopedQuery
 {
     /// <summary>
     /// Organizational unit code to filter by. Server-assigned by <c>VahedScopeBehavior</c> from

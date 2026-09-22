@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.IdentitySubGroups.Commands.CreateIdentitySubGroup;
@@ -27,18 +28,18 @@ namespace Accounting.Application.IdentitySubGroups.Commands.CreateIdentitySubGro
 /// <param name="SubgrpsDesc">SUBGRPS_DESC column (max 100 chars, required).</param>
 /// <param name="SubgrpsLen">SUBGRPS_LEN column (<c>NUMBER(2)</c>, mapped as <c>byte</c>, required).</param>
 /// <param name="SumFlag">SUMFLAG column (<c>NUMBER(1)</c>, mapped as non-nullable <c>bool</c>).</param>
-/// <param name="Fixed">FIXED column (<c>NUMBER(1)</c>, mapped as non-nullable <c>bool</c>).</param>
+/// <param name="Fixed">
+/// FIXED column — <see cref="IdentitySubGroupKind"/> (1=Fixed/ثابت, 2=Variable/متغیر). Resolved
+/// from the project-wide <c>bool</c>/enum scaffolding bug (CLAUDE.md open risk #2) — see
+/// <c>docs/centralaccount-business-reference.md</c> §24-1.
+/// </param>
 /// <param name="SubgrpsType">
-/// SUBGRPS_TYPE column (<c>NUMBER(1)</c>, mapped as nullable <c>bool</c>). ⚠️ CONFIRMED-SUSPICIOUS:
-/// the Oracle column comment itself reads "نوع : حروف, اعداد, يا هردو" (type: letters, digits, or
-/// both) — i.e. a <b>three</b>-valued enum, which a <c>bool</c>/<c>bool?</c> structurally cannot
-/// represent. This matches the project-wide <c>bool?</c>/<c>NUMBER(1)</c> scaffolding bug pattern
-/// recorded in CLAUDE.md's Phase 12 (19 columns across 13 tables; only
-/// <c>TB_ACCOUNTCODE.TYPECODE</c>, <c>TB_VOUCHERSHEAD.DOCLIFE</c> and <c>TB_TAFSILI.ISACTIVE</c>
-/// were triaged there). This specific column was NOT previously in that list — flagging it here
-/// as a newly-confirmed instance for the same follow-up task. Modeled as <c>bool?</c> exactly as
-/// the current Domain entity declares it; fixing the underlying CLR type is a separate,
-/// out-of-scope task and was deliberately not attempted here.
+/// SUBGRPS_TYPE column — <see cref="IdentitySubGroupType"/> (1=Date/تاریخ,
+/// 2=PersianLetter/حروف فارسی, 3=Number/عدد, 4=LatinLetter/حروف لاتین). ⚠️ Four-valued: the
+/// previous <c>bool?</c> mapping could only ever express two of these four real values (plus
+/// NULL) — values 3 and 4 were structurally unreachable through this API before this fix.
+/// Resolved from the project-wide <c>bool?</c>/enum scaffolding bug (CLAUDE.md open risk #2) —
+/// see <c>docs/centralaccount-business-reference.md</c> §24-1.
 /// </param>
 /// <param name="Year">
 /// YEAR column (max 4 chars, required fiscal year — participates in
@@ -53,8 +54,8 @@ public sealed record CreateIdentitySubGroupCommand(
     string SubgrpsDesc,
     byte SubgrpsLen,
     bool SumFlag,
-    bool Fixed,
-    bool? SubgrpsType,
+    IdentitySubGroupKind Fixed,
+    IdentitySubGroupType? SubgrpsType,
     string Year,
     string? IdentySubGroupsCode) : IRequest<Guid>, IVahedScopedCommand
 {

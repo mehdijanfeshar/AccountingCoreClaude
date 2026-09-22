@@ -11,6 +11,15 @@ namespace Accounting.Domain.ValueObjects;
 /// enum در <see cref="VahedCategoryMapper.FromTypeCode"/> است، نه اینجا — این فایل فقط خودِ
 /// enum را نگه می‌دارد: POCO خالص، بدون هیچ وابستگی خارجی، مطابق قید صفر-وابستگی
 /// <c>Accounting.Domain</c>.
+///
+/// ⚠️ **از فاز ۲۷ (بچ ۱) این enum نوع دومی هم دارد: <c>TB_TAFSILI.VAHEDTYPE</c>** (فعلاً به‌اشتباه
+/// <c>bool?</c>، رجوع به ریسک باز #۲ در <c>CLAUDE.md</c> و
+/// <c>docs/centralaccount-business-reference.md</c> §۲۴-۱). همان enum <c>TypeKoli</c> در پروژهٔ
+/// مرجع، دوباره تعریف نشد — عمداً بازاستفاده شد چون مقادیر و معنا کاملاً یکسانند.
+/// ⚠️ **این نگاشت خاص (<c>TB_TAFSILI.VAHEDTYPE</c>) شاهد قوی است، نه اثبات‌شده روی دادهٔ ما** —
+/// دادهٔ زندهٔ فاز ۱۲ فقط مقادیر <c>{1, 3}</c> را نشان داد که با این enum سازگار است ولی برچسب‌ها
+/// هرگز مستقیماً روی <c>CENTRALACCOUNT</c> راستی‌آزمایی نشده‌اند (برخلاف نگاشت اصلی این enum روی
+/// <c>TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE</c> که پایهٔ Rule B و کاملاً جاافتاده است).
 /// </summary>
 public enum VahedCategory
 {

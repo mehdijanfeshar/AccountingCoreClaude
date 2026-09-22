@@ -4,9 +4,10 @@ namespace Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems;
 /// One selectable تفصیلی item for a given (معین, level) pair — a page item of
 /// <see cref="GetTafsiliLevelItemsQuery"/>. Deliberately excludes <c>TB_TAFSILI.ISACTIVE</c> —
 /// see that query's XML doc for why leaving out that filter is a known, deliberately-deferred
-/// gap — and the item's own <c>VAHEDCODE</c>/owner info, which describe the تفصیلی's OWNING
-/// unit and are unrelated to Rule B (already applied server-side to decide whether the row is
-/// even eligible to appear here at all).
+/// gap (independent of that column's phase-27-batch-1 <c>bool?</c>→enum type fix) — and the
+/// item's own <c>VAHEDCODE</c>/owner info, which describe the تفصیلی's OWNING unit and are
+/// unrelated to Rule B (already applied server-side to decide whether the row is even eligible
+/// to appear here at all).
 /// </summary>
 /// <param name="Id">TB_TAFSILI.ID.</param>
 /// <param name="TafsiliCode">TB_TAFSILI.TAFSILI_CODE.</param>

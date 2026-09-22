@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.IdentitySubGroups.Commands.UpdateIdentitySubGroup;
@@ -24,10 +25,10 @@ namespace Accounting.Application.IdentitySubGroups.Commands.UpdateIdentitySubGro
 /// <param name="SubgrpsDesc">SUBGRPS_DESC column (max 100 chars, required).</param>
 /// <param name="SubgrpsLen">SUBGRPS_LEN column (<c>NUMBER(2)</c>, mapped as <c>byte</c>, required).</param>
 /// <param name="SumFlag">SUMFLAG column (<c>NUMBER(1)</c>, mapped as non-nullable <c>bool</c>).</param>
-/// <param name="Fixed">FIXED column (<c>NUMBER(1)</c>, mapped as non-nullable <c>bool</c>).</param>
+/// <param name="Fixed">FIXED column — <see cref="IdentitySubGroupKind"/>; see the identical note on <c>CreateIdentitySubGroupCommand.Fixed</c> for full detail.</param>
 /// <param name="SubgrpsType">
-/// SUBGRPS_TYPE column — ⚠️ CONFIRMED-SUSPICIOUS three-valued column modeled as <c>bool?</c>; see
-/// the identical note on <c>CreateIdentitySubGroupCommand.SubgrpsType</c> for full detail.
+/// SUBGRPS_TYPE column — <see cref="IdentitySubGroupType"/>; see the identical note on
+/// <c>CreateIdentitySubGroupCommand.SubgrpsType</c> for full detail.
 /// </param>
 /// <param name="Year">YEAR column (max 4 chars, required fiscal year).</param>
 /// <param name="IdentySubGroupsCode">IDENTYSUBGROUPS_CODE column (max 2 chars, optional).</param>
@@ -37,8 +38,8 @@ public sealed record UpdateIdentitySubGroupCommand(
     string SubgrpsDesc,
     byte SubgrpsLen,
     bool SumFlag,
-    bool Fixed,
-    bool? SubgrpsType,
+    IdentitySubGroupKind Fixed,
+    IdentitySubGroupType? SubgrpsType,
     string Year,
     string? IdentySubGroupsCode) : IRequest, IVahedScopedCommand
 {

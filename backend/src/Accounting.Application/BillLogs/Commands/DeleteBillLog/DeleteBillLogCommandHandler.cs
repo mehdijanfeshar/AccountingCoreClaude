@@ -31,7 +31,7 @@ public sealed class DeleteBillLogCommandHandler : IRequestHandler<DeleteBillLogC
 
     public async Task Handle(DeleteBillLogCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _billLogRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _billLogRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null)
         {

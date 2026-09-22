@@ -1,3 +1,6 @@
+using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Tests.Vouchers.Commands.Common;
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.CreateVoucherHead;
@@ -20,7 +23,7 @@ public sealed class CreateVoucherHeadCommandHandlerInitialDetailsTests
         IReadOnlyList<CreateVoucherHeadDetailInput>? initialDetails = null) => new(
         DocNum: "000001",
         DateDoc: "14050101",
-        DocLife: true,
+        DocLife: DocLife.Temporary,
         HeadDesc: "سند افتتاحیه",
         Apendix: null,
         SystemTypeId: null,
@@ -94,7 +97,8 @@ public sealed class CreateVoucherHeadCommandHandlerInitialDetailsTests
             HeadRepository.Object,
             DetailRepository.Object,
             UnitOfWork.Object,
-            CurrentUser.Object);
+            CurrentUser.Object,
+            TafsiliLevelGuards.Permissive());
     }
 
     [Fact]
@@ -279,7 +283,7 @@ public sealed class CreateVoucherHeadCommandHandlerInitialDetailsTests
         var fixture = new Fixture();
         fixture.CurrentUser.SetupGet(u => u.VahedCode).Returns("0009");
         var handler = fixture.CreateHandler();
-        var behavior = new VahedScopeBehavior<CreateVoucherHeadCommand, Guid>(fixture.CurrentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateVoucherHeadCommand, Guid>(TestUnitScope.ResolverFor(fixture.CurrentUser.Object));
         var forgedCommand = ValidCommand(new[] { SampleDetail(1), SampleDetail(2) }) with
         {
             VahedCode = "9999",

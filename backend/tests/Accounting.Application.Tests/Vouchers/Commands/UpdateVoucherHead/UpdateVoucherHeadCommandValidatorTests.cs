@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Vouchers.Commands.UpdateVoucherHead;
 
 namespace Accounting.Application.Tests.Vouchers.Commands.UpdateVoucherHead;
@@ -305,6 +306,52 @@ public sealed class UpdateVoucherHeadCommandValidatorTests
         var command = ValidCommand() with { AtfNum = new string('a', 15) };
 
         var result = _validator.Validate(command);
+
+        Assert.True(result.IsValid);
+    }
+
+    // --- DOCLIFE enum coverage (bool-to-enum fix, batch 5) ------------------------------------
+
+    [Fact]
+    public void Validate_DocLifeOutOfRange_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { DocLife = (DocLife)99 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateVoucherHeadCommand.DocLife));
+    }
+
+    /// <summary>
+    /// 0 is the Oracle column's own DEFAULT but is deliberately not a <see cref="DocLife"/>
+    /// value. ⚠️ On the UPDATE path this is the sharp edge: any pre-existing row that carries a
+    /// stored 0 cannot be round-tripped through this command — same shape as the live
+    /// <c>TYPEACTION = 5</c> row phase 25 found. See the enum's XML doc.
+    /// </summary>
+    [Fact]
+    public void Validate_DocLifeZero_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { DocLife = (DocLife)0 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateVoucherHeadCommand.DocLife));
+    }
+
+    [Fact]
+    public void Validate_DocLifeNull_Passes()
+    {
+        var result = _validator.Validate(ValidCommand() with { DocLife = null });
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [InlineData(DocLife.Draft)]
+    [InlineData(DocLife.Temporary)]
+    [InlineData(DocLife.Reviewed)]
+    [InlineData(DocLife.Accepted)]
+    public void Validate_EveryRealDocLifeState_Passes(DocLife state)
+    {
+        var result = _validator.Validate(ValidCommand() with { DocLife = state });
 
         Assert.True(result.IsValid);
     }

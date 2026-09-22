@@ -17,5 +17,5 @@ public sealed class GetChequesIncorrentByIdQueryHandler : IRequestHandler<GetChe
     }
 
     public Task<ChequesIncorrentDto?> Handle(GetChequesIncorrentByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

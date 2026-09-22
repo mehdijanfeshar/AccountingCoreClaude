@@ -132,7 +132,7 @@ public sealed class ExpenseTafsiliLinkWriteTests
 
         var repository = new Mock<IExpenseRepository>();
         repository
-            .Setup(r => r.GetForUpdateAsync(parentId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(parentId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TB_EXPENCE { ID = parentId, ISDELETED = false });
         repository
             .Setup(r => r.GetActiveTafsiliLinksAsync(parentId, It.IsAny<CancellationToken>()))
@@ -186,7 +186,7 @@ public sealed class ExpenseTafsiliLinkWriteTests
 
         var repository = new Mock<IExpenseRepository>();
         repository
-            .Setup(r => r.GetForUpdateAsync(parentId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(parentId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TB_EXPENCE { ID = parentId, ISDELETED = false });
         repository
             .Setup(r => r.GetActiveTafsiliLinksAsync(parentId, It.IsAny<CancellationToken>()))

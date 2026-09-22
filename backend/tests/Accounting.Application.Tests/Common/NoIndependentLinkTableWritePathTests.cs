@@ -50,6 +50,7 @@ public sealed class NoIndependentLinkTableWritePathTests
         typeof(IExpenseRepository),
         typeof(IRevolvingFundRepository),
         typeof(IWorkShopRepository),
+        typeof(IIdentityHeadRepository),
     };
 
     private static bool IsLinkTableEntityType(Type type)

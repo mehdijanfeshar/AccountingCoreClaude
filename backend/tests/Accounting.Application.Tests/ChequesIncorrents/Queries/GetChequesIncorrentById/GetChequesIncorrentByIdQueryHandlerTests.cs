@@ -34,7 +34,7 @@ public sealed class GetChequesIncorrentByIdQueryHandlerTests
         var expected = SampleDto(id);
         var readRepository = new Mock<IChequesIncorrentReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetChequesIncorrentByIdQueryHandler(readRepository.Object);
@@ -50,7 +50,7 @@ public sealed class GetChequesIncorrentByIdQueryHandlerTests
         var id = Guid.NewGuid();
         var readRepository = new Mock<IChequesIncorrentReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChequesIncorrentDto?)null);
 
         var handler = new GetChequesIncorrentByIdQueryHandler(readRepository.Object);
@@ -68,14 +68,14 @@ public sealed class GetChequesIncorrentByIdQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetByIdAsync(id, token))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), token))
             .ReturnsAsync((ChequesIncorrentDto?)null);
 
         var handler = new GetChequesIncorrentByIdQueryHandler(readRepository.Object);
 
         await handler.Handle(new GetChequesIncorrentByIdQuery(id), token);
 
-        readRepository.Verify(r => r.GetByIdAsync(id, token), Times.Once);
+        readRepository.Verify(r => r.GetByIdAsync(id, It.IsAny<string>(), token), Times.Once);
     }
 
     [Fact]

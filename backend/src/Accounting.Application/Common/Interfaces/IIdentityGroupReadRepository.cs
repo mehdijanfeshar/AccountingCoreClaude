@@ -34,5 +34,5 @@ public interface IIdentityGroupReadRepository
     /// Returns the identity-group row with the given <paramref name="id"/> regardless of its
     /// logical-delete state, or <see langword="null"/> if no such row exists.
     /// </summary>
-    Task<IdentityGroupDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IdentityGroupDto?> GetByIdAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

@@ -33,7 +33,7 @@ public sealed class DeletePersonActionCommandHandler : IRequestHandler<DeletePer
 
     public async Task Handle(DeletePersonActionCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _personActionRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _personActionRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null)
         {

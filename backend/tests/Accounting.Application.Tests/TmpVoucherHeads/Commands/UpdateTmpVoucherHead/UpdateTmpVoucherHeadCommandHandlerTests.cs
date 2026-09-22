@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
@@ -44,7 +45,7 @@ public sealed class UpdateTmpVoucherHeadCommandHandlerTests
     {
         var repository = new Mock<ITmpVoucherHeadRepository>();
         repository
-            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = new Mock<ICurrentUser>();
@@ -168,7 +169,7 @@ public sealed class UpdateTmpVoucherHeadCommandHandlerTests
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
-        repository.Verify(r => r.GetForUpdateAsync(ExistingId, It.IsAny<CancellationToken>()), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(ExistingId, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -181,7 +182,7 @@ public sealed class UpdateTmpVoucherHeadCommandHandlerTests
 
         await handler.Handle(ValidCommand(), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(ExistingId, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(ExistingId, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 
@@ -232,7 +233,7 @@ public sealed class UpdateTmpVoucherHeadCommandHandlerTests
         var currentUser = new Mock<ICurrentUser>();
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
-        var behavior = new VahedScopeBehavior<UpdateTmpVoucherHeadCommand, Unit>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdateTmpVoucherHeadCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(

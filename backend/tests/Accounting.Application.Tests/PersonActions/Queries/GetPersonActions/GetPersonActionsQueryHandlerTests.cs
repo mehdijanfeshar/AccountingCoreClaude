@@ -2,6 +2,7 @@ using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.PersonActions.Queries;
 using Accounting.Application.PersonActions.Queries.GetPersonActions;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.PersonActions.Queries.GetPersonActions;
@@ -15,8 +16,8 @@ public sealed class GetPersonActionsQueryHandlerTests
         FromDate: "14030101",
         ToDate: "14031231",
         Status: true,
-        OperatorRole: true,
-        VahedCode: "0100",
+        OperatorRole: OperatorRole.JaneshinOmorMali,
+        VahedCode: "0042",
         CreatedDate: DateTime.UtcNow,
         UpdatedDate: null,
         AddUserId: "user1",
@@ -35,7 +36,7 @@ public sealed class GetPersonActionsQueryHandlerTests
             TotalCount = 51,
         };
         readRepository
-            .Setup(r => r.GetPagedAsync(2, 25, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(2, 25, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetPersonActionsQueryHandler(readRepository.Object);
@@ -46,7 +47,7 @@ public sealed class GetPersonActionsQueryHandlerTests
         Assert.Equal(2, result.PageNumber);
         Assert.Equal(25, result.PageSize);
         Assert.Equal(51, result.TotalCount);
-        readRepository.Verify(r => r.GetPagedAsync(2, 25, It.IsAny<CancellationToken>()), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(2, 25, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -56,14 +57,14 @@ public sealed class GetPersonActionsQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetPagedAsync(1, 20, token))
+            .Setup(r => r.GetPagedAsync(1, 20, It.IsAny<string>(), token))
             .ReturnsAsync(new PagedResult<PersonActionDto>());
 
         var handler = new GetPersonActionsQueryHandler(readRepository.Object);
 
         await handler.Handle(new GetPersonActionsQuery(PageNumber: 1, PageSize: 20), token);
 
-        readRepository.Verify(r => r.GetPagedAsync(1, 20, token), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(1, 20, It.IsAny<string>(), token), Times.Once);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.ElamHeads.Commands.UpdateElamHead;
 
 namespace Accounting.Application.Tests.ElamHeads.Commands.UpdateElamHead;
@@ -14,7 +15,7 @@ public sealed class UpdateElamHeadCommandValidatorTests
         DabirNo: "DABIR-002",
         DabirDate: "14040201",
         PrintNo: 9,
-        Case: false,
+        Case: ElamCase.Creditor,
         SerialNoInput: "INP-02",
         WebStat: 1,
         Date: "14040202",
@@ -24,7 +25,7 @@ public sealed class UpdateElamHeadCommandValidatorTests
         RcvDt: "14040203",
         LstMon: "08",
         PayNo: "PAY-00002",
-        DramadType: true,
+        DramadType: DaramElamhType.OtherDramadElam,
         PeimanNo: "PEIMAN-02",
         WorkShopCode: "WS-002",
         WorkShopName: "کارگاه به‌روزشده",
@@ -260,5 +261,50 @@ public sealed class UpdateElamHeadCommandValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateElamHeadCommand.Year));
+    }
+
+    // --- ELAMH_CASE / ELAMHDRAMAD_TYPE enum coverage (bool-to-enum fix, batch 5) --------------
+
+    [Fact]
+    public void Validate_CaseOutOfRange_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { Case = (ElamCase)99 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateElamHeadCommand.Case));
+    }
+
+    [Fact]
+    public void Validate_DramadTypeOutOfRange_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { DramadType = (DaramElamhType)99 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateElamHeadCommand.DramadType));
+    }
+
+    /// <summary>
+    /// A null enum must stay valid: both columns are optional in Legacy, so "not supplied" is a
+    /// legitimate value and <c>IsInEnum()</c> must not turn it into a 400.
+    /// </summary>
+    [Fact]
+    public void Validate_BothEnumsNull_Passes()
+    {
+        var result = _validator.Validate(ValidCommand() with { Case = null, DramadType = null });
+
+        Assert.True(result.IsValid);
+    }
+
+    /// <summary>
+    /// The third <c>DramadType</c> value was unreachable while the property was <c>bool?</c> —
+    /// this locks in that it is now accepted.
+    /// </summary>
+    [Fact]
+    public void Validate_DramadTypeThirdValue_Passes()
+    {
+        var result = _validator.Validate(
+            ValidCommand() with { DramadType = DaramElamhType.OtherDramadElam });
+
+        Assert.True(result.IsValid);
     }
 }

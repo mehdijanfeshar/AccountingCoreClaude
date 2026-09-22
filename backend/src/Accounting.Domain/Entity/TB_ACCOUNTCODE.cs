@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -7,7 +8,11 @@ public partial class TB_ACCOUNTCODE
 {
     public Guid ID { get; set; }
 
-    public bool? TYPECODE { get; set; }
+    /// <summary>
+    /// سطح سلسله‌مراتب کدینگ (گروه/کل/معین) — رجوع به <see cref="Accounting.Domain.ValueObjects.TypeCodes"/>
+    /// برای مقادیر و مستندات کامل.
+    /// </summary>
+    public TypeCodes? TYPECODE { get; set; }
 
     public Guid? PARENTID { get; set; }
 
@@ -16,18 +21,20 @@ public partial class TB_ACCOUNTCODE
     public string? ACCCODENAME { get; set; }
 
     /// <summary>
-    /// (1بستانکار2بدهکار3بد-بس)نوع فعاليت
+    /// ماهیت بدهکار/بستانکار حساب — رجوع به <see cref="Accounting.Domain.ValueObjects.TypeActivity"/>.
+    /// ⚠️ کامنت ستون Oracle («(1بستانکار2بدهکار3بد-بس)نوع فعاليت») نادرست/کهنه است و مقادیر ۱ و
+    /// ۲ را جابه‌جا گزارش می‌کند؛ برای مقدار واقعی و شواهد آن به مستندات enum مراجعه کن.
     /// </summary>
-    public bool? TYPEACTIVITY { get; set; }
+    public TypeActivity? TYPEACTIVITY { get; set; }
 
     public Guid? SOURCEANDCONSUME_ID { get; set; }
 
     public Guid? IDENTYGROUPS_ID { get; set; }
 
     /// <summary>
-    /// نوع حساب (1موقت2دائم)
+    /// موقت/دائم‌بودن حساب — رجوع به <see cref="Accounting.Domain.ValueObjects.TypeAccCode"/>.
     /// </summary>
-    public bool? TYPEACCCODE { get; set; }
+    public TypeAccCode? TYPEACCCODE { get; set; }
 
     public DateTime? CREATEDDATE { get; set; }
 
@@ -42,9 +49,9 @@ public partial class TB_ACCOUNTCODE
     public string? MOINFORCLOSE { get; set; }
 
     /// <summary>
-    /// نوع خلاف ماهيت(کنترل نشود-اخطار دهد-ثبت نشود)
+    /// رفتار موردانتظار هنگام ثبت سند خلاف ماهیت — رجوع به <see cref="Accounting.Domain.ValueObjects.TypeAction"/>.
     /// </summary>
-    public bool? TYPEACTION { get; set; }
+    public TypeAction? TYPEACTION { get; set; }
 
     public virtual ICollection<TB_ACCOUNTCODE> InversePARENT { get; set; } = new List<TB_ACCOUNTCODE>();
 

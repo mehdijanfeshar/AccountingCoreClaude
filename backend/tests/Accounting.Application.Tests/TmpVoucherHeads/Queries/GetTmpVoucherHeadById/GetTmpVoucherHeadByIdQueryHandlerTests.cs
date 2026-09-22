@@ -30,7 +30,7 @@ public sealed class GetTmpVoucherHeadByIdQueryHandlerTests
         var expected = SampleDto();
         var readRepository = new Mock<ITmpVoucherHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(TargetId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(TargetId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetTmpVoucherHeadByIdQueryHandler(readRepository.Object);
@@ -45,7 +45,7 @@ public sealed class GetTmpVoucherHeadByIdQueryHandlerTests
     {
         var readRepository = new Mock<ITmpVoucherHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((TmpVoucherHeadDto?)null);
 
         var handler = new GetTmpVoucherHeadByIdQueryHandler(readRepository.Object);
@@ -60,7 +60,7 @@ public sealed class GetTmpVoucherHeadByIdQueryHandlerTests
     {
         var readRepository = new Mock<ITmpVoucherHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(TargetId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(TargetId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SampleDto(isDeleted: true));
 
         var handler = new GetTmpVoucherHeadByIdQueryHandler(readRepository.Object);
@@ -81,7 +81,7 @@ public sealed class GetTmpVoucherHeadByIdQueryHandlerTests
     {
         var readRepository = new Mock<ITmpVoucherHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(TargetId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(TargetId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SampleDto(isDeleted: null));
 
         var handler = new GetTmpVoucherHeadByIdQueryHandler(readRepository.Object);
@@ -97,7 +97,7 @@ public sealed class GetTmpVoucherHeadByIdQueryHandlerTests
     {
         var readRepository = new Mock<ITmpVoucherHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SampleDto());
         using var cts = new CancellationTokenSource();
 
@@ -105,6 +105,6 @@ public sealed class GetTmpVoucherHeadByIdQueryHandlerTests
 
         await handler.Handle(new GetTmpVoucherHeadByIdQuery(TargetId), cts.Token);
 
-        readRepository.Verify(r => r.GetByIdAsync(TargetId, cts.Token), Times.Once);
+        readRepository.Verify(r => r.GetByIdAsync(TargetId, It.IsAny<string>(), cts.Token), Times.Once);
     }
 }

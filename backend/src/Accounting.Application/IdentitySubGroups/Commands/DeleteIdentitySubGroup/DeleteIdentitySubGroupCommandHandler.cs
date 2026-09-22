@@ -33,7 +33,7 @@ public sealed class DeleteIdentitySubGroupCommandHandler : IRequestHandler<Delet
 
     public async Task Handle(DeleteIdentitySubGroupCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _identitySubGroupRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _identitySubGroupRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null)
         {

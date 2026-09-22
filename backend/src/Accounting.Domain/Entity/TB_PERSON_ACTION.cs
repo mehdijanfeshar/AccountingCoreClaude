@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -17,7 +18,7 @@ public partial class TB_PERSON_ACTION
 
     public bool? STATUS { get; set; }
 
-    public bool OPERATORROLE { get; set; }
+    public OperatorRole OPERATORROLE { get; set; }
 
     public string? VAHEDCODE { get; set; }
 

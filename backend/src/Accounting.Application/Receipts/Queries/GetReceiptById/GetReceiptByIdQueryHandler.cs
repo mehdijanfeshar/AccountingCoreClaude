@@ -17,5 +17,5 @@ public sealed class GetReceiptByIdQueryHandler : IRequestHandler<GetReceiptByIdQ
     }
 
     public Task<ReceiptDto?> Handle(GetReceiptByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

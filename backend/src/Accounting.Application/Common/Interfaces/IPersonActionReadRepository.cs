@@ -18,11 +18,12 @@ public interface IPersonActionReadRepository
     Task<PagedResult<PersonActionDto>> GetPagedAsync(
         int pageNumber,
         int pageSize,
+        string vahedCode,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns the row with the given <paramref name="id"/> regardless of its logical-delete
     /// state, or <see langword="null"/> if no such row exists.
     /// </summary>
-    Task<PersonActionDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<PersonActionDto?> GetByIdAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

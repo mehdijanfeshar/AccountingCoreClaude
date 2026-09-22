@@ -5,6 +5,7 @@ using Accounting.Application.PayReciveHeads.Commands.UpdatePayReciveHead;
 using Accounting.Application.PayReciveHeads.Queries;
 using Accounting.Application.PayReciveHeads.Queries.GetPayReciveHeadById;
 using Accounting.Application.PayReciveHeads.Queries.GetPayReciveHeads;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -55,11 +56,11 @@ namespace Accounting.Api.Controllers;
 /// no <c>errors</c> dictionary — naming the offending field would mean leaking the Oracle
 /// constraint name).
 ///
-/// ⚠️⚠️ <b><c>PayReciveType</c> (<c>PAYRECIVTYPE</c>) is a CONFIRMED <c>bool?</c>-should-be-enum
-/// column, flagged not fixed</b>: the reference project models it as a three-valued
-/// <c>PayRecivType</c> (۱پرداخت ۲دریافت ۳همه), so the third value is unreachable through this
-/// API. See <see cref="CreatePayReciveHeadCommand"/> XML doc for the full write-up. Re-typing it
-/// is a breaking API-contract change and out of scope for this batch.
+/// <c>PayReciveType</c> (<c>PAYRECIVTYPE</c>) is now <see cref="PayRecivType"/> — resolved in
+/// phase 27 batch 2 (previously a CONFIRMED <c>bool?</c>-should-be-enum column): the reference
+/// project models it as a three-valued <c>PayRecivType</c> (۱پرداخت ۲دریافت ۳همه), and all three
+/// values are now reachable through this API. See <see cref="CreatePayReciveHeadCommand"/> XML
+/// doc for the full write-up.
 ///
 /// <b><see cref="Create"/>/<see cref="Update"/>/<see cref="GetList"/> also declare <c>403
 /// Forbidden</c></b> — <c>CreatePayReciveHeadCommand</c>/<c>UpdatePayReciveHeadCommand</c>/
@@ -221,6 +222,6 @@ public sealed record UpdatePayReciveHeadRequest(
     string PayReciveCode,
     string PayReciveDate,
     string PayReciveDescription,
-    bool? PayReciveType,
+    PayRecivType? PayReciveType,
     string Year,
     Guid? VoucherHeadId);

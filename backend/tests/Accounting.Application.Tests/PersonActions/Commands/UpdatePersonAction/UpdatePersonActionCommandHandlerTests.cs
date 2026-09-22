@@ -2,6 +2,7 @@ using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.PersonActions.Commands.UpdatePersonAction;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.PersonActions.Commands.UpdatePersonAction;
@@ -15,8 +16,7 @@ public sealed class UpdatePersonActionCommandHandlerTests
         FromDate: "14030201",
         ToDate: "14030228",
         Status: false,
-        OperatorRole: false,
-        VahedCode: "0200");
+        OperatorRole: OperatorRole.ReyisVahed);
 
     private static TB_PERSON_ACTION ExistingEntity(Guid id, bool isDeleted = false) => new()
     {
@@ -26,7 +26,7 @@ public sealed class UpdatePersonActionCommandHandlerTests
         FROMDATE = "14030101",
         TODATE = "14031231",
         STATUS = true,
-        OPERATORROLE = true,
+        OPERATORROLE = OperatorRole.MasolOmorMali,
         VAHEDCODE = "0100",
         ADDUSERID = "creator1",
         CREATEDDATE = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
@@ -48,7 +48,7 @@ public sealed class UpdatePersonActionCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IPersonActionRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -72,7 +72,7 @@ public sealed class UpdatePersonActionCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IPersonActionRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("srvusr02");
 
@@ -96,7 +96,7 @@ public sealed class UpdatePersonActionCommandHandlerTests
         var originalIsDeleted = entity.ISDELETED;
 
         var repository = new Mock<IPersonActionRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -115,7 +115,7 @@ public sealed class UpdatePersonActionCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<IPersonActionRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_PERSON_ACTION?)null);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_PERSON_ACTION?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -132,7 +132,7 @@ public sealed class UpdatePersonActionCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, isDeleted: true);
         var repository = new Mock<IPersonActionRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -149,7 +149,7 @@ public sealed class UpdatePersonActionCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IPersonActionRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -171,13 +171,13 @@ public sealed class UpdatePersonActionCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
         var handler = new UpdatePersonActionCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 }

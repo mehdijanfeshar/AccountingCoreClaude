@@ -183,7 +183,8 @@ public sealed class VoucherDetailsControllerTests
         ChangeUserId: null,
         VahedCode: "0001",
         Year: "1405",
-        IsDeleted: false);
+        IsDeleted: false,
+        TafsiliLinks: Array.Empty<VoucherDetailTafsiliLinkDto>());
 
     [Fact]
     public async Task GetById_ReturnsOkWithDto_WhenHandlerReturnsValue()

@@ -1,6 +1,7 @@
 using Accounting.Application.Receipts.Queries;
 using Accounting.Application.Receipts.Queries.GetReceiptById;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.Receipts.Queries.GetReceiptById;
@@ -9,7 +10,7 @@ public sealed class GetReceiptByIdQueryHandlerTests
 {
     private static ReceiptDto SampleDto(Guid id) => new(
         Id: id,
-        ReceiptKind: true,
+        ReceiptKind: ReceiptType.Fish,
         ReceiptDate: "14020101",
         ReceiptNo: "R0000001",
         DateRsid: "14020102",
@@ -28,7 +29,7 @@ public sealed class GetReceiptByIdQueryHandlerTests
         var expected = SampleDto(id);
         var readRepository = new Mock<IReceiptReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetReceiptByIdQueryHandler(readRepository.Object);
@@ -44,7 +45,7 @@ public sealed class GetReceiptByIdQueryHandlerTests
         var id = Guid.NewGuid();
         var readRepository = new Mock<IReceiptReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ReceiptDto?)null);
 
         var handler = new GetReceiptByIdQueryHandler(readRepository.Object);
@@ -62,14 +63,14 @@ public sealed class GetReceiptByIdQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetByIdAsync(id, token))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), token))
             .ReturnsAsync((ReceiptDto?)null);
 
         var handler = new GetReceiptByIdQueryHandler(readRepository.Object);
 
         await handler.Handle(new GetReceiptByIdQuery(id), token);
 
-        readRepository.Verify(r => r.GetByIdAsync(id, token), Times.Once);
+        readRepository.Verify(r => r.GetByIdAsync(id, It.IsAny<string>(), token), Times.Once);
     }
 
     [Fact]

@@ -2,6 +2,7 @@ using Accounting.Application.CheckBooks.Commands.DeleteCheckBook;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.CheckBooks.Commands.DeleteCheckBook;
@@ -18,7 +19,7 @@ public sealed class DeleteCheckBookCommandHandlerTests
         TOCHECKNUMBER = "100050",
         CHECKTYPE_ID = Guid.NewGuid(),
         VAHEDCODE = "0001",
-        CHECKBOOK_TYPE = true,
+        CHECKBOOK_TYPE = CheckType.Real,
         SERIAL = "SER0001",
         ADDUSERID = "creator1",
         CREATEDDATE = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
@@ -40,7 +41,7 @@ public sealed class DeleteCheckBookCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<ICheckBookRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter9");
 
@@ -69,7 +70,7 @@ public sealed class DeleteCheckBookCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<ICheckBookRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -77,7 +78,7 @@ public sealed class DeleteCheckBookCommandHandlerTests
 
         await handler.Handle(new DeleteCheckBookCommand(id), CancellationToken.None);
 
-        Assert.Same(entity, await repository.Object.GetForUpdateAsync(id, CancellationToken.None));
+        Assert.Same(entity, await repository.Object.GetForUpdateAsync(id, It.IsAny<string>(), CancellationToken.None));
     }
 
     [Fact]
@@ -85,7 +86,7 @@ public sealed class DeleteCheckBookCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<ICheckBookRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_CHECKBOOK?)null);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_CHECKBOOK?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -107,7 +108,7 @@ public sealed class DeleteCheckBookCommandHandlerTests
         entity.UPDATEDDATE = updatedAt;
 
         var repository = new Mock<ICheckBookRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("newDeleter");
 
@@ -134,13 +135,13 @@ public sealed class DeleteCheckBookCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
         var handler = new DeleteCheckBookCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(new DeleteCheckBookCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 }

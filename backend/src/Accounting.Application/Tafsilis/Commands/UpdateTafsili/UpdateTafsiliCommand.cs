@@ -35,10 +35,10 @@ namespace Accounting.Application.Tafsilis.Commands.UpdateTafsili;
 /// <param name="TafsiliCode">TAFSILI_CODE column (required, max 15 chars).</param>
 /// <param name="TafsiliName">TAFSILI_NAME column (required, max 200 chars).</param>
 /// <param name="TafsilDesc">TAFSIL_DESC column (optional, max 200 chars).</param>
-/// <param name="IsActive">ISACTIVE column. See <see cref="Accounting.Application.Tafsilis.Commands.CreateTafsili.CreateTafsiliCommand.IsActive"/> for the unverified-enum caveat.</param>
-/// <param name="PersonType">PERSONTYPE column. Same caveat.</param>
-/// <param name="Owner">OWNER column. Same caveat.</param>
-/// <param name="VahedType">VAHEDTYPE column. Same caveat.</param>
+/// <param name="IsActive">ISACTIVE column — <see cref="TafsiliActiveState"/>. See <see cref="Accounting.Application.Tafsilis.Commands.CreateTafsili.CreateTafsiliCommand.IsActive"/> for the phase-27-batch-1 fix this reflects.</param>
+/// <param name="PersonType">PERSONTYPE column — <see cref="PersonTypes"/>. Same fix.</param>
+/// <param name="Owner">OWNER column — <see cref="Owners"/>. Same fix.</param>
+/// <param name="VahedType">VAHEDTYPE column — reuses <see cref="VahedCategory"/>. Same fix.</param>
 /// <param name="TafsilGroupIds"><c>TB_TAFSIL_GROUP.ID</c> values this تفصیلی should be linked to after this update (may be empty — clears every existing link).</param>
 /// <param name="TafsilGroupLinkVahedType">
 /// Visibility scope stamped onto any newly-added <c>TB_TAFSIL_LINK_TAFSILGROUP</c> row (ids
@@ -51,10 +51,10 @@ public sealed record UpdateTafsiliCommand(
     string TafsiliCode,
     string TafsiliName,
     string? TafsilDesc,
-    bool? IsActive,
-    bool? PersonType,
-    bool? Owner,
-    bool? VahedType,
+    TafsiliActiveState? IsActive,
+    PersonTypes? PersonType,
+    Owners? Owner,
+    VahedCategory? VahedType,
     IReadOnlyList<Guid> TafsilGroupIds,
     VahedCategory? TafsilGroupLinkVahedType = null) : IRequest, IVahedScopedCommand
 {

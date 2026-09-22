@@ -42,7 +42,7 @@ public sealed class UpdateWorkShopCommandHandler : IRequestHandler<UpdateWorkSho
 
     public async Task Handle(UpdateWorkShopCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _workShopRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _workShopRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null || entity.ISDELETED == true)
         {

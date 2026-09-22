@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Security;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using MediatR;
@@ -41,12 +42,25 @@ public sealed class DeleteVoucherHeadCommandHandler : IRequestHandler<DeleteVouc
 
     public async Task Handle(DeleteVoucherHeadCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _voucherHeadRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _voucherHeadRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null)
         {
             throw new NotFoundException("VoucherHead", request.Id);
         }
+
+        // Phase 38: a reviewed/accepted voucher is view-only. Checked BEFORE the idempotent
+
+
+        // already-deleted short-circuit, so a locked voucher reports why rather than silently
+
+
+        // succeeding.
+
+
+        VoucherEditability.EnsureEditable(entity.ID, entity.DOCLIFE);
+
+
 
         if (entity.ISDELETED == true)
         {

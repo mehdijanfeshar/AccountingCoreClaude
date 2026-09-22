@@ -17,5 +17,5 @@ public sealed class GetBillLogByIdQueryHandler : IRequestHandler<GetBillLogByIdQ
     }
 
     public Task<BillLogDto?> Handle(GetBillLogByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

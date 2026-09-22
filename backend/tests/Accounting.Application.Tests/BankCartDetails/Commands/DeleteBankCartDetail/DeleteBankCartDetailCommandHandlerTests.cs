@@ -2,6 +2,7 @@ using Accounting.Application.BankCartDetails.Commands.DeleteBankCartDetail;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.BankCartDetails.Commands.DeleteBankCartDetail;
@@ -19,7 +20,7 @@ public sealed class DeleteBankCartDetailCommandHandlerTests
         MONTH = "01",
         CHEQNO = "11111111",
         RECIVDATE = "14010101",
-        CHECKRECEIPTTYPE = true,
+        CHECKRECEIPTTYPE = CheckReceiptType.RealCheck,
         DEBTOR = 500m,
         CREDITOR = 0m,
         VAHEDCODE = "0001",
@@ -45,7 +46,7 @@ public sealed class DeleteBankCartDetailCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IBankCartDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter9");
 
@@ -77,7 +78,7 @@ public sealed class DeleteBankCartDetailCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<IBankCartDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_BANKCARTDETAIL?)null);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_BANKCARTDETAIL?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -99,7 +100,7 @@ public sealed class DeleteBankCartDetailCommandHandlerTests
         entity.UPDATEDDATE = updatedAt;
 
         var repository = new Mock<IBankCartDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("newDeleter");
 
@@ -121,7 +122,7 @@ public sealed class DeleteBankCartDetailCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, isDeleted: null);
         var repository = new Mock<IBankCartDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter5");
 
@@ -146,13 +147,13 @@ public sealed class DeleteBankCartDetailCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
         var handler = new DeleteBankCartDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(new DeleteBankCartDetailCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 }

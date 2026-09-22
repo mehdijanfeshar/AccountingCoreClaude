@@ -24,5 +24,5 @@ public interface ITafsiliReadRepository
     /// Returns the row with the given <paramref name="id"/> regardless of its logical-delete
     /// state, or <see langword="null"/> if no such row exists.
     /// </summary>
-    Task<TafsiliDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TafsiliDto?> GetByIdAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

@@ -5,6 +5,7 @@ using Accounting.Application.TafsilGroups.Commands.UpdateTafsilGroup;
 using Accounting.Application.TafsilGroups.Queries;
 using Accounting.Application.TafsilGroups.Queries.GetTafsilGroupById;
 using Accounting.Application.TafsilGroups.Queries.GetTafsilGroups;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -49,7 +50,10 @@ public sealed class TafsilGroupsController : ControllerBase
     }
 
     /// <summary>
-    /// Creates a new tafsili-group lookup entry (<c>TB_TAFSIL_GROUP</c> row).
+    /// Creates a new tafsili-group lookup entry (<c>TB_TAFSIL_GROUP</c> row). See
+    /// <see cref="CreateTafsilGroupCommand"/> XML doc for the <c>PersonType</c> enum field, which
+    /// serializes as a plain JSON integer (no <c>JsonStringEnumConverter</c> registered) — same
+    /// convention as <c>CreateAccountCodeCommand</c> (phase 25).
     /// </summary>
     [HttpPost]
     [ProducesResponseType(typeof(CreateTafsilGroupResponse), StatusCodes.Status201Created)]
@@ -108,6 +112,8 @@ public sealed class TafsilGroupsController : ControllerBase
     /// Exposed as <c>POST {id}/update</c>, not <c>PUT</c> — by explicit project-owner mandate.
     /// <c>Id</c> is taken from the route, never the body. Returns <b>200</b> with the affected
     /// <c>Id</c> in the body (not 204), mirroring every other write action in this project.
+    /// <see cref="UpdateTafsilGroupRequest"/> carries the same <c>PersonType</c> enum field as
+    /// <see cref="CreateTafsilGroupCommand"/> — same plain-integer JSON wire format.
     /// </summary>
     [HttpPost("{id:guid}/update")]
     [ProducesResponseType(typeof(UpdateTafsilGroupResponse), StatusCodes.Status200OK)]
@@ -179,4 +185,4 @@ public sealed record DeleteTafsilGroupResponse(Guid Id);
 public sealed record UpdateTafsilGroupRequest(
     string TafsilGroupCode,
     string TafsilGroupName,
-    bool? PersonType);
+    PersonTypes? PersonType);

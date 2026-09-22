@@ -20,5 +20,5 @@ public sealed class GetTmpVoucherHeadByIdQueryHandler
     public Task<TmpVoucherHeadDto?> Handle(
         GetTmpVoucherHeadByIdQuery request,
         CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

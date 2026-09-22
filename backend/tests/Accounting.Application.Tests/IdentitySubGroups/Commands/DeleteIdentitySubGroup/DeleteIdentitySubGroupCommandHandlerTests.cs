@@ -2,6 +2,7 @@ using Accounting.Application.IdentitySubGroups.Commands.DeleteIdentitySubGroup;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.IdentitySubGroups.Commands.DeleteIdentitySubGroup;
@@ -15,8 +16,8 @@ public sealed class DeleteIdentitySubGroupCommandHandlerTests
         SUBGRPS_DESC = "desc",
         SUBGRPS_LEN = 4,
         SUMFLAG = true,
-        FIXED = false,
-        SUBGRPS_TYPE = true,
+        FIXED = IdentitySubGroupKind.Variable,
+        SUBGRPS_TYPE = IdentitySubGroupType.PersianLetter,
         VAHEDCODE = "0100",
         YEAR = "1403",
         IDENTYSUBGROUPS_CODE = "01",
@@ -40,7 +41,7 @@ public sealed class DeleteIdentitySubGroupCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IIdentitySubGroupRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter9");
 
@@ -69,7 +70,7 @@ public sealed class DeleteIdentitySubGroupCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IIdentitySubGroupRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -77,7 +78,7 @@ public sealed class DeleteIdentitySubGroupCommandHandlerTests
 
         await handler.Handle(new DeleteIdentitySubGroupCommand(id), CancellationToken.None);
 
-        Assert.Same(entity, await repository.Object.GetForUpdateAsync(id, CancellationToken.None));
+        Assert.Same(entity, await repository.Object.GetForUpdateAsync(id, It.IsAny<string>(), CancellationToken.None));
     }
 
     [Fact]
@@ -85,7 +86,7 @@ public sealed class DeleteIdentitySubGroupCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<IIdentitySubGroupRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_IDENTITYSUBGRP?)null);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_IDENTITYSUBGRP?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -107,7 +108,7 @@ public sealed class DeleteIdentitySubGroupCommandHandlerTests
         entity.UPDATEDDATE = updatedAt;
 
         var repository = new Mock<IIdentitySubGroupRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("newDeleter");
 
@@ -134,13 +135,13 @@ public sealed class DeleteIdentitySubGroupCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
         var handler = new DeleteIdentitySubGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(new DeleteIdentitySubGroupCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 }

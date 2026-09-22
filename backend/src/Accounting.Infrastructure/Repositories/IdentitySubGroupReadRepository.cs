@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using Accounting.Application.IdentitySubGroups.Queries;
 using Accounting.Application.Common;
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using Accounting.Infrastructure.Legacy;
@@ -50,6 +51,8 @@ public sealed class IdentitySubGroupReadRepository : IIdentitySubGroupReadReposi
         int pageNumber,
         int pageSize,
         string vahedCode,
+        Guid? identityGroupId = null,
+        IdentitySubGroupKind? kind = null,
         CancellationToken cancellationToken = default)
     {
         // VahedCode filter: deliberately unconditional — no "if (!string.IsNullOrEmpty(vahedCode))"
@@ -64,6 +67,24 @@ public sealed class IdentitySubGroupReadRepository : IIdentitySubGroupReadReposi
         var query = _dbContext.TB_IDENTITYSUBGRPs
             .AsNoTracking()
             .Where(s => s.ISDELETED != true && s.VAHEDCODE == vahedCode);
+
+        // Both filters are opt-in: null means "do not narrow", never "match nothing". Note this
+        // is the opposite of the VAHEDCODE guard above — a narrowing filter is safe to skip, a
+        // security scope is not.
+        //
+        // Together these two are what the شناسنامه entry form needs: "give me the FIXED
+        // subgroups of group X", which is the reference app's getFixed?Groupid= call. Without
+        // them the form would have to page through every subgroup of the unit and filter client
+        // side.
+        if (identityGroupId is not null)
+        {
+            query = query.Where(s => s.IDENTYGROUPS_ID == identityGroupId);
+        }
+
+        if (kind is not null)
+        {
+            query = query.Where(s => s.FIXED == kind);
+        }
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -87,11 +108,26 @@ public sealed class IdentitySubGroupReadRepository : IIdentitySubGroupReadReposi
         };
     }
 
-    public Task<IdentitySubGroupDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<IdentitySubGroupDto?> GetByIdAsync(
+        Guid id,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
     {
+        // The owning unit is read first as a scalar so the access decision can tell "no such
+        // row" (null, caller gets null, 404) from "another unit's row" (403). Projecting it
+        // alongside the DTO in one query is not possible while ToDto stays a reusable
+        // Expression, and this is a single-record edit-form fetch, not a hot path.
+        var ownerVahedCode = await _dbContext.TB_IDENTITYSUBGRPs
+            .AsNoTracking()
+            .Where(s => s.ID == id)
+            .Select(s => s.VAHEDCODE)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        VahedOwnership.EnsureOwned(ownerVahedCode, vahedCode, id, "IdentitySubGroup");
+
         // No ISDELETED filter here on purpose: GetById returns the row regardless of its
         // deletion state; the caller decides what to do based on IdentitySubGroupDto.IsDeleted.
-        return _dbContext.TB_IDENTITYSUBGRPs
+        return await _dbContext.TB_IDENTITYSUBGRPs
             .AsNoTracking()
             .Where(s => s.ID == id)
             .Select(ToDto)

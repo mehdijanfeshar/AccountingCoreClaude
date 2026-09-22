@@ -11,6 +11,7 @@ using Accounting.Application.Accounts.Queries.GetAccountTafsilGroupLinks;
 using Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems;
 using Accounting.Application.AccountCodes.Queries.GetTafsiliLevels;
 using Accounting.Application.Common;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -71,7 +72,10 @@ public sealed class AccountCodesController : ControllerBase
     }
 
     /// <summary>
-    /// Creates a new account code (<c>TB_ACCOUNTCODE</c> row).
+    /// Creates a new account code (<c>TB_ACCOUNTCODE</c> row). See
+    /// <see cref="CreateAccountCodeCommand"/> XML doc for the four enum fields
+    /// (<c>TypeCode</c>/<c>TypeActivity</c>/<c>TypeAccCode</c>/<c>TypeAction</c>), which
+    /// serialize as plain JSON integers (no <c>JsonStringEnumConverter</c> registered).
     /// </summary>
     [HttpPost]
     [ProducesResponseType(typeof(CreateAccountCodeResponse), StatusCodes.Status201Created)]
@@ -351,18 +355,24 @@ public sealed record DeleteAccountCodeResponse(Guid Id);
 /// <see cref="UpdateAccountCodeCommand"/> except <c>Id</c>, which is bound from the route
 /// instead — this deliberately prevents a route id/body id mismatch from ever reaching the
 /// handler.
+///
+/// <c>TypeCode</c>/<c>TypeActivity</c>/<c>TypeAccCode</c>/<c>TypeAction</c> serialize as plain
+/// JSON integers (e.g. <c>"typeCode": 3</c>), not strings — there is no
+/// <c>JsonStringEnumConverter</c> registered in <c>Program.cs</c>. This matches the underlying
+/// Oracle values and the reference project exactly; do not add a string-enum converter as part
+/// of this contract.
 /// </summary>
 public sealed record UpdateAccountCodeRequest(
-    bool? TypeCode,
+    TypeCodes? TypeCode,
     Guid? ParentId,
     string AccCode,
     string AccCodeName,
-    bool? TypeActivity,
+    TypeActivity? TypeActivity,
     Guid? SourceAndConsumeId,
     Guid? IdentyGroupsId,
-    bool? TypeAccCode,
+    TypeAccCode? TypeAccCode,
     string? MoInforClose,
-    bool? TypeAction);
+    TypeAction? TypeAction);
 
 /// <summary>
 /// Response body for a successful <see cref="AccountCodesController.CreateTafsilGroupLink"/> call.

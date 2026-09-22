@@ -1,6 +1,7 @@
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.PersonActions.Commands.CreatePersonAction;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.PersonActions.Commands.CreatePersonAction;
@@ -13,8 +14,7 @@ public sealed class CreatePersonActionCommandHandlerTests
         FromDate: "14030101",
         ToDate: "14031231",
         Status: true,
-        OperatorRole: true,
-        VahedCode: "0100");
+        OperatorRole: OperatorRole.MasolOmorMali);
 
     private static Mock<ICurrentUser> CurrentUserMock(string userId = "user1")
     {

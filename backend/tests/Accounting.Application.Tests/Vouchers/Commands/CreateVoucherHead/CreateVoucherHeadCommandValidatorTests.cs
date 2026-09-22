@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Vouchers.Commands.CreateVoucherHead;
 
 namespace Accounting.Application.Tests.Vouchers.Commands.CreateVoucherHead;
@@ -9,7 +10,7 @@ public sealed class CreateVoucherHeadCommandValidatorTests
     private static CreateVoucherHeadCommand ValidCommand() => new(
         DocNum: "000001",
         DateDoc: "14050101",
-        DocLife: true,
+        DocLife: DocLife.Temporary,
         HeadDesc: "سند افتتاحیه",
         Apendix: null,
         SystemTypeId: null,
@@ -183,5 +184,54 @@ public sealed class CreateVoucherHeadCommandValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateVoucherHeadCommand.AtfNum));
+    }
+
+    // --- DOCLIFE enum coverage (bool-to-enum fix, batch 5) ------------------------------------
+
+    [Fact]
+    public void Validate_DocLifeOutOfRange_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { DocLife = (DocLife)99 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateVoucherHeadCommand.DocLife));
+    }
+
+    /// <summary>
+    /// 0 is the Oracle column's own DEFAULT but is deliberately not a <see cref="DocLife"/>
+    /// value, so it must be rejected here. This test exists to make that consequence explicit
+    /// rather than incidental — see the enum's XML doc.
+    /// </summary>
+    [Fact]
+    public void Validate_DocLifeZero_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { DocLife = (DocLife)0 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateVoucherHeadCommand.DocLife));
+    }
+
+    [Fact]
+    public void Validate_DocLifeNull_Passes()
+    {
+        var result = _validator.Validate(ValidCommand() with { DocLife = null });
+
+        Assert.True(result.IsValid);
+    }
+
+    /// <summary>
+    /// All four real states must be accepted; while the property was <c>bool?</c> only two of
+    /// them were even expressible.
+    /// </summary>
+    [Theory]
+    [InlineData(DocLife.Draft)]
+    [InlineData(DocLife.Temporary)]
+    [InlineData(DocLife.Reviewed)]
+    [InlineData(DocLife.Accepted)]
+    public void Validate_EveryRealDocLifeState_Passes(DocLife state)
+    {
+        var result = _validator.Validate(ValidCommand() with { DocLife = state });
+
+        Assert.True(result.IsValid);
     }
 }

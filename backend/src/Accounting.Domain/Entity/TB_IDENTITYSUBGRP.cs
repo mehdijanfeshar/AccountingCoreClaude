@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -31,14 +32,14 @@ public partial class TB_IDENTITYSUBGRP
     public bool SUMFLAG { get; set; }
 
     /// <summary>
-    /// ثابت يا متغير بودن 
+    /// ثابت يا متغير بودن
     /// </summary>
-    public bool FIXED { get; set; }
+    public IdentitySubGroupKind FIXED { get; set; }
 
     /// <summary>
-    /// نوع : حروف, اعداد, يا هردو 
+    /// نوع : حروف, اعداد, يا هردو
     /// </summary>
-    public bool? SUBGRPS_TYPE { get; set; }
+    public IdentitySubGroupType? SUBGRPS_TYPE { get; set; }
 
     public DateTime CREATEDDATE { get; set; }
 

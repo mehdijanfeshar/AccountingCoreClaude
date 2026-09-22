@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Search;
 using Accounting.Application.Reports.TrialBalance;
 
 namespace Accounting.Application.Common.Interfaces;
@@ -13,8 +14,12 @@ namespace Accounting.Application.Common.Interfaces;
 ///
 /// This is the one Query in the codebase whose Read side cannot reasonably use plain EF Core LINQ
 /// (see <c>TrialBalanceReadRepository</c> XML doc for why — <c>TB_ACCOUNTCODE.TYPECODE</c> and
-/// <c>TB_VOUCHERSHEAD.DOCLIFE</c> are mapped to <c>bool?</c> but the report needs to compare them
-/// as numbers). It still honours rule #2 in <c>CLAUDE.md</c> ("سمت Read باید از View/Materialized
+/// <c>TB_VOUCHERSHEAD.DOCLIFE</c> were mapped to <c>bool?</c> but the report needs to compare them
+/// as numbers). ⚠️ <b>That original justification has since expired:</b> both columns are real
+/// enums now (phase 25 and ۲۰۲۶-۰۹-۲۰ respectively), so an ordinal <c>&gt;=</c> comparison is
+/// expressible in LINQ today. The raw SQL was deliberately left in place — rewriting a working,
+/// tested report is a separate decision with its own risk — but the reason it exists is no longer
+/// the reason it stays. It still honours rule #2 in <c>CLAUDE.md</c> ("سمت Read باید از View/Materialized
 /// View مجزا بخواند... نه مستقیماً از مدل نوشتن") in spirit as far as this schema allows: it reads
 /// the same base tables the write model uses (there is no View for this yet), exactly like the
 /// pre-existing narrow exception already taken by <c>VoucherHeadReadRepository</c>/
@@ -62,6 +67,19 @@ public interface ITrialBalanceReadRepository
     /// <c>TB_VOUCHERSHEAD.DOCLIFE</c> number (read as a number here specifically to route around
     /// the <c>bool?</c> mapping bug — see the class remarks). <see langword="null"/> means no
     /// filtering by document life-cycle status at all.</param>
+    /// <param name="filters">
+    /// Optional generic report filters (<c>Property</c> / <c>Operator</c> / <c>Value</c>), the same
+    /// shape the project owner's previous system used. Applied in the <c>WHERE</c> clause, so
+    /// filtering happens <b>before</b> aggregation rather than on rows already computed and sent.
+    ///
+    /// <para>
+    /// ⚠️ <c>Property</c> is a logical field name from <c>TrialBalanceSearchFields</c>, never a
+    /// column name. A column name cannot be a bind variable, so letting a caller choose one is the
+    /// one place a generic filter could become an injection point. Implementations map allowed
+    /// names to SQL expressions they own, take operators from the closed
+    /// <see cref="SearchOperator"/> enum, and bind every value.
+    /// </para>
+    /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task<IReadOnlyList<TrialBalanceAggregateRow>> GetAggregatesAsync(
         TrialBalanceLevel level,
@@ -70,5 +88,6 @@ public interface ITrialBalanceReadRepository
         string? toDate,
         string vahedCode,
         int? docLife,
+        IReadOnlyList<SearchParam>? filters,
         CancellationToken cancellationToken = default);
 }

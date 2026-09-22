@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
@@ -30,7 +31,7 @@ public sealed class VahedScopeBehaviorTests
     public async Task Handle_ScopedRequest_OverwritesClientSuppliedVahedCode_WithCurrentUserValue()
     {
         var currentUser = CurrentUserMock("0007");
-        var behavior = new VahedScopeBehavior<ScopedRequest, string>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<ScopedRequest, string>(TestUnitScope.ResolverFor(currentUser.Object));
         var request = new ScopedRequest(ClientSuppliedVahedCode: "9999") { VahedCode = "9999" };
 
         RequestHandlerDelegate<string> next = _ => Task.FromResult("handled");
@@ -44,7 +45,7 @@ public sealed class VahedScopeBehaviorTests
     public async Task Handle_NullVahedCodeClaim_ThrowsMissingVahedScopeException_AndNeverInvokesNext()
     {
         var currentUser = CurrentUserMock(null);
-        var behavior = new VahedScopeBehavior<ScopedRequest, string>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<ScopedRequest, string>(TestUnitScope.ResolverFor(currentUser.Object));
         var request = new ScopedRequest(ClientSuppliedVahedCode: "0001");
 
         var nextInvoked = false;
@@ -64,7 +65,7 @@ public sealed class VahedScopeBehaviorTests
     public async Task Handle_EmptyVahedCodeClaim_ThrowsMissingVahedScopeException_AndNeverInvokesNext()
     {
         var currentUser = CurrentUserMock(string.Empty);
-        var behavior = new VahedScopeBehavior<ScopedRequest, string>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<ScopedRequest, string>(TestUnitScope.ResolverFor(currentUser.Object));
         var request = new ScopedRequest(ClientSuppliedVahedCode: "0001");
 
         var nextInvoked = false;
@@ -84,7 +85,7 @@ public sealed class VahedScopeBehaviorTests
     public async Task Handle_WhitespaceVahedCodeClaim_ThrowsMissingVahedScopeException_AndNeverInvokesNext()
     {
         var currentUser = CurrentUserMock("   ");
-        var behavior = new VahedScopeBehavior<ScopedRequest, string>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<ScopedRequest, string>(TestUnitScope.ResolverFor(currentUser.Object));
         var request = new ScopedRequest(ClientSuppliedVahedCode: "0001");
 
         var nextInvoked = false;
@@ -104,7 +105,7 @@ public sealed class VahedScopeBehaviorTests
     public async Task Handle_VahedCodeClaimLongerThanFourCharacters_ThrowsMissingVahedScopeException_NeverTruncates()
     {
         var currentUser = CurrentUserMock("00001");
-        var behavior = new VahedScopeBehavior<ScopedRequest, string>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<ScopedRequest, string>(TestUnitScope.ResolverFor(currentUser.Object));
         var request = new ScopedRequest(ClientSuppliedVahedCode: "0001");
 
         var nextInvoked = false;
@@ -126,7 +127,7 @@ public sealed class VahedScopeBehaviorTests
     public async Task Handle_VahedCodeClaimAtExactlyFourCharacters_Passes()
     {
         var currentUser = CurrentUserMock("0001");
-        var behavior = new VahedScopeBehavior<ScopedRequest, string>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<ScopedRequest, string>(TestUnitScope.ResolverFor(currentUser.Object));
         var request = new ScopedRequest(ClientSuppliedVahedCode: "9999");
 
         RequestHandlerDelegate<string> next = _ => Task.FromResult("handled");
@@ -143,7 +144,7 @@ public sealed class VahedScopeBehaviorTests
         // ICurrentUser.VahedCode is deliberately left unset/never verified here — this proves
         // the behavior does not even look at it for a request that did not opt in.
         var currentUser = new Mock<ICurrentUser>();
-        var behavior = new VahedScopeBehavior<UnscopedRequest, string>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<UnscopedRequest, string>(TestUnitScope.ResolverFor(currentUser.Object));
         var request = new UnscopedRequest("ok");
 
         var nextInvoked = false;
@@ -208,6 +209,12 @@ public sealed class VahedScopeBehaviorTests
         var currentUser = new Mock<ICurrentUser>();
         currentUser.SetupGet(u => u.VahedCode).Returns(currentUserVahedCode);
         services.AddSingleton(currentUser.Object);
+
+        // Phase 37-B: the behavior resolves its scope through IUnitScopeResolver rather than
+        // reading the claim itself. Registering the real resolver (over a stubbed unit tree) keeps
+        // this probe honest — it still proves the behavior RUNS for void requests, which is the
+        // regression it exists to catch.
+        services.AddSingleton(TestUnitScope.ResolverFor(currentUser.Object));
 
         return services.BuildServiceProvider();
     }

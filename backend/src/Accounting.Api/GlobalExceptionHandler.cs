@@ -86,6 +86,29 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Bad Request",
                     "One or more referenced records do not exist.")),
 
+            // The only mapping here that returns a per-exception detail rather than a fixed
+            // string. That is deliberate and safe: what it carries is a تفصیلی level's business
+            // name, which the caller already sees on the form — not a Legacy table, column or
+            // constraint name. See TafsiliLevelRuleException for the reasoning.
+            TafsiliLevelRuleException tafsiliLevelRuleException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    tafsiliLevelRuleException.PublicDetail)),
+
+            // State-based refusal, not a permissions one: the caller MAY edit this voucher, just
+            // not while it is reviewed/accepted — and they can fix that themselves via
+            // change-state. See VoucherNotEditableException for why 409 rather than 403.
+            VoucherNotEditableException voucherNotEditableException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    voucherNotEditableException.PublicDetail)),
+
             NotFoundException => (
                 StatusCodes.Status404NotFound,
                 BuildProblemDetails(
@@ -101,6 +124,44 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     StatusCodes.Status403Forbidden,
                     "Forbidden",
                     "The authenticated caller has no usable organizational-unit scope for this operation.")),
+
+            // Scope-level 403: the request asked to BE a unit the caller may not be, decided
+            // before any row is touched — as opposed to the record-level
+            // UnitAccessDeniedException below. See UnitActAsDeniedException for why they are not
+            // collapsed. Carries a per-exception detail for the same reason
+            // TafsiliLevelRuleException does: the value echoed back is the unit code the caller
+            // themselves just sent.
+            UnitActAsDeniedException unitActAsDeniedException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    unitActAsDeniedException.PublicDetail)),
+
+            // A fourth distinct 403: the token names a unit, but no TB_VAHED_INFO row carries that
+            // code — an IDP/Legacy data mismatch rather than a permissions decision. The unit code
+            // echoed back is the caller's own, which their token already carries.
+            UnknownCallerUnitException unknownCallerUnitException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    unknownCallerUnitException.PublicDetail)),
+
+            // Deliberately a different detail string from MissingVahedScopeException above, even
+            // though both are 403: that one means "we could not work out which unit you are", this
+            // one means "we know which unit you are, and this record is not yours". Collapsing them
+            // would make a misconfigured token and a cross-unit access attempt indistinguishable in
+            // support. Neither body names the owning unit — that stays in the log.
+            UnitAccessDeniedException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    "This record belongs to a different organizational unit.")),
 
             _ => (
                 StatusCodes.Status500InternalServerError,

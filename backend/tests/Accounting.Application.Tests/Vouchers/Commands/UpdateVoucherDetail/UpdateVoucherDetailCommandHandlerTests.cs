@@ -1,3 +1,5 @@
+using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Tests.Vouchers.Commands.Common;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
@@ -58,11 +60,17 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var voucherHeadId = Guid.NewGuid();
         var entity = ExistingEntity(id, voucherHeadId);
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        // The «تفصیلی الزامی» guard reads the stored links when a request changes the حساب, and
+        // Moq answers an unstubbed Task<IReadOnlyList<T>> with null rather than an empty list.
+        repository
+            .Setup(r => r.GetActiveTafsiliLinksAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TB_VOUCHERDETAIL_LINK_TAFSILI>());
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
         var command = ValidCommand(id);
 
         await handler.Handle(command, CancellationToken.None);
@@ -93,11 +101,17 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var originalIsDeleted = entity.ISDELETED;
 
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        // The «تفصیلی الزامی» guard reads the stored links when a request changes the حساب, and
+        // Moq answers an unstubbed Task<IReadOnlyList<T>> with null rather than an empty list.
+        repository
+            .Setup(r => r.GetActiveTafsiliLinksAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TB_VOUCHERDETAIL_LINK_TAFSILI>());
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -126,11 +140,17 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, Guid.NewGuid());
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        // The «تفصیلی الزامی» guard reads the stored links when a request changes the حساب, and
+        // Moq answers an unstubbed Task<IReadOnlyList<T>> with null rather than an empty list.
+        repository
+            .Setup(r => r.GetActiveTafsiliLinksAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TB_VOUCHERDETAIL_LINK_TAFSILI>());
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("srvusr02");
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -143,11 +163,17 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_VOUCHERSDETAIL?)null);
+        // The «تفصیلی الزامی» guard reads the stored links when a request changes the حساب, and
+        // Moq answers an unstubbed Task<IReadOnlyList<T>> with null rather than an empty list.
+        repository
+            .Setup(r => r.GetActiveTafsiliLinksAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TB_VOUCHERDETAIL_LINK_TAFSILI>());
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_VOUCHERSDETAIL?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(ValidCommand(id), CancellationToken.None));
 
@@ -160,11 +186,17 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, Guid.NewGuid(), isDeleted: true);
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        // The «تفصیلی الزامی» guard reads the stored links when a request changes the حساب, and
+        // Moq answers an unstubbed Task<IReadOnlyList<T>> with null rather than an empty list.
+        repository
+            .Setup(r => r.GetActiveTafsiliLinksAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TB_VOUCHERDETAIL_LINK_TAFSILI>());
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(ValidCommand(id), CancellationToken.None));
 
@@ -177,11 +209,17 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, Guid.NewGuid(), isDeleted: null);
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        // The «تفصیلی الزامی» guard reads the stored links when a request changes the حساب, and
+        // Moq answers an unstubbed Task<IReadOnlyList<T>> with null rather than an empty list.
+        repository
+            .Setup(r => r.GetActiveTafsiliLinksAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TB_VOUCHERDETAIL_LINK_TAFSILI>());
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -195,11 +233,17 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, Guid.NewGuid());
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        // The «تفصیلی الزامی» guard reads the stored links when a request changes the حساب, and
+        // Moq answers an unstubbed Task<IReadOnlyList<T>> with null rather than an empty list.
+        repository
+            .Setup(r => r.GetActiveTafsiliLinksAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TB_VOUCHERDETAIL_LINK_TAFSILI>());
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -212,18 +256,24 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, Guid.NewGuid());
         var repository = new Mock<IVoucherDetailRepository>();
+        // The «تفصیلی الزامی» guard reads the stored links when a request changes the حساب, and
+        // Moq answers an unstubbed Task<IReadOnlyList<T>> with null rather than an empty list.
+        repository
+            .Setup(r => r.GetActiveTafsiliLinksAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TB_VOUCHERDETAIL_LINK_TAFSILI>());
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 
@@ -236,11 +286,17 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, Guid.NewGuid());
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        // The «تفصیلی الزامی» guard reads the stored links when a request changes the حساب, and
+        // Moq answers an unstubbed Task<IReadOnlyList<T>> with null rather than an empty list.
+        repository
+            .Setup(r => r.GetActiveTafsiliLinksAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TB_VOUCHERDETAIL_LINK_TAFSILI>());
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
         var command = ValidCommand(id) with { VahedCode = "0009" };
 
         await handler.Handle(command, CancellationToken.None);
@@ -258,13 +314,19 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, Guid.NewGuid());
         var repository = new Mock<IVoucherDetailRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        // The «تفصیلی الزامی» guard reads the stored links when a request changes the حساب, and
+        // Moq answers an unstubbed Task<IReadOnlyList<T>> with null rather than an empty list.
+        repository
+            .Setup(r => r.GetActiveTafsiliLinksAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TB_VOUCHERDETAIL_LINK_TAFSILI>());
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<UpdateVoucherDetailCommand, Unit>(currentUser.Object);
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
+        var behavior = new VahedScopeBehavior<UpdateVoucherDetailCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(id) with { VahedCode = "9999" };
 
         await behavior.Handle(

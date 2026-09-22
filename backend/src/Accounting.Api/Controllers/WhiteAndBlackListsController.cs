@@ -5,6 +5,7 @@ using Accounting.Application.WhiteAndBlackLists.Commands.UpdateWhiteAndBlackList
 using Accounting.Application.WhiteAndBlackLists.Queries;
 using Accounting.Application.WhiteAndBlackLists.Queries.GetWhiteAndBlackListById;
 using Accounting.Application.WhiteAndBlackLists.Queries.GetWhiteAndBlackLists;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -38,10 +39,9 @@ namespace Accounting.Api.Controllers;
 /// <c>errors</c> dictionary — naming the offending field would mean leaking the Oracle
 /// constraint name).
 ///
-/// <b>Known contract caveat on <c>State</c>:</b> the underlying Oracle column
-/// (<c>STATE</c>, <c>NUMBER(1)</c>) is documented as a 3-valued enum, not a boolean — see
-/// <see cref="CreateWhiteAndBlackListCommand.State"/> XML doc. Fixing this is a separate,
-/// explicitly out-of-scope task.
+/// <c>State</c> (the <c>STATE</c> column, <c>NUMBER(1)</c>) is modeled as the nullable
+/// <see cref="WhiteBlackListState"/> enum — see <see cref="CreateWhiteAndBlackListCommand.State"/>
+/// XML doc for the resolution reference (§24-1, phase 27 batch 3).
 /// </summary>
 [ApiController]
 [Route("api/white-and-black-lists")]
@@ -193,4 +193,4 @@ public sealed record UpdateWhiteAndBlackListRequest(
     string? ToAuthorizedDate,
     string? FromLimitationDate,
     string? ToLimitationDate,
-    bool? State);
+    WhiteBlackListState? State);

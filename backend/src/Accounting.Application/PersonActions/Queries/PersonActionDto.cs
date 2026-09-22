@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+
 namespace Accounting.Application.PersonActions.Queries;
 
 /// <summary>
@@ -9,10 +11,10 @@ namespace Accounting.Application.PersonActions.Queries;
 /// <param name="UserId">USERID column — participates in <c>UK_PERSON_ACTION</c>.</param>
 /// <param name="FromDate">FROMDATE column (a Persian date string) — participates in <c>UK_PERSON_ACTION</c>.</param>
 /// <param name="ToDate">TODATE column (a Persian date string) — participates in <c>UK_PERSON_ACTION</c>.</param>
-/// <param name="Status">STATUS column (nullable <c>bool</c>).</param>
+/// <param name="Status">STATUS column (nullable <c>bool</c>, genuinely boolean — left untouched).</param>
 /// <param name="OperatorRole">
-/// OPERATORROLE column (non-nullable <c>bool</c>). NOTE: suspected to actually be a
-/// multi-valued enum — see
+/// OPERATORROLE column (non-nullable <see cref="Accounting.Domain.ValueObjects.OperatorRole"/>) —
+/// see
 /// <see cref="Accounting.Application.PersonActions.Commands.CreatePersonAction.CreatePersonActionCommand.OperatorRole"/>.
 /// </param>
 /// <param name="VahedCode">VAHEDCODE column.</param>
@@ -28,7 +30,7 @@ public sealed record PersonActionDto(
     string? FromDate,
     string? ToDate,
     bool? Status,
-    bool OperatorRole,
+    OperatorRole OperatorRole,
     string? VahedCode,
     DateTime? CreatedDate,
     DateTime? UpdatedDate,

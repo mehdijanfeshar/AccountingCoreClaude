@@ -19,5 +19,5 @@ public sealed class GetVoucherHeadByIdQueryHandler : IRequestHandler<GetVoucherH
     }
 
     public Task<VoucherHeadDto?> Handle(GetVoucherHeadByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

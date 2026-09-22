@@ -1,6 +1,8 @@
+using Accounting.Application.Accounts.Commands.Common;
 using Accounting.Application.Accounts.Commands.UnlinkAccountCodeFromTafsilGroup;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Tests.Accounts.Commands.Common;
 using Accounting.Domain.Entity;
 using Moq;
 
@@ -32,14 +34,18 @@ public sealed class UnlinkAccountCodeFromTafsilGroupCommandHandlerTests
         var accountCodeId = Guid.NewGuid();
         var linkId = Guid.NewGuid();
         var link = ExistingLink(accountCodeId, linkId);
-        var repository = new Mock<IAccountCodeRepository>();
+        var repository = new Mock<IAccountCodeRepository>().WithNoExistingLevelLinks();
         repository
             .Setup(r => r.GetTafsilGroupLinkForUpdateAsync(accountCodeId, linkId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(link);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter9");
 
-        var handler = new UnlinkAccountCodeFromTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UnlinkAccountCodeFromTafsilGroupCommandHandler(
+            repository.Object,
+            unitOfWork.Object,
+            currentUser.Object,
+            new AccountLevelLinkSynchronizer(repository.Object, currentUser.Object));
 
         await handler.Handle(new UnlinkAccountCodeFromTafsilGroupCommand(accountCodeId, linkId), CancellationToken.None);
 
@@ -54,14 +60,18 @@ public sealed class UnlinkAccountCodeFromTafsilGroupCommandHandlerTests
     {
         var accountCodeId = Guid.NewGuid();
         var linkId = Guid.NewGuid();
-        var repository = new Mock<IAccountCodeRepository>();
+        var repository = new Mock<IAccountCodeRepository>().WithNoExistingLevelLinks();
         repository
             .Setup(r => r.GetTafsilGroupLinkForUpdateAsync(accountCodeId, linkId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((TB_ACCOUNT_LINK_TAFSILGROUP?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UnlinkAccountCodeFromTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UnlinkAccountCodeFromTafsilGroupCommandHandler(
+            repository.Object,
+            unitOfWork.Object,
+            currentUser.Object,
+            new AccountLevelLinkSynchronizer(repository.Object, currentUser.Object));
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => handler.Handle(new UnlinkAccountCodeFromTafsilGroupCommand(accountCodeId, linkId), CancellationToken.None));
@@ -79,14 +89,18 @@ public sealed class UnlinkAccountCodeFromTafsilGroupCommandHandlerTests
         link.CHANGEUSERID = "previousEditor";
         link.UPDATEDDATE = updatedAt;
 
-        var repository = new Mock<IAccountCodeRepository>();
+        var repository = new Mock<IAccountCodeRepository>().WithNoExistingLevelLinks();
         repository
             .Setup(r => r.GetTafsilGroupLinkForUpdateAsync(accountCodeId, linkId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(link);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("newDeleter");
 
-        var handler = new UnlinkAccountCodeFromTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UnlinkAccountCodeFromTafsilGroupCommandHandler(
+            repository.Object,
+            unitOfWork.Object,
+            currentUser.Object,
+            new AccountLevelLinkSynchronizer(repository.Object, currentUser.Object));
 
         var exception = await Record.ExceptionAsync(
             () => handler.Handle(new UnlinkAccountCodeFromTafsilGroupCommand(accountCodeId, linkId), CancellationToken.None));
@@ -104,7 +118,7 @@ public sealed class UnlinkAccountCodeFromTafsilGroupCommandHandlerTests
         var accountCodeId = Guid.NewGuid();
         var linkId = Guid.NewGuid();
         var link = ExistingLink(accountCodeId, linkId);
-        var repository = new Mock<IAccountCodeRepository>();
+        var repository = new Mock<IAccountCodeRepository>().WithNoExistingLevelLinks();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         using var cts = new CancellationTokenSource();
@@ -112,7 +126,11 @@ public sealed class UnlinkAccountCodeFromTafsilGroupCommandHandlerTests
 
         repository.Setup(r => r.GetTafsilGroupLinkForUpdateAsync(accountCodeId, linkId, token)).ReturnsAsync(link);
 
-        var handler = new UnlinkAccountCodeFromTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UnlinkAccountCodeFromTafsilGroupCommandHandler(
+            repository.Object,
+            unitOfWork.Object,
+            currentUser.Object,
+            new AccountLevelLinkSynchronizer(repository.Object, currentUser.Object));
 
         await handler.Handle(new UnlinkAccountCodeFromTafsilGroupCommand(accountCodeId, linkId), token);
 

@@ -38,7 +38,7 @@ public sealed class UpdateIdentitySubGroupCommandHandler : IRequestHandler<Updat
 
     public async Task Handle(UpdateIdentitySubGroupCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _identitySubGroupRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _identitySubGroupRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null || entity.ISDELETED)
         {

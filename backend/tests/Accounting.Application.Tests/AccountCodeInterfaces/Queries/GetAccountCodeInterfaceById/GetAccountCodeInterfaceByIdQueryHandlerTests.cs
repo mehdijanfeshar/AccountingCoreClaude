@@ -1,6 +1,7 @@
 using Accounting.Application.AccountCodeInterfaces.Queries;
 using Accounting.Application.AccountCodeInterfaces.Queries.GetAccountCodeInterfaceById;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.AccountCodeInterfaces.Queries.GetAccountCodeInterfaceById;
@@ -9,7 +10,7 @@ public sealed class GetAccountCodeInterfaceByIdQueryHandlerTests
 {
     private static AccountCodeInterfaceDto SampleDto(Guid id) => new(
         Id: id,
-        Type: true,
+        Type: InterfaceType.CloseVoucher,
         AccountCodeId: Guid.NewGuid(),
         CreatedDate: DateTime.UtcNow,
         UpdatedDate: null,

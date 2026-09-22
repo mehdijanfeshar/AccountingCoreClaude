@@ -24,10 +24,19 @@ public sealed class VoucherDetailRepository : IVoucherDetailRepository
         await _dbContext.TB_VOUCHERSDETAILs.AddAsync(voucherDetail, cancellationToken);
     }
 
-    public async Task<TB_VOUCHERSDETAIL?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<TB_VOUCHERSDETAIL?> GetForUpdateAsync(
+        Guid id,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
     {
-        return await _dbContext.TB_VOUCHERSDETAILs
+        var entity = await _dbContext.TB_VOUCHERSDETAILs
             .FirstOrDefaultAsync(d => d.ID == id, cancellationToken);
+
+        // Fetched by ID alone, then judged — a WHERE on VAHEDCODE could not tell "no such row"
+        // apart from "another unit's row", and those answer 404 and 403 respectively.
+        VahedOwnership.EnsureOwned(entity?.VAHEDCODE, vahedCode, id, "VoucherDetail");
+
+        return entity;
     }
 
     public async Task<int> SoftDeleteTafsiliLinksAsync(

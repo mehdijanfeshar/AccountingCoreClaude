@@ -2,6 +2,7 @@ using Accounting.Application.TafsilGroups.Commands.UpdateTafsilGroup;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.TafsilGroups.Commands.UpdateTafsilGroup;
@@ -12,7 +13,7 @@ public sealed class UpdateTafsilGroupCommandHandlerTests
         Id: id,
         TafsilGroupCode: "002",
         TafsilGroupName: "گروه تفصیلی دو",
-        PersonType: false);
+        PersonType: PersonTypes.Legal);
 
     private static TB_TAFSIL_GROUP ExistingEntity(Guid id, bool isDeleted = false) => new()
     {

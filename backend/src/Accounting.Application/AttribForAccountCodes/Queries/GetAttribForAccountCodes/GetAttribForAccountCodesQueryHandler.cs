@@ -22,5 +22,15 @@ public sealed class GetAttribForAccountCodesQueryHandler : IRequestHandler<GetAt
     }
 
     public Task<PagedResult<AttribForAccountCodeDto>> Handle(GetAttribForAccountCodesQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, request.VahedCode, cancellationToken);
+        => _readRepository.GetPagedAsync(
+            request.PageNumber,
+            request.PageSize,
+            request.VahedCode,
+            new AttribForAccountCodeFilter(
+                request.MoinCodeFrom,
+                request.MoinCodeTo,
+                request.AttribSum,
+                request.Flag,
+                request.Year),
+            cancellationToken);
 }

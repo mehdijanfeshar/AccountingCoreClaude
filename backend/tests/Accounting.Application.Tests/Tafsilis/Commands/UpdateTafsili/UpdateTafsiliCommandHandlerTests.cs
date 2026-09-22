@@ -17,10 +17,10 @@ public sealed class UpdateTafsiliCommandHandlerTests
         TafsiliCode: "002",
         TafsiliName: "تفصیلی دو",
         TafsilDesc: "توضیحات جدید",
-        IsActive: false,
-        PersonType: false,
-        Owner: true,
-        VahedType: true,
+        IsActive: TafsiliActiveState.DeActive,
+        PersonType: PersonTypes.Legal,
+        Owner: Owners.Global,
+        VahedType: VahedCategory.Insurance,
         TafsilGroupIds: tafsilGroupIds ?? Array.Empty<Guid>(),
         TafsilGroupLinkVahedType: tafsilGroupLinkVahedType);
 
@@ -30,7 +30,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         TAFSILI_CODE = "001",
         TAFSILI_NAME = "تفصیلی یک",
         TAFSIL_DESC = "قدیمی",
-        ISACTIVE = true,
+        ISACTIVE = TafsiliActiveState.IsActive,
         PERSONTYPE = null,
         OWNER = null,
         VAHEDTYPE = null,
@@ -52,7 +52,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
     private static Mock<ITafsiliRepository> RepositoryWithNoExistingLinks(Guid id, TB_TAFSILI entity)
     {
         var repository = new Mock<ITafsiliRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         repository
             .Setup(r => r.GetTafsiliGroupLinksAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<TB_TAFSIL_LINK_TAFSILGROUP>());
@@ -146,7 +146,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<ITafsiliRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_TAFSILI?)null);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_TAFSILI?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -163,7 +163,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, isDeleted: true);
         var repository = new Mock<ITafsiliRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -186,7 +186,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         var dropLink = new TB_TAFSIL_LINK_TAFSILGROUP { ID = Guid.NewGuid(), TAFSIL_ID = id, TAFSILGROUP_ID = dropGroupId, ISDELETED = false };
 
         var repository = new Mock<ITafsiliRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         repository
             .Setup(r => r.GetTafsiliGroupLinksAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { keepLink, dropLink });
@@ -229,7 +229,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         };
 
         var repository = new Mock<ITafsiliRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         repository
             .Setup(r => r.GetTafsiliGroupLinksAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { keepLink });
@@ -280,7 +280,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
         repository
             .Setup(r => r.GetTafsiliGroupLinksAsync(id, token))
             .ReturnsAsync(Array.Empty<TB_TAFSIL_LINK_TAFSILGROUP>());
@@ -289,7 +289,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
 
         await handler.Handle(ValidCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 }

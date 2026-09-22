@@ -36,11 +36,13 @@ namespace Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems;
 /// matches <c>TAFSILI_CODE LIKE %term%</c>; otherwise it matches <c>TAFSILI_NAME LIKE %term%</c>.
 /// Never both. A blank/whitespace-only <see cref="Search"/> means "no filter".
 ///
-/// Deliberately excludes <c>TB_TAFSILI.ISACTIVE</c> from every filter — our <c>ISACTIVE</c> is a
-/// <c>bool?</c> that may hold the value 2 ("inactive"), and touching it is out of scope for this
-/// phase (CLAUDE.md open risk #2). Including deactivated تفصیلی rows in this lookup is therefore
-/// a known, deliberately-deferred gap, matching the reference project's own behaviour (it does
-/// not filter <c>ISACTIVE</c> in this lookup either).
+/// Deliberately excludes <c>TB_TAFSILI.ISACTIVE</c> from every filter. As of phase 27 batch 1,
+/// <c>ISACTIVE</c> is correctly typed as <see cref="Accounting.Domain.ValueObjects.TafsiliActiveState"/>
+/// (1=IsActive, 2=DeActive) rather than the previously-wrong <c>bool?</c> — but this query still
+/// does not filter on it: including deactivated تفصیلی rows in this lookup remains a known,
+/// deliberately-deferred gap (adding an active/inactive filter would be a new business rule, out
+/// of scope here), matching the reference project's own behaviour (it does not filter
+/// <c>ISACTIVE</c> in this lookup either).
 /// </summary>
 /// <param name="AccountCodeId">TB_ACCOUNTCODE.ID.</param>
 /// <param name="LevelId">

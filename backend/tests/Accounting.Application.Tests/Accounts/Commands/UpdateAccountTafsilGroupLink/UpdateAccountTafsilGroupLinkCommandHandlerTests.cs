@@ -1,6 +1,8 @@
+using Accounting.Application.Accounts.Commands.Common;
 using Accounting.Application.Accounts.Commands.UpdateAccountTafsilGroupLink;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Tests.Accounts.Commands.Common;
 using Accounting.Domain.Entity;
 using Moq;
 
@@ -38,14 +40,18 @@ public sealed class UpdateAccountTafsilGroupLinkCommandHandlerTests
         var accountCodeId = Guid.NewGuid();
         var linkId = Guid.NewGuid();
         var link = ExistingLink(accountCodeId, linkId);
-        var repository = new Mock<IAccountCodeRepository>();
+        var repository = new Mock<IAccountCodeRepository>().WithNoExistingLevelLinks();
         repository
             .Setup(r => r.GetTafsilGroupLinkForUpdateAsync(accountCodeId, linkId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(link);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateAccountTafsilGroupLinkCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateAccountTafsilGroupLinkCommandHandler(
+            repository.Object,
+            unitOfWork.Object,
+            currentUser.Object,
+            new AccountLevelLinkSynchronizer(repository.Object, currentUser.Object));
         var command = ValidCommand(accountCodeId, linkId);
 
         await handler.Handle(command, CancellationToken.None);
@@ -60,14 +66,18 @@ public sealed class UpdateAccountTafsilGroupLinkCommandHandlerTests
         var accountCodeId = Guid.NewGuid();
         var linkId = Guid.NewGuid();
         var link = ExistingLink(accountCodeId, linkId);
-        var repository = new Mock<IAccountCodeRepository>();
+        var repository = new Mock<IAccountCodeRepository>().WithNoExistingLevelLinks();
         repository
             .Setup(r => r.GetTafsilGroupLinkForUpdateAsync(accountCodeId, linkId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(link);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("srvusr02");
 
-        var handler = new UpdateAccountTafsilGroupLinkCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateAccountTafsilGroupLinkCommandHandler(
+            repository.Object,
+            unitOfWork.Object,
+            currentUser.Object,
+            new AccountLevelLinkSynchronizer(repository.Object, currentUser.Object));
 
         await handler.Handle(ValidCommand(accountCodeId, linkId), CancellationToken.None);
 
@@ -81,14 +91,18 @@ public sealed class UpdateAccountTafsilGroupLinkCommandHandlerTests
     {
         var accountCodeId = Guid.NewGuid();
         var linkId = Guid.NewGuid();
-        var repository = new Mock<IAccountCodeRepository>();
+        var repository = new Mock<IAccountCodeRepository>().WithNoExistingLevelLinks();
         repository
             .Setup(r => r.GetTafsilGroupLinkForUpdateAsync(accountCodeId, linkId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((TB_ACCOUNT_LINK_TAFSILGROUP?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateAccountTafsilGroupLinkCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateAccountTafsilGroupLinkCommandHandler(
+            repository.Object,
+            unitOfWork.Object,
+            currentUser.Object,
+            new AccountLevelLinkSynchronizer(repository.Object, currentUser.Object));
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => handler.Handle(ValidCommand(accountCodeId, linkId), CancellationToken.None));
@@ -102,14 +116,18 @@ public sealed class UpdateAccountTafsilGroupLinkCommandHandlerTests
         var accountCodeId = Guid.NewGuid();
         var linkId = Guid.NewGuid();
         var link = ExistingLink(accountCodeId, linkId, isDeleted: true);
-        var repository = new Mock<IAccountCodeRepository>();
+        var repository = new Mock<IAccountCodeRepository>().WithNoExistingLevelLinks();
         repository
             .Setup(r => r.GetTafsilGroupLinkForUpdateAsync(accountCodeId, linkId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(link);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateAccountTafsilGroupLinkCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateAccountTafsilGroupLinkCommandHandler(
+            repository.Object,
+            unitOfWork.Object,
+            currentUser.Object,
+            new AccountLevelLinkSynchronizer(repository.Object, currentUser.Object));
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => handler.Handle(ValidCommand(accountCodeId, linkId), CancellationToken.None));
@@ -123,7 +141,7 @@ public sealed class UpdateAccountTafsilGroupLinkCommandHandlerTests
         var accountCodeId = Guid.NewGuid();
         var linkId = Guid.NewGuid();
         var link = ExistingLink(accountCodeId, linkId);
-        var repository = new Mock<IAccountCodeRepository>();
+        var repository = new Mock<IAccountCodeRepository>().WithNoExistingLevelLinks();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         using var cts = new CancellationTokenSource();
@@ -131,7 +149,11 @@ public sealed class UpdateAccountTafsilGroupLinkCommandHandlerTests
 
         repository.Setup(r => r.GetTafsilGroupLinkForUpdateAsync(accountCodeId, linkId, token)).ReturnsAsync(link);
 
-        var handler = new UpdateAccountTafsilGroupLinkCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateAccountTafsilGroupLinkCommandHandler(
+            repository.Object,
+            unitOfWork.Object,
+            currentUser.Object,
+            new AccountLevelLinkSynchronizer(repository.Object, currentUser.Object));
 
         await handler.Handle(ValidCommand(accountCodeId, linkId), token);
 

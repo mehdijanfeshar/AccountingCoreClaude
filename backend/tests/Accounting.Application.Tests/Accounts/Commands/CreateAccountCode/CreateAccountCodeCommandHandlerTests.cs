@@ -1,6 +1,7 @@
 using Accounting.Application.Accounts.Commands.CreateAccountCode;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.Accounts.Commands.CreateAccountCode;
@@ -8,14 +9,14 @@ namespace Accounting.Application.Tests.Accounts.Commands.CreateAccountCode;
 public sealed class CreateAccountCodeCommandHandlerTests
 {
     private static CreateAccountCodeCommand ValidCommand() => new(
-        TypeCode: true,
+        TypeCode: TypeCodes.Moin,
         ParentId: null,
         AccCode: "100100",
         AccCodeName: "بانک ملی",
-        TypeActivity: true,
+        TypeActivity: TypeActivity.Debit,
         SourceAndConsumeId: null,
         IdentyGroupsId: null,
-        TypeAccCode: true,
+        TypeAccCode: TypeAccCode.Permanent,
         MoInforClose: null,
         TypeAction: null);
 
@@ -54,6 +55,29 @@ public sealed class CreateAccountCodeCommandHandlerTests
         Assert.Equal(command.TypeAccCode, staged.TYPEACCCODE);
         Assert.Equal(command.MoInforClose, staged.MOINFORCLOSE);
         Assert.Equal(command.TypeAction, staged.TYPEACTION);
+    }
+
+    [Fact]
+    public async Task Handle_TypeActivityCreditFinBoundaryValue_LandsOnEntityUnchanged()
+    {
+        // TypeActivity.CreditFin = 7 is outside the range the old (wrong) bool? type could ever
+        // represent — this is the concrete proof that the retype actually fixed something.
+        var repository = new Mock<IAccountCodeRepository>();
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var currentUser = CurrentUserMock();
+        TB_ACCOUNTCODE? staged = null;
+        repository
+            .Setup(r => r.AddAsync(It.IsAny<TB_ACCOUNTCODE>(), It.IsAny<CancellationToken>()))
+            .Callback<TB_ACCOUNTCODE, CancellationToken>((entity, _) => staged = entity)
+            .Returns(Task.CompletedTask);
+
+        var handler = new CreateAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var command = ValidCommand() with { TypeActivity = TypeActivity.CreditFin };
+
+        await handler.Handle(command, CancellationToken.None);
+
+        Assert.NotNull(staged);
+        Assert.Equal(TypeActivity.CreditFin, staged!.TYPEACTIVITY);
     }
 
     [Fact]

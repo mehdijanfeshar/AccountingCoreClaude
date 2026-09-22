@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Queries;
 using Accounting.Application.Vouchers.Queries.GetVoucherHeadById;
@@ -11,7 +12,7 @@ public sealed class GetVoucherHeadByIdQueryHandlerTests
         Id: id,
         DocNum: "000001",
         DateDoc: "14050101",
-        DocLife: true,
+        DocLife: DocLife.Temporary,
         HeadDesc: "سند افتتاحیه",
         Apendix: null,
         SystemTypeId: null,
@@ -37,7 +38,7 @@ public sealed class GetVoucherHeadByIdQueryHandlerTests
         var expected = SampleDto(id);
         var readRepository = new Mock<IVoucherHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetVoucherHeadByIdQueryHandler(readRepository.Object);
@@ -53,7 +54,7 @@ public sealed class GetVoucherHeadByIdQueryHandlerTests
         var id = Guid.NewGuid();
         var readRepository = new Mock<IVoucherHeadReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((VoucherHeadDto?)null);
 
         var handler = new GetVoucherHeadByIdQueryHandler(readRepository.Object);
@@ -71,14 +72,14 @@ public sealed class GetVoucherHeadByIdQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetByIdAsync(id, token))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), token))
             .ReturnsAsync((VoucherHeadDto?)null);
 
         var handler = new GetVoucherHeadByIdQueryHandler(readRepository.Object);
 
         await handler.Handle(new GetVoucherHeadByIdQuery(id), token);
 
-        readRepository.Verify(r => r.GetByIdAsync(id, token), Times.Once);
+        readRepository.Verify(r => r.GetByIdAsync(id, It.IsAny<string>(), token), Times.Once);
     }
 
     [Fact]

@@ -38,7 +38,7 @@ public sealed class DeleteElamHeadCommandHandler : IRequestHandler<DeleteElamHea
 
     public async Task Handle(DeleteElamHeadCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _elamHeadRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _elamHeadRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null)
         {

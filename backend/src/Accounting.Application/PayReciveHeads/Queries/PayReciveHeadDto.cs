@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+
 namespace Accounting.Application.PayReciveHeads.Queries;
 
 /// <summary>
@@ -9,16 +11,15 @@ namespace Accounting.Application.PayReciveHeads.Queries;
 /// no debit/credit totals, so a caller cannot tell from this DTO whether the underlying document
 /// balances.
 ///
-/// ⚠️⚠️ <c>PayReciveType</c> is exposed as-is (<see cref="bool"/>?) — see
-/// <c>CreatePayReciveHeadCommand</c> XML doc for the CONFIRMED <c>bool?</c>-should-be-enum bug on
-/// that column (real values 1 = payment, 2 = receipt, 3 = both); re-typing here would be a
-/// breaking contract change, deliberately not done.
+/// <c>PayReciveType</c> is now exposed as <see cref="PayRecivType"/>? — resolved in phase 27
+/// batch 2 (real values 1 = payment, 2 = receipt, 3 = both); see
+/// <c>CreatePayReciveHeadCommand</c> XML doc for the full write-up.
 /// </summary>
 /// <param name="Id">ID column.</param>
 /// <param name="PayReciveCode">PAYRECIVCODE column — document number. ⚠️ NOT unique: this table has no UNIQUE constraint.</param>
 /// <param name="PayReciveDate">PAYRECIVDATE column — Legacy string-encoded date.</param>
 /// <param name="PayReciveDescription">PAYRECIVDESCRIPTION column.</param>
-/// <param name="PayReciveType">PAYRECIVTYPE column — ⚠️ CONFIRMED <see cref="bool"/>?-should-be-enum, see <c>CreatePayReciveHeadCommand</c> XML doc.</param>
+/// <param name="PayReciveType">PAYRECIVTYPE column — <see cref="PayRecivType"/>?, see <c>CreatePayReciveHeadCommand</c> XML doc for the resolved-enum note.</param>
 /// <param name="VahedCode">VAHEDCODE column — organizational unit code.</param>
 /// <param name="Year">YEAR column — fiscal year.</param>
 /// <param name="VoucherHeadId">VOUCHERSHEAD_ID column — the accounting voucher this document was turned into, if any.</param>
@@ -36,7 +37,7 @@ public sealed record PayReciveHeadDto(
     string PayReciveCode,
     string PayReciveDate,
     string PayReciveDescription,
-    bool? PayReciveType,
+    PayRecivType? PayReciveType,
     string VahedCode,
     string Year,
     Guid? VoucherHeadId,

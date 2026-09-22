@@ -102,11 +102,27 @@ public sealed class WorkShopReadRepository : IWorkShopReadRepository
         };
     }
 
-    public Task<WorkShopDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<WorkShopDto?> GetByIdAsync(
+        Guid id,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
     {
+        // Two round trips, deliberately. The owning unit is read first as a scalar so the access
+        // decision can distinguish "no such row" (null → caller gets null → 404) from "another
+        // unit's row" (→ 403). Projecting VAHEDCODE alongside the DTO in one query is not possible
+        // while ToDto stays a reusable Expression, and an extra primary-key lookup on a
+        // single-record edit-form fetch is not a path worth complicating the projection for.
+        var ownerVahedCode = await _dbContext.TB_WORKSHOPs
+            .AsNoTracking()
+            .Where(w => w.ID == id)
+            .Select(w => w.VAHEDCODE)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        VahedOwnership.EnsureOwned(ownerVahedCode, vahedCode, id, "WorkShop");
+
         // No ISDELETED filter here on purpose: GetById returns the row regardless of its
         // deletion state; the caller decides what to do based on WorkShopDto.IsDeleted.
-        return _dbContext.TB_WORKSHOPs
+        return await _dbContext.TB_WORKSHOPs
             .AsNoTracking()
             .Where(w => w.ID == id)
             .Select(ToDto)

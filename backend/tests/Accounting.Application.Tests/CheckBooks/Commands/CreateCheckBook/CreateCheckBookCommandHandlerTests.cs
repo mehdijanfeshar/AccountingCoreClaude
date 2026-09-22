@@ -1,7 +1,9 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.CheckBooks.Commands.CreateCheckBook;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.CheckBooks.Commands.CreateCheckBook;
@@ -15,7 +17,7 @@ public sealed class CreateCheckBookCommandHandlerTests
         FromCheckNumber: "100000",
         ToCheckNumber: "100050",
         CheckTypeId: Guid.NewGuid(),
-        CheckBookType: true,
+        CheckBookType: CheckType.Real,
         Serial: "SER0001")
     {
         VahedCode = "0001",
@@ -220,7 +222,7 @@ public sealed class CreateCheckBookCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         var handler = new CreateCheckBookCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateCheckBookCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateCheckBookCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

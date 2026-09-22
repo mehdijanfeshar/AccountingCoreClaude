@@ -1,4 +1,5 @@
 using Accounting.Application.PayReciveHeads.Commands.UpdatePayReciveHead;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.PayReciveHeads.Commands.UpdatePayReciveHead;
 
@@ -11,7 +12,7 @@ public sealed class UpdatePayReciveHeadCommandValidatorTests
         PayReciveCode: "00123",
         PayReciveDate: "14040101",
         PayReciveDescription: "شرح سند",
-        PayReciveType: true,
+        PayReciveType: PayRecivType.Pay,
         Year: "1404",
         VoucherHeadId: Guid.NewGuid())
     {
@@ -69,5 +70,18 @@ public sealed class UpdatePayReciveHeadCommandValidatorTests
         var command = ValidCommand() with { PayReciveType = null, VoucherHeadId = null };
 
         Assert.True(_validator.Validate(command).IsValid);
+    }
+
+    /// <summary>
+    /// <c>.IsInEnum()</c> only rejects an out-of-range underlying integer — added in phase 27
+    /// batch 2 alongside the <c>bool?</c>-to-enum fix for this column.
+    /// </summary>
+    [Fact]
+    public void Validate_PayReciveTypeOutOfRange_Fails()
+    {
+        var result = _validator.Validate(ValidCommand() with { PayReciveType = (PayRecivType)99 });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdatePayReciveHeadCommand.PayReciveType));
     }
 }

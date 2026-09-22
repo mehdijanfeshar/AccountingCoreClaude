@@ -2,6 +2,7 @@ using Accounting.Application.Accounts.Queries;
 using Accounting.Application.Accounts.Queries.GetAccountCodes;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.Accounts.Queries.GetAccountCodes;
@@ -10,14 +11,14 @@ public sealed class GetAccountCodesQueryHandlerTests
 {
     private static AccountCodeDto SampleDto(Guid id) => new(
         Id: id,
-        TypeCode: true,
+        TypeCode: TypeCodes.Moin,
         ParentId: null,
         AccCode: "100100",
         AccCodeName: "بانک ملی",
-        TypeActivity: true,
+        TypeActivity: TypeActivity.Debit,
         SourceAndConsumeId: null,
         IdentyGroupsId: null,
-        TypeAccCode: true,
+        TypeAccCode: TypeAccCode.Permanent,
         CreatedDate: DateTime.UtcNow,
         UpdatedDate: null,
         AddUserId: "user1",

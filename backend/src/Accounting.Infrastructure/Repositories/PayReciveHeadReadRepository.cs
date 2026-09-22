@@ -88,11 +88,26 @@ public sealed class PayReciveHeadReadRepository : IPayReciveHeadReadRepository
         };
     }
 
-    public Task<PayReciveHeadDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<PayReciveHeadDto?> GetByIdAsync(
+        Guid id,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
     {
+        // The owning unit is read first as a scalar so the access decision can tell "no such
+        // row" (null, caller gets null, 404) from "another unit's row" (403). Projecting it
+        // alongside the DTO in one query is not possible while ToDto stays a reusable
+        // Expression, and this is a single-record edit-form fetch, not a hot path.
+        var ownerVahedCode = await _dbContext.TB_PAYRECIVHEADs
+            .AsNoTracking()
+            .Where(e => e.ID == id)
+            .Select(e => e.VAHEDCODE)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        VahedOwnership.EnsureOwned(ownerVahedCode, vahedCode, id, "PayReciveHead");
+
         // No ISDELETED filter here on purpose: GetById returns the row regardless of its
         // deletion state; the caller decides what to do based on PayReciveHeadDto.IsDeleted.
-        return _dbContext.TB_PAYRECIVHEADs
+        return await _dbContext.TB_PAYRECIVHEADs
             .AsNoTracking()
             .Where(e => e.ID == id)
             .Select(ToDto)

@@ -41,5 +41,5 @@ public interface IPreDescribReadRepository
     /// Returns the pre-description row with the given <paramref name="id"/>, or
     /// <see langword="null"/> if no such row exists.
     /// </summary>
-    Task<PreDescribDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<PreDescribDto?> GetByIdAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

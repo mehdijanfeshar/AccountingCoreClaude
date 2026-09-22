@@ -1,4 +1,5 @@
 using Accounting.Application.WhiteAndBlackLists.Commands.CreateWhiteAndBlackList;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.WhiteAndBlackLists.Commands.CreateWhiteAndBlackList;
 
@@ -13,7 +14,7 @@ public sealed class CreateWhiteAndBlackListCommandValidatorTests
         ToAuthorizedDate: "14031231",
         FromLimitationDate: "14030101",
         ToLimitationDate: "14031231",
-        State: true);
+        State: WhiteBlackListState.Allowed);
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -98,6 +99,37 @@ public sealed class CreateWhiteAndBlackListCommandValidatorTests
             FromLimitationDate = null,
             ToLimitationDate = null,
         };
+
+        var result = _validator.Validate(command);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_NullState_Passes()
+    {
+        var command = ValidCommand() with { State = null };
+
+        var result = _validator.Validate(command);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_InvalidStateEnumValue_Fails()
+    {
+        var command = ValidCommand() with { State = (WhiteBlackListState)999 };
+
+        var result = _validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateWhiteAndBlackListCommand.State));
+    }
+
+    [Fact]
+    public void Validate_PreviouslyUnreachableStateValue_Blacklisted_Passes()
+    {
+        var command = ValidCommand() with { State = WhiteBlackListState.Blacklisted };
 
         var result = _validator.Validate(command);
 

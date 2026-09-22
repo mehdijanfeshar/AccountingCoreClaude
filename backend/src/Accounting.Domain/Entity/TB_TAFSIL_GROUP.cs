@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -21,7 +22,12 @@ public partial class TB_TAFSIL_GROUP
 
     public bool ISDELETED { get; set; }
 
-    public bool? PERSONTYPE { get; set; }
+    /// <summary>
+    /// نوع شخص — <see cref="ValueObjects.PersonTypes"/> (۱=حقیقی, ۲=حقوقی, ۳=سایر). تا فاز ۲۷
+    /// (بچ ۱) به‌اشتباه <c>bool?</c> بود؛ رجوع به <c>docs/centralaccount-business-reference.md</c>
+    /// §۲۴-۱.
+    /// </summary>
+    public PersonTypes? PERSONTYPE { get; set; }
 
     public virtual ICollection<TB_ACCOUNT_LINK_TAFSILGROUP> TB_ACCOUNT_LINK_TAFSILGROUPs { get; set; } = new List<TB_ACCOUNT_LINK_TAFSILGROUP>();
 

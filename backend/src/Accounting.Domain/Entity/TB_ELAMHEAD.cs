@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -40,7 +41,7 @@ public partial class TB_ELAMHEAD
     /// <summary>
     /// نوع اعلاميه 1بد     2بس
     /// </summary>
-    public bool? ELAMH_CASE { get; set; }
+    public ElamCase? ELAMH_CASE { get; set; }
 
     /// <summary>
     /// سريال اعلاميه ورودي
@@ -90,7 +91,7 @@ public partial class TB_ELAMHEAD
     /// <summary>
     ///  3حق بيمه نوع اعلاميه 1ذي حسابي 2سايردرآمد
     /// </summary>
-    public bool? ELAMHDRAMAD_TYPE { get; set; }
+    public DaramElamhType? ELAMHDRAMAD_TYPE { get; set; }
 
     /// <summary>
     /// شماره پيمان

@@ -27,24 +27,25 @@ namespace Accounting.Application.Tests.Common.Security;
 /// <c>TB_WHITEANDBLACKLIST</c>). There is nothing to scope — implementing
 /// <see cref="IVahedScoped"/> would require inventing a column that does not exist. This group is
 /// permanent; it only changes if one of these tables ever gains a <c>VAHEDCODE</c> column.</description></item>
-/// <item><description><b>Group B — exempted by explicit project-owner decision</b> (2 entities):
-/// <list type="bullet">
-/// <item><description><c>VahedInfo</c> (<c>TB_VAHED_INFO</c>) — this table IS the organizational
-/// unit reference table itself. Forcing Create to overwrite <c>VahedCode</c> with the caller's own
-/// unit would make it impossible to ever create a NEW unit (and would immediately collide with the
-/// UNIQUE constraint <c>UK_VAHEDINFO</c> the moment a second row was attempted); forcing the list
-/// Query to filter by the caller's unit would make it impossible for any UI to populate a unit
-/// picker or resolve <c>ParentId</c>. Permanent admin/global-table exemption.</description></item>
-/// <item><description><c>PersonAction</c> (<c>TB_PERSON_ACTION</c>) — ⚠️ <b>TEMPORARY, pending a
-/// project-owner decision.</b> The owner wants this entity scoped by <c>VahedType</c> rather than
-/// <c>VahedCode</c>, but <c>TB_PERSON_ACTION</c> has been verified (both the Domain entity and the
-/// Fluent mapping in <c>LegacyDbContext.cs</c>) to have NO <c>VAHEDTYPE_ID</c> column at all. There
-/// is currently no column to scope by, of either kind, so this is left unscoped rather than
-/// guessing a mechanism. <b>Whoever resolves that open decision must revisit this exemption</b> —
-/// either remove it (if a scoping column is added) or replace it with a durable comment explaining
-/// why <c>PersonAction</c> stays permanently unscoped.</description></item>
-/// </list></description></item>
+/// <item><description><b>Group B — exempted by explicit project-owner decision</b> (1 entity):
+/// <c>VahedInfo</c> (<c>TB_VAHED_INFO</c>) — this table IS the organizational unit reference table
+/// itself. Forcing Create to overwrite <c>VahedCode</c> with the caller's own unit would make it
+/// impossible to ever create a NEW unit (and would immediately collide with the UNIQUE constraint
+/// <c>UK_VAHEDINFO</c> the moment a second row was attempted); forcing the list Query to filter by
+/// the caller's unit would make it impossible for any UI to populate a unit picker or resolve
+/// <c>ParentId</c>. Permanent admin/global-table exemption.</description></item>
 /// </list>
+///
+/// <para>
+/// <b><c>PersonAction</c> left Group B on 2026-09-21 and is now scoped like everything else.</b>
+/// It had sat there because the owner wanted it scoped by <c>VahedType</c> rather than
+/// <c>VahedCode</c>, and <c>TB_PERSON_ACTION</c> has no <c>VAHEDTYPE_ID</c> column — verified
+/// twice, in the Domain entity and in the Fluent mapping. Rather than invent a column, the
+/// question went back to the owner, who answered: use the unit code the logged-in user carries.
+/// That closes open risk #1-ب, which was the one risk in the register that got <i>worse</i> with
+/// time — every row planted today with a forged unit would have become a real permission the day
+/// RBAC started reading this table.
+/// </para>
 ///
 /// If a future entity gains an actual <c>VAHEDCODE</c> column and its Create/Update
 /// command/list-Query is NOT added to either group and does NOT implement <see cref="IVahedScoped"/>,
@@ -101,9 +102,6 @@ public sealed class VahedScopeConventionTests
         // TB_VAHED_INFO — permanent admin/global-table exemption.
         "CreateVahedInfoCommand",
         "UpdateVahedInfoCommand",
-        // TB_PERSON_ACTION — TEMPORARY, pending project-owner decision (no VAHEDTYPE_ID column exists).
-        "CreatePersonActionCommand",
-        "UpdatePersonActionCommand",
     };
 
     /// <summary>Group A, applied to list Queries instead of commands (same 8 entities).</summary>
@@ -123,7 +121,6 @@ public sealed class VahedScopeConventionTests
     private static readonly HashSet<string> ProjectOwnerDecisionExemptQueries = new(StringComparer.Ordinal)
     {
         "GetVahedInfosQuery",
-        "GetPersonActionsQuery",
     };
 
     private static IEnumerable<Type> ConcreteApplicationTypes =>
@@ -211,37 +208,40 @@ public sealed class VahedScopeConventionTests
     }
 
     /// <summary>
-    /// Deliberately OUT of scope, by explicit project-owner decision: single-record
-    /// <c>Get...ByIdQuery</c> lookups are never <see cref="IVahedScoped"/> — record-ownership
-    /// verification on direct-by-id access is a separate, not-yet-closed IDOR gap (see
-    /// <c>UpdateWorkShopCommand</c>'s XML doc "Scope note" and CLAUDE.md risk #1), not something
-    /// this convention test should silently paper over by requiring the marker. If a
-    /// <c>Get...ByIdQuery</c> ever DOES gain the marker, that is itself a change worth a second
-    /// look (does the repository now filter by unit for a by-id lookup? was that intentional?) —
-    /// so this test fails loudly in that direction too, rather than just ignoring by-id queries
-    /// entirely.
+    /// <b>This assertion was inverted on 2026-09-21 by explicit project-owner decision, and the
+    /// direction matters.</b> It used to assert that no <c>Get...ByIdQuery</c> implements
+    /// <see cref="IVahedScoped"/>, pinning the phase 19 decision to leave by-id access
+    /// unscoped — the open half of IDOR risk #1. The owner has now reversed that: a by-id lookup
+    /// must state whose record it may return, so every <c>Get...ByIdQuery</c> is required to carry
+    /// the marker.
+    ///
+    /// <para>
+    /// The migration is complete: the rule is unconditional, so a new by-id query that forgets
+    /// the marker fails here immediately rather than inheriting an exemption.
+    /// </para>
     /// </summary>
     [Fact]
-    public void NoGetByIdQuery_ImplementsIVahedScoped()
+    public void EveryGetByIdQuery_ImplementsIVahedScoped()
     {
         var byIdQueries = ConcreteApplicationTypes
             .Where(t => t.Name.EndsWith("ByIdQuery", StringComparison.Ordinal))
             .ToList();
 
         var offenders = byIdQueries
-            .Where(t => ImplementsInterface(t, typeof(IVahedScoped)))
+            .Where(t => !ImplementsInterface(t, typeof(IVahedScoped)))
+            .Where(t => !NoVahedCodeColumnExemptByIdAndDelete.Contains(t.Name))
             .Select(t => t.FullName ?? t.Name)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToList();
 
         Assert.True(
             offenders.Count == 0,
-            "The following Get...ByIdQuery type(s) unexpectedly implement IVahedScoped, which is "
-                + "deliberately out of scope for by-id lookups (project-owner decision): "
+            "The following Get...ByIdQuery type(s) do not implement IVahedScoped, so they hand "
+                + "back whatever row the caller's id names, regardless of which unit owns it — "
+                + "the second half of IDOR risk #1: "
                 + string.Join(", ", offenders)
-                + ". If this is an intentional new decision to scope by-id access, update this "
-                + "test (and its XML doc) to reflect that decision explicitly rather than deleting "
-                + "the assertion.");
+                + ". Make each one implement IVahedScopedQuery and give its read repository's "
+                + "GetByIdAsync a required vahedCode parameter, the way every other entity does.");
 
         // Sanity check: the scan must not be vacuous.
         Assert.NotEmpty(byIdQueries);
@@ -315,8 +315,16 @@ public sealed class VahedScopeConventionTests
         Assert.NotEmpty(vahedScopedTypes);
     }
 
+    /// <summary>
+    /// <b>Also inverted on 2026-09-21, same owner decision.</b> The old assertion said no Delete
+    /// command may be <see cref="IVahedScoped"/>, and its reasoning was sound as far as it went:
+    /// a soft delete does not write <c>VAHEDCODE</c>, so there is nothing for
+    /// <c>VahedScopeBehavior</c> to stamp. What that reasoning missed is that the unit is needed
+    /// not to <i>write</i> the column but to decide whether this caller may delete this row at
+    /// all — without it, any valid id deletes any unit's record.
+    /// </summary>
     [Fact]
-    public void NoDeleteCommand_ImplementsIVahedScoped()
+    public void EveryDeleteCommand_ImplementsIVahedScoped()
     {
         var deleteCommands = ConcreteApplicationTypes
             .Where(t => t.Name.EndsWith("Command", StringComparison.Ordinal))
@@ -324,20 +332,56 @@ public sealed class VahedScopeConventionTests
             .ToList();
 
         var offenders = deleteCommands
-            .Where(t => ImplementsInterface(t, typeof(IVahedScoped)))
+            .Where(t => !ImplementsInterface(t, typeof(IVahedScoped)))
+            .Where(t => !NoVahedCodeColumnExemptByIdAndDelete.Contains(t.Name))
             .Select(t => t.FullName ?? t.Name)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToList();
 
         Assert.True(
             offenders.Count == 0,
-            "The following Delete command(s) unexpectedly implement IVahedScoped, which is "
-                + "deliberately out of scope for Delete (soft-delete does not touch VAHEDCODE): "
+            "The following Delete command(s) do not implement IVahedScoped, so they delete "
+                + "whatever row the caller's id names, in any unit: "
                 + string.Join(", ", offenders)
-                + ". If this is an intentional new decision to scope Delete commands, update this "
-                + "test to reflect that decision explicitly rather than deleting the assertion.");
+                + ". Make each one implement IVahedScopedCommand and give its repository's "
+                + "GetForUpdateAsync a required vahedCode parameter, the way every other entity does.");
 
         // Sanity check: the scan must not be vacuous.
         Assert.NotEmpty(deleteCommands);
     }
+
+    /// <summary>
+    /// By-id queries and Delete commands that can never be ownership-scoped, because their Legacy
+    /// table has no <c>VAHEDCODE</c> column at all (the same 8 entities as
+    /// <see cref="NoVahedCodeColumnExemptCommands"/>), or because the project owner exempted the
+    /// entity permanently (<c>VahedInfo</c>) or pending a decision (<c>PersonAction</c>).
+    ///
+    /// <para>
+    /// ⚠️ These rows are <b>not</b> protected by unit ownership and never will be by this
+    /// mechanism. For the tables with no column that is simply the schema; for
+    /// <c>PersonAction</c> it is open risk #1-ب, which needs its own answer.
+    /// </para>
+    /// </summary>
+    private static readonly HashSet<string> NoVahedCodeColumnExemptByIdAndDelete = new(StringComparer.Ordinal)
+    {
+        "DeleteAccountCodeCommand",
+        "DeleteAccountCodeInterfaceCommand",
+        "DeleteAccountExceptionCommand",
+        "DeleteAttribForAccountCodeCommand",
+        "DeleteLevelTafsilCommand",
+        "DeleteRabetCommand",
+        "DeleteTafsilGroupCommand",
+        "DeleteWhiteAndBlackListCommand",
+        "DeleteWhiteListCommand",
+        "GetAccountCodeByIdQuery",
+        "GetAccountCodeInterfaceByIdQuery",
+        "GetAccountExceptionByIdQuery",
+        "GetAttribForAccountCodeByIdQuery",
+        "GetLevelTafsilByIdQuery",
+        "GetRabetByIdQuery",
+        "GetTafsilGroupByIdQuery",
+        "GetVahedInfoByIdQuery",
+        "GetWhiteAndBlackListByIdQuery",
+        "GetWhiteListByIdQuery",
+    };
 }

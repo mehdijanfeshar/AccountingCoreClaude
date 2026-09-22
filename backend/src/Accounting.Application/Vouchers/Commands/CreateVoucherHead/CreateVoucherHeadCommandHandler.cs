@@ -1,4 +1,5 @@
 using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Vouchers.Commands.Common;
 using Accounting.Domain.Entity;
 using MediatR;
 
@@ -35,17 +36,20 @@ public sealed class CreateVoucherHeadCommandHandler : IRequestHandler<CreateVouc
     private readonly IVoucherDetailRepository _voucherDetailRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IVoucherTafsiliLevelGuard _tafsiliLevelGuard;
 
     public CreateVoucherHeadCommandHandler(
         IVoucherHeadRepository voucherHeadRepository,
         IVoucherDetailRepository voucherDetailRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IVoucherTafsiliLevelGuard tafsiliLevelGuard)
     {
         _voucherHeadRepository = voucherHeadRepository;
         _voucherDetailRepository = voucherDetailRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _tafsiliLevelGuard = tafsiliLevelGuard;
     }
 
     public async Task<Guid> Handle(CreateVoucherHeadCommand request, CancellationToken cancellationToken)
@@ -78,6 +82,21 @@ public sealed class CreateVoucherHeadCommandHandler : IRequestHandler<CreateVouc
 
         if (request.InitialDetails is { Count: > 0 } initialDetails)
         {
+            // Every line is checked before any is staged, so a composite create is all-or-nothing
+            // against «تفصیلی الزامی» too — a voucher never lands with some lines validated and the
+            // rest rejected.
+            //
+            // ⚠️ CreateVoucherHeadDetailInput has no tafsiliLinks field (open risk #21), so a line
+            // here can only ever be created WITHOUT تفصیلی. That means this path now rejects any
+            // initial line whose معین requires تفصیلی — which is the rule working, not a
+            // regression: such a line was always invalid, it was just accepted silently before.
+            // The frontend voucher form is unaffected because it deliberately never uses
+            // initialDetails; it posts the head, then each line through CreateVoucherDetail.
+            foreach (var detailInput in initialDetails)
+            {
+                await _tafsiliLevelGuard.EnsureSatisfiedAsync(detailInput.AccountId, [], cancellationToken);
+            }
+
             foreach (var detailInput in initialDetails)
             {
                 var detailEntity = new TB_VOUCHERSDETAIL

@@ -25,10 +25,20 @@ public sealed class WorkShopRepository : IWorkShopRepository
         await _dbContext.TB_WORKSHOPs.AddAsync(workShop, cancellationToken);
     }
 
-    public async Task<TB_WORKSHOP?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<TB_WORKSHOP?> GetForUpdateAsync(
+        Guid id,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
     {
-        return await _dbContext.TB_WORKSHOPs
+        var entity = await _dbContext.TB_WORKSHOPs
             .FirstOrDefaultAsync(w => w.ID == id, cancellationToken);
+
+        // Fetch by ID alone, then decide — rather than filtering on VAHEDCODE in the WHERE. A
+        // filtered query cannot tell "no such row" apart from "someone else's row", and the
+        // project owner chose 403 over 404 for the second case.
+        VahedOwnership.EnsureOwned(entity?.VAHEDCODE, vahedCode, id, "WorkShop");
+
+        return entity;
     }
 
     public async Task AddTafsiliLinkAsync(TB_WORKSHOP_LINK_TAFSILI link, CancellationToken cancellationToken = default)

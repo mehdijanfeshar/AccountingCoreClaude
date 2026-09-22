@@ -1,3 +1,5 @@
+using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Tests.Vouchers.Commands.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.Common;
 using Accounting.Application.Vouchers.Commands.UpdateVoucherDetail;
@@ -80,7 +82,7 @@ public sealed class UpdateVoucherDetailCommandHandlerTafsiliLinksTests
 
         var detailRepository = new Mock<IVoucherDetailRepository>();
         detailRepository
-            .Setup(r => r.GetForUpdateAsync(detailId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(detailId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(entity);
         detailRepository
             .Setup(r => r.GetActiveTafsiliLinksAsync(detailId, It.IsAny<CancellationToken>()))
@@ -105,7 +107,9 @@ public sealed class UpdateVoucherDetailCommandHandlerTafsiliLinksTests
         currentUser.SetupGet(u => u.UserId).Returns(userId);
 
         var handler = new UpdateVoucherDetailCommandHandler(
-            detailRepository.Object, unitOfWork.Object, currentUser.Object);
+            detailRepository.Object,
+            VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         return new Harness(handler, detailRepository, unitOfWork, entity, stagedNewLinks, callOrder);
     }
@@ -116,7 +120,14 @@ public sealed class UpdateVoucherDetailCommandHandlerTafsiliLinksTests
         var detailId = Guid.NewGuid();
         var harness = CreateHarness(detailId, Array.Empty<TB_VOUCHERDETAIL_LINK_TAFSILI>());
 
-        await harness.Handler.Handle(CommandWithLinks(detailId, null), CancellationToken.None);
+        // Same حساب as the stored line. That used to be incidental — CommandWithLinks generates a
+        // fresh AccountId — and the test still passed because nothing looked at it. It is now
+        // load-bearing: «تفصیلی الزامی» re-reads the stored links when a request MOVES the line to
+        // another حساب, since assignments valid for the old one say nothing about the new one. This
+        // test is about the other case, an edit that leaves both the حساب and the تفصیلی alone.
+        await harness.Handler.Handle(
+            CommandWithLinks(detailId, null) with { AccountId = harness.Entity.ACCOUNT_ID },
+            CancellationToken.None);
 
         // "null means leave them alone" must be a genuine no-op, not a reconcile against an empty
         // set — otherwise every legacy caller would silently wipe تفصیلی data on an unrelated edit.

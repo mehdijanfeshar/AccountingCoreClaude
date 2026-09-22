@@ -148,7 +148,7 @@ public sealed class BankAccountTafsiliLinkWriteTests
 
         var repository = new Mock<IBankAccountRepository>();
         repository
-            .Setup(r => r.GetForUpdateAsync(accountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(accountId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TB_ACCOUNT { ID = accountId, ISDELETED = false });
         repository
             .Setup(r => r.GetActiveTafsiliLinksAsync(accountId, It.IsAny<CancellationToken>()))
@@ -204,7 +204,7 @@ public sealed class BankAccountTafsiliLinkWriteTests
 
         var repository = new Mock<IBankAccountRepository>();
         repository
-            .Setup(r => r.GetForUpdateAsync(accountId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(accountId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new TB_ACCOUNT { ID = accountId, ISDELETED = false });
         repository
             .Setup(r => r.GetActiveTafsiliLinksAsync(accountId, It.IsAny<CancellationToken>()))

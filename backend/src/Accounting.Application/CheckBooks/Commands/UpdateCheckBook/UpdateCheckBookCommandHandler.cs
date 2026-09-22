@@ -34,7 +34,7 @@ public sealed class UpdateCheckBookCommandHandler : IRequestHandler<UpdateCheckB
 
     public async Task Handle(UpdateCheckBookCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _checkBookRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _checkBookRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null || entity.ISDELETED)
         {

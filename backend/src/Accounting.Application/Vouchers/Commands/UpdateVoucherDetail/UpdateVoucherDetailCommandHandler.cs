@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Security;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.Common;
@@ -58,27 +59,51 @@ namespace Accounting.Application.Vouchers.Commands.UpdateVoucherDetail;
 public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVoucherDetailCommand>
 {
     private readonly IVoucherDetailRepository _voucherDetailRepository;
+    private readonly IVoucherHeadRepository _voucherHeadRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IVoucherTafsiliLevelGuard _tafsiliLevelGuard;
 
     public UpdateVoucherDetailCommandHandler(
         IVoucherDetailRepository voucherDetailRepository,
+        IVoucherHeadRepository voucherHeadRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IVoucherTafsiliLevelGuard tafsiliLevelGuard)
     {
         _voucherDetailRepository = voucherDetailRepository;
+        _voucherHeadRepository = voucherHeadRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _tafsiliLevelGuard = tafsiliLevelGuard;
     }
 
     public async Task Handle(UpdateVoucherDetailCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _voucherDetailRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _voucherDetailRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null || entity.ISDELETED == true)
         {
             throw new NotFoundException("VoucherDetail", request.Id);
         }
+
+        // Phase 38: a line inherits its parent voucher's editability — a reviewed/accepted
+        // voucher is view-only all the way down. The parent is loaded with the caller's
+        // VahedCode, so this cannot be used to probe another unit's voucher either.
+        if (entity.VOUCHERSHEAD_ID is not null)
+        {
+            var head = await _voucherHeadRepository.GetForUpdateAsync(
+                entity.VOUCHERSHEAD_ID.Value,
+                request.VahedCode,
+                cancellationToken);
+
+            if (head is not null)
+            {
+                VoucherEditability.EnsureEditable(head.ID, head.DOCLIFE);
+            }
+        }
+
+        await EnsureTafsiliLevelsSatisfiedAsync(entity, request, cancellationToken);
 
         entity.ACCOUNT_ID = request.AccountId;
         entity.RECEIP_ID = request.ReceiptId;
@@ -103,6 +128,45 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Applies «تفصیلی الزامی» to the state the line will be left in, not to the request in
+    /// isolation — a null <c>TafsiliLinks</c> means "leave the existing assignments alone", so the
+    /// stored links are the ones that have to satisfy the rule.
+    ///
+    /// <b>Deliberately skipped when this request changes neither the تفصیلی nor the حساب.</b>
+    /// Rows written before this rule existed can violate it, and there is no way to know how many
+    /// (see <c>docs/open-decisions.md</c>). Validating unconditionally would make every such line
+    /// permanently uneditable — a user could not fix its شرح or مبلغ — which punishes them for data
+    /// they did not create and cannot repair through this endpoint. Validating what the request
+    /// actually changes keeps new and edited state correct while leaving untouched history
+    /// editable. A request that changes the حساب <i>is</i> re-validated: the stored تفصیلی were
+    /// valid for the old حساب and say nothing about the new one.
+    /// </summary>
+    private async Task EnsureTafsiliLevelsSatisfiedAsync(
+        TB_VOUCHERSDETAIL entity,
+        UpdateVoucherDetailCommand request,
+        CancellationToken cancellationToken)
+    {
+        var accountChanged = entity.ACCOUNT_ID != request.AccountId;
+
+        if (request.TafsiliLinks is null && !accountChanged)
+        {
+            return;
+        }
+
+        var effectiveLinks = request.TafsiliLinks;
+
+        if (effectiveLinks is null)
+        {
+            var storedLinks = await _voucherDetailRepository.GetActiveTafsiliLinksAsync(entity.ID, cancellationToken);
+            effectiveLinks = storedLinks
+                .Select(link => new VoucherDetailTafsiliLinkInput(link.TAFSILI_ID, link.LEVEL_ID))
+                .ToList();
+        }
+
+        await _tafsiliLevelGuard.EnsureSatisfiedAsync(request.AccountId, effectiveLinks, cancellationToken);
     }
 
     /// <summary>

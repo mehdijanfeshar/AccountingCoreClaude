@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.PayReciveHeads.Commands.CreatePayReciveHead;
@@ -20,17 +21,15 @@ namespace Accounting.Application.PayReciveHeads.Commands.CreatePayReciveHead;
 /// <c>TB_VOUCHERSHEAD</c>), mapped centrally to 400 by <c>UnitOfWork.SaveChangesAsync</c> on
 /// violation. It is the table's <em>only</em> FK.
 ///
-/// ⚠️⚠️ <b><c>PayReciveType</c> (<c>PAYRECIVTYPE</c>) is a CONFIRMED instance of the phase-12
-/// <c>bool?</c>-should-be-enum bug — flagged, NOT fixed</b> (re-typing would be a breaking
-/// API-contract change, out of scope for this batch). Per
-/// <c>docs/centralaccount-business-reference.md</c> §10-2 row 14, the reference project models
-/// this exact column as <c>PayRecivType</c> with <b>three</b> values — <c>۱پرداخت ۲دریافت ۳همه</c>
-/// (1 = payment, 2 = receipt, 3 = both) — and the reference table marks our <c>bool?</c> mapping
-/// 🔴 <b>غلط</b> outright. Consequences while it stays <see cref="bool"/>?: the third value is
-/// <em>unreachable</em> through this API, and an existing row holding 2 is very likely read back
-/// as <see langword="true"/> exactly like a row holding 1. This is the same class of defect as
-/// <c>TB_ELAMHEAD.ELAMHDRAMAD_TYPE</c> (phase 15) and <c>TB_WHITEANDBLACKLIST.STATE</c>
-/// (phase 13).
+/// <c>PayReciveType</c> (<c>PAYRECIVTYPE</c>) is now <see cref="PayRecivType"/> — resolved in
+/// phase 27 batch 2 (previously a CONFIRMED instance of the phase-12 <c>bool?</c>-should-be-enum
+/// bug; see <c>docs/centralaccount-business-reference.md</c> §24-1 row 14, formerly §10-2 row 14).
+/// The reference project models this exact column as <c>PayRecivType</c> with <b>three</b> values
+/// — <c>۱پرداخت ۲دریافت ۳همه</c> (1 = payment, 2 = receipt, 3 = both). Before this fix, the third
+/// value was structurally <em>unreachable</em> through a <see cref="bool"/>? — this is the same
+/// class of defect as <c>TB_ELAMHEAD.ELAMHDRAMAD_TYPE</c> (phase 15) and
+/// <c>TB_WHITEANDBLACKLIST.STATE</c> (phase 13, since resolved in phase 27 batch 3 to
+/// <see cref="WhiteBlackListState"/>) — this note fixes the CLR type for this column specifically.
 ///
 /// ⚠️ <b>No duplicate-code guard is implemented, deliberately.</b> The reference project's
 /// <c>AddPayReciveCommand</c>/<c>UpdatePayReciveCommand</c> both carry a "duplicate number"
@@ -43,14 +42,14 @@ namespace Accounting.Application.PayReciveHeads.Commands.CreatePayReciveHead;
 /// <param name="PayReciveCode">PAYRECIVCODE column (required, max 5 chars — document number). ⚠️ NOT unique: no UNIQUE constraint exists on this table.</param>
 /// <param name="PayReciveDate">PAYRECIVDATE column (required, max 8 chars — Legacy string-encoded date, not a real <see cref="DateTime"/>).</param>
 /// <param name="PayReciveDescription">PAYRECIVDESCRIPTION column (required, max 250 chars — free-text description; the Oracle column carries <c>DEFAULT '-'</c>, but this command always sends an explicit value).</param>
-/// <param name="PayReciveType">PAYRECIVTYPE column (optional <see cref="bool"/>) — ⚠️ see the CONFIRMED enum flag above; real values are 1/2/3, so the third is unreachable via <see cref="bool"/>?.</param>
+/// <param name="PayReciveType">PAYRECIVTYPE column — <see cref="PayRecivType"/> (1=Pay, 2=Recive, 3=All). See the class XML doc for the resolved-enum note.</param>
 /// <param name="Year">YEAR column (required, max 4 chars, fixed-length — fiscal year).</param>
 /// <param name="VoucherHeadId">VOUCHERSHEAD_ID column (optional) — the accounting voucher this document was turned into (<c>FK_PAYRECIV_VOCHERHEAD</c>).</param>
 public sealed record CreatePayReciveHeadCommand(
     string PayReciveCode,
     string PayReciveDate,
     string PayReciveDescription,
-    bool? PayReciveType,
+    PayRecivType? PayReciveType,
     string Year,
     Guid? VoucherHeadId) : IRequest<Guid>, IVahedScopedCommand
 {

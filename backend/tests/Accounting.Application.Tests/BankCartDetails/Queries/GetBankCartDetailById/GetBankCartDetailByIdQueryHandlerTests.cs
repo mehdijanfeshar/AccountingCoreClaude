@@ -1,6 +1,7 @@
 using Accounting.Application.BankCartDetails.Queries;
 using Accounting.Application.BankCartDetails.Queries.GetBankCartDetailById;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.BankCartDetails.Queries.GetBankCartDetailById;
@@ -17,7 +18,7 @@ public sealed class GetBankCartDetailByIdQueryHandlerTests
         Month: "01",
         Cheqno: "12345678",
         RecivDate: "14020101",
-        CheckReceiptType: true,
+        CheckReceiptType: CheckReceiptType.RealCheck,
         Debtor: 1000m,
         Creditor: 0m,
         VahedCode: "0001",
@@ -36,7 +37,7 @@ public sealed class GetBankCartDetailByIdQueryHandlerTests
         var expected = SampleDto(id);
         var readRepository = new Mock<IBankCartDetailReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetBankCartDetailByIdQueryHandler(readRepository.Object);
@@ -52,7 +53,7 @@ public sealed class GetBankCartDetailByIdQueryHandlerTests
         var id = Guid.NewGuid();
         var readRepository = new Mock<IBankCartDetailReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((BankCartDetailDto?)null);
 
         var handler = new GetBankCartDetailByIdQueryHandler(readRepository.Object);
@@ -70,14 +71,14 @@ public sealed class GetBankCartDetailByIdQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetByIdAsync(id, token))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), token))
             .ReturnsAsync((BankCartDetailDto?)null);
 
         var handler = new GetBankCartDetailByIdQueryHandler(readRepository.Object);
 
         await handler.Handle(new GetBankCartDetailByIdQuery(id), token);
 
-        readRepository.Verify(r => r.GetByIdAsync(id, token), Times.Once);
+        readRepository.Verify(r => r.GetByIdAsync(id, It.IsAny<string>(), token), Times.Once);
     }
 
     [Fact]

@@ -17,5 +17,5 @@ public sealed class GetChequeTypeByIdQueryHandler : IRequestHandler<GetChequeTyp
     }
 
     public Task<ChequeTypeDto?> Handle(GetChequeTypeByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

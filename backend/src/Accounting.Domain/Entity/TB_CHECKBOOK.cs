@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -31,7 +32,13 @@ public partial class TB_CHECKBOOK
 
     public bool ISDELETED { get; set; }
 
-    public bool? CHECKBOOK_TYPE { get; set; }
+    /// <summary>
+    /// نوع چک — <see cref="ValueObjects.CheckType"/> (۱=چک صوری, ۲=چک واقعی). تا فاز ۲۷ (بچ ۲)
+    /// به‌اشتباه <c>bool?</c> بود؛ رجوع به <c>docs/centralaccount-business-reference.md</c> §۲۴-۱.
+    /// ⚠️ §۲۴-۳: در پروژهٔ مرجع این ستون سمت سرور همیشه ثابت <c>CheckType.real</c> است و هرگز
+    /// ورودی فراخوان نیست — این فاز فقط نوع CLR را اصلاح کرد، نه caller-supplied بودن آن.
+    /// </summary>
+    public CheckType? CHECKBOOK_TYPE { get; set; }
 
     public string? SERIAL { get; set; }
 

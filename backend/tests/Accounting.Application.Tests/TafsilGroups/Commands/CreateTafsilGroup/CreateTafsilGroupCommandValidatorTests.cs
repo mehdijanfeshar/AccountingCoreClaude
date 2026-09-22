@@ -1,4 +1,5 @@
 using Accounting.Application.TafsilGroups.Commands.CreateTafsilGroup;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.TafsilGroups.Commands.CreateTafsilGroup;
 
@@ -9,7 +10,7 @@ public sealed class CreateTafsilGroupCommandValidatorTests
     [Fact]
     public void Validate_ValidCommand_Passes()
     {
-        var result = _validator.Validate(new CreateTafsilGroupCommand("001", "گروه تفصیلی یک", true));
+        var result = _validator.Validate(new CreateTafsilGroupCommand("001", "گروه تفصیلی یک", PersonTypes.Person));
 
         Assert.True(result.IsValid);
     }
@@ -62,6 +63,37 @@ public sealed class CreateTafsilGroupCommandValidatorTests
     public void Validate_TafsilGroupNameAtMaxLength_Passes()
     {
         var result = _validator.Validate(new CreateTafsilGroupCommand("001", new string('a', 200), null));
+
+        Assert.True(result.IsValid);
+    }
+
+    // --- PERSONTYPE enum coverage (phase 27 batch 1) ------------------------------------------
+
+    [Fact]
+    public void Validate_PersonTypeOutOfRange_Fails()
+    {
+        var result = _validator.Validate(new CreateTafsilGroupCommand("001", "گروه تفصیلی یک", (PersonTypes)99));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateTafsilGroupCommand.PersonType));
+    }
+
+    [Fact]
+    public void Validate_PersonTypeZero_Fails()
+    {
+        var result = _validator.Validate(new CreateTafsilGroupCommand("001", "گروه تفصیلی یک", (PersonTypes)0));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateTafsilGroupCommand.PersonType));
+    }
+
+    [Theory]
+    [InlineData(PersonTypes.Person)]
+    [InlineData(PersonTypes.Legal)]
+    [InlineData(PersonTypes.Other)]
+    public void Validate_DefinedPersonType_Passes(PersonTypes personType)
+    {
+        var result = _validator.Validate(new CreateTafsilGroupCommand("001", "گروه تفصیلی یک", personType));
 
         Assert.True(result.IsValid);
     }

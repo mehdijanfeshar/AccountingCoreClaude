@@ -30,7 +30,7 @@ public sealed class GetExpenseByIdQueryHandlerTests
         var expected = SampleDto(id);
         var readRepository = new Mock<IExpenseReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetExpenseByIdQueryHandler(readRepository.Object);
@@ -46,7 +46,7 @@ public sealed class GetExpenseByIdQueryHandlerTests
         var id = Guid.NewGuid();
         var readRepository = new Mock<IExpenseReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ExpenseDto?)null);
 
         var handler = new GetExpenseByIdQueryHandler(readRepository.Object);
@@ -64,14 +64,14 @@ public sealed class GetExpenseByIdQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetByIdAsync(id, token))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), token))
             .ReturnsAsync((ExpenseDto?)null);
 
         var handler = new GetExpenseByIdQueryHandler(readRepository.Object);
 
         await handler.Handle(new GetExpenseByIdQuery(id), token);
 
-        readRepository.Verify(r => r.GetByIdAsync(id, token), Times.Once);
+        readRepository.Verify(r => r.GetByIdAsync(id, It.IsAny<string>(), token), Times.Once);
     }
 
     [Fact]

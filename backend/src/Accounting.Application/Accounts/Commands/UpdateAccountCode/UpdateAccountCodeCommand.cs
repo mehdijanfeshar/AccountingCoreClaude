@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.Accounts.Commands.UpdateAccountCode;
@@ -19,25 +20,25 @@ namespace Accounting.Application.Accounts.Commands.UpdateAccountCode;
 /// and the server clock, never from client input.
 /// </summary>
 /// <param name="Id">The <c>TB_ACCOUNTCODE.ID</c> to update (bound from the route, never the body).</param>
-/// <param name="TypeCode">TYPECODE column (legacy boolean flag).</param>
+/// <param name="TypeCode">TYPECODE column — coding level, see <see cref="TypeCodes"/>.</param>
 /// <param name="ParentId">Optional parent node in the self-referencing coding hierarchy.</param>
 /// <param name="AccCode">Account code (max 6 chars, unique — enforced by DB constraint <c>UK_ACCOUNTCODE</c>).</param>
 /// <param name="AccCodeName">Account code title (max 200 chars).</param>
-/// <param name="TypeActivity">TYPEACTIVITY column — نوع فعالیت (بستانکار/بدهکار/بد-بس).</param>
+/// <param name="TypeActivity">TYPEACTIVITY column — debit/credit nature, see <see cref="TypeActivity"/>.</param>
 /// <param name="SourceAndConsumeId">Optional link to source/consume classification.</param>
 /// <param name="IdentyGroupsId">Optional link to identity group.</param>
-/// <param name="TypeAccCode">TYPEACCCODE column — نوع حساب (موقت/دائم).</param>
+/// <param name="TypeAccCode">TYPEACCCODE column — temporary/permanent, see <see cref="TypeAccCode"/>.</param>
 /// <param name="MoInforClose">MOINFORCLOSE column (max 6 chars).</param>
-/// <param name="TypeAction">TYPEACTION column — نوع خلاف ماهیت.</param>
+/// <param name="TypeAction">TYPEACTION column — off-nature posting behavior, see <see cref="TypeAction"/>.</param>
 public sealed record UpdateAccountCodeCommand(
     Guid Id,
-    bool? TypeCode,
+    TypeCodes? TypeCode,
     Guid? ParentId,
     string AccCode,
     string AccCodeName,
-    bool? TypeActivity,
+    TypeActivity? TypeActivity,
     Guid? SourceAndConsumeId,
     Guid? IdentyGroupsId,
-    bool? TypeAccCode,
+    TypeAccCode? TypeAccCode,
     string? MoInforClose,
-    bool? TypeAction) : IRequest;
+    TypeAction? TypeAction) : IRequest;

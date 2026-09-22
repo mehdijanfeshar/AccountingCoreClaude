@@ -2,6 +2,7 @@ using Accounting.Application.Accounts.Commands.UpdateAccountCode;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.Accounts.Commands.UpdateAccountCode;
@@ -10,28 +11,28 @@ public sealed class UpdateAccountCodeCommandHandlerTests
 {
     private static UpdateAccountCodeCommand ValidCommand(Guid id) => new(
         Id: id,
-        TypeCode: true,
+        TypeCode: TypeCodes.Moin,
         ParentId: null,
         AccCode: "100200",
         AccCodeName: "بانک ملت",
-        TypeActivity: true,
+        TypeActivity: TypeActivity.Debit,
         SourceAndConsumeId: null,
         IdentyGroupsId: null,
-        TypeAccCode: true,
+        TypeAccCode: TypeAccCode.Permanent,
         MoInforClose: null,
         TypeAction: null);
 
     private static TB_ACCOUNTCODE ExistingEntity(Guid id, bool? isDeleted = false) => new()
     {
         ID = id,
-        TYPECODE = false,
+        TYPECODE = TypeCodes.Kol,
         PARENTID = null,
         ACCCODE = "100100",
         ACCCODENAME = "بانک ملی",
-        TYPEACTIVITY = false,
+        TYPEACTIVITY = TypeActivity.Credit,
         SOURCEANDCONSUME_ID = null,
         IDENTYGROUPS_ID = null,
-        TYPEACCCODE = false,
+        TYPEACCCODE = TypeAccCode.Temporary,
         MOINFORCLOSE = "OLD",
         TYPEACTION = null,
         ADDUSERID = "creator1",

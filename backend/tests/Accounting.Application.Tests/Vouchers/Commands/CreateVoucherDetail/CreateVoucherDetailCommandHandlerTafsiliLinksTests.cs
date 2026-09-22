@@ -1,3 +1,6 @@
+using Accounting.Domain.ValueObjects;
+using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Tests.Vouchers.Commands.Common;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.Common;
@@ -42,6 +45,9 @@ public sealed class CreateVoucherDetailCommandHandlerTafsiliLinksTests
     private static TB_VOUCHERSHEAD ExistingHead(Guid id) => new()
     {
         ID = id,
+        // Draft: the editable state these tests assume. Phase 38 fails closed on an absent or
+        // unknown DOCLIFE, which is its own rule with its own tests.
+        DOCLIFE = DocLife.Draft,
         DOC_NUM = "000001",
         DATE_DOC = "14050101",
         VAHEDCODE = "0001",
@@ -63,7 +69,7 @@ public sealed class CreateVoucherDetailCommandHandlerTafsiliLinksTests
     {
         var headRepository = new Mock<IVoucherHeadRepository>();
         headRepository
-            .Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ExistingHead(headId));
 
         var stagedDetails = new List<TB_VOUCHERSDETAIL>();
@@ -98,7 +104,8 @@ public sealed class CreateVoucherDetailCommandHandlerTafsiliLinksTests
         currentUser.SetupGet(u => u.UserId).Returns(userId);
 
         var handler = new CreateVoucherDetailCommandHandler(
-            headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+            headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         return new Harness(handler, detailRepository, unitOfWork, stagedDetails, stagedLinks, callOrder);
     }
@@ -293,7 +300,7 @@ public sealed class CreateVoucherDetailCommandHandlerTafsiliLinksTests
 
         var headRepository = new Mock<IVoucherHeadRepository>();
         headRepository
-            .Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ExistingHead(headId));
 
         var stagedDetails = new List<TB_VOUCHERSDETAIL>();
@@ -311,8 +318,9 @@ public sealed class CreateVoucherDetailCommandHandlerTafsiliLinksTests
         unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         var handler = new CreateVoucherDetailCommandHandler(
-            headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateVoucherDetailCommand, Guid>(currentUser.Object);
+            headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
+        var behavior = new VahedScopeBehavior<CreateVoucherDetailCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = CommandWithLinks(headId, new[]
         {
             new VoucherDetailTafsiliLinkInput(Guid.NewGuid(), Guid.NewGuid()),

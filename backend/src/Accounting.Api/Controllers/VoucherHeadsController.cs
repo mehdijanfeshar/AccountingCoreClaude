@@ -1,4 +1,6 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common;
+using Accounting.Application.Vouchers.Commands.ChangeVoucherState;
 using Accounting.Application.Vouchers.Commands.CreateVoucherHead;
 using Accounting.Application.Vouchers.Commands.DeleteVoucherHead;
 using Accounting.Application.Vouchers.Commands.UpdateVoucherHead;
@@ -110,10 +112,20 @@ public sealed class VoucherHeadsController : ControllerBase
         [FromQuery] string? dateDocFrom = null,
         [FromQuery] string? dateDocTo = null,
         [FromQuery] Guid? systemTypeId = null,
+        [FromQuery] DocLife? docLife = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetVoucherHeadsQuery(pageNumber, pageSize, year, docNumFrom, docNumTo, dateDocFrom, dateDocTo, systemTypeId),
+            new GetVoucherHeadsQuery(
+                pageNumber,
+                pageSize,
+                year,
+                docNumFrom,
+                docNumTo,
+                dateDocFrom,
+                dateDocTo,
+                systemTypeId,
+                docLife),
             cancellationToken);
 
         return Ok(result);
@@ -202,7 +214,40 @@ public sealed class VoucherHeadsController : ControllerBase
 
         return Ok(new DeleteVoucherHeadResponse(id));
     }
+
+    /// <summary>
+    /// Moves one or more vouchers to a new state (وضعیت سند) — the کارتابل's «انتقال وضعیت»
+    /// action. All-or-nothing: if any id is unknown or already deleted the whole batch is
+    /// rejected with a 404 and nothing moves.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately a separate operation from <see cref="Update"/>: changing what a voucher says
+    /// and changing how final it is are different things, and the reference system separates them
+    /// the same way. ⚠️ No transition is forbidden — including تأیید دائم back to یادداشت. That
+    /// is the still-open half of risk #5, recorded in <c>docs/open-decisions.md</c>, not an
+    /// oversight here; no such rule exists in the reference system to port.
+    /// </remarks>
+    [HttpPost("change-state")]
+    [ProducesResponseType(typeof(ChangeVoucherStateResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ChangeState(
+        [FromBody] ChangeVoucherStateCommand command,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(command, cancellationToken);
+
+        return Ok(new ChangeVoucherStateResponse(command.VoucherHeadIds.Count, command.NewState));
+    }
 }
+
+/// <summary>
+/// Response body for <see cref="VoucherHeadsController.ChangeState"/> — how many vouchers moved
+/// and where to. Returns a count rather than the id list the caller already has.
+/// </summary>
+public sealed record ChangeVoucherStateResponse(int MovedCount, DocLife NewState);
 
 /// <summary>
 /// Response body for a successful <see cref="VoucherHeadsController.Create"/> call.
@@ -233,7 +278,7 @@ public sealed record DeleteVoucherHeadResponse(Guid Id);
 public sealed record UpdateVoucherHeadRequest(
     string DocNum,
     string DateDoc,
-    bool? DocLife,
+    DocLife? DocLife,
     string? HeadDesc,
     string? Apendix,
     Guid? SystemTypeId,

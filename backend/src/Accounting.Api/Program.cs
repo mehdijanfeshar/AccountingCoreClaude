@@ -2,6 +2,7 @@ using Accounting.Api;
 using Accounting.Api.Security;
 using Accounting.Application;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Common.Security;
 using Accounting.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -140,6 +141,11 @@ builder.Services.AddAuthorizationBuilder()
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
+
+// Turns the untrusted X-Vahed-Code header plus the token's own unit claim into the one
+// effective scope every IVahedScoped request runs under (phase 37-B). Scoped, because it reads
+// per-request state through ICurrentUser.
+builder.Services.AddScoped<IUnitScopeResolver, UnitScopeResolver>();
 
 var app = builder.Build();
 

@@ -1,7 +1,9 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.BankCartDetails.Commands.CreateBankCartDetail;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.BankCartDetails.Commands.CreateBankCartDetail;
@@ -17,7 +19,7 @@ public sealed class CreateBankCartDetailCommandHandlerTests
         Month: "01",
         Cheqno: "12345678",
         RecivDate: "14020101",
-        CheckReceiptType: true,
+        CheckReceiptType: CheckReceiptType.RealCheck,
         Debtor: 1000m,
         Creditor: 0m,
         Year: "1402",
@@ -230,7 +232,7 @@ public sealed class CreateBankCartDetailCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         var handler = new CreateBankCartDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateBankCartDetailCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateBankCartDetailCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

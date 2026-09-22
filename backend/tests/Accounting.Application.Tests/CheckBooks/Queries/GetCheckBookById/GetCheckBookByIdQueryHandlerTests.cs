@@ -1,6 +1,7 @@
 using Accounting.Application.CheckBooks.Queries;
 using Accounting.Application.CheckBooks.Queries.GetCheckBookById;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.CheckBooks.Queries.GetCheckBookById;
@@ -16,7 +17,7 @@ public sealed class GetCheckBookByIdQueryHandlerTests
         ToCheckNumber: "100050",
         CheckTypeId: Guid.NewGuid(),
         VahedCode: "0001",
-        CheckBookType: true,
+        CheckBookType: CheckType.Real,
         Serial: "SER0001",
         CreatedDate: DateTime.UtcNow,
         UpdatedDate: null,
@@ -31,7 +32,7 @@ public sealed class GetCheckBookByIdQueryHandlerTests
         var expected = SampleDto(id);
         var readRepository = new Mock<ICheckBookReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetCheckBookByIdQueryHandler(readRepository.Object);
@@ -47,7 +48,7 @@ public sealed class GetCheckBookByIdQueryHandlerTests
         var id = Guid.NewGuid();
         var readRepository = new Mock<ICheckBookReadRepository>();
         readRepository
-            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((CheckBookDto?)null);
 
         var handler = new GetCheckBookByIdQueryHandler(readRepository.Object);
@@ -65,14 +66,14 @@ public sealed class GetCheckBookByIdQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetByIdAsync(id, token))
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<string>(), token))
             .ReturnsAsync((CheckBookDto?)null);
 
         var handler = new GetCheckBookByIdQueryHandler(readRepository.Object);
 
         await handler.Handle(new GetCheckBookByIdQuery(id), token);
 
-        readRepository.Verify(r => r.GetByIdAsync(id, token), Times.Once);
+        readRepository.Verify(r => r.GetByIdAsync(id, It.IsAny<string>(), token), Times.Once);
     }
 
     [Fact]

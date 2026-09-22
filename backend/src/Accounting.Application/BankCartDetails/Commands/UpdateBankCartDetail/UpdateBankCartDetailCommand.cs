@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.BankCartDetails.Commands.UpdateBankCartDetail;
@@ -37,7 +38,7 @@ public sealed record UpdateBankCartDetailCommand(
     string? Month,
     string? Cheqno,
     string? RecivDate,
-    bool? CheckReceiptType,
+    CheckReceiptType? CheckReceiptType,
     decimal? Debtor,
     decimal? Creditor,
     string? Year,

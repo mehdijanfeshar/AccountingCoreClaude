@@ -15,5 +15,5 @@ public interface IPersonActionRepository
     /// (deliberately no <c>AsNoTracking()</c>). Returns <see langword="null"/> when no row with
     /// that <c>ID</c> exists — soft-deleted rows are still returned here.
     /// </summary>
-    Task<TB_PERSON_ACTION?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TB_PERSON_ACTION?> GetForUpdateAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

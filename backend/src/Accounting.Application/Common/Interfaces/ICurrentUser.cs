@@ -28,6 +28,20 @@ public interface ICurrentUser
     string? VahedCode { get; }
 
     /// <summary>
+    /// The organizational unit the client has asked to act as for this request, taken from the
+    /// <c>X-Vahed-Code</c> request header, or <see langword="null"/> when the client asked for
+    /// nothing.
+    ///
+    /// <para>
+    /// ⚠️ <b>Untrusted.</b> Any client can set this header. It is never a scope on its own — it is
+    /// only ever validated against the server-computed access set by
+    /// <see cref="IUnitScopeResolver"/>, which is the only component that should read it.
+    /// Everything else must use the resolver's answer, never this value.
+    /// </para>
+    /// </summary>
+    string? RequestedVahedCode { get; }
+
+    /// <summary>
     /// True when the current authenticated principal is a member of <paramref name="role"/>.
     /// Returns false (never throws) when there is no authenticated user.
     /// </summary>

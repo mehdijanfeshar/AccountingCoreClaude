@@ -1,3 +1,5 @@
+using Accounting.Application.Tests.TestSupport;
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.ElamHeads.Commands.UpdateElamHead;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
@@ -18,7 +20,7 @@ public sealed class UpdateElamHeadCommandHandlerTests
         DabirNo: "DABIR-002",
         DabirDate: "14040201",
         PrintNo: 9,
-        Case: false,
+        Case: ElamCase.Creditor,
         SerialNoInput: "INP-02",
         WebStat: 1,
         Date: "14040202",
@@ -28,7 +30,7 @@ public sealed class UpdateElamHeadCommandHandlerTests
         RcvDt: "14040203",
         LstMon: "08",
         PayNo: "PAY-00002",
-        DramadType: true,
+        DramadType: DaramElamhType.OtherDramadElam,
         PeimanNo: "PEIMAN-02",
         WorkShopCode: "WS-002",
         WorkShopName: "کارگاه به‌روزشده",
@@ -49,7 +51,7 @@ public sealed class UpdateElamHeadCommandHandlerTests
         ELAMH_DABIRNO = "DABIR-001",
         ELAMH_DABIRDATE = "14040101",
         ELAMH_PRINTNO = 7,
-        ELAMH_CASE = true,
+        ELAMH_CASE = ElamCase.Debtor,
         SERIALNO_INPUT = "INP-01",
         WEB_STAT = 2,
         ELAMH_DATE = "14040102",
@@ -59,7 +61,7 @@ public sealed class UpdateElamHeadCommandHandlerTests
         ELAMH_RCVDT = "14040103",
         ELAMH_LSTMON = "07",
         PAY_NO = "PAY-00001",
-        ELAMHDRAMAD_TYPE = false,
+        ELAMHDRAMAD_TYPE = DaramElamhType.ZeeDramadElam,
         PEIMAN_NO = "PEIMAN-01",
         ELAMH_WORKSHOPCODE = "WS-001",
         ELAMH_WORKSHOPNAME = "کارگاه قدیمی",
@@ -88,7 +90,7 @@ public sealed class UpdateElamHeadCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IElamHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -130,7 +132,7 @@ public sealed class UpdateElamHeadCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IElamHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("srvusr02");
 
@@ -154,7 +156,7 @@ public sealed class UpdateElamHeadCommandHandlerTests
         var originalIsDeleted = entity.ISDELETED;
 
         var repository = new Mock<IElamHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -173,7 +175,7 @@ public sealed class UpdateElamHeadCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<IElamHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_ELAMHEAD?)null);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_ELAMHEAD?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -190,7 +192,7 @@ public sealed class UpdateElamHeadCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, isDeleted: true);
         var repository = new Mock<IElamHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -207,7 +209,7 @@ public sealed class UpdateElamHeadCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, isDeleted: null);
         var repository = new Mock<IElamHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         var command = ValidCommand(id);
@@ -226,7 +228,7 @@ public sealed class UpdateElamHeadCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IElamHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -248,13 +250,13 @@ public sealed class UpdateElamHeadCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
         var handler = new UpdateElamHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 
@@ -267,7 +269,7 @@ public sealed class UpdateElamHeadCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IElamHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -289,13 +291,13 @@ public sealed class UpdateElamHeadCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IElamHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
         var handler = new UpdateElamHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<UpdateElamHeadCommand, Unit>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdateElamHeadCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(id) with { VahedCode = "9999" };
 
         await behavior.Handle(

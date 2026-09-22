@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+
 namespace Accounting.Application.Receipts.Queries;
 
 /// <summary>
@@ -5,7 +7,7 @@ namespace Accounting.Application.Receipts.Queries;
 /// <c>GetReceiptById</c> — the Domain entity never crosses the Application boundary.
 /// </summary>
 /// <param name="Id">ID column.</param>
-/// <param name="ReceiptKind">RECEIPT_KIND column — see the unverified-enum note on <c>CreateReceiptCommand</c>.</param>
+/// <param name="ReceiptKind">RECEIPT_KIND column — see the resolved-enum note on <c>CreateReceiptCommand</c>.</param>
 /// <param name="ReceiptDate">RECEIPT_DATE column.</param>
 /// <param name="ReceiptNo">RECEIPT_NO column.</param>
 /// <param name="DateRsid">DATE_RSID column.</param>
@@ -18,7 +20,7 @@ namespace Accounting.Application.Receipts.Queries;
 /// <param name="IsDeleted">Logical delete flag, exposed as-is.</param>
 public sealed record ReceiptDto(
     Guid Id,
-    bool ReceiptKind,
+    ReceiptType ReceiptKind,
     string ReceiptDate,
     string ReceiptNo,
     string? DateRsid,

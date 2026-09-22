@@ -1,6 +1,7 @@
 using Accounting.Application.WhiteAndBlackLists.Commands.CreateWhiteAndBlackList;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.WhiteAndBlackLists.Commands.CreateWhiteAndBlackList;
@@ -14,7 +15,7 @@ public sealed class CreateWhiteAndBlackListCommandHandlerTests
         ToAuthorizedDate: "14031231",
         FromLimitationDate: "14030101",
         ToLimitationDate: "14031231",
-        State: true);
+        State: WhiteBlackListState.Allowed);
 
     private static Mock<ICurrentUser> CurrentUserMock(string userId = "user1")
     {

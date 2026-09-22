@@ -35,7 +35,7 @@ public sealed class DeleteBankAccountCommandHandler : IRequestHandler<DeleteBank
 
     public async Task Handle(DeleteBankAccountCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _bankAccountRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _bankAccountRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null)
         {

@@ -35,7 +35,7 @@ public sealed class DeleteWorkShopCommandHandler : IRequestHandler<DeleteWorkSho
 
     public async Task Handle(DeleteWorkShopCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _workShopRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _workShopRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null)
         {

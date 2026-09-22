@@ -2,6 +2,7 @@ using Accounting.Application.AttribForAccountCodes.Queries;
 using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
@@ -11,10 +12,12 @@ public sealed class GetAttribForAccountCodesQueryHandlerTests
     private static AttribForAccountCodeDto SampleDto(Guid id) => new(
         Id: id,
         AccountCodeId: Guid.NewGuid(),
-        AttribBoxNo: true,
-        Flag: false,
+        MoinCode: "110101",
+        MoinName: "حساب معین تستی",
+        AttribBoxNo: 3,
+        Flag: AttribFlag.Date,
         LenAtr: 4,
-        AttribSum: true,
+        AttribSum: AttribSum.Summable,
         ControlId: null,
         VahedCode: "0001",
         Year: "1404",
@@ -36,7 +39,7 @@ public sealed class GetAttribForAccountCodesQueryHandlerTests
             TotalCount = 51,
         };
         readRepository
-            .Setup(r => r.GetPagedAsync(2, 25, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(2, 25, It.IsAny<string>(), It.IsAny<AttribForAccountCodeFilter?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetAttribForAccountCodesQueryHandler(readRepository.Object);
@@ -48,7 +51,7 @@ public sealed class GetAttribForAccountCodesQueryHandlerTests
         Assert.Equal(2, result.PageNumber);
         Assert.Equal(25, result.PageSize);
         Assert.Equal(51, result.TotalCount);
-        readRepository.Verify(r => r.GetPagedAsync(2, 25, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(2, 25, It.IsAny<string>(), It.IsAny<AttribForAccountCodeFilter?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -59,7 +62,7 @@ public sealed class GetAttribForAccountCodesQueryHandlerTests
         // unit code, so the handler must forward exactly that value, not derive its own.
         var readRepository = new Mock<IAttribForAccountCodeReadRepository>();
         readRepository
-            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), "0007", It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(It.IsAny<int>(), It.IsAny<int>(), "0007", It.IsAny<AttribForAccountCodeFilter?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new PagedResult<AttribForAccountCodeDto>());
 
         var handler = new GetAttribForAccountCodesQueryHandler(readRepository.Object);
@@ -68,7 +71,7 @@ public sealed class GetAttribForAccountCodesQueryHandlerTests
         await handler.Handle(query, CancellationToken.None);
 
         readRepository.Verify(
-            r => r.GetPagedAsync(1, 20, "0007", It.IsAny<CancellationToken>()),
+            r => r.GetPagedAsync(1, 20, "0007", It.IsAny<AttribForAccountCodeFilter?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -79,7 +82,7 @@ public sealed class GetAttribForAccountCodesQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetPagedAsync(1, 20, "0001", token))
+            .Setup(r => r.GetPagedAsync(1, 20, "0001", It.IsAny<AttribForAccountCodeFilter?>(), token))
             .ReturnsAsync(new PagedResult<AttribForAccountCodeDto>());
 
         var handler = new GetAttribForAccountCodesQueryHandler(readRepository.Object);
@@ -87,7 +90,7 @@ public sealed class GetAttribForAccountCodesQueryHandlerTests
 
         await handler.Handle(query, token);
 
-        readRepository.Verify(r => r.GetPagedAsync(1, 20, "0001", token), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(1, 20, "0001", It.IsAny<AttribForAccountCodeFilter?>(), token), Times.Once);
     }
 
     [Fact]

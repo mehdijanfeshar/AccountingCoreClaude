@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.DeleteVoucherHead;
@@ -11,6 +12,9 @@ public sealed class DeleteVoucherHeadCommandHandlerTests
     private static TB_VOUCHERSHEAD ExistingEntity(Guid id, bool? isDeleted = false) => new()
     {
         ID = id,
+        // Draft: the editable state these tests assume. Phase 38 fails closed on an absent or
+        // unknown DOCLIFE, which is its own rule with its own tests.
+        DOCLIFE = DocLife.Draft,
         DOC_NUM = "000001",
         DATE_DOC = "14030101",
         VAHEDCODE = "0001",
@@ -35,7 +39,7 @@ public sealed class DeleteVoucherHeadCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IVoucherHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         repository
             .Setup(r => r.SoftDeleteDetailTreeAsync(id, It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
@@ -58,7 +62,7 @@ public sealed class DeleteVoucherHeadCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IVoucherHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         repository
             .Setup(r => r.SoftDeleteDetailTreeAsync(id, It.IsAny<string?>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(3);
@@ -81,7 +85,7 @@ public sealed class DeleteVoucherHeadCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IVoucherHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         var callOrder = new List<string>();
@@ -124,7 +128,7 @@ public sealed class DeleteVoucherHeadCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IVoucherHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -132,7 +136,7 @@ public sealed class DeleteVoucherHeadCommandHandlerTests
 
         await handler.Handle(new DeleteVoucherHeadCommand(id), CancellationToken.None);
 
-        Assert.Same(entity, await repository.Object.GetForUpdateAsync(id, CancellationToken.None));
+        Assert.Same(entity, await repository.Object.GetForUpdateAsync(id, It.IsAny<string>(), CancellationToken.None));
     }
 
     [Fact]
@@ -140,7 +144,7 @@ public sealed class DeleteVoucherHeadCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<IVoucherHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_VOUCHERSHEAD?)null);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_VOUCHERSHEAD?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -162,7 +166,7 @@ public sealed class DeleteVoucherHeadCommandHandlerTests
         entity.UPDATEDDATE = updatedAt;
 
         var repository = new Mock<IVoucherHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("newDeleter");
 
@@ -187,7 +191,7 @@ public sealed class DeleteVoucherHeadCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id, isDeleted: null);
         var repository = new Mock<IVoucherHeadRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter5");
 
@@ -212,7 +216,7 @@ public sealed class DeleteVoucherHeadCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
         repository
             .Setup(r => r.SoftDeleteDetailTreeAsync(id, It.IsAny<string?>(), It.IsAny<DateTime>(), token))
             .ReturnsAsync(0);
@@ -221,7 +225,7 @@ public sealed class DeleteVoucherHeadCommandHandlerTests
 
         await handler.Handle(new DeleteVoucherHeadCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         repository.Verify(r => r.SoftDeleteDetailTreeAsync(id, It.IsAny<string?>(), It.IsAny<DateTime>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }

@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.PayReciveHeads.Commands.UpdatePayReciveHead;
@@ -21,8 +22,9 @@ namespace Accounting.Application.PayReciveHeads.Commands.UpdatePayReciveHead;
 /// <c>CHANGEUSERID</c>/<c>UPDATEDDATE</c> are absent too, but for the opposite reason: the
 /// handler always stamps them server-side from <see cref="Accounting.Application.Common.Interfaces.ICurrentUser"/>.
 ///
-/// ⚠️ HEAD ONLY, and ⚠️⚠️ <c>PayReciveType</c> is a CONFIRMED <c>bool?</c>-should-be-enum column
-/// (real values 1/2/3) — see <c>CreatePayReciveHeadCommand</c> XML doc for both write-ups.
+/// ⚠️ HEAD ONLY. <c>PayReciveType</c> is now <see cref="PayRecivType"/> (real values 1/2/3) —
+/// resolved in phase 27 batch 2, see <c>CreatePayReciveHeadCommand</c> XML doc for the full
+/// write-up.
 ///
 /// ⚠️ <b>Scope note:</b> <see cref="IVahedScopedCommand"/> here only guarantees that
 /// <c>VAHEDCODE</c> cannot be *changed* to an arbitrary unit by the caller. It does
@@ -35,7 +37,7 @@ namespace Accounting.Application.PayReciveHeads.Commands.UpdatePayReciveHead;
 /// <param name="PayReciveCode">PAYRECIVCODE column (required, max 5 chars). ⚠️ NOT unique — no UNIQUE constraint exists, and no duplicate guard is implemented.</param>
 /// <param name="PayReciveDate">PAYRECIVDATE column (required, max 8 chars — Legacy string-encoded date).</param>
 /// <param name="PayReciveDescription">PAYRECIVDESCRIPTION column (required, max 250 chars).</param>
-/// <param name="PayReciveType">PAYRECIVTYPE column (optional <see cref="bool"/>) — ⚠️ CONFIRMED enum-should-be, real values 1/2/3.</param>
+/// <param name="PayReciveType">PAYRECIVTYPE column — <see cref="PayRecivType"/> (1=Pay, 2=Recive, 3=All).</param>
 /// <param name="Year">YEAR column (required, max 4 chars, fixed-length).</param>
 /// <param name="VoucherHeadId">VOUCHERSHEAD_ID column (optional, <c>FK_PAYRECIV_VOCHERHEAD</c> → 400 on violation).</param>
 public sealed record UpdatePayReciveHeadCommand(
@@ -43,7 +45,7 @@ public sealed record UpdatePayReciveHeadCommand(
     string PayReciveCode,
     string PayReciveDate,
     string PayReciveDescription,
-    bool? PayReciveType,
+    PayRecivType? PayReciveType,
     string Year,
     Guid? VoucherHeadId) : IRequest, IVahedScopedCommand
 {

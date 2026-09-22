@@ -1,8 +1,10 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.PayReciveHeads.Commands.UpdatePayReciveHead;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 using Moq;
 
@@ -17,7 +19,7 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
         PayReciveCode: "00999",
         PayReciveDate: "14041231",
         PayReciveDescription: "شرح به‌روزشده",
-        PayReciveType: false,
+        PayReciveType: PayRecivType.Recive,
         Year: "1405",
         VoucherHeadId: Guid.Parse("22222222-2222-2222-2222-222222222222"))
     {
@@ -35,7 +37,7 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
         PAYRECIVCODE = "00001",
         PAYRECIVDATE = "14040101",
         PAYRECIVDESCRIPTION = "شرح اولیه",
-        PAYRECIVTYPE = true,
+        PAYRECIVTYPE = PayRecivType.Pay,
         VAHEDCODE = "0001",
         YEAR = "1404",
         VOUCHERSHEAD_ID = null,
@@ -56,7 +58,7 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
     {
         var repository = new Mock<IPayReciveHeadRepository>();
         repository
-            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
         var unitOfWork = new Mock<IUnitOfWork>();
         var handler = new UpdatePayReciveHeadCommandHandler(
@@ -171,7 +173,7 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
-        repository.Verify(r => r.GetForUpdateAsync(ExistingId, It.IsAny<CancellationToken>()), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(ExistingId, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -184,7 +186,7 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
 
         await handler.Handle(ValidCommand(), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(ExistingId, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(ExistingId, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 
@@ -197,7 +199,7 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
     public async Task Handle_NullOptionalFields_OverwritePreviousValuesWithNull()
     {
         var entity = ExistingEntity();
-        entity.PAYRECIVTYPE = true;
+        entity.PAYRECIVTYPE = PayRecivType.Pay;
         entity.VOUCHERSHEAD_ID = Guid.NewGuid();
         var (handler, _, _) = Build(entity);
 
@@ -234,13 +236,13 @@ public sealed class UpdatePayReciveHeadCommandHandlerTests
         var entity = ExistingEntity();
         var repository = new Mock<IPayReciveHeadRepository>();
         repository
-            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetForUpdateAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
         var handler = new UpdatePayReciveHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<UpdatePayReciveHeadCommand, Unit>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdatePayReciveHeadCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(

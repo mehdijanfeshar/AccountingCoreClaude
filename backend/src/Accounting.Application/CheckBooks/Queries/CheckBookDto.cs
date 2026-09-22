@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+
 namespace Accounting.Application.CheckBooks.Queries;
 
 /// <summary>
@@ -12,7 +14,7 @@ namespace Accounting.Application.CheckBooks.Queries;
 /// <param name="ToCheckNumber">TOCHECKNUMBER column — part of <c>UK_CHECKBOOK</c>.</param>
 /// <param name="CheckTypeId">CHECKTYPE_ID column — optional link to <c>TB_CHECK_TYPE</c>.</param>
 /// <param name="VahedCode">VAHEDCODE column — part of <c>UK_CHECKBOOK</c>.</param>
-/// <param name="CheckBookType">CHECKBOOK_TYPE column — see <c>CreateCheckBookCommand</c> XML doc for the unverified-enum note.</param>
+/// <param name="CheckBookType">CHECKBOOK_TYPE column — see <c>CreateCheckBookCommand</c> XML doc for the resolved-enum note and the still-open §24-3 caveat.</param>
 /// <param name="Serial">SERIAL column — optional.</param>
 /// <param name="CreatedDate">Audit trail: creation timestamp (non-nullable on this table).</param>
 /// <param name="UpdatedDate">Audit trail: last update timestamp.</param>
@@ -32,7 +34,7 @@ public sealed record CheckBookDto(
     string ToCheckNumber,
     Guid? CheckTypeId,
     string VahedCode,
-    bool? CheckBookType,
+    CheckType? CheckBookType,
     string? Serial,
     DateTime CreatedDate,
     DateTime? UpdatedDate,

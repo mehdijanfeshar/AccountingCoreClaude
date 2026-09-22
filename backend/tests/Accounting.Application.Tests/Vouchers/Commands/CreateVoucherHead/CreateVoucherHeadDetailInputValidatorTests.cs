@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Vouchers.Commands.CreateVoucherHead;
 
 namespace Accounting.Application.Tests.Vouchers.Commands.CreateVoucherHead;
@@ -88,7 +89,7 @@ public sealed class CreateVoucherHeadCommandValidatorInitialDetailsTests
         IReadOnlyList<CreateVoucherHeadDetailInput>? initialDetails = null) => new(
         DocNum: "000001",
         DateDoc: "14050101",
-        DocLife: true,
+        DocLife: DocLife.Temporary,
         HeadDesc: "سند افتتاحیه",
         Apendix: null,
         SystemTypeId: null,

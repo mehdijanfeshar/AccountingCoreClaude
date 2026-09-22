@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Search;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Reports.TrialBalance;
 using Accounting.Application.Reports.TrialBalance.GetTrialBalance6;
@@ -48,7 +49,7 @@ public sealed class GetTrialBalance6QueryHandlerTests
         readRepository
             .Setup(r => r.GetAggregatesAsync(
                 It.IsAny<TrialBalanceLevel>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(),
-                It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<IReadOnlyList<SearchParam>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { Row(periodDebtor: 100m, periodCreditor: 50m, totalDebtor: 800m, totalCreditor: 350m, openingDebtor: 700m, openingCreditor: 300m) });
 
         var handler = new GetTrialBalance6QueryHandler(readRepository.Object);
@@ -66,7 +67,7 @@ public sealed class GetTrialBalance6QueryHandlerTests
         readRepository
             .Setup(r => r.GetAggregatesAsync(
                 It.IsAny<TrialBalanceLevel>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(),
-                It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<IReadOnlyList<SearchParam>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { Row(periodDebtor: 100m, periodCreditor: 50m, totalDebtor: 800m, totalCreditor: 1350m, openingDebtor: 300m, openingCreditor: 700m) });
 
         var handler = new GetTrialBalance6QueryHandler(readRepository.Object);
@@ -84,7 +85,7 @@ public sealed class GetTrialBalance6QueryHandlerTests
         readRepository
             .Setup(r => r.GetAggregatesAsync(
                 It.IsAny<TrialBalanceLevel>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(),
-                It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<IReadOnlyList<SearchParam>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { Row(periodDebtor: 500m, periodCreditor: 100m, totalDebtor: 1500m, totalCreditor: 600m, openingDebtor: 1000m, openingCreditor: 500m) });
 
         var handler = new GetTrialBalance6QueryHandler(readRepository.Object);
@@ -102,7 +103,7 @@ public sealed class GetTrialBalance6QueryHandlerTests
         readRepository
             .Setup(r => r.GetAggregatesAsync(
                 It.IsAny<TrialBalanceLevel>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(),
-                It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<IReadOnlyList<SearchParam>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { Row(periodDebtor: 100m, periodCreditor: 500m, totalDebtor: 600m, totalCreditor: 1500m, openingDebtor: 500m, openingCreditor: 1000m) });
 
         var handler = new GetTrialBalance6QueryHandler(readRepository.Object);
@@ -120,7 +121,7 @@ public sealed class GetTrialBalance6QueryHandlerTests
         readRepository
             .Setup(r => r.GetAggregatesAsync(
                 It.IsAny<TrialBalanceLevel>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(),
-                It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+                It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<IReadOnlyList<SearchParam>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { Row(periodDebtor: 200m, periodCreditor: 200m, totalDebtor: 1000m, totalCreditor: 1000m, openingDebtor: 800m, openingCreditor: 800m) });
 
         var handler = new GetTrialBalance6QueryHandler(readRepository.Object);
@@ -144,7 +145,7 @@ public sealed class GetTrialBalance6QueryHandlerTests
         readRepository
             .Setup(r => r.GetAggregatesAsync(
                 It.IsAny<TrialBalanceLevel>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>(),
-                "0007", It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+                "0007", It.IsAny<int?>(), It.IsAny<IReadOnlyList<SearchParam>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<TrialBalanceAggregateRow>());
 
         var handler = new GetTrialBalance6QueryHandler(readRepository.Object);
@@ -154,7 +155,7 @@ public sealed class GetTrialBalance6QueryHandlerTests
 
         readRepository.Verify(
             r => r.GetAggregatesAsync(
-                query.Level, query.Year, query.FromDate, query.ToDate, "0007", query.DocLife,
+                query.Level, query.Year, query.FromDate, query.ToDate, "0007", query.DocLife, query.Filters,
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

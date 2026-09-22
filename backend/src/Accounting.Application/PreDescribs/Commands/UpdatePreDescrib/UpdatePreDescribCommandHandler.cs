@@ -40,7 +40,7 @@ public sealed class UpdatePreDescribCommandHandler : IRequestHandler<UpdatePreDe
 
     public async Task Handle(UpdatePreDescribCommand request, CancellationToken cancellationToken)
     {
-        var entity = await _preDescribRepository.GetForUpdateAsync(request.Id, cancellationToken);
+        var entity = await _preDescribRepository.GetForUpdateAsync(request.Id, request.VahedCode, cancellationToken);
 
         if (entity is null)
         {

@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Search;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using MediatR;
@@ -26,7 +27,8 @@ public sealed record GetTrialBalance8Query(
     string? FromDate,
     string? ToDate,
     TrialBalanceLevel Level,
-    int? DocLife) : IRequest<IReadOnlyList<TrialBalance8RowDto>>, IVahedScopedQuery
+    int? DocLife,
+    IReadOnlyList<SearchParam>? Filters = null) : IRequest<IReadOnlyList<TrialBalance8RowDto>>, IVahedScopedQuery
 {
     /// <summary>
     /// Organizational unit code to filter by. Server-assigned by <c>VahedScopeBehavior</c> —

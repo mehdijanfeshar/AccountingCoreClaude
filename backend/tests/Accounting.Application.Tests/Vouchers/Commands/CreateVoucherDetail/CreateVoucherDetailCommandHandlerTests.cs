@@ -1,3 +1,6 @@
+using Accounting.Domain.ValueObjects;
+using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Tests.Vouchers.Commands.Common;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
@@ -28,6 +31,9 @@ public sealed class CreateVoucherDetailCommandHandlerTests
     private static TB_VOUCHERSHEAD ExistingHead(Guid id, bool? isDeleted = false) => new()
     {
         ID = id,
+        // Draft: the editable state these tests assume. Phase 38 fails closed on an absent or
+        // unknown DOCLIFE, which is its own rule with its own tests.
+        DOCLIFE = DocLife.Draft,
         DOC_NUM = "000001",
         DATE_DOC = "14050101",
         VAHEDCODE = "0001",
@@ -49,7 +55,7 @@ public sealed class CreateVoucherDetailCommandHandlerTests
     {
         var headId = Guid.NewGuid();
         var headRepository = new Mock<IVoucherHeadRepository>();
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
         var detailRepository = new Mock<IVoucherDetailRepository>();
         TB_VOUCHERSDETAIL? staged = null;
         detailRepository
@@ -59,7 +65,8 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
         var command = ValidCommand(headId);
 
         var result = await handler.Handle(command, CancellationToken.None);
@@ -88,12 +95,13 @@ public sealed class CreateVoucherDetailCommandHandlerTests
     {
         var headId = Guid.NewGuid();
         var headRepository = new Mock<IVoucherHeadRepository>();
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync((TB_VOUCHERSHEAD?)null);
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_VOUCHERSHEAD?)null);
         var detailRepository = new Mock<IVoucherDetailRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => handler.Handle(ValidCommand(headId), CancellationToken.None));
@@ -107,12 +115,13 @@ public sealed class CreateVoucherDetailCommandHandlerTests
     {
         var headId = Guid.NewGuid();
         var headRepository = new Mock<IVoucherHeadRepository>();
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId, isDeleted: true));
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId, isDeleted: true));
         var detailRepository = new Mock<IVoucherDetailRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => handler.Handle(ValidCommand(headId), CancellationToken.None));
@@ -126,7 +135,7 @@ public sealed class CreateVoucherDetailCommandHandlerTests
     {
         var headId = Guid.NewGuid();
         var headRepository = new Mock<IVoucherHeadRepository>();
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
         var detailRepository = new Mock<IVoucherDetailRepository>();
         TB_VOUCHERSDETAIL? staged = null;
         detailRepository
@@ -136,7 +145,8 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("srvusr01");
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(headId), CancellationToken.None);
 
@@ -149,7 +159,7 @@ public sealed class CreateVoucherDetailCommandHandlerTests
     {
         var headId = Guid.NewGuid();
         var headRepository = new Mock<IVoucherHeadRepository>();
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
         var detailRepository = new Mock<IVoucherDetailRepository>();
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
@@ -164,7 +174,8 @@ public sealed class CreateVoucherDetailCommandHandlerTests
             .Callback(() => callOrder.Add("SaveChangesAsync"))
             .ReturnsAsync(1);
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(headId), CancellationToken.None);
 
@@ -184,13 +195,14 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, token)).ReturnsAsync(ExistingHead(headId));
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), token)).ReturnsAsync(ExistingHead(headId));
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(headId), token);
 
-        headRepository.Verify(r => r.GetForUpdateAsync(headId, token), Times.Once);
+        headRepository.Verify(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), token), Times.Once);
         detailRepository.Verify(r => r.AddAsync(It.IsAny<TB_VOUCHERSDETAIL>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
@@ -203,7 +215,7 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         // the dedicated pipeline test below); this test only proves the mapping is faithful.
         var headId = Guid.NewGuid();
         var headRepository = new Mock<IVoucherHeadRepository>();
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
         var detailRepository = new Mock<IVoucherDetailRepository>();
         TB_VOUCHERSDETAIL? staged = null;
         detailRepository
@@ -213,7 +225,8 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
         var command = ValidCommand(headId) with { VahedCode = "0009" };
 
         await handler.Handle(command, CancellationToken.None);
@@ -231,7 +244,7 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         // unconditionally with ICurrentUser.VahedCode before the handler ever sees it.
         var headId = Guid.NewGuid();
         var headRepository = new Mock<IVoucherHeadRepository>();
-        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
+        headRepository.Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(ExistingHead(headId));
         var detailRepository = new Mock<IVoucherDetailRepository>();
         TB_VOUCHERSDETAIL? staged = null;
         detailRepository
@@ -242,8 +255,9 @@ public sealed class CreateVoucherDetailCommandHandlerTests
         var currentUser = CurrentUserMock();
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
-        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateVoucherDetailCommand, Guid>(currentUser.Object);
+        var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            TafsiliLevelGuards.Permissive());
+        var behavior = new VahedScopeBehavior<CreateVoucherDetailCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(headId) with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

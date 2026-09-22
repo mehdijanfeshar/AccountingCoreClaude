@@ -44,11 +44,15 @@ public sealed class PersonActionReadRepository : IPersonActionReadRepository
     public async Task<PagedResult<PersonActionDto>> GetPagedAsync(
         int pageNumber,
         int pageSize,
+        string vahedCode,
         CancellationToken cancellationToken = default)
     {
         var query = _dbContext.TB_PERSON_ACTIONs
             .AsNoTracking()
-            .Where(p => p.ISDELETED != true);
+            .Where(p => p.ISDELETED != true)
+            // Scoped from 2026-09-21: this list used to return every unit's rows, and USERID here
+            // is a national identification number.
+            .Where(p => p.VAHEDCODE == vahedCode);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -72,9 +76,24 @@ public sealed class PersonActionReadRepository : IPersonActionReadRepository
         };
     }
 
-    public Task<PersonActionDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<PersonActionDto?> GetByIdAsync(
+        Guid id,
+        string vahedCode,
+        CancellationToken cancellationToken = default)
     {
-        return _dbContext.TB_PERSON_ACTIONs
+        // The owning unit is read first as a scalar so the access decision can tell "no such
+        // row" (null, caller gets null, 404) from "another unit's row" (403). Projecting it
+        // alongside the DTO in one query is not possible while ToDto stays a reusable
+        // Expression, and this is a single-record edit-form fetch, not a hot path.
+        var ownerVahedCode = await _dbContext.TB_PERSON_ACTIONs
+            .AsNoTracking()
+            .Where(p => p.ID == id)
+            .Select(p => p.VAHEDCODE)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        VahedOwnership.EnsureOwned(ownerVahedCode, vahedCode, id, "PersonAction");
+
+        return await _dbContext.TB_PERSON_ACTIONs
             .AsNoTracking()
             .Where(p => p.ID == id)
             .Select(ToDto)

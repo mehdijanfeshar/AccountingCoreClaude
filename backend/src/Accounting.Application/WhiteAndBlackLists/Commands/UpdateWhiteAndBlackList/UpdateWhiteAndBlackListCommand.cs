@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.WhiteAndBlackLists.Commands.UpdateWhiteAndBlackList;
@@ -22,9 +23,9 @@ namespace Accounting.Application.WhiteAndBlackLists.Commands.UpdateWhiteAndBlack
 /// <param name="FromLimitationDate">FROMLIMITATIONDATE column (max 8 chars).</param>
 /// <param name="ToLimitationDate">TOLIMITATIONDATE column (max 8 chars).</param>
 /// <param name="State">
-/// STATE column. WARNING: really a 3-valued enum in Legacy, currently modeled as <c>bool?</c> —
-/// see <see cref="Accounting.Application.WhiteAndBlackLists.Commands.CreateWhiteAndBlackList.CreateWhiteAndBlackListCommand.State"/>
-/// for the full rationale. This field's contract is expected to change.
+/// STATE column (nullable <see cref="Accounting.Domain.ValueObjects.WhiteBlackListState"/>) — see
+/// <see cref="Accounting.Application.WhiteAndBlackLists.Commands.CreateWhiteAndBlackList.CreateWhiteAndBlackListCommand.State"/>
+/// for the resolution reference (§24-1).
 /// </param>
 public sealed record UpdateWhiteAndBlackListCommand(
     Guid Id,
@@ -34,4 +35,4 @@ public sealed record UpdateWhiteAndBlackListCommand(
     string? ToAuthorizedDate,
     string? FromLimitationDate,
     string? ToLimitationDate,
-    bool? State) : IRequest;
+    WhiteBlackListState? State) : IRequest;

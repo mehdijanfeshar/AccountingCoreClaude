@@ -17,5 +17,5 @@ public sealed class GetCheckBookByIdQueryHandler : IRequestHandler<GetCheckBookB
     }
 
     public Task<CheckBookDto?> Handle(GetCheckBookByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

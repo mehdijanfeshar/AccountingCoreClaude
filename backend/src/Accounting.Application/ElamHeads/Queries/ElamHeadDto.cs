@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+
 namespace Accounting.Application.ElamHeads.Queries;
 
 /// <summary>
@@ -7,9 +9,9 @@ namespace Accounting.Application.ElamHeads.Queries;
 /// ⚠️ HEAD ONLY — carries no <c>TB_ELAMDETAIL</c> data (out of scope; see
 /// <c>Accounting.Api.Controllers.ElamHeadsController</c> XML doc).
 ///
-/// ⚠️ <c>Case</c>/<c>DramadType</c> are exposed as-is (<see cref="bool"/>?) — see
-/// <c>CreateElamHeadCommand</c> XML doc for the confirmed <c>bool?</c>-should-be-enum bug on
-/// both columns; re-typing here would be a breaking contract change, deliberately not done.
+/// ⚠️ <c>Case</c>/<c>DramadType</c> were re-typed from <see cref="bool"/>? to real enums on
+/// ۲۰۲۶-۰۹-۲۰ (batch 5 of open risk #2) — a <b>breaking contract change</b>: both serialize as
+/// integers now. See <c>CreateElamHeadCommand</c> XML doc for the evidence behind each.
 /// </summary>
 /// <param name="Id">ID column.</param>
 /// <param name="VoucherHeadId">VOUCHERSHEAD_ID column — optional link to <c>TB_VOUCHERSHEAD</c>.</param>
@@ -18,7 +20,7 @@ namespace Accounting.Application.ElamHeads.Queries;
 /// <param name="DabirNo">ELAMH_DABIRNO column.</param>
 /// <param name="DabirDate">ELAMH_DABIRDATE column.</param>
 /// <param name="PrintNo">ELAMH_PRINTNO column.</param>
-/// <param name="Case">ELAMH_CASE column — ⚠️ unverified <see cref="bool"/>?-should-be-enum, see <c>CreateElamHeadCommand</c> XML doc.</param>
+/// <param name="Case">ELAMH_CASE column (<see cref="ElamCase"/>? — 1=بدهکار، 2=بستانکار).</param>
 /// <param name="SerialNoInput">SERIALNO_INPUT column.</param>
 /// <param name="WebStat">WEB_STAT column.</param>
 /// <param name="Date">ELAMH_DATE column.</param>
@@ -28,7 +30,7 @@ namespace Accounting.Application.ElamHeads.Queries;
 /// <param name="RcvDt">ELAMH_RCVDT column.</param>
 /// <param name="LstMon">ELAMH_LSTMON column.</param>
 /// <param name="PayNo">PAY_NO column.</param>
-/// <param name="DramadType">ELAMHDRAMAD_TYPE column — ⚠️ unverified <see cref="bool"/>?-should-be-enum (3 real values), see <c>CreateElamHeadCommand</c> XML doc.</param>
+/// <param name="DramadType">ELAMHDRAMAD_TYPE column (<see cref="DaramElamhType"/>? — three values; ⚠️ label ordering follows the reference project, see <c>CreateElamHeadCommand</c> XML doc).</param>
 /// <param name="PeimanNo">PEIMAN_NO column.</param>
 /// <param name="WorkShopCode">ELAMH_WORKSHOPCODE column.</param>
 /// <param name="WorkShopName">ELAMH_WORKSHOPNAME column.</param>
@@ -54,7 +56,7 @@ public sealed record ElamHeadDto(
     string? DabirNo,
     string? DabirDate,
     short? PrintNo,
-    bool? Case,
+    ElamCase? Case,
     string? SerialNoInput,
     byte? WebStat,
     string? Date,
@@ -64,7 +66,7 @@ public sealed record ElamHeadDto(
     string? RcvDt,
     string? LstMon,
     string? PayNo,
-    bool? DramadType,
+    DaramElamhType? DramadType,
     string? PeimanNo,
     string? WorkShopCode,
     string? WorkShopName,

@@ -70,6 +70,38 @@ public sealed class HttpContextCurrentUser : ICurrentUser
 
     public string? VahedCode => _httpContextAccessor.HttpContext?.User?.FindFirstValue(VahedCodeClaimType);
 
+    /// <summary>
+    /// Header name the «تغییر واحد» picker sets. A header rather than a body/query field on
+    /// purpose: it applies uniformly to all ~60 existing commands and queries without changing a
+    /// single contract, and it keeps the untrusted value out of the request models entirely —
+    /// phase 33 deliberately removed <c>VahedCode</c> from API contracts and that stays true.
+    /// </summary>
+    private const string RequestedVahedCodeHeader = "X-Vahed-Code";
+
+    public string? RequestedVahedCode
+    {
+        get
+        {
+            var headers = _httpContextAccessor.HttpContext?.Request?.Headers;
+
+            if (headers is null || !headers.TryGetValue(RequestedVahedCodeHeader, out var values))
+            {
+                return null;
+            }
+
+            // A repeated header is a malformed request, not a choice to guess at. Taking the first
+            // value would let a caller smuggle a second one past anything that inspects only one.
+            if (values.Count != 1)
+            {
+                return null;
+            }
+
+            var value = values[0];
+
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        }
+    }
+
     public bool IsInRole(string role) =>
         _httpContextAccessor.HttpContext?.User?.IsInRole(role) ?? false;
 }

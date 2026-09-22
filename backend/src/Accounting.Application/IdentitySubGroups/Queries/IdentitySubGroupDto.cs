@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+
 namespace Accounting.Application.IdentitySubGroups.Queries;
 
 /// <summary>
@@ -10,10 +12,10 @@ namespace Accounting.Application.IdentitySubGroups.Queries;
 /// <param name="SubgrpsDesc">SUBGRPS_DESC column.</param>
 /// <param name="SubgrpsLen">SUBGRPS_LEN column.</param>
 /// <param name="SumFlag">SUMFLAG column.</param>
-/// <param name="Fixed">FIXED column.</param>
+/// <param name="Fixed">FIXED column — <see cref="IdentitySubGroupKind"/>; see <c>CreateIdentitySubGroupCommand.Fixed</c> XML doc.</param>
 /// <param name="SubgrpsType">
-/// SUBGRPS_TYPE column — ⚠️ confirmed-suspicious three-valued column exposed as <c>bool?</c> as-is;
-/// see <c>CreateIdentitySubGroupCommand.SubgrpsType</c> XML doc.
+/// SUBGRPS_TYPE column — <see cref="IdentitySubGroupType"/>; see
+/// <c>CreateIdentitySubGroupCommand.SubgrpsType</c> XML doc.
 /// </param>
 /// <param name="VahedCode">VAHEDCODE column.</param>
 /// <param name="Year">YEAR column.</param>
@@ -29,8 +31,8 @@ public sealed record IdentitySubGroupDto(
     string SubgrpsDesc,
     byte SubgrpsLen,
     bool SumFlag,
-    bool Fixed,
-    bool? SubgrpsType,
+    IdentitySubGroupKind Fixed,
+    IdentitySubGroupType? SubgrpsType,
     string VahedCode,
     string Year,
     string? IdentySubGroupsCode,

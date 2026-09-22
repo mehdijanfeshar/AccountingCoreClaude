@@ -27,11 +27,13 @@ namespace Accounting.Application.Common.Behaviors;
 /// container's open-generic resolution silently — no exception, no log — skips any open-generic
 /// <c>IPipelineBehavior&lt;,&gt;</c> registration whose implementation type's generic constraints
 /// aren't satisfiable for a given closed request/response pair. Concretely: with the
-/// <c>IRequest&lt;TResponse&gt;</c> constraint in place, this behavior (and, it turns out,
-/// <c>ValidationBehavior</c> — a pre-existing, separate bug now on record, out of this class's
-/// scope to fix) never runs for <c>UpdateWorkShopCommand</c>/<c>DeleteWorkShopCommand</c>-shaped
-/// requests: no exception, no validation, no VahedCode enforcement — a textbook silent bypass of
-/// exactly the kind this mechanism exists to prevent. Dropping the constraint (leaving only the
+/// <c>IRequest&lt;TResponse&gt;</c> constraint in place, this behavior never runs for
+/// <c>UpdateWorkShopCommand</c>/<c>DeleteWorkShopCommand</c>-shaped requests: no exception, no
+/// VahedCode enforcement — a textbook silent bypass of exactly the kind this mechanism exists to
+/// prevent. <c>ValidationBehavior</c> really did carry that constraint and really was skipped
+/// this way for every Update/Delete command from phase 8 to phase 30; that is fixed (phase 31)
+/// and <c>BehaviorPipelineConstraintTests</c> now fails if either behavior regains the
+/// constraint. Dropping the constraint (leaving only the
 /// <c>notnull</c> that <see cref="IPipelineBehavior{TRequest,TResponse}"/> itself requires) makes
 /// MediatR's internal void-request dispatch — which genuinely does invoke
 /// <c>IPipelineBehavior&lt;TRequest, Unit&gt;</c>, just never via a constrained open-generic
@@ -67,11 +69,11 @@ public sealed class VahedScopeBehavior<TRequest, TResponse> : IPipelineBehavior<
     /// </summary>
     public const int MaxVahedCodeLength = 4;
 
-    private readonly ICurrentUser _currentUser;
+    private readonly IUnitScopeResolver _unitScopeResolver;
 
-    public VahedScopeBehavior(ICurrentUser currentUser)
+    public VahedScopeBehavior(IUnitScopeResolver unitScopeResolver)
     {
-        _currentUser = currentUser;
+        _unitScopeResolver = unitScopeResolver;
     }
 
     public Task<TResponse> Handle(
@@ -81,22 +83,26 @@ public sealed class VahedScopeBehavior<TRequest, TResponse> : IPipelineBehavior<
     {
         if (request is IVahedScoped scoped)
         {
-            var vahedCode = _currentUser.VahedCode;
-
-            if (string.IsNullOrWhiteSpace(vahedCode))
-            {
-                throw new MissingVahedScopeException(typeof(TRequest).Name);
-            }
-
-            if (vahedCode.Length > MaxVahedCodeLength)
-            {
-                throw new MissingVahedScopeException(typeof(TRequest).Name);
-            }
-
-            // Unconditional: whatever the caller supplied is discarded, not merely defaulted.
-            scoped.VahedCode = vahedCode;
+            return HandleScopedAsync(scoped, next, cancellationToken);
         }
 
         return next(cancellationToken);
+    }
+
+    private async Task<TResponse> HandleScopedAsync(
+        IVahedScoped scoped,
+        RequestHandlerDelegate<TResponse> next,
+        CancellationToken cancellationToken)
+    {
+        // Phase 37-B: the value is still server-decided and still overwrites whatever the caller
+        // put on the request — what changed is only HOW the server decides it. The resolver
+        // returns the caller's own unit unless they explicitly asked for another one AND are
+        // entitled to it; it throws rather than ever returning an unentitled code.
+        var vahedCode = await _unitScopeResolver.ResolveEffectiveVahedCodeAsync(cancellationToken);
+
+        // Unconditional: whatever the caller supplied is discarded, not merely defaulted.
+        scoped.VahedCode = vahedCode;
+
+        return await next(cancellationToken);
     }
 }

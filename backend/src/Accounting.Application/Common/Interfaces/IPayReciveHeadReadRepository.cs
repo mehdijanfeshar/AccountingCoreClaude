@@ -36,5 +36,5 @@ public interface IPayReciveHeadReadRepository
     /// Returns the payment/receipt header row with the given <paramref name="id"/> regardless of
     /// its logical-delete state, or <see langword="null"/> if no such row exists.
     /// </summary>
-    Task<PayReciveHeadDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<PayReciveHeadDto?> GetByIdAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

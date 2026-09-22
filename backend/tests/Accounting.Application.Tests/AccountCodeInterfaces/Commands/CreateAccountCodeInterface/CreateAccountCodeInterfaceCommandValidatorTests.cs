@@ -1,4 +1,5 @@
 using Accounting.Application.AccountCodeInterfaces.Commands.CreateAccountCodeInterface;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.AccountCodeInterfaces.Commands.CreateAccountCodeInterface;
 
@@ -7,7 +8,7 @@ public sealed class CreateAccountCodeInterfaceCommandValidatorTests
     private readonly CreateAccountCodeInterfaceCommandValidator _validator = new();
 
     private static CreateAccountCodeInterfaceCommand ValidCommand() => new(
-        Type: true,
+        Type: InterfaceType.OpenVoucher,
         AccountCodeId: Guid.NewGuid());
 
     [Fact]
@@ -27,5 +28,16 @@ public sealed class CreateAccountCodeInterfaceCommandValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateAccountCodeInterfaceCommand.AccountCodeId));
+    }
+
+    [Fact]
+    public void Validate_InvalidTypeEnumValue_Fails()
+    {
+        var command = ValidCommand() with { Type = (InterfaceType)999 };
+
+        var result = _validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateAccountCodeInterfaceCommand.Type));
     }
 }

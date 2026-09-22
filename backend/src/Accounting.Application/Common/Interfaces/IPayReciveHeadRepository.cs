@@ -25,5 +25,5 @@ public interface IPayReciveHeadRepository
     /// <see langword="null"/> when no row with that <c>ID</c> exists — soft-deleted rows are
     /// still returned here (the caller decides how to treat <c>ISDELETED</c>).
     /// </summary>
-    Task<TB_PAYRECIVHEAD?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TB_PAYRECIVHEAD?> GetForUpdateAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

@@ -1,7 +1,9 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Receipts.Commands.CreateReceipt;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.Receipts.Commands.CreateReceipt;
@@ -9,7 +11,7 @@ namespace Accounting.Application.Tests.Receipts.Commands.CreateReceipt;
 public sealed class CreateReceiptCommandHandlerTests
 {
     private static CreateReceiptCommand ValidCommand() => new(
-        ReceiptKind: true,
+        ReceiptKind: ReceiptType.Fish,
         ReceiptDate: "14020101",
         ReceiptNo: "R0000001",
         DateRsid: "14020102",
@@ -214,7 +216,7 @@ public sealed class CreateReceiptCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         var handler = new CreateReceiptCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateReceiptCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateReceiptCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

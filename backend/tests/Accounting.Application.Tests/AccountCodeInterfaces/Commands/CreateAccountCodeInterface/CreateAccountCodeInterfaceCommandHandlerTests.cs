@@ -1,6 +1,7 @@
 using Accounting.Application.AccountCodeInterfaces.Commands.CreateAccountCodeInterface;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.AccountCodeInterfaces.Commands.CreateAccountCodeInterface;
@@ -8,7 +9,7 @@ namespace Accounting.Application.Tests.AccountCodeInterfaces.Commands.CreateAcco
 public sealed class CreateAccountCodeInterfaceCommandHandlerTests
 {
     private static CreateAccountCodeInterfaceCommand ValidCommand() => new(
-        Type: true,
+        Type: InterfaceType.OpenVoucher,
         AccountCodeId: Guid.NewGuid());
 
     private static Mock<ICurrentUser> CurrentUserMock(string userId = "user1")

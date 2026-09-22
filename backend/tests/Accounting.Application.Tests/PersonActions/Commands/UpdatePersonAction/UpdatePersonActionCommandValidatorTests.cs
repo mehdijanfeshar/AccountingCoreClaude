@@ -1,4 +1,5 @@
 using Accounting.Application.PersonActions.Commands.UpdatePersonAction;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.PersonActions.Commands.UpdatePersonAction;
 
@@ -13,8 +14,7 @@ public sealed class UpdatePersonActionCommandValidatorTests
         FromDate: "14030101",
         ToDate: "14031231",
         Status: true,
-        OperatorRole: true,
-        VahedCode: "0100");
+        OperatorRole: OperatorRole.MasolOmorMali);
 
     [Fact]
     public void Validate_ValidCommand_Passes()
@@ -105,6 +105,27 @@ public sealed class UpdatePersonActionCommandValidatorTests
     public void Validate_VahedCodeAtMaxLength_Passes()
     {
         var command = ValidCommand() with { VahedCode = "0100" };
+
+        var result = _validator.Validate(command);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_InvalidOperatorRoleEnumValue_Fails()
+    {
+        var command = ValidCommand() with { OperatorRole = (OperatorRole)999 };
+
+        var result = _validator.Validate(command);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdatePersonActionCommand.OperatorRole));
+    }
+
+    [Fact]
+    public void Validate_PreviouslyUnreachableOperatorRoleValue_JaneshinReyisVahed_Passes()
+    {
+        var command = ValidCommand() with { OperatorRole = OperatorRole.JaneshinReyisVahed };
 
         var result = _validator.Validate(command);
 

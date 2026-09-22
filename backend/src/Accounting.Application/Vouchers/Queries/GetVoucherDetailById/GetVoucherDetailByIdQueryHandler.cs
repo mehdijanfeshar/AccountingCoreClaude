@@ -19,5 +19,5 @@ public sealed class GetVoucherDetailByIdQueryHandler : IRequestHandler<GetVouche
     }
 
     public Task<VoucherDetailDto?> Handle(GetVoucherDetailByIdQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetByIdAsync(request.Id, cancellationToken);
+        => _readRepository.GetByIdAsync(request.Id, request.VahedCode, cancellationToken);
 }

@@ -2,6 +2,7 @@ using Accounting.Application.Receipts.Commands.DeleteReceipt;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Moq;
 
 namespace Accounting.Application.Tests.Receipts.Commands.DeleteReceipt;
@@ -11,7 +12,7 @@ public sealed class DeleteReceiptCommandHandlerTests
     private static TB_RECEIP ExistingEntity(Guid id, bool isDeleted = false) => new()
     {
         ID = id,
-        RECEIPT_KIND = true,
+        RECEIPT_KIND = ReceiptType.Fish,
         RECEIPT_DATE = "14020101",
         RECEIPT_NO = "R0000001",
         DATE_RSID = "14020102",
@@ -37,7 +38,7 @@ public sealed class DeleteReceiptCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<IReceiptRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter9");
 
@@ -69,7 +70,7 @@ public sealed class DeleteReceiptCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<IReceiptRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((TB_RECEIP?)null);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_RECEIP?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
@@ -91,7 +92,7 @@ public sealed class DeleteReceiptCommandHandlerTests
         entity.UPDATEDDATE = updatedAt;
 
         var repository = new Mock<IReceiptRepository>();
-        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("newDeleter");
 
@@ -118,13 +119,13 @@ public sealed class DeleteReceiptCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
+        repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
         var handler = new DeleteReceiptCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(new DeleteReceiptCommand(id), token);
 
-        repository.Verify(r => r.GetForUpdateAsync(id, token), Times.Once);
+        repository.Verify(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token), Times.Once);
         unitOfWork.Verify(u => u.SaveChangesAsync(token), Times.Once);
     }
 }
