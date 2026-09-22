@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Tests.Vouchers.Commands.Common;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
@@ -29,6 +31,9 @@ public sealed class CreateVoucherDetailCommandHandlerTests
     private static TB_VOUCHERSHEAD ExistingHead(Guid id, bool? isDeleted = false) => new()
     {
         ID = id,
+        // Draft: the editable state these tests assume. Phase 38 fails closed on an absent or
+        // unknown DOCLIFE, which is its own rule with its own tests.
+        DOCLIFE = DocLife.Draft,
         DOC_NUM = "000001",
         DATE_DOC = "14050101",
         VAHEDCODE = "0001",
@@ -252,7 +257,7 @@ public sealed class CreateVoucherDetailCommandHandlerTests
 
         var handler = new CreateVoucherDetailCommandHandler(headRepository.Object, detailRepository.Object, unitOfWork.Object, currentUser.Object,
             TafsiliLevelGuards.Permissive());
-        var behavior = new VahedScopeBehavior<CreateVoucherDetailCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateVoucherDetailCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(headId) with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

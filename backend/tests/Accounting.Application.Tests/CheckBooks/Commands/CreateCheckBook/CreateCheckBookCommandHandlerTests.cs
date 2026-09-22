@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.CheckBooks.Commands.CreateCheckBook;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
@@ -221,7 +222,7 @@ public sealed class CreateCheckBookCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         var handler = new CreateCheckBookCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateCheckBookCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateCheckBookCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

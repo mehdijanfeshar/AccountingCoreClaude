@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.ChequeTypes.Commands.CreateChequeType;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
@@ -323,7 +324,7 @@ public sealed class CreateChequeTypeCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         var handler = new CreateChequeTypeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateChequeTypeCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateChequeTypeCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

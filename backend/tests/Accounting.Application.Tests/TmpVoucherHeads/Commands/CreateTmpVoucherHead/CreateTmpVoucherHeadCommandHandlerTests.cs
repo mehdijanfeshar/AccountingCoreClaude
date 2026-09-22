@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.TmpVoucherHeads.Commands.CreateTmpVoucherHead;
@@ -313,7 +314,7 @@ public sealed class CreateTmpVoucherHeadCommandHandlerTests
 
         var handler = new CreateTmpVoucherHeadCommandHandler(
             repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateTmpVoucherHeadCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateTmpVoucherHeadCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

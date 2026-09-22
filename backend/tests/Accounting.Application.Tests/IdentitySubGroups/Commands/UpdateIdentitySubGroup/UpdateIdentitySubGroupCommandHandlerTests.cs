@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.IdentitySubGroups.Commands.UpdateIdentitySubGroup;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
@@ -229,7 +230,7 @@ public sealed class UpdateIdentitySubGroupCommandHandlerTests
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
         var handler = new UpdateIdentitySubGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<UpdateIdentitySubGroupCommand, Unit>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdateIdentitySubGroupCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(id) with { VahedCode = "9999" };
 
         await behavior.Handle(

@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.WorkShops.Commands.UpdateWorkShop;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
@@ -271,7 +272,7 @@ public sealed class UpdateWorkShopCommandHandlerTests
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
         var handler = new UpdateWorkShopCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<UpdateWorkShopCommand, Unit>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdateWorkShopCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(id) with { VahedCode = "9999" };
 
         await behavior.Handle(

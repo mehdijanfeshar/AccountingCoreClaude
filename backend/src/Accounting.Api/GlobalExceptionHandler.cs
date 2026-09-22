@@ -98,6 +98,17 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Bad Request",
                     tafsiliLevelRuleException.PublicDetail)),
 
+            // State-based refusal, not a permissions one: the caller MAY edit this voucher, just
+            // not while it is reviewed/accepted — and they can fix that themselves via
+            // change-state. See VoucherNotEditableException for why 409 rather than 403.
+            VoucherNotEditableException voucherNotEditableException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    voucherNotEditableException.PublicDetail)),
+
             NotFoundException => (
                 StatusCodes.Status404NotFound,
                 BuildProblemDetails(
@@ -113,6 +124,31 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     StatusCodes.Status403Forbidden,
                     "Forbidden",
                     "The authenticated caller has no usable organizational-unit scope for this operation.")),
+
+            // Scope-level 403: the request asked to BE a unit the caller may not be, decided
+            // before any row is touched — as opposed to the record-level
+            // UnitAccessDeniedException below. See UnitActAsDeniedException for why they are not
+            // collapsed. Carries a per-exception detail for the same reason
+            // TafsiliLevelRuleException does: the value echoed back is the unit code the caller
+            // themselves just sent.
+            UnitActAsDeniedException unitActAsDeniedException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    unitActAsDeniedException.PublicDetail)),
+
+            // A fourth distinct 403: the token names a unit, but no TB_VAHED_INFO row carries that
+            // code — an IDP/Legacy data mismatch rather than a permissions decision. The unit code
+            // echoed back is the caller's own, which their token already carries.
+            UnknownCallerUnitException unknownCallerUnitException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    unknownCallerUnitException.PublicDetail)),
 
             // Deliberately a different detail string from MissingVahedScopeException above, even
             // though both are 403: that one means "we could not work out which unit you are", this

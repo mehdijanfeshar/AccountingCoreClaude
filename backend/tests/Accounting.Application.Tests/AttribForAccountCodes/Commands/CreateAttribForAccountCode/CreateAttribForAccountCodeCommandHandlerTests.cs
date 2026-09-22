@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.AttribForAccountCodes.Commands.CreateAttribForAccountCode;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
@@ -219,7 +220,7 @@ public sealed class CreateAttribForAccountCodeCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         var handler = new CreateAttribForAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateAttribForAccountCodeCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateAttribForAccountCodeCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

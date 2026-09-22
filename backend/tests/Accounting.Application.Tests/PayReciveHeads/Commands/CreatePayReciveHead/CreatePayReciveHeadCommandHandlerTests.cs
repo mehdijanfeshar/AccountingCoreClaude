@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.PayReciveHeads.Commands.CreatePayReciveHead;
@@ -305,7 +306,7 @@ public sealed class CreatePayReciveHeadCommandHandlerTests
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
         var handler = new CreatePayReciveHeadCommandHandler(
             repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreatePayReciveHeadCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreatePayReciveHeadCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

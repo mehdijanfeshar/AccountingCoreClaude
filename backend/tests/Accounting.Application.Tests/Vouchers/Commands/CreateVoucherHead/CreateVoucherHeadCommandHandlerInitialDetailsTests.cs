@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Tests.Vouchers.Commands.Common;
 using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Behaviors;
@@ -282,7 +283,7 @@ public sealed class CreateVoucherHeadCommandHandlerInitialDetailsTests
         var fixture = new Fixture();
         fixture.CurrentUser.SetupGet(u => u.VahedCode).Returns("0009");
         var handler = fixture.CreateHandler();
-        var behavior = new VahedScopeBehavior<CreateVoucherHeadCommand, Guid>(fixture.CurrentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateVoucherHeadCommand, Guid>(TestUnitScope.ResolverFor(fixture.CurrentUser.Object));
         var forgedCommand = ValidCommand(new[] { SampleDetail(1), SampleDetail(2) }) with
         {
             VahedCode = "9999",

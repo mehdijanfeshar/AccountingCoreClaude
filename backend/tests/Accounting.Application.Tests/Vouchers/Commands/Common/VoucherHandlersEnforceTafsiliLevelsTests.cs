@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.Common;
@@ -38,6 +40,9 @@ public sealed class VoucherHandlersEnforceTafsiliLevelsTests
     private static TB_VOUCHERSHEAD ExistingHead(Guid id) => new()
     {
         ID = id,
+        // Draft: the editable state these tests assume. Phase 38 fails closed on an absent or
+        // unknown DOCLIFE, which is its own rule with its own tests.
+        DOCLIFE = DocLife.Draft,
         DOC_NUM = "000001",
         DATE_DOC = "14050101",
         VAHEDCODE = "0001",
@@ -179,6 +184,7 @@ public sealed class VoucherHandlersEnforceTafsiliLevelsTests
 
         var handler = new UpdateVoucherDetailCommandHandler(
             detailRepository.Object,
+            VoucherHeadStubs.NotFound(),
             new Mock<IUnitOfWork>().Object,
             CurrentUser().Object,
             guard.Object);
@@ -211,6 +217,7 @@ public sealed class VoucherHandlersEnforceTafsiliLevelsTests
 
         var handler = new UpdateVoucherDetailCommandHandler(
             detailRepository.Object,
+            VoucherHeadStubs.NotFound(),
             new Mock<IUnitOfWork>().Object,
             CurrentUser().Object,
             guard.Object);
@@ -238,6 +245,7 @@ public sealed class VoucherHandlersEnforceTafsiliLevelsTests
 
         var handler = new UpdateVoucherDetailCommandHandler(
             detailRepository.Object,
+            VoucherHeadStubs.NotFound(),
             new Mock<IUnitOfWork>().Object,
             CurrentUser().Object,
             guard.Object);
@@ -267,6 +275,7 @@ public sealed class VoucherHandlersEnforceTafsiliLevelsTests
 
         var handler = new UpdateVoucherDetailCommandHandler(
             detailRepository.Object,
+            VoucherHeadStubs.NotFound(),
             unitOfWork.Object,
             CurrentUser().Object,
             TafsiliLevelGuards.Rejecting(Rejection()));

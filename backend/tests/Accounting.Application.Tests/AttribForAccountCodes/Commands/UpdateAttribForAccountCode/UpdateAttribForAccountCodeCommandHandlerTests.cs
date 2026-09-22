@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.AttribForAccountCodes.Commands.UpdateAttribForAccountCode;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
@@ -226,7 +227,7 @@ public sealed class UpdateAttribForAccountCodeCommandHandlerTests
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
         var handler = new UpdateAttribForAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<UpdateAttribForAccountCodeCommand, Unit>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdateAttribForAccountCodeCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(id) with { VahedCode = "9999" };
 
         await behavior.Handle(

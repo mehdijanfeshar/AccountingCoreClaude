@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Security;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.Common;
@@ -85,6 +86,9 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
         {
             throw new NotFoundException("VoucherHead", request.VoucherHeadId);
         }
+
+        // Phase 38: lines may not be added to a voucher that is no longer editable.
+        VoucherEditability.EnsureEditable(head.ID, head.DOCLIFE);
 
         // Before anything is staged, so a line that violates «تفصیلی الزامی» never reaches the
         // database even partially. On create the command's list IS the line's final تفصیلی state,

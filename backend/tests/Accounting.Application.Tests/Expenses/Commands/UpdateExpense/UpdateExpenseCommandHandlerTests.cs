@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Expenses.Commands.UpdateExpense;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
@@ -271,7 +272,7 @@ public sealed class UpdateExpenseCommandHandlerTests
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
         var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<UpdateExpenseCommand, Unit>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdateExpenseCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(id) with { VahedCode = "9999" };
 
         await behavior.Handle(

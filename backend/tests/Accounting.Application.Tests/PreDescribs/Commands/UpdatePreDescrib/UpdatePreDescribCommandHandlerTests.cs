@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.PreDescribs.Commands.UpdatePreDescrib;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
@@ -152,7 +153,7 @@ public sealed class UpdatePreDescribCommandHandlerTests
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
         var handler = new UpdatePreDescribCommandHandler(repository.Object, unitOfWork.Object);
-        var behavior = new VahedScopeBehavior<UpdatePreDescribCommand, Unit>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdatePreDescribCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(id) with { VahedCode = "9999" };
 
         await behavior.Handle(

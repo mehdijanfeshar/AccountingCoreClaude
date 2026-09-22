@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Tests.Vouchers.Commands.Common;
 using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Behaviors;
@@ -252,7 +253,7 @@ public sealed class CreateVoucherHeadCommandHandlerTests
 
         var handler = new CreateVoucherHeadCommandHandler(repository.Object, voucherDetailRepository.Object, unitOfWork.Object, currentUser.Object,
             TafsiliLevelGuards.Permissive());
-        var behavior = new VahedScopeBehavior<CreateVoucherHeadCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateVoucherHeadCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
@@ -232,7 +233,7 @@ public sealed class UpdateTmpVoucherHeadCommandHandlerTests
         var currentUser = new Mock<ICurrentUser>();
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
-        var behavior = new VahedScopeBehavior<UpdateTmpVoucherHeadCommand, Unit>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdateTmpVoucherHeadCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(

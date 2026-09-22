@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Receipts.Commands.CreateReceipt;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
@@ -215,7 +216,7 @@ public sealed class CreateReceiptCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         var handler = new CreateReceiptCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateReceiptCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateReceiptCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

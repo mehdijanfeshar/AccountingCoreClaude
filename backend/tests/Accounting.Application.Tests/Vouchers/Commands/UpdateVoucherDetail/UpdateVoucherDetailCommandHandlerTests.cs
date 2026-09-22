@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Tests.Vouchers.Commands.Common;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
@@ -68,7 +69,7 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object,
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
             TafsiliLevelGuards.Permissive());
         var command = ValidCommand(id);
 
@@ -109,7 +110,7 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object,
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
             TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
@@ -148,7 +149,7 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("srvusr02");
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object,
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
             TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
@@ -171,7 +172,7 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object,
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
             TafsiliLevelGuards.Permissive());
 
         await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(ValidCommand(id), CancellationToken.None));
@@ -194,7 +195,7 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object,
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
             TafsiliLevelGuards.Permissive());
 
         await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(ValidCommand(id), CancellationToken.None));
@@ -217,7 +218,7 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object,
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
             TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
@@ -241,7 +242,7 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object,
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
             TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
@@ -267,7 +268,7 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
 
         repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object,
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
             TafsiliLevelGuards.Permissive());
 
         await handler.Handle(ValidCommand(id), token);
@@ -294,7 +295,7 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object,
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
             TafsiliLevelGuards.Permissive());
         var command = ValidCommand(id) with { VahedCode = "0009" };
 
@@ -323,9 +324,9 @@ public sealed class UpdateVoucherDetailCommandHandlerTests
         var currentUser = CurrentUserMock();
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
-        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object,
+        var handler = new UpdateVoucherDetailCommandHandler(repository.Object, VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
             TafsiliLevelGuards.Permissive());
-        var behavior = new VahedScopeBehavior<UpdateVoucherDetailCommand, Unit>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdateVoucherDetailCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(id) with { VahedCode = "9999" };
 
         await behavior.Handle(

@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Tests.Vouchers.Commands.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.Common;
@@ -106,7 +107,8 @@ public sealed class UpdateVoucherDetailCommandHandlerTafsiliLinksTests
         currentUser.SetupGet(u => u.UserId).Returns(userId);
 
         var handler = new UpdateVoucherDetailCommandHandler(
-            detailRepository.Object, unitOfWork.Object, currentUser.Object,
+            detailRepository.Object,
+            VoucherHeadStubs.NotFound(), unitOfWork.Object, currentUser.Object,
             TafsiliLevelGuards.Permissive());
 
         return new Harness(handler, detailRepository, unitOfWork, entity, stagedNewLinks, callOrder);

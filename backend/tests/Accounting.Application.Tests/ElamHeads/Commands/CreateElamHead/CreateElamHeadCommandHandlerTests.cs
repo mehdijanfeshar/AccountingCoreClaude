@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Domain.ValueObjects;
 using Accounting.Application.ElamHeads.Commands.CreateElamHead;
 using Accounting.Application.Common.Behaviors;
@@ -332,7 +333,7 @@ public sealed class CreateElamHeadCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         var handler = new CreateElamHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateElamHeadCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateElamHeadCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

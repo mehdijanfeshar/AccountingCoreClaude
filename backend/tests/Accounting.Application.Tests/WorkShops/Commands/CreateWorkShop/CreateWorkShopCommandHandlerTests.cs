@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.WorkShops.Commands.CreateWorkShop;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
@@ -238,7 +239,7 @@ public sealed class CreateWorkShopCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         var handler = new CreateWorkShopCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateWorkShopCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateWorkShopCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);

@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Security;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using MediatR;
@@ -28,15 +29,18 @@ namespace Accounting.Application.Vouchers.Commands.DeleteVoucherDetail;
 public sealed class DeleteVoucherDetailCommandHandler : IRequestHandler<DeleteVoucherDetailCommand>
 {
     private readonly IVoucherDetailRepository _voucherDetailRepository;
+    private readonly IVoucherHeadRepository _voucherHeadRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
     public DeleteVoucherDetailCommandHandler(
         IVoucherDetailRepository voucherDetailRepository,
+        IVoucherHeadRepository voucherHeadRepository,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser)
     {
         _voucherDetailRepository = voucherDetailRepository;
+        _voucherHeadRepository = voucherHeadRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
     }
@@ -48,6 +52,22 @@ public sealed class DeleteVoucherDetailCommandHandler : IRequestHandler<DeleteVo
         if (entity is null)
         {
             throw new NotFoundException("VoucherDetail", request.Id);
+        }
+
+        // Phase 38: a line inherits its parent voucher's editability — a reviewed/accepted
+        // voucher is view-only all the way down. The parent is loaded with the caller's
+        // VahedCode, so this cannot be used to probe another unit's voucher either.
+        if (entity.VOUCHERSHEAD_ID is not null)
+        {
+            var head = await _voucherHeadRepository.GetForUpdateAsync(
+                entity.VOUCHERSHEAD_ID.Value,
+                request.VahedCode,
+                cancellationToken);
+
+            if (head is not null)
+            {
+                VoucherEditability.EnsureEditable(head.ID, head.DOCLIFE);
+            }
         }
 
         if (entity.ISDELETED == true)

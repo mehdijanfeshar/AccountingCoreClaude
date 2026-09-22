@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Security;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.Common;
@@ -58,17 +59,20 @@ namespace Accounting.Application.Vouchers.Commands.UpdateVoucherDetail;
 public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVoucherDetailCommand>
 {
     private readonly IVoucherDetailRepository _voucherDetailRepository;
+    private readonly IVoucherHeadRepository _voucherHeadRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
     private readonly IVoucherTafsiliLevelGuard _tafsiliLevelGuard;
 
     public UpdateVoucherDetailCommandHandler(
         IVoucherDetailRepository voucherDetailRepository,
+        IVoucherHeadRepository voucherHeadRepository,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
         IVoucherTafsiliLevelGuard tafsiliLevelGuard)
     {
         _voucherDetailRepository = voucherDetailRepository;
+        _voucherHeadRepository = voucherHeadRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _tafsiliLevelGuard = tafsiliLevelGuard;
@@ -81,6 +85,22 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
         if (entity is null || entity.ISDELETED == true)
         {
             throw new NotFoundException("VoucherDetail", request.Id);
+        }
+
+        // Phase 38: a line inherits its parent voucher's editability — a reviewed/accepted
+        // voucher is view-only all the way down. The parent is loaded with the caller's
+        // VahedCode, so this cannot be used to probe another unit's voucher either.
+        if (entity.VOUCHERSHEAD_ID is not null)
+        {
+            var head = await _voucherHeadRepository.GetForUpdateAsync(
+                entity.VOUCHERSHEAD_ID.Value,
+                request.VahedCode,
+                cancellationToken);
+
+            if (head is not null)
+            {
+                VoucherEditability.EnsureEditable(head.ID, head.DOCLIFE);
+            }
         }
 
         await EnsureTafsiliLevelsSatisfiedAsync(entity, request, cancellationToken);

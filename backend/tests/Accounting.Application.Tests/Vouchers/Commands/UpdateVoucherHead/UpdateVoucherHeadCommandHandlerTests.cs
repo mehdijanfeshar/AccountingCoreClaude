@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
@@ -35,7 +36,9 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
         ID = id,
         DOC_NUM = "000001",
         DATE_DOC = "14030101",
-        DOCLIFE = null,
+        // Draft = the state these mechanics tests are about; phase 38 makes a voucher with no
+        // usable DOCLIFE non-editable, which is a separate rule covered by its own tests.
+        DOCLIFE = DocLife.Draft,
         HEAD_DESC = "سند افتتاحیه",
         APENDIX = null,
         SYSTEM_TYPE = null,
@@ -284,7 +287,7 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
         var handler = new UpdateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<UpdateVoucherHeadCommand, Unit>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<UpdateVoucherHeadCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(id) with { VahedCode = "9999" };
 
         await behavior.Handle(

@@ -86,6 +86,8 @@ public static class DependencyInjection
         services.AddScoped<ILevelTafsilReadRepository, LevelTafsilReadRepository>();
         services.AddScoped<ITafsilGroupReadRepository, TafsilGroupReadRepository>();
         services.AddScoped<IVahedInfoReadRepository, VahedInfoReadRepository>();
+        services.AddScoped<IUnitAccessReadRepository, UnitAccessReadRepository>();
+        services.AddScoped<IYearReadRepository, YearReadRepository>();
         services.AddScoped<IWorkShopReadRepository, WorkShopReadRepository>();
 
         // Phase 15 (batch 4) independent entities. Same write/read repository split again.

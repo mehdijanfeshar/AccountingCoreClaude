@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.DeleteVoucherHead;
@@ -11,6 +12,9 @@ public sealed class DeleteVoucherHeadCommandHandlerTests
     private static TB_VOUCHERSHEAD ExistingEntity(Guid id, bool? isDeleted = false) => new()
     {
         ID = id,
+        // Draft: the editable state these tests assume. Phase 38 fails closed on an absent or
+        // unknown DOCLIFE, which is its own rule with its own tests.
+        DOCLIFE = DocLife.Draft,
         DOC_NUM = "000001",
         DATE_DOC = "14030101",
         VAHEDCODE = "0001",

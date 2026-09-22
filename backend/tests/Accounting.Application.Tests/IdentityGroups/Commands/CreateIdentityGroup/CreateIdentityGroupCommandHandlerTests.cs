@@ -1,3 +1,4 @@
+using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.IdentityGroups.Commands.CreateIdentityGroup;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
@@ -210,7 +211,7 @@ public sealed class CreateIdentityGroupCommandHandlerTests
             .Returns(Task.CompletedTask);
 
         var handler = new CreateIdentityGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
-        var behavior = new VahedScopeBehavior<CreateIdentityGroupCommand, Guid>(currentUser.Object);
+        var behavior = new VahedScopeBehavior<CreateIdentityGroupCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 
         await behavior.Handle(forgedCommand, ct => handler.Handle(forgedCommand, ct), CancellationToken.None);
