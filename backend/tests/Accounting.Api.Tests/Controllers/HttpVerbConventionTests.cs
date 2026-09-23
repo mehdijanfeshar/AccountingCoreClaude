@@ -254,6 +254,36 @@ public sealed class HttpVerbConventionTests
     }
 
     /// <summary>
+    /// <c>TB_VAHED_TYPE</c> is exposed read-only on purpose — see
+    /// <see cref="VahedTypesController"/>. Organisational unit types arrive with the shared
+    /// <c>CENTRALACCOUNT</c> schema and are consumed by other systems on it; this project reads
+    /// them to populate the «نوع واحد» tree of the «دسترسی کدینگ حسابداری» screen and never
+    /// reshapes them.
+    ///
+    /// The guard is written as "the only actions are GETs" rather than naming Create/Update/Delete
+    /// one by one, so a write action under any name — <c>Import</c>, <c>Sync</c>, <c>Upsert</c> —
+    /// still fails it.
+    /// </summary>
+    [Fact]
+    public void NoWriteActionExistsOnVahedTypesController_BecauseThisProjectNeverEditsUnitTypes()
+    {
+        var actions = typeof(VahedTypesController)
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(m => !m.IsSpecialName)
+            .ToList();
+
+        Assert.NotEmpty(actions);
+        Assert.All(actions, action =>
+        {
+            Assert.Empty(action.GetCustomAttributes<HttpPostAttribute>(inherit: true));
+            Assert.Empty(action.GetCustomAttributes<HttpPutAttribute>(inherit: true));
+            Assert.Empty(action.GetCustomAttributes<HttpDeleteAttribute>(inherit: true));
+            Assert.Empty(action.GetCustomAttributes<HttpPatchAttribute>(inherit: true));
+            Assert.NotEmpty(action.GetCustomAttributes<HttpGetAttribute>(inherit: true));
+        });
+    }
+
+    /// <summary>
     /// Phase 15 (batch 4) controllers. Unlike phases 13 and 14, there is no CRU-only exception in
     /// this batch: all eight underlying tables own an <c>ISDELETED</c> column, so every one of them
     /// exposes both <c>Update</c> as <c>POST {id}/update</c> and <c>Delete</c> as

@@ -46,3 +46,7 @@ dist/
 
 # Claude Code local/personal settings (hooks, permissions specific to this machine)
 .claude/settings.local.json
+
+# خروجی publish — هرگز commit نشود (فاز ۴۲: پوشهٔ publish داخل پروژه باعث تودرتو شدن خروجی می‌شد)
+artifacts/
+publish/

@@ -36,7 +36,7 @@ public sealed class GetWhiteAndBlackListsQueryHandlerTests
             TotalCount = 51,
         };
         readRepository
-            .Setup(r => r.GetPagedAsync(2, 25, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(2, 25, It.IsAny<WhiteAndBlackListFilter>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetWhiteAndBlackListsQueryHandler(readRepository.Object);
@@ -47,7 +47,9 @@ public sealed class GetWhiteAndBlackListsQueryHandlerTests
         Assert.Equal(2, result.PageNumber);
         Assert.Equal(25, result.PageSize);
         Assert.Equal(51, result.TotalCount);
-        readRepository.Verify(r => r.GetPagedAsync(2, 25, It.IsAny<CancellationToken>()), Times.Once);
+        readRepository.Verify(
+            r => r.GetPagedAsync(2, 25, It.IsAny<WhiteAndBlackListFilter>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -57,14 +59,82 @@ public sealed class GetWhiteAndBlackListsQueryHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
         readRepository
-            .Setup(r => r.GetPagedAsync(1, 20, token))
+            .Setup(r => r.GetPagedAsync(1, 20, It.IsAny<WhiteAndBlackListFilter>(), token))
             .ReturnsAsync(new PagedResult<WhiteAndBlackListDto>());
 
         var handler = new GetWhiteAndBlackListsQueryHandler(readRepository.Object);
 
         await handler.Handle(new GetWhiteAndBlackListsQuery(PageNumber: 1, PageSize: 20), token);
 
-        readRepository.Verify(r => r.GetPagedAsync(1, 20, token), Times.Once);
+        readRepository.Verify(
+            r => r.GetPagedAsync(1, 20, It.IsAny<WhiteAndBlackListFilter>(), token),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// A query with no filter arguments must reach the repository as an empty filter, not as one
+    /// that silently narrows the page. This is the default every existing caller relies on.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithNoFilterArguments_PassesAnAllNullFilter()
+    {
+        var readRepository = new Mock<IWhiteAndBlackListReadRepository>();
+        WhiteAndBlackListFilter? captured = null;
+        readRepository
+            .Setup(r => r.GetPagedAsync(
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<WhiteAndBlackListFilter>(), It.IsAny<CancellationToken>()))
+            .Callback<int, int, WhiteAndBlackListFilter, CancellationToken>((_, _, filter, _) => captured = filter)
+            .ReturnsAsync(new PagedResult<WhiteAndBlackListDto>());
+
+        var handler = new GetWhiteAndBlackListsQueryHandler(readRepository.Object);
+
+        await handler.Handle(new GetWhiteAndBlackListsQuery(PageNumber: 1, PageSize: 20), CancellationToken.None);
+
+        Assert.NotNull(captured);
+        Assert.Equal(WhiteAndBlackListFilter.None, captured);
+    }
+
+    /// <summary>
+    /// Every filter the query accepts must arrive at the repository. Written as one test over all
+    /// seven rather than seven tests, because the failure being guarded against is a single
+    /// forgotten line in the handler's projection — which this catches for any of them.
+    /// </summary>
+    [Fact]
+    public async Task Handle_ForwardsEveryFilterToRepository()
+    {
+        var accountCodeId = Guid.NewGuid();
+        var vahedTypeId = Guid.NewGuid();
+        var readRepository = new Mock<IWhiteAndBlackListReadRepository>();
+        WhiteAndBlackListFilter? captured = null;
+        readRepository
+            .Setup(r => r.GetPagedAsync(
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<WhiteAndBlackListFilter>(), It.IsAny<CancellationToken>()))
+            .Callback<int, int, WhiteAndBlackListFilter, CancellationToken>((_, _, filter, _) => captured = filter)
+            .ReturnsAsync(new PagedResult<WhiteAndBlackListDto>());
+
+        var handler = new GetWhiteAndBlackListsQueryHandler(readRepository.Object);
+
+        await handler.Handle(
+            new GetWhiteAndBlackListsQuery(
+                PageNumber: 1,
+                PageSize: 20,
+                AccountCodeId: accountCodeId,
+                VahedTypeId: vahedTypeId,
+                State: WhiteBlackListState.SystemOnly,
+                FromAuthorizedDate: "14040101",
+                ToAuthorizedDate: "14041229",
+                FromLimitationDate: "14050101",
+                ToLimitationDate: "14051229"),
+            CancellationToken.None);
+
+        Assert.NotNull(captured);
+        Assert.Equal(accountCodeId, captured!.AccountCodeId);
+        Assert.Equal(vahedTypeId, captured.VahedTypeId);
+        Assert.Equal(WhiteBlackListState.SystemOnly, captured.State);
+        Assert.Equal("14040101", captured.FromAuthorizedDate);
+        Assert.Equal("14041229", captured.ToAuthorizedDate);
+        Assert.Equal("14050101", captured.FromLimitationDate);
+        Assert.Equal("14051229", captured.ToLimitationDate);
     }
 
     [Fact]

@@ -27,6 +27,23 @@ namespace Accounting.Application.WhiteAndBlackLists.Queries;
 /// STATE column (nullable <see cref="Accounting.Domain.ValueObjects.WhiteBlackListState"/>).
 /// Resolved per <c>docs/centralaccount-business-reference.md</c> §24-1 (phase 27 batch 3).
 /// </param>
+/// <param name="AccCode">
+/// Display-only: <c>TB_ACCOUNTCODE.ACCCODE</c> of the linked account, resolved by the read
+/// repository through the <c>FK_ACCOUNTCODE_LINK_WHITELISTS</c> navigation. Present so the
+/// «دسترسی کدینگ حسابداری» grid can render its «کد معین» column without a second round-trip
+/// per row. Never written back — the write side still takes <c>AccountCodeId</c>.
+/// </param>
+/// <param name="AccCodeName">Display-only: <c>TB_ACCOUNTCODE.ACCCODENAME</c>. Same rationale as <paramref name="AccCode"/>.</param>
+/// <param name="VahedTypeCode">Display-only: <c>TB_VAHED_TYPE.TYPECODE</c>, or <see langword="null"/> when <paramref name="VahedTypeId"/> is null.</param>
+/// <param name="VahedTypeName">Display-only: <c>TB_VAHED_TYPE.TYPENAME</c> — the grid's «نوع واحد» column.</param>
+/// <param name="VahedTypeParentCode">
+/// Display-only: <c>TB_VAHED_TYPE.PARENTTYPECODE</c> — what the grid's «بخش» column groups on.
+/// ⚠️ It is a bare code (<c>"1"</c>/<c>"2"</c>/<c>"3"</c> in live data) with <b>no lookup table
+/// anywhere in the schema</b>, and the reference project's own tree endpoint
+/// (<c>GetVahedTypeQueryTreeHandler</c>) returns it unlabelled. Turning it into
+/// «بیمه»/«درمان»/«ستاد» is therefore a presentation-layer decision and is deliberately NOT made
+/// here — see the recorded assumption in <c>docs/open-decisions.md</c>.
+/// </param>
 public sealed record WhiteAndBlackListDto(
     Guid Id,
     Guid AccountCodeId,
@@ -40,4 +57,9 @@ public sealed record WhiteAndBlackListDto(
     string? ToAuthorizedDate,
     string? FromLimitationDate,
     string? ToLimitationDate,
-    WhiteBlackListState? State);
+    WhiteBlackListState? State,
+    string? AccCode = null,
+    string? AccCodeName = null,
+    string? VahedTypeCode = null,
+    string? VahedTypeName = null,
+    string? VahedTypeParentCode = null);

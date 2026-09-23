@@ -1,5 +1,8 @@
 using Accounting.Application.Common;
+using Accounting.Application.WhiteAndBlackLists.Commands.BlacklistWhiteAndBlackList;
 using Accounting.Application.WhiteAndBlackLists.Commands.CreateWhiteAndBlackList;
+using Accounting.Application.WhiteAndBlackLists.Commands.CreateWhiteAndBlackListsBulk;
+using Accounting.Application.WhiteAndBlackLists.Commands.ReactivateWhiteAndBlackList;
 using Accounting.Application.WhiteAndBlackLists.Commands.DeleteWhiteAndBlackList;
 using Accounting.Application.WhiteAndBlackLists.Commands.UpdateWhiteAndBlackList;
 using Accounting.Application.WhiteAndBlackLists.Queries;
@@ -76,7 +79,42 @@ public sealed class WhiteAndBlackListsController : ControllerBase
     }
 
     /// <summary>
-    /// Returns a page of allow/deny-list entries.
+    /// Grants a set of account codes for a set of unit types in one transaction — the
+    /// «افزودن دسترسی جدید» dialog. The full cartesian product is written; combinations that
+    /// already exist are skipped rather than failing the request, and the response reports both
+    /// counts. See <see cref="CreateWhiteAndBlackListsBulkCommand"/> for why there is one date
+    /// pair here rather than four.
+    ///
+    /// 409 is still declared: the skip pass is a pre-check, not a lock, so a row inserted
+    /// concurrently between it and the save surfaces as the central duplicate-key mapping.
+    /// </summary>
+    [HttpPost("bulk")]
+    [ProducesResponseType(typeof(CreateWhiteAndBlackListsBulkResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateBulk(
+        [FromBody] CreateWhiteAndBlackListsBulkRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new CreateWhiteAndBlackListsBulkCommand(
+            request.AccountCodeIds,
+            request.VahedTypeIds,
+            request.FromDate,
+            request.ToDate,
+            request.State);
+
+        var result = await _mediator.Send(command, cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Returns a page of allow/deny-list entries, optionally narrowed by the filter panel of the
+    /// «دسترسی کدینگ حسابداری» screen. Every filter is optional and they combine with AND; the
+    /// four date parameters are range bounds rather than equality — see
+    /// <see cref="GetWhiteAndBlackListsQuery"/>.
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<WhiteAndBlackListDto>), StatusCodes.Status200OK)]
@@ -86,9 +124,27 @@ public sealed class WhiteAndBlackListsController : ControllerBase
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] Guid? accountCodeId = null,
+        [FromQuery] Guid? vahedTypeId = null,
+        [FromQuery] WhiteBlackListState? state = null,
+        [FromQuery] string? fromAuthorizedDate = null,
+        [FromQuery] string? toAuthorizedDate = null,
+        [FromQuery] string? fromLimitationDate = null,
+        [FromQuery] string? toLimitationDate = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetWhiteAndBlackListsQuery(pageNumber, pageSize), cancellationToken);
+        var query = new GetWhiteAndBlackListsQuery(
+            pageNumber,
+            pageSize,
+            accountCodeId,
+            vahedTypeId,
+            state,
+            fromAuthorizedDate,
+            toAuthorizedDate,
+            fromLimitationDate,
+            toLimitationDate);
+
+        var result = await _mediator.Send(query, cancellationToken);
 
         return Ok(result);
     }
@@ -161,7 +217,94 @@ public sealed class WhiteAndBlackListsController : ControllerBase
 
         return Ok(new DeleteWhiteAndBlackListResponse(id));
     }
+
+    /// <summary>
+    /// Moves an entry to «غیرمجاز» and clears all four of its date columns — the «غیرفعال‌سازی»
+    /// action on the grid. Takes no body: what happens to the dates is part of the transition,
+    /// not a caller choice (see <see cref="BlacklistWhiteAndBlackListCommand"/>).
+    ///
+    /// Idempotent — blacklisting an already-blacklisted row returns 200.
+    /// </summary>
+    [HttpPost("{id:guid}/blacklist")]
+    [ProducesResponseType(typeof(BlacklistWhiteAndBlackListResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Blacklist(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new BlacklistWhiteAndBlackListCommand(id), cancellationToken);
+
+        return Ok(new BlacklistWhiteAndBlackListResponse(id));
+    }
+
+    /// <summary>
+    /// Brings a blacklisted entry back into service with a new state and date range — the
+    /// «فعال سازی مجدد» dialog. <c>State</c> may not be «غیرمجاز»; use
+    /// <see cref="Blacklist"/> for that.
+    /// </summary>
+    [HttpPost("{id:guid}/reactivate")]
+    [ProducesResponseType(typeof(ReactivateWhiteAndBlackListResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Reactivate(
+        Guid id,
+        [FromBody] ReactivateWhiteAndBlackListRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new ReactivateWhiteAndBlackListCommand(
+            id,
+            request.State,
+            request.FromDate,
+            request.ToDate);
+
+        await _mediator.Send(command, cancellationToken);
+
+        return Ok(new ReactivateWhiteAndBlackListResponse(id));
+    }
 }
+
+/// <summary>
+/// Request body for <see cref="WhiteAndBlackListsController.CreateBulk"/>.
+/// </summary>
+/// <param name="AccountCodeIds">The معین rows to grant.</param>
+/// <param name="VahedTypeIds">The unit types to grant them for.</param>
+/// <param name="FromDate">Start of the range, zero-padded <c>YYYYMMDD</c> Jalali text.</param>
+/// <param name="ToDate">End of the range, zero-padded <c>YYYYMMDD</c> Jalali text.</param>
+/// <param name="State">Which date pair the range lands in — «مجاز» or «فقط سیستمی».</param>
+public sealed record CreateWhiteAndBlackListsBulkRequest(
+    IReadOnlyList<Guid> AccountCodeIds,
+    IReadOnlyList<Guid> VahedTypeIds,
+    string? FromDate,
+    string? ToDate,
+    WhiteBlackListState State);
+
+/// <summary>
+/// Response body for a successful <see cref="WhiteAndBlackListsController.Blacklist"/> call.
+/// </summary>
+/// <param name="Id">The <c>TB_WHITEANDBLACKLIST.ID</c> that was blacklisted (from the route).</param>
+public sealed record BlacklistWhiteAndBlackListResponse(Guid Id);
+
+/// <summary>
+/// Request body for <see cref="WhiteAndBlackListsController.Reactivate"/>. <c>Id</c> is
+/// deliberately absent — it comes from the route, never the body.
+/// </summary>
+/// <param name="State">The state to return to. «غیرمجاز» is rejected with 400.</param>
+/// <param name="FromDate">Start of the new range, zero-padded <c>YYYYMMDD</c> Jalali text.</param>
+/// <param name="ToDate">End of the new range, zero-padded <c>YYYYMMDD</c> Jalali text.</param>
+public sealed record ReactivateWhiteAndBlackListRequest(
+    WhiteBlackListState State,
+    string? FromDate,
+    string? ToDate);
+
+/// <summary>
+/// Response body for a successful <see cref="WhiteAndBlackListsController.Reactivate"/> call.
+/// </summary>
+/// <param name="Id">The <c>TB_WHITEANDBLACKLIST.ID</c> that was reactivated (from the route).</param>
+public sealed record ReactivateWhiteAndBlackListResponse(Guid Id);
 
 /// <summary>
 /// Response body for a successful <see cref="WhiteAndBlackListsController.Create"/> call.

@@ -6,7 +6,9 @@ namespace Accounting.Application.WhiteAndBlackLists.Queries.GetWhiteAndBlackList
 
 /// <summary>
 /// Delegates straight to <see cref="IWhiteAndBlackListReadRepository.GetPagedAsync"/>. Read-side
-/// handlers never touch <see cref="IUnitOfWork"/> — there is nothing to persist.
+/// handlers never touch <see cref="IUnitOfWork"/> — there is nothing to persist. The filters are
+/// passed through as a single <see cref="WhiteAndBlackListFilter"/> so that adding one later does
+/// not change this signature.
 /// </summary>
 public sealed class GetWhiteAndBlackListsQueryHandler : IRequestHandler<GetWhiteAndBlackListsQuery, PagedResult<WhiteAndBlackListDto>>
 {
@@ -18,5 +20,16 @@ public sealed class GetWhiteAndBlackListsQueryHandler : IRequestHandler<GetWhite
     }
 
     public Task<PagedResult<WhiteAndBlackListDto>> Handle(GetWhiteAndBlackListsQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, cancellationToken);
+        => _readRepository.GetPagedAsync(
+            request.PageNumber,
+            request.PageSize,
+            new WhiteAndBlackListFilter(
+                request.AccountCodeId,
+                request.VahedTypeId,
+                request.State,
+                request.FromAuthorizedDate,
+                request.ToAuthorizedDate,
+                request.FromLimitationDate,
+                request.ToLimitationDate),
+            cancellationToken);
 }

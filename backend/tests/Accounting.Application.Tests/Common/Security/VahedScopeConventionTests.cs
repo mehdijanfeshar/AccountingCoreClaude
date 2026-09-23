@@ -82,9 +82,12 @@ public sealed class VahedScopeConventionTests
         // TB_WHITELIST
         "CreateWhiteListCommand",
         "UpdateWhiteListCommand",
-        // TB_WHITEANDBLACKLIST
+        // TB_WHITEANDBLACKLIST — a central permission matrix keyed on (account code, unit TYPE),
+        // with no VAHEDCODE column: a row says which KIND of unit may use a معین, organisation-wide.
+        // Scoping it to the caller's own unit would make the matrix meaningless.
         "CreateWhiteAndBlackListCommand",
         "UpdateWhiteAndBlackListCommand",
+        "CreateWhiteAndBlackListsBulkCommand",
         // TB_ACCOUNT_LINK_TAFSILGROUP — permanently-embedded link table (see
         // NoIndependentLinkTableWritePathTests), has no VAHEDCODE column at all. Its Create-shaped
         // command is deliberately named LinkAccountCodeToTafsilGroupCommand (not

@@ -86,6 +86,9 @@ public static class DependencyInjection
         services.AddScoped<ILevelTafsilReadRepository, LevelTafsilReadRepository>();
         services.AddScoped<ITafsilGroupReadRepository, TafsilGroupReadRepository>();
         services.AddScoped<IVahedInfoReadRepository, VahedInfoReadRepository>();
+        // Read-only by design — there is deliberately no IVahedTypeRepository counterpart; see
+        // IVahedTypeReadRepository's XML doc.
+        services.AddScoped<IVahedTypeReadRepository, VahedTypeReadRepository>();
         services.AddScoped<IUnitAccessReadRepository, UnitAccessReadRepository>();
         services.AddScoped<IYearReadRepository, YearReadRepository>();
         services.AddScoped<IMatrixReportReadRepository, MatrixReportReadRepository>();
