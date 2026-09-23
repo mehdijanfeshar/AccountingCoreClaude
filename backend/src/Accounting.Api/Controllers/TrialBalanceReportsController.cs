@@ -1,4 +1,6 @@
 using Accounting.Application.Common.Search;
+using Accounting.Application.Reports.CrossTab;
+using Accounting.Application.Reports.CrossTab.GetCrossTabReport;
 using Accounting.Application.Reports.MatrixReport;
 using Accounting.Application.Reports.MatrixReport.GetMatrixReport;
 using Accounting.Application.Reports.TrialBalance;
@@ -218,6 +220,62 @@ public sealed class TrialBalanceReportsController : ControllerBase
                 toVoucherNo,
                 docLife,
                 systemTypeId),
+            cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// گزارش متقاطع — turnover crossed over two dimensions at once: one on the rows, one on the
+    /// columns, بدهکار/بستانکار in each intersection.
+    ///
+    /// <para>
+    /// <b>A separate report from <see cref="GetMatrixReport"/>, not a replacement.</b> That one
+    /// groups by a single level and is navigated کل↔جزء; its output is a list. This one produces a
+    /// grid, and answers a question the other cannot ask — «این تفصیلی در کدام معین‌ها گردش داشته».
+    /// </para>
+    ///
+    /// <para>
+    /// Reads the same verified Oracle view, so it too satisfies team working-rule #2 by
+    /// construction. Not paged, for the same reason; the <b>column</b> count is capped instead,
+    /// because the column set is data-dependent. When the cap bites, the response says so and the
+    /// totals still cover the whole filtered set.
+    /// </para>
+    ///
+    /// <para>
+    /// Scoped to the caller's effective unit via <c>IVahedScopedQuery</c>, hence the <b>403</b>.
+    /// <b>400</b> also covers the two axes being the same dimension.
+    /// </para>
+    /// </summary>
+    [HttpGet("cross-tab")]
+    [ProducesResponseType(typeof(CrossTabResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetCrossTabReport(
+        [FromQuery] string year = "",
+        [FromQuery] CrossTabDimension rowDimension = CrossTabDimension.Tafsili1,
+        [FromQuery] CrossTabDimension columnDimension = CrossTabDimension.Moin,
+        [FromQuery] string? fromDate = null,
+        [FromQuery] string? toDate = null,
+        [FromQuery] int? docLife = null,
+        [FromQuery] Guid? systemTypeId = null,
+        [FromQuery] string? rowCodeFilter = null,
+        [FromQuery] string? columnCodeFilter = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(
+            new GetCrossTabReportQuery(
+                year,
+                rowDimension,
+                columnDimension,
+                fromDate,
+                toDate,
+                docLife,
+                systemTypeId,
+                rowCodeFilter,
+                columnCodeFilter),
             cancellationToken);
 
         return Ok(result);
