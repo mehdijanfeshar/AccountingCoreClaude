@@ -35,53 +35,87 @@ public sealed class PettyCashExpenseDocReadRepository : IPettyCashExpenseDocRead
         _dbContext = dbContext;
     }
 
-    private IQueryable<Row> BaseQuery(string vahedCode) =>
-        from doc in _dbContext.TB_PC_EXPENSE_DOCs.AsNoTracking()
-        join head in _dbContext.TB_CHARGEANDCOST_HEADs.AsNoTracking() on doc.CHARGEANDCOSTHEAD_ID equals head.ID
-        join fund in _dbContext.TB_REVOLVING_FUNDs.AsNoTracking() on doc.REVOLVINGFUND_ID equals fund.ID
-        join detail in _dbContext.TB_CHARGEANDCOST_DETAILs.AsNoTracking()
-            on (Guid?)doc.CHARGEANDCOSTHEAD_ID equals detail.CHARGEANDCOSTHEAD_ID into detailGroup
-        from detail in detailGroup.DefaultIfEmpty()
-        join expense in _dbContext.TB_EXPENCEs.AsNoTracking()
-            on detail!.EXPENSE_ID equals (Guid?)expense.ID into expenseGroup
-        from expense in expenseGroup.DefaultIfEmpty()
-        where !doc.ISDELETED && doc.VAHEDCODE == vahedCode
-        select new Row(doc, head, fund, detail, expense);
-
-    private static IQueryable<Row> ApplyFundAndSearch(IQueryable<Row> query, Guid? fundId, string? search)
+    /// <summary>
+    /// Filtering, state counts and paging all run against this bare <c>TB_PC_EXPENSE_DOC</c>
+    /// (+ <c>TB_CHARGEANDCOST_HEAD</c>, only for <paramref name="search"/>) shape — never against
+    /// the full 5-table <see cref="Row"/> projection. EF Core's Oracle provider cannot translate a
+    /// <c>Where</c>/<c>GroupBy</c> predicate that reaches through a <c>new Row(...)</c> record
+    /// constructed from a chain including two <c>LeftJoin</c>/<c>DefaultIfEmpty</c> pairs
+    /// ("The LINQ expression ... could not be translated" — hit against live Oracle only, since
+    /// this path was never exercised in SQLite tests). Filtering, counting and ordering only ever
+    /// need columns off <c>TB_PC_EXPENSE_DOC</c>/<c>TB_CHARGEANDCOST_HEAD</c> directly, so this
+    /// leaner shape sidesteps the issue entirely; <see cref="GetPagedAsync"/> hydrates the full
+    /// <see cref="Row"/> shape afterwards, only for the already-page-bounded set of ids.
+    /// </summary>
+    private IQueryable<TB_PC_EXPENSE_DOC> FilteredDocsQuery(string vahedCode, Guid? fundId, string? search)
     {
+        var docs = _dbContext.TB_PC_EXPENSE_DOCs.AsNoTracking()
+            .Where(d => !d.ISDELETED && d.VAHEDCODE == vahedCode);
+
         if (fundId is { } id)
         {
-            query = query.Where(r => r.Doc.REVOLVINGFUND_ID == id);
+            docs = docs.Where(d => d.REVOLVINGFUND_ID == id);
         }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim();
-            query = query.Where(r =>
-                (r.Head.CHARGEANDCOST_CODE != null && r.Head.CHARGEANDCOST_CODE.Contains(term)) ||
-                (r.Doc.VENDOR_NAME != null && r.Doc.VENDOR_NAME.Contains(term)) ||
-                (r.Doc.INVOICE_NO != null && r.Doc.INVOICE_NO.Contains(term)) ||
-                (r.Head.DESCRIPTION != null && r.Head.DESCRIPTION.Contains(term)));
+            docs =
+                from doc in docs
+                join head in _dbContext.TB_CHARGEANDCOST_HEADs.AsNoTracking() on doc.CHARGEANDCOSTHEAD_ID equals head.ID
+                where (head.CHARGEANDCOST_CODE != null && head.CHARGEANDCOST_CODE.Contains(term)) ||
+                      (doc.VENDOR_NAME != null && doc.VENDOR_NAME.Contains(term)) ||
+                      (doc.INVOICE_NO != null && doc.INVOICE_NO.Contains(term)) ||
+                      (head.DESCRIPTION != null && head.DESCRIPTION.Contains(term))
+                select doc;
         }
 
-        return query;
+        return docs;
     }
 
-    private static IQueryable<Row> ApplyState(IQueryable<Row> query, PettyCashDocState? state, IReadOnlyList<PettyCashDocState>? states)
+    private static IQueryable<TB_PC_EXPENSE_DOC> ApplyState(
+        IQueryable<TB_PC_EXPENSE_DOC> docs, PettyCashDocState? state, IReadOnlyList<PettyCashDocState>? states)
     {
         // States takes precedence over State when non-empty — see PettyCashExpenseDocFilter XML doc.
         if (states is { Count: > 0 })
         {
-            return query.Where(r => states.Contains(r.Doc.DOC_STATE));
+            return docs.Where(d => states.Contains(d.DOC_STATE));
         }
 
         if (state is { } s)
         {
-            return query.Where(r => r.Doc.DOC_STATE == s);
+            return docs.Where(d => d.DOC_STATE == s);
         }
 
-        return query;
+        return docs;
+    }
+
+    /// <summary>Hydrates the full display <see cref="Row"/> shape for exactly these ids (a
+    /// bounded, already-paged set), preserving <paramref name="orderedIds"/>'s order since an
+    /// <c>IN</c>-style filter gives no ordering guarantee of its own.</summary>
+    private async Task<List<Row>> HydrateRowsAsync(IReadOnlyList<Guid> orderedIds, CancellationToken cancellationToken)
+    {
+        if (orderedIds.Count == 0)
+        {
+            return [];
+        }
+
+        var rows = await (
+            from doc in _dbContext.TB_PC_EXPENSE_DOCs.AsNoTracking()
+            where orderedIds.Contains(doc.ID)
+            join head in _dbContext.TB_CHARGEANDCOST_HEADs.AsNoTracking() on doc.CHARGEANDCOSTHEAD_ID equals head.ID
+            join fund in _dbContext.TB_REVOLVING_FUNDs.AsNoTracking() on doc.REVOLVINGFUND_ID equals fund.ID
+            join detail in _dbContext.TB_CHARGEANDCOST_DETAILs.AsNoTracking()
+                on (Guid?)doc.CHARGEANDCOSTHEAD_ID equals detail.CHARGEANDCOSTHEAD_ID into detailGroup
+            from detail in detailGroup.DefaultIfEmpty()
+            join expense in _dbContext.TB_EXPENCEs.AsNoTracking()
+                on detail!.EXPENSE_ID equals (Guid?)expense.ID into expenseGroup
+            from expense in expenseGroup.DefaultIfEmpty()
+            select new Row(doc, head, fund, detail, expense))
+            .ToListAsync(cancellationToken);
+
+        var rowsById = rows.ToDictionary(r => r.Doc.ID);
+        return orderedIds.Select(id => rowsById[id]).ToList();
     }
 
     public async Task<PettyCashExpenseDocListResult> GetPagedAsync(
@@ -91,27 +125,30 @@ public sealed class PettyCashExpenseDocReadRepository : IPettyCashExpenseDocRead
         string vahedCode,
         CancellationToken cancellationToken = default)
     {
-        var scopedQuery = ApplyFundAndSearch(BaseQuery(vahedCode), filter.FundId, filter.Search);
+        var scopedDocs = FilteredDocsQuery(vahedCode, filter.FundId, filter.Search);
 
         // Computed with fundId/search applied but the state/states filter deliberately IGNORED,
         // so one request populates every کارتابل tab badge — see PettyCashDocStateCountDto.
-        var stateCounts = await scopedQuery
-            .GroupBy(r => r.Doc.DOC_STATE)
+        var stateCounts = await scopedDocs
+            .GroupBy(d => d.DOC_STATE)
             .Select(g => new PettyCashDocStateCountDto(g.Key, g.Count()))
             .ToListAsync(cancellationToken);
 
-        var filteredQuery = ApplyState(scopedQuery, filter.State, filter.States);
+        var filteredDocs = ApplyState(scopedDocs, filter.State, filter.States);
 
-        var totalCount = await filteredQuery.CountAsync(cancellationToken);
+        var totalCount = await filteredDocs.CountAsync(cancellationToken);
 
         // Oldest-submitted-first: documents with no SUBMITTED_DATE (i.e. drafts) sort last, since
         // they are not yet in anyone's queue. ID is a pure tie-breaker for stable paging.
-        var rows = await filteredQuery
-            .OrderBy(r => r.Doc.SUBMITTED_DATE ?? DateTime.MaxValue)
-            .ThenBy(r => r.Doc.ID)
+        var pageIds = await filteredDocs
+            .OrderBy(d => d.SUBMITTED_DATE ?? DateTime.MaxValue)
+            .ThenBy(d => d.ID)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
+            .Select(d => d.ID)
             .ToListAsync(cancellationToken);
+
+        var rows = await HydrateRowsAsync(pageIds, cancellationToken);
 
         var now = DateTime.UtcNow;
         var items = rows.Select(r => ToListItemDto(r, now)).ToList();
