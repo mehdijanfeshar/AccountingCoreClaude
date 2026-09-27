@@ -110,10 +110,43 @@ GET  api/petty-cash/expense-docs/{id}/events       گردش عملیات
 
 ## ۸. خارج از دامنه / باز
 
-- **نقش‌ها (RBAC) و ماتریس SoD کامل (ص ۱۳):** بخش ۱ فقط تنظیمات تنخواه را می‌سازد. سیستم نقش پروژه امروز فقط `TB_PERSON_ACTION` است؛ تصمیم نقش‌ها در بخش ۲.
-- **پیوست:** `TB_ATTACH` فقط به سند حسابداری و دریافت/پرداخت ستون دارد. ساختن ستون جدید روی جدول Legacy = تغییر schema Legacy؛ در بخش ۲ تصمیم‌گیری می‌شود.
 - **مرکز هزینه:** در پاورپوینت هست، معادل مشخصی در schema ندارد (احتمالاً یک سطح تفصیلی) — بخش ۱ ندارد.
 - **فروش / حساب‌های دریافتنی:** خارج از دامنه (تصمیم ۳).
+
+### تصمیم‌های بخش ۲ (accounting-domain، ۲۰۲۶-۰۹-۲۷) — نقش‌ها، پیوست، دلایل برگشت
+
+**نقش‌ها (RBAC):** جدول جانبی جدید `TB_PC_REVIEWER`، نه `TB_PERSON_ACTION`. دلیل: `TB_PERSON_ACTION.USERID` کد ملی است (فضای هویتی جدا از `ICurrentUser.UserId`/`ADDUSERID` که بقیهٔ پروژه با آن مقایسه هویت می‌کند)، و `OPERATORROLE` یک نقش امضای مالی سازمانی بدون هیچ consumer فعلی است — تحمیل معنای «بررسی‌کنندهٔ این تنخواهِ خاص» رویش حدسی و مستندنشده است.
+
+```sql
+TB_PC_REVIEWER
+  ID CHAR(36) PK, REVOLVINGFUND_ID CHAR(36) NOT NULL FK->TB_REVOLVING_FUND,
+  REVIEWER_USERID VARCHAR2(10) NOT NULL,   -- فضای هویتی ICurrentUser.UserId/ADDUSERID، نه کد ملی
+  REVIEWER_NAME VARCHAR2(200),
+  + ستون‌های Audit استاندارد + UNIQUE(REVOLVINGFUND_ID, REVIEWER_USERID)
+```
+
+**قاعدهٔ SoD:** اکشن‌های بررسی/تأیید/برگشت/رد فقط برای کاربری مجازند که (۱) ردیف فعال در `TB_PC_REVIEWER` برای همان `REVOLVINGFUND_ID` دارد (وگرنه ۴۰۳) و (۲) `ICurrentUser.UserId != TB_PC_EXPENSE_DOC.ADDUSERID` (وگرنه ۴۰۹ — تعارض منافع، نه نبود دسترسی).
+
+**پیوست:** جدول جانبی جدید `TB_PC_ATTACHMENT` (BLOB در DB، هم‌الگو با `TB_ATTACH` Legacy — نه ستون جدید روی آن، نه فایل‌سیستم/Blob storage که در پروژه سابقه ندارد):
+
+```sql
+TB_PC_ATTACHMENT
+  ID CHAR(36) PK, EXPENSE_DOC_ID CHAR(36) NOT NULL FK->TB_PC_EXPENSE_DOC,
+  ATTACH_NAME VARCHAR2(255) NOT NULL, ATTACH_SIZE NUMBER(10) NOT NULL,
+  CONTENT_TYPE VARCHAR2(100), ATTACH_FILE BLOB NOT NULL, ATTACH_RADIF NUMBER(2) NOT NULL,
+  + ستون‌های Audit استاندارد
+```
+فقط در `DOC_STATE ∈ {Draft, Returned}` قابل افزودن/حذف (هم‌قاعدهٔ ویرایش §۴). سقف اندازه در FluentValidation (پیشنهاد ۱۰MB)، نه در DB. لیست پیوست بدون بایت برمی‌گردد؛ دانلود endpoint جدا.
+
+**دلایل برگشت:** enum ثابت `PettyCashReturnReason` (نه جدول قابل‌تنظیم — هم‌الگو با بقیهٔ enumهای این ماژول)، کدها در `TB_PC_DOC_EVENT.RETURN_REASONS` موجود (کاما-جدا) ذخیره می‌شوند، DDL عوض نمی‌شود. ⚠️ متن دقیق دلایل از پاورپوینت استخراج نشده — پیش‌نویس (نیازمند تأیید صاحب پروژه روی عبارت‌ها): فاکتور/رسید ناقص، تاریخ فاکتور نامعتبر، مغایرت مبلغ، اطلاعات فروشنده ناقص، مدارک پشتیبان ناقص، خارج از سقف/ضوابط تنخواه، سایر.
+
+**`RETURN_DEADLINE`:** بدون ستون «مهلت پیش‌فرض» در تنظیمات؛ بررسی‌کننده مهلت را در همان درخواست Return وارد می‌کند (الزامی، تاریخ بعد از امروز). عبور از مهلت فعلاً هیچ اکشن خودکاری ندارد (فقط اطلاعاتی).
+
+**گسترش `PettyCashDocAction`** (مقادیر ۵+ که در بخش ۱ رزرو شده بودند): `StartReview=5` (New→PendingReview)، `Approve=6` (PendingReview→Approved)، `Return=7` (PendingReview→Returned)، `Reject=8` (PendingReview→Rejected). تأیید گروهی enum جدا نمی‌خواهد — یک Command با لیست id، یک تراکنش، all-or-nothing.
+
+**API افزوده:** `POST expense-docs/{id}/start-review|approve|return|reject`، `POST expense-docs/bulk-approve`، `GET/POST funds/{fundId}/reviewers`، `POST funds/{fundId}/reviewers/{id}/delete`، `POST/GET expense-docs/{id}/attachments[...]`.
+
+**ریسک باز جدید:** `TB_PC_REVIEWER` مستقل از سیستم نقش مرکزی است؛ اگر IDP واقعی/RBAC مرکزی پیاده شد (ریسک #۱۰)، باید یکپارچه یا حذف شود — به `docs/open-decisions.md` اضافه شود.
 
 ### تصمیم‌های محافظه‌کارانهٔ پیاده‌سازی بخش ۱ (۲۰۲۶-۰۹-۲۷) — ابهام‌هایی که این سند صراحتاً پوشش نداده بود
 

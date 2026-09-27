@@ -1,12 +1,20 @@
+using Accounting.Application.PettyCash.Commands.ApprovePettyCashExpenseDoc;
+using Accounting.Application.PettyCash.Commands.BulkApprovePettyCashExpenseDocs;
 using Accounting.Application.PettyCash.Commands.CreatePettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Commands.DeletePettyCashExpenseDoc;
+using Accounting.Application.PettyCash.Commands.DeletePettyCashFundReviewer;
+using Accounting.Application.PettyCash.Commands.RejectPettyCashExpenseDoc;
+using Accounting.Application.PettyCash.Commands.ReturnPettyCashExpenseDoc;
+using Accounting.Application.PettyCash.Commands.StartReviewPettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Commands.SubmitPettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Commands.UpdatePettyCashExpenseDoc;
+using Accounting.Application.PettyCash.Commands.UpsertPettyCashFundReviewer;
 using Accounting.Application.PettyCash.Commands.UpsertPettyCashFundSetting;
 using Accounting.Application.PettyCash.Queries;
 using Accounting.Application.PettyCash.Queries.GetPettyCashDocEvents;
 using Accounting.Application.PettyCash.Queries.GetPettyCashExpenseDocById;
 using Accounting.Application.PettyCash.Queries.GetPettyCashExpenseDocs;
+using Accounting.Application.PettyCash.Queries.GetPettyCashFundReviewers;
 using Accounting.Application.PettyCash.Queries.GetPettyCashFunds;
 using Accounting.Application.PettyCash.Queries.GetPettyCashFundSetting;
 using Accounting.Domain.ValueObjects;
@@ -17,7 +25,9 @@ namespace Accounting.Api.Controllers;
 
 /// <summary>
 /// Thin HTTP surface over the petty-cash module, chunk 1 (<c>docs/tankhah-khazaneh-module.md</c>
-/// §5). Every action does nothing but: build a request → send it through MediatR → map the
+/// §5) and chunk 2 (بخش ۲ — review/approve/return/reject/bulk-approve + reviewer RBAC CRUD,
+/// same doc's "تصمیم‌های بخش ۲" section). Every action does nothing but: build a request → send
+/// it through MediatR → map the
 /// result to an <see cref="IActionResult"/>. No PUT/DELETE anywhere here — by explicit
 /// project-owner mandate, same as every other controller: Update/Delete are
 /// <c>POST {id}/update</c> and <c>POST {id}/delete</c>.
@@ -275,6 +285,155 @@ public sealed class PettyCashController : ControllerBase
         return Ok(new DeletePettyCashExpenseDocResponse(id));
     }
 
+    /// <summary>
+    /// بخش ۲ — moves a صورت‌هزینه from جدید to «در انتظار بررسی». Only an active
+    /// <c>TB_PC_REVIEWER</c> for the document's fund (who is not its own creator) may call this.
+    /// Takes no body.
+    /// </summary>
+    [HttpPost("expense-docs/{id:guid}/start-review")]
+    [ProducesResponseType(typeof(StartReviewPettyCashExpenseDocResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> StartReview(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new StartReviewPettyCashExpenseDocCommand(id), cancellationToken);
+
+        return Ok(new StartReviewPettyCashExpenseDocResponse(id));
+    }
+
+    /// <summary>بخش ۲ — moves a صورت‌هزینه from «در انتظار بررسی» to «تأییدشده».</summary>
+    [HttpPost("expense-docs/{id:guid}/approve")]
+    [ProducesResponseType(typeof(ApprovePettyCashExpenseDocResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Approve(
+        Guid id,
+        [FromBody] ApprovePettyCashExpenseDocRequest? request,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new ApprovePettyCashExpenseDocCommand(id, request?.Note), cancellationToken);
+
+        return Ok(new ApprovePettyCashExpenseDocResponse(id));
+    }
+
+    /// <summary>بخش ۲ — moves a صورت‌هزینه from «در انتظار بررسی» to «برگشتی»، با یک یا چند دلیل و مهلت اصلاح.</summary>
+    [HttpPost("expense-docs/{id:guid}/return")]
+    [ProducesResponseType(typeof(ReturnPettyCashExpenseDocResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Return(
+        Guid id,
+        [FromBody] ReturnPettyCashExpenseDocRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(
+            new ReturnPettyCashExpenseDocCommand(id, request.ReasonCodes, request.Deadline, request.Note),
+            cancellationToken);
+
+        return Ok(new ReturnPettyCashExpenseDocResponse(id));
+    }
+
+    /// <summary>بخش ۲ — moves a صورت‌هزینه from «در انتظار بررسی» to «ردشده» (پایانی، بدون ترمیم).</summary>
+    [HttpPost("expense-docs/{id:guid}/reject")]
+    [ProducesResponseType(typeof(RejectPettyCashExpenseDocResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Reject(
+        Guid id,
+        [FromBody] RejectPettyCashExpenseDocRequest? request,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new RejectPettyCashExpenseDocCommand(id, request?.Note), cancellationToken);
+
+        return Ok(new RejectPettyCashExpenseDocResponse(id));
+    }
+
+    /// <summary>
+    /// بخش ۲ — approves every id in <see cref="BulkApprovePettyCashExpenseDocsRequest.Ids"/> in
+    /// one all-or-nothing transaction. A 409 response's <c>failedIds</c> extension lists which ids
+    /// failed and why; none of the batch is approved when any one of them fails.
+    /// </summary>
+    [HttpPost("expense-docs/bulk-approve")]
+    [ProducesResponseType(typeof(BulkApprovePettyCashExpenseDocsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> BulkApprove(
+        [FromBody] BulkApprovePettyCashExpenseDocsRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new BulkApprovePettyCashExpenseDocsCommand(request.Ids), cancellationToken);
+
+        return Ok(new BulkApprovePettyCashExpenseDocsResponse(request.Ids));
+    }
+
+    /// <summary>بخش ۲ — every active بررسی‌کنندهٔ تنخواه configured for a fund.</summary>
+    [HttpGet("funds/{fundId:guid}/reviewers")]
+    [ProducesResponseType(typeof(IReadOnlyList<PettyCashFundReviewerDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetFundReviewers(Guid fundId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPettyCashFundReviewersQuery(fundId), cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>بخش ۲ — creates a new بررسی‌کننده for a fund, or reactivates/renames an existing one.</summary>
+    [HttpPost("funds/{fundId:guid}/reviewers")]
+    [ProducesResponseType(typeof(UpsertPettyCashFundReviewerResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpsertFundReviewer(
+        Guid fundId,
+        [FromBody] UpsertPettyCashFundReviewerRequest request,
+        CancellationToken cancellationToken)
+    {
+        var id = await _mediator.Send(
+            new UpsertPettyCashFundReviewerCommand(fundId, request.ReviewerUserId, request.ReviewerName),
+            cancellationToken);
+
+        return Ok(new UpsertPettyCashFundReviewerResponse(id));
+    }
+
+    /// <summary>بخش ۲ — soft-deletes a بررسی‌کننده.</summary>
+    [HttpPost("funds/{fundId:guid}/reviewers/{id:guid}/delete")]
+    [ProducesResponseType(typeof(DeletePettyCashFundReviewerResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteFundReviewer(Guid fundId, Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeletePettyCashFundReviewerCommand(fundId, id), cancellationToken);
+
+        return Ok(new DeletePettyCashFundReviewerResponse(id));
+    }
+
     /// <summary>«گردش عملیات» — the full audit trail for one صورت‌هزینه.</summary>
     [HttpGet("expense-docs/{id:guid}/events")]
     [ProducesResponseType(typeof(IReadOnlyList<PettyCashDocEventDto>), StatusCodes.Status200OK)]
@@ -344,3 +503,42 @@ public sealed record SubmitPettyCashExpenseDocResponse(Guid Id);
 
 /// <summary>Response body for a successful <see cref="PettyCashController.Delete"/> call.</summary>
 public sealed record DeletePettyCashExpenseDocResponse(Guid Id);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.StartReview"/> call.</summary>
+public sealed record StartReviewPettyCashExpenseDocResponse(Guid Id);
+
+/// <summary>Request body for <see cref="PettyCashController.Approve"/>. May be omitted entirely (no note).</summary>
+public sealed record ApprovePettyCashExpenseDocRequest(string? Note);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.Approve"/> call.</summary>
+public sealed record ApprovePettyCashExpenseDocResponse(Guid Id);
+
+/// <summary>Request body for <see cref="PettyCashController.Return"/>.</summary>
+public sealed record ReturnPettyCashExpenseDocRequest(
+    IReadOnlyList<int> ReasonCodes,
+    string Deadline,
+    string? Note);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.Return"/> call.</summary>
+public sealed record ReturnPettyCashExpenseDocResponse(Guid Id);
+
+/// <summary>Request body for <see cref="PettyCashController.Reject"/>. May be omitted entirely (no note).</summary>
+public sealed record RejectPettyCashExpenseDocRequest(string? Note);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.Reject"/> call.</summary>
+public sealed record RejectPettyCashExpenseDocResponse(Guid Id);
+
+/// <summary>Request body for <see cref="PettyCashController.BulkApprove"/>.</summary>
+public sealed record BulkApprovePettyCashExpenseDocsRequest(IReadOnlyList<Guid> Ids);
+
+/// <summary>Response body for a successful (all ids approved) <see cref="PettyCashController.BulkApprove"/> call.</summary>
+public sealed record BulkApprovePettyCashExpenseDocsResponse(IReadOnlyList<Guid> Ids);
+
+/// <summary>Request body for <see cref="PettyCashController.UpsertFundReviewer"/>. <c>FundId</c> comes from the route.</summary>
+public sealed record UpsertPettyCashFundReviewerRequest(string ReviewerUserId, string? ReviewerName);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.UpsertFundReviewer"/> call.</summary>
+public sealed record UpsertPettyCashFundReviewerResponse(Guid Id);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.DeleteFundReviewer"/> call.</summary>
+public sealed record DeletePettyCashFundReviewerResponse(Guid Id);

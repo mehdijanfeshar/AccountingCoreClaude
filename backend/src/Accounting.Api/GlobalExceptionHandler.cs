@@ -166,6 +166,33 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Bad Request",
                     pettyCashInvoiceYearMismatchException.PublicDetail)),
 
+            // Petty-cash module, chunk 2 (بخش ۲). Wrong DOC_STATE for the requested review
+            // action — same state-based-refusal shape as PettyCashDocNotEditableException.
+            PettyCashReviewStateConflictException pettyCashReviewStateConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashReviewStateConflictException.PublicDetail)),
+
+            // SoD part (ب): caller IS an active reviewer for the fund, but also created this very
+            // document — a conflict-of-interest state, not a permissions gap, hence 409.
+            PettyCashSelfReviewConflictException pettyCashSelfReviewConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashSelfReviewConflictException.PublicDetail)),
+
+            // BulkApprove all-or-nothing failure — one 409 regardless of how many/which ids
+            // failed or why; the per-id reasons ride along as a ProblemDetails extension so the
+            // caller can react per row without a second round-trip.
+            PettyCashBulkApproveConflictException pettyCashBulkApproveConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildBulkApproveConflictProblemDetails(httpContext, pettyCashBulkApproveConflictException)),
+
             NotFoundException => (
                 StatusCodes.Status404NotFound,
                 BuildProblemDetails(
@@ -219,6 +246,17 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     StatusCodes.Status403Forbidden,
                     "Forbidden",
                     "This record belongs to a different organizational unit.")),
+
+            // Petty-cash module, chunk 2 (بخش ۲), SoD part (الف): caller has no active
+            // TB_PC_REVIEWER row for this document's fund at all — a straight permissions gap,
+            // same shape as UnitAccessDeniedException above.
+            PettyCashReviewerAccessDeniedException pettyCashReviewerAccessDeniedException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    pettyCashReviewerAccessDeniedException.PublicDetail)),
 
             _ => (
                 StatusCodes.Status500InternalServerError,
@@ -289,5 +327,28 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             Detail = detail,
             Instance = httpContext.Request.Path,
         };
+    }
+
+    /// <summary>
+    /// Same shape as <see cref="BuildProblemDetails"/> plus a <c>failedIds</c> extension —
+    /// <c>[{ id, reason }, ...]</c> — so a bulk-approve caller can react per row without a second
+    /// round-trip. <c>reason</c> is one of the fixed machine-readable codes documented on
+    /// <see cref="PettyCashBulkApproveConflictException.Failures"/>.
+    /// </summary>
+    private static ProblemDetails BuildBulkApproveConflictProblemDetails(
+        HttpContext httpContext,
+        PettyCashBulkApproveConflictException exception)
+    {
+        var problemDetails = BuildProblemDetails(
+            httpContext,
+            StatusCodes.Status409Conflict,
+            "Conflict",
+            exception.PublicDetail);
+
+        problemDetails.Extensions["failedIds"] = exception.Failures
+            .Select(pair => new { id = pair.Key, reason = pair.Value })
+            .ToArray();
+
+        return problemDetails;
     }
 }

@@ -2,10 +2,11 @@ namespace Accounting.Domain.ValueObjects;
 
 /// <summary>
 /// Audit-trail action recorded on <c>TB_PC_DOC_EVENT.ACTION</c> for a صورت‌هزینهٔ تنخواه. Chunk 1
-/// (this file) only ever writes <see cref="Create"/>, <see cref="Update"/>, <see cref="Submit"/>
-/// and <see cref="Delete"/>. Values 5+ are deliberately reserved — not guessed at — for the بخش ۲
-/// review actions (<c>docs/tankhah-khazaneh-module.md</c> §۷: بررسی، برگشت، رد، تأیید) so that
-/// chunk 2 can add them without renumbering anything chunk 1 already persisted.
+/// wrote <see cref="Create"/>, <see cref="Update"/>, <see cref="Submit"/> and <see cref="Delete"/>.
+/// Chunk 2 (بخش ۲، <c>docs/tankhah-khazaneh-module.md</c> تصمیم‌های بخش ۲) fills the values that
+/// were deliberately reserved back then: <see cref="StartReview"/>, <see cref="Approve"/>,
+/// <see cref="Return"/> and <see cref="Reject"/>. Bulk approve reuses <see cref="Approve"/> — one
+/// event row per document, not a separate action value.
 /// </summary>
 public enum PettyCashDocAction
 {
@@ -21,5 +22,17 @@ public enum PettyCashDocAction
     /// <summary>سند (فقط از پیش‌نویس) حذف نرم شد.</summary>
     Delete = 4,
 
-    // 5..: Review / Return / Reject / Approve / Settle — بخش ۲/۳، عمداً هنوز تعریف نشده‌اند.
+    /// <summary>سند از «جدید» به «در انتظار بررسی» منتقل شد (بررسی‌کننده کارتابل را باز کرد).</summary>
+    StartReview = 5,
+
+    /// <summary>سند از «در انتظار بررسی» به «تأییدشده» منتقل شد (تکی یا از تأیید گروهی).</summary>
+    Approve = 6,
+
+    /// <summary>سند از «در انتظار بررسی» به «برگشتی» منتقل شد.</summary>
+    Return = 7,
+
+    /// <summary>سند از «در انتظار بررسی» به «ردشده» منتقل شد.</summary>
+    Reject = 8,
+
+    // 9..: Settle — بخش ۳، عمداً هنوز تعریف نشده است.
 }

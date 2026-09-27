@@ -172,6 +172,11 @@ public static class DependencyInjection
         services.AddScoped<IPettyCashExpenseDocReadRepository, PettyCashExpenseDocReadRepository>();
         services.AddScoped<IPettyCashDocEventReadRepository, PettyCashDocEventReadRepository>();
 
+        // Petty-cash module, chunk 2 (بخش ۲) — RBAC side table (docs/tankhah-khazaneh-module.md,
+        // تصمیم‌های بخش ۲).
+        services.AddScoped<IPettyCashFundReviewerRepository, PettyCashFundReviewerRepository>();
+        services.AddScoped<IPettyCashFundReviewerReadRepository, PettyCashFundReviewerReadRepository>();
+
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 
         return services;

@@ -103,6 +103,9 @@ public partial class LegacyDbContext : DbContext
 
     public virtual DbSet<TB_PC_FUND_SETTING> TB_PC_FUND_SETTINGs { get; set; }
 
+    // Petty-cash module, chunk 2 (بخش ۲) — RBAC side table, same owner-approved exception.
+    public virtual DbSet<TB_PC_REVIEWER> TB_PC_REVIEWERs { get; set; }
+
     public virtual DbSet<TB_PERSON_ACTION> TB_PERSON_ACTIONs { get; set; }
 
     public virtual DbSet<TB_PREDESCRIB> TB_PREDESCRIBs { get; set; }
@@ -1381,6 +1384,57 @@ public partial class LegacyDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(d => d.EXPENSE_DOC_ID)
                 .HasConstraintName("FK_PC_DOC_EVENT_EXPENSEDOC");
+        });
+
+        // Petty-cash module, chunk 2 (بخش ۲, 2026-09-27) — RBAC side table, same owner-approved
+        // exception and no-sys_guid()-DEFAULT convention as the chunk 1 tables above
+        // (docs/tankhah-khazaneh-module.md, "تصمیم‌های بخش ۲").
+        modelBuilder.Entity<TB_PC_REVIEWER>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_PC_REVIEWER");
+
+            entity.ToTable("TB_PC_REVIEWER");
+
+            // Mirrors the real UNIQUE constraint in backend/db/045_petty_cash_review.sql.
+            entity.HasIndex(e => new { e.REVOLVINGFUND_ID, e.REVIEWER_USERID }, "UK_PC_REVIEWER").IsUnique();
+            entity.HasIndex(e => e.REVOLVINGFUND_ID, "IDX_PC_REVIEWER_FUND");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.REVOLVINGFUND_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.REVIEWER_USERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.REVIEWER_NAME)
+                .HasMaxLength(200)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+
+            entity.HasOne(d => d.REVOLVINGFUND)
+                .WithMany()
+                .HasForeignKey(d => d.REVOLVINGFUND_ID)
+                .HasConstraintName("FK_PC_REVIEWER_REVOLVING");
         });
 
         modelBuilder.Entity<TB_CHECK>(entity =>

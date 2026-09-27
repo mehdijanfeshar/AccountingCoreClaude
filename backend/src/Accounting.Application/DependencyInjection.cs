@@ -64,6 +64,14 @@ public static class DependencyInjection
         services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashSubmitRuleChecker,
             Accounting.Application.PettyCash.Commands.Common.PettyCashSubmitRuleChecker>();
 
+        // Petty-cash module, chunk 2 (بخش ۲) — the SoD authorizer and the shared review-transition
+        // service used by StartReview/Approve/Return/Reject/BulkApprove. See
+        // IPettyCashReviewAuthorizer / IPettyCashReviewTransitionService XML docs.
+        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashReviewAuthorizer,
+            Accounting.Application.PettyCash.Commands.Common.PettyCashReviewAuthorizer>();
+        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashReviewTransitionService,
+            Accounting.Application.PettyCash.Commands.Common.PettyCashReviewTransitionService>();
+
         return services;
     }
 }
