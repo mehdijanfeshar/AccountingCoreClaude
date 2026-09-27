@@ -1,8 +1,8 @@
 using Accounting.Application.Common.Search;
-using Accounting.Application.Reports.CrossTab;
-using Accounting.Application.Reports.CrossTab.GetCrossTabReport;
 using Accounting.Application.Reports.MatrixReport;
 using Accounting.Application.Reports.MatrixReport.GetMatrixReport;
+using Accounting.Application.Reports.AccountReview;
+using Accounting.Application.Reports.AccountReview.GetAccountReview;
 using Accounting.Application.Reports.TrialBalance;
 using Accounting.Application.Reports.TrialBalance.GetTrialBalance4;
 using Accounting.Application.Reports.TrialBalance.GetTrialBalance6;
@@ -168,7 +168,7 @@ public sealed class TrialBalanceReportsController : ControllerBase
     }
 
     /// <summary>
-    /// گزارش ماتریسی (تلفیقی) — aggregates voucher activity at one level of the coding hierarchy
+    /// مرور حساب‌ها — aggregates voucher activity at one level of the coding hierarchy
     /// (گروه/کل/معین) or at one of the seven تفصیلی levels, chosen by <paramref name="level"/>,
     /// optionally narrowed to a path through the levels above it.
     ///
@@ -191,26 +191,26 @@ public sealed class TrialBalanceReportsController : ControllerBase
     /// <c>IVahedScopedQuery</c>, hence the <b>403</b>.
     /// </para>
     /// </summary>
-    [HttpGet("matrix")]
-    [ProducesResponseType(typeof(MatrixReportResultDto), StatusCodes.Status200OK)]
+    [HttpGet("account-review")]
+    [ProducesResponseType(typeof(AccountReviewResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetMatrixReport(
+    public async Task<IActionResult> GetAccountReview(
         [FromQuery] string year = "",
-        [FromQuery] MatrixReportLevel level = MatrixReportLevel.Moin,
+        [FromQuery] AccountReviewLevel level = AccountReviewLevel.Moin,
         [FromQuery] string? fromDate = null,
         [FromQuery] string? toDate = null,
         [FromQuery] string? fromVoucherNo = null,
         [FromQuery] string? toVoucherNo = null,
         [FromQuery] int? docLife = null,
         [FromQuery] Guid? systemTypeId = null,
-        [FromQuery] List<MatrixReportScopeItem>? scope = null,
+        [FromQuery] List<AccountReviewScopeItem>? scope = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetMatrixReportQuery(
+            new GetAccountReviewQuery(
                 year,
                 level,
                 scope,
@@ -226,11 +226,11 @@ public sealed class TrialBalanceReportsController : ControllerBase
     }
 
     /// <summary>
-    /// گزارش متقاطع — turnover crossed over two dimensions at once: one on the rows, one on the
+    /// گزارش ماتریسی — turnover crossed over two dimensions at once: one on the rows, one on the
     /// columns, بدهکار/بستانکار in each intersection.
     ///
     /// <para>
-    /// <b>A separate report from <see cref="GetMatrixReport"/>, not a replacement.</b> That one
+    /// <b>A separate report from <see cref="GetAccountReview"/>, not a replacement.</b> That one
     /// groups by a single level and is navigated کل↔جزء; its output is a list. This one produces a
     /// grid, and answers a question the other cannot ask — «این تفصیلی در کدام معین‌ها گردش داشته».
     /// </para>
@@ -247,16 +247,16 @@ public sealed class TrialBalanceReportsController : ControllerBase
     /// <b>400</b> also covers the two axes being the same dimension.
     /// </para>
     /// </summary>
-    [HttpGet("cross-tab")]
-    [ProducesResponseType(typeof(CrossTabResultDto), StatusCodes.Status200OK)]
+    [HttpGet("matrix")]
+    [ProducesResponseType(typeof(MatrixResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetCrossTabReport(
+    public async Task<IActionResult> GetMatrixReport(
         [FromQuery] string year = "",
-        [FromQuery] CrossTabDimension rowDimension = CrossTabDimension.Tafsili1,
-        [FromQuery] CrossTabDimension columnDimension = CrossTabDimension.Moin,
+        [FromQuery] MatrixDimension rowDimension = MatrixDimension.Tafsili1,
+        [FromQuery] MatrixDimension columnDimension = MatrixDimension.Moin,
         [FromQuery] string? fromDate = null,
         [FromQuery] string? toDate = null,
         [FromQuery] int? docLife = null,
@@ -266,7 +266,7 @@ public sealed class TrialBalanceReportsController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetCrossTabReportQuery(
+            new GetMatrixReportQuery(
                 year,
                 rowDimension,
                 columnDimension,

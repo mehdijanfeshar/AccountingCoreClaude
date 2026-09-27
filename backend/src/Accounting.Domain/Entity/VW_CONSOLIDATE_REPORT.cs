@@ -3,7 +3,9 @@ using System;
 namespace Accounting.Domain.Entity;
 
 /// <summary>
-/// گزارش ماتریسی/تلفیقی — projection of the Oracle view <c>VW_CONSOLIDATE_REPORT</c>.
+/// مرور حساب‌ها و گزارش ماتریسی — projection of the Oracle view <c>VW_CONSOLIDATE_REPORT</c>.
+/// Both reports read this one view: it already flattens the account hierarchy and all seven
+/// تفصیلی levels onto every line, which is why neither of them needs a join.
 ///
 /// <para>
 /// <b>The first view-backed type in this project</b>, and the first report that actually follows

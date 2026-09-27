@@ -8,7 +8,7 @@ namespace Accounting.Application.Reports.MatrixReport.GetMatrixReport;
 /// <see cref="IUnitOfWork"/> — there is nothing to persist.
 /// </summary>
 public sealed class GetMatrixReportQueryHandler
-    : IRequestHandler<GetMatrixReportQuery, MatrixReportResultDto>
+    : IRequestHandler<GetMatrixReportQuery, MatrixResultDto>
 {
     private readonly IMatrixReportReadRepository _readRepository;
 
@@ -17,7 +17,7 @@ public sealed class GetMatrixReportQueryHandler
         _readRepository = readRepository;
     }
 
-    public Task<MatrixReportResultDto> Handle(
+    public Task<MatrixResultDto> Handle(
         GetMatrixReportQuery request,
         CancellationToken cancellationToken)
         => _readRepository.GetAsync(request, cancellationToken);

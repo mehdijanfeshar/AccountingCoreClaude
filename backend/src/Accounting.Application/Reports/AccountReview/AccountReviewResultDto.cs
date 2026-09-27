@@ -1,4 +1,4 @@
-namespace Accounting.Application.Reports.MatrixReport;
+namespace Accounting.Application.Reports.AccountReview;
 
 /// <summary>
 /// One resolved step of the drill-down path, with the name the UI needs for its breadcrumb.
@@ -11,14 +11,14 @@ namespace Accounting.Application.Reports.MatrixReport;
 /// path is echoed back regardless, so a mistyped code shows as «کد بدون نام» rather than silently
 /// vanishing from the breadcrumb.
 /// </param>
-public sealed record MatrixReportScopeDto(
-    MatrixReportLevel Level,
+public sealed record AccountReviewScopeDto(
+    AccountReviewLevel Level,
     string LevelLabel,
     string Code,
     string Name);
 
 /// <summary>
-/// The full answer for گزارش ماتریسی: the rows at the requested level, the path that led there,
+/// The full answer for مرور حساب‌ها: the rows at the requested level, the path that led there,
 /// and which levels are worth offering next.
 ///
 /// <para>
@@ -37,9 +37,9 @@ public sealed record MatrixReportScopeDto(
 /// destination — offering every level unconditionally is what makes a drill-down feel like a maze
 /// of empty tables.
 /// </param>
-public sealed record MatrixReportResultDto(
-    IReadOnlyList<MatrixReportRowDto> Rows,
-    MatrixReportLevel Level,
+public sealed record AccountReviewResultDto(
+    IReadOnlyList<AccountReviewRowDto> Rows,
+    AccountReviewLevel Level,
     string LevelLabel,
-    IReadOnlyList<MatrixReportScopeDto> Scope,
-    IReadOnlyList<MatrixReportLevel> AvailableLevels);
+    IReadOnlyList<AccountReviewScopeDto> Scope,
+    IReadOnlyList<AccountReviewLevel> AvailableLevels);

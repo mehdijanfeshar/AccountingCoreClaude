@@ -3,106 +3,126 @@ using Accounting.Application.Reports.MatrixReport.GetMatrixReport;
 
 namespace Accounting.Application.Tests.Reports.MatrixReport;
 
-/// <summary>
-/// The scope rules are the ones worth pinning. A contradictory path — a level repeated, or a step
-/// deeper than the level being listed — would otherwise answer with an empty table, which is
-/// indistinguishable from «داده‌ای نیست» and sends the user looking for missing data instead of a
-/// bad request.
-/// </summary>
 public sealed class GetMatrixReportQueryValidatorTests
 {
-    private readonly GetMatrixReportQueryValidator _validator = new();
+    private static readonly GetMatrixReportQueryValidator Validator = new();
 
-    private static MatrixReportScopeItem Step(MatrixReportLevel level, string code)
-        => new() { Level = level, Code = code };
-
-    private static GetMatrixReportQuery ValidQuery(params MatrixReportScopeItem[] scope) => new(
-        Year: "1404",
-        Level: MatrixReportLevel.Moin,
-        Scope: scope,
-        FromDate: "14040101",
-        ToDate: "14041230",
-        FromVoucherNo: "1",
-        ToVoucherNo: "100",
-        DocLife: 2,
-        SystemTypeId: null)
-    {
-        VahedCode = "0001",
-    };
+    private static GetMatrixReportQuery ValidQuery() => new(
+        Year: "1403",
+        RowDimension: MatrixDimension.Tafsili1,
+        ColumnDimension: MatrixDimension.Moin,
+        FromDate: null,
+        ToDate: null,
+        DocLife: null,
+        SystemTypeId: null,
+        RowCodeFilter: null,
+        ColumnCodeFilter: null);
 
     [Fact]
-    public void Valid_query_without_a_scope_passes()
+    public void Validate_ValidQuery_Passes()
     {
-        Assert.True(_validator.Validate(ValidQuery()).IsValid);
-    }
-
-    [Fact]
-    public void A_scope_of_shallower_levels_passes()
-    {
-        var query = ValidQuery(
-            Step(MatrixReportLevel.Group, "1"),
-            Step(MatrixReportLevel.Kol, "10"));
-
-        Assert.True(_validator.Validate(query).IsValid);
-    }
-
-    [Fact]
-    public void A_scope_step_at_or_below_the_listed_level_is_rejected()
-    {
-        Assert.False(_validator.Validate(ValidQuery(Step(MatrixReportLevel.Moin, "1010"))).IsValid);
-        Assert.False(_validator.Validate(ValidQuery(Step(MatrixReportLevel.Tafsili1, "T1"))).IsValid);
-    }
-
-    [Fact]
-    public void The_same_level_twice_is_rejected()
-    {
-        var query = ValidQuery(
-            Step(MatrixReportLevel.Group, "1"),
-            Step(MatrixReportLevel.Group, "2"));
-
-        Assert.False(_validator.Validate(query).IsValid);
-    }
-
-    [Fact]
-    public void A_scope_step_needs_a_code()
-    {
-        Assert.False(_validator.Validate(ValidQuery(Step(MatrixReportLevel.Group, ""))).IsValid);
-    }
-
-    [Fact]
-    public void A_code_longer_than_the_widest_column_is_rejected()
-    {
-        var tooLong = new string('9', GetMatrixReportQueryValidator.MaxCodeLength + 1);
-
-        Assert.False(_validator.Validate(ValidQuery(Step(MatrixReportLevel.Group, tooLong))).IsValid);
-    }
-
-    [Fact]
-    public void A_scope_step_at_an_unknown_level_is_rejected()
-    {
-        Assert.False(_validator.Validate(ValidQuery(Step((MatrixReportLevel)99, "1"))).IsValid);
+        Assert.True(Validator.Validate(ValidQuery()).IsValid);
     }
 
     [Theory]
     [InlineData("")]
-    [InlineData("140")]
-    [InlineData("سال")]
-    public void Year_must_be_four_digits(string year)
+    [InlineData("14")]
+    [InlineData("14035")]
+    [InlineData("abcd")]
+    public void Validate_BadYear_Fails(string year)
     {
-        Assert.False(_validator.Validate(ValidQuery() with { Year = year }).IsValid);
+        Assert.False(Validator.Validate(ValidQuery() with { Year = year }).IsValid);
+    }
+
+    /// <summary>
+    /// The load-bearing rule. Crossing a dimension with itself leaves every off-diagonal cell
+    /// empty by construction, and answering it with a mostly-blank grid is indistinguishable from
+    /// «داده‌ای نیست».
+    /// </summary>
+    [Fact]
+    public void Validate_SameDimensionOnBothAxes_Fails()
+    {
+        var result = Validator.Validate(ValidQuery() with
+        {
+            RowDimension = MatrixDimension.Moin,
+            ColumnDimension = MatrixDimension.Moin,
+        });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.ErrorMessage.Contains("یکی"));
     }
 
     [Fact]
-    public void Inverted_date_range_is_rejected()
+    public void Validate_EveryDistinctDimensionPair_Passes()
     {
-        Assert.False(_validator
-            .Validate(ValidQuery() with { FromDate = "14041230", ToDate = "14040101" })
-            .IsValid);
+        var all = Enum.GetValues<MatrixDimension>();
+
+        foreach (var row in all)
+        {
+            foreach (var column in all.Where(c => c != row))
+            {
+                var result = Validator.Validate(ValidQuery() with
+                {
+                    RowDimension = row,
+                    ColumnDimension = column,
+                });
+                Assert.True(result.IsValid, $"{row} × {column} should be valid");
+            }
+        }
     }
 
     [Fact]
-    public void Doc_life_outside_the_known_range_is_rejected()
+    public void Validate_DimensionOutsideEnum_Fails()
     {
-        Assert.False(_validator.Validate(ValidQuery() with { DocLife = 9 }).IsValid);
+        Assert.False(Validator.Validate(ValidQuery() with { RowDimension = (MatrixDimension)99 }).IsValid);
+        Assert.False(Validator.Validate(ValidQuery() with { ColumnDimension = (MatrixDimension)0 }).IsValid);
+    }
+
+    [Theory]
+    [InlineData("1403051")]
+    [InlineData("1403/05/15")]
+    public void Validate_MalformedDate_Fails(string date)
+    {
+        Assert.False(Validator.Validate(ValidQuery() with { FromDate = date }).IsValid);
+        Assert.False(Validator.Validate(ValidQuery() with { ToDate = date }).IsValid);
+    }
+
+    /// <summary>
+    /// An inverted range silently returns nothing, which reads to the user as missing data rather
+    /// than as bounds typed backwards.
+    /// </summary>
+    [Fact]
+    public void Validate_InvertedDateRange_Fails()
+    {
+        Assert.False(Validator.Validate(ValidQuery() with
+        {
+            FromDate = "14031229",
+            ToDate = "14030101",
+        }).IsValid);
+    }
+
+    [Fact]
+    public void Validate_EqualDateBounds_Pass()
+    {
+        Assert.True(Validator.Validate(ValidQuery() with
+        {
+            FromDate = "14030515",
+            ToDate = "14030515",
+        }).IsValid);
+    }
+
+    [Fact]
+    public void Validate_OverlongCodeFilter_Fails()
+    {
+        var tooLong = new string('1', GetMatrixReportQueryValidator.MaxCodeLength + 1);
+
+        Assert.False(Validator.Validate(ValidQuery() with { RowCodeFilter = tooLong }).IsValid);
+        Assert.False(Validator.Validate(ValidQuery() with { ColumnCodeFilter = tooLong }).IsValid);
+    }
+
+    [Fact]
+    public void Validate_EmptySystemTypeId_Fails()
+    {
+        Assert.False(Validator.Validate(ValidQuery() with { SystemTypeId = Guid.Empty }).IsValid);
     }
 }

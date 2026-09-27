@@ -146,7 +146,7 @@ public partial class LegacyDbContext : DbContext
 
     public virtual DbSet<TB_YEAR> TB_YEARs { get; set; }
 
-    /// <summary>گزارش ماتریسی — keyless, read-only projection of the Oracle view.</summary>
+    /// <summary>مرور حساب‌ها و گزارش ماتریسی — keyless, read-only projection of the Oracle view.</summary>
     public virtual DbSet<VW_CONSOLIDATE_REPORT> VW_CONSOLIDATE_REPORTs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

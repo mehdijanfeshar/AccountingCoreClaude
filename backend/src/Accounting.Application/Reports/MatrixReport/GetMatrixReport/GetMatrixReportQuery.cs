@@ -5,44 +5,59 @@ using System.Text.Json.Serialization;
 namespace Accounting.Application.Reports.MatrixReport.GetMatrixReport;
 
 /// <summary>
-/// گزارش ماتریسی (تلفیقی) — voucher activity aggregated at a chosen level of the coding or تفصیلی
-/// hierarchy, optionally narrowed to a path through the levels above it. READ-ONLY; reads the
+/// گزارش ماتریسی — voucher turnover aggregated across <b>two</b> dimensions at once: one on the
+/// rows, one on the columns, with بدهکار/بستانکار in each intersection. READ-ONLY; reads the
 /// Oracle view <c>VW_CONSOLIDATE_REPORT</c>.
 ///
 /// <para>
-/// <b><see cref="Scope"/> is what makes this report different from تراز آزمایشی.</b> Without it,
-/// "group by معین" is a flat list the trial balance already produces at its own levels. With it,
-/// the same query answers «معین‌های داخل این کل» — so the report is navigated from کل to جزء by
-/// appending a step, and from جزء to کل by dropping one. The view carries every level's code on
-/// each line, so a step is one equality filter and depth costs nothing.
+/// <b>How this differs from مرور حساب‌ها, which it does not replace.</b> That report groups by
+/// <i>one</i> level and is navigated from کل to جزء; its output is a list. This one crosses two
+/// dimensions and its output is a grid, so it answers a question the other cannot ask at all —
+/// «این تفصیلی در کدام معین‌ها گردش داشته، و چقدر؟». Both were kept because both are useful; the
+/// project owner asked for this as a new report rather than a change to the existing one.
 /// </para>
 ///
 /// <para>
-/// Not paged: a partial aggregate is not a smaller answer, it is a wrong one — its totals would
-/// not add up to anything real. The client may slice rows it already holds.
+/// <b>Working-rule #2 is satisfied by construction, not by exception.</b> Every dimension here is
+/// already a column of <c>VW_CONSOLIDATE_REPORT</c> — the view flattens the account hierarchy and
+/// all seven تفصیلی levels onto each line — so the whole pivot is one GROUP BY over a read model,
+/// with no join and no raw SQL. The two documented exceptions (phases 18 and 41) do not extend
+/// here and must not be cited as precedent for it.
+/// </para>
+///
+/// <para>
+/// Not paged, for the same reason as مرور حساب‌ها: half of an aggregate is not a smaller answer,
+/// it is a wrong one. Column <i>count</i> is capped instead — see
+/// <see cref="GetMatrixReportQueryValidator.MaxColumns"/> — because the column set is
+/// data-dependent and an unbounded pivot can produce a grid no client can render.
 /// </para>
 /// </summary>
 /// <param name="Year">سال مالی — required exact match.</param>
-/// <param name="Level">Which level to group by. Must be deeper than every step of <paramref name="Scope"/>.</param>
-/// <param name="Scope">
-/// Ordered drill-down path, shallowest first. Empty means the whole unit — the top of the report.
-/// </param>
+/// <param name="RowDimension">What the rows are.</param>
+/// <param name="ColumnDimension">What the columns are. Must differ from <paramref name="RowDimension"/>.</param>
 /// <param name="FromDate">Optional Jalali <c>YYYYMMDD</c> lower bound on تاریخ سند (inclusive).</param>
 /// <param name="ToDate">Optional Jalali <c>YYYYMMDD</c> upper bound on تاریخ سند (inclusive).</param>
-/// <param name="FromVoucherNo">Optional lower bound on شماره سند (inclusive).</param>
-/// <param name="ToVoucherNo">Optional upper bound on شماره سند (inclusive).</param>
 /// <param name="DocLife">Optional exact وضعیت سند filter.</param>
 /// <param name="SystemTypeId">Optional نوع سند filter.</param>
+/// <param name="RowCodeFilter">
+/// Optional «شروع با» narrowing on the row dimension's code — the row half of the reference
+/// screen's «فیلتر سطر».
+/// </param>
+/// <param name="ColumnCodeFilter">
+/// Optional «شروع با» narrowing on the column dimension's code — the «فیلتر ستون» half. This is
+/// also the practical answer to a pivot that is too wide: narrow the columns rather than raise the
+/// cap.
+/// </param>
 public sealed record GetMatrixReportQuery(
     string Year,
-    MatrixReportLevel Level,
-    IReadOnlyList<MatrixReportScopeItem>? Scope,
+    MatrixDimension RowDimension,
+    MatrixDimension ColumnDimension,
     string? FromDate,
     string? ToDate,
-    string? FromVoucherNo,
-    string? ToVoucherNo,
     int? DocLife,
-    Guid? SystemTypeId) : IRequest<MatrixReportResultDto>, IVahedScopedQuery
+    Guid? SystemTypeId,
+    string? RowCodeFilter,
+    string? ColumnCodeFilter) : IRequest<MatrixResultDto>, IVahedScopedQuery
 {
     /// <summary>
     /// Server-assigned by <c>VahedScopeBehavior</c> from the caller's effective unit — never bound

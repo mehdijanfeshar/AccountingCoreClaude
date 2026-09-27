@@ -1,4 +1,4 @@
-namespace Accounting.Application.Reports.CrossTab;
+namespace Accounting.Application.Reports.MatrixReport;
 
 /// <summary>
 /// One column of the cross-tab — a distinct value of the column dimension.
@@ -13,7 +13,7 @@ namespace Accounting.Application.Reports.CrossTab;
 /// <param name="Name">Its title, for the header.</param>
 /// <param name="Debtor">Column total, بدهکار.</param>
 /// <param name="Creditor">Column total, بستانکار.</param>
-public sealed record CrossTabColumnDto(
+public sealed record MatrixColumnDto(
     string Code,
     string Name,
     decimal Debtor,
@@ -31,7 +31,7 @@ public sealed record CrossTabColumnDto(
 /// <param name="ColumnCode">Which column this cell belongs to.</param>
 /// <param name="Debtor">بدهکار at this intersection.</param>
 /// <param name="Creditor">بستانکار at this intersection.</param>
-public sealed record CrossTabCellDto(
+public sealed record MatrixCellDto(
     string ColumnCode,
     decimal Debtor,
     decimal Creditor);
@@ -44,10 +44,10 @@ public sealed record CrossTabCellDto(
 /// <param name="Cells">Populated intersections only; absent column codes are zero.</param>
 /// <param name="Debtor">Row total, بدهکار.</param>
 /// <param name="Creditor">Row total, بستانکار.</param>
-public sealed record CrossTabRowDto(
+public sealed record MatrixRowDto(
     string Code,
     string Name,
-    IReadOnlyList<CrossTabCellDto> Cells,
+    IReadOnlyList<MatrixCellDto> Cells,
     decimal Debtor,
     decimal Creditor);
 
@@ -77,13 +77,13 @@ public sealed record CrossTabRowDto(
 /// so on screen.
 /// </para>
 /// </param>
-public sealed record CrossTabResultDto(
-    CrossTabDimension RowDimension,
+public sealed record MatrixResultDto(
+    MatrixDimension RowDimension,
     string RowDimensionLabel,
-    CrossTabDimension ColumnDimension,
+    MatrixDimension ColumnDimension,
     string ColumnDimensionLabel,
-    IReadOnlyList<CrossTabColumnDto> Columns,
-    IReadOnlyList<CrossTabRowDto> Rows,
+    IReadOnlyList<MatrixColumnDto> Columns,
+    IReadOnlyList<MatrixRowDto> Rows,
     decimal Debtor,
     decimal Creditor,
     int TotalColumnCount,

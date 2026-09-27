@@ -1,7 +1,7 @@
-namespace Accounting.Application.Reports.MatrixReport;
+namespace Accounting.Application.Reports.AccountReview;
 
 /// <summary>
-/// Which level گزارش ماتریسی aggregates by — the report's single most important input.
+/// Which level مرور حساب‌ها aggregates by — the report's single most important input.
 ///
 /// <para>
 /// Mirrors the reference project's <c>typeShow</c> (1..10) exactly, including the ordering, so the
@@ -11,7 +11,7 @@ namespace Accounting.Application.Reports.MatrixReport;
 /// ten without a different join per level.
 /// </para>
 /// </summary>
-public enum MatrixReportLevel
+public enum AccountReviewLevel
 {
     /// <summary>گروه.</summary>
     Group = 1,

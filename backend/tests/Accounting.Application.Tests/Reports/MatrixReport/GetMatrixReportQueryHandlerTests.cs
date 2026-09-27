@@ -1,31 +1,31 @@
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Common.Security;
-using Accounting.Application.Reports.CrossTab;
-using Accounting.Application.Reports.CrossTab.GetCrossTabReport;
+using Accounting.Application.Reports.MatrixReport;
+using Accounting.Application.Reports.MatrixReport.GetMatrixReport;
 using Moq;
 
-namespace Accounting.Application.Tests.Reports.CrossTab;
+namespace Accounting.Application.Tests.Reports.MatrixReport;
 
-public sealed class GetCrossTabReportQueryHandlerTests
+public sealed class GetMatrixReportQueryHandlerTests
 {
-    private static GetCrossTabReportQuery Query() => new(
-        "1403", CrossTabDimension.Tafsili1, CrossTabDimension.Moin,
+    private static GetMatrixReportQuery Query() => new(
+        "1403", MatrixDimension.Tafsili1, MatrixDimension.Moin,
         null, null, null, null, null, null);
 
     [Fact]
     public async Task Handle_ReturnsRepositoryResult()
     {
-        var expected = new CrossTabResultDto(
-            CrossTabDimension.Tafsili1, "تفصیلی ۱",
-            CrossTabDimension.Moin, "معین",
+        var expected = new MatrixResultDto(
+            MatrixDimension.Tafsili1, "تفصیلی ۱",
+            MatrixDimension.Moin, "معین",
             [], [], 0m, 0m, 0, false);
 
-        var repository = new Mock<ICrossTabReportReadRepository>();
+        var repository = new Mock<IMatrixReportReadRepository>();
         repository
-            .Setup(r => r.GetAsync(It.IsAny<GetCrossTabReportQuery>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetAsync(It.IsAny<GetMatrixReportQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
-        var handler = new GetCrossTabReportQueryHandler(repository.Object);
+        var handler = new GetMatrixReportQueryHandler(repository.Object);
 
         Assert.Same(expected, await handler.Handle(Query(), CancellationToken.None));
     }
@@ -37,14 +37,14 @@ public sealed class GetCrossTabReportQueryHandlerTests
         var token = cts.Token;
         var query = Query();
 
-        var repository = new Mock<ICrossTabReportReadRepository>();
+        var repository = new Mock<IMatrixReportReadRepository>();
         repository
             .Setup(r => r.GetAsync(query, token))
-            .ReturnsAsync(new CrossTabResultDto(
-                CrossTabDimension.Tafsili1, "تفصیلی ۱", CrossTabDimension.Moin, "معین",
+            .ReturnsAsync(new MatrixResultDto(
+                MatrixDimension.Tafsili1, "تفصیلی ۱", MatrixDimension.Moin, "معین",
                 [], [], 0m, 0m, 0, false));
 
-        var handler = new GetCrossTabReportQueryHandler(repository.Object);
+        var handler = new GetMatrixReportQueryHandler(repository.Object);
 
         await handler.Handle(query, token);
 
@@ -54,7 +54,7 @@ public sealed class GetCrossTabReportQueryHandlerTests
     [Fact]
     public void Constructor_DoesNotDependOnIUnitOfWork()
     {
-        var parameterTypes = typeof(GetCrossTabReportQueryHandler)
+        var parameterTypes = typeof(GetMatrixReportQueryHandler)
             .GetConstructors()
             .SelectMany(c => c.GetParameters())
             .Select(p => p.ParameterType);
@@ -70,6 +70,6 @@ public sealed class GetCrossTabReportQueryHandlerTests
     [Fact]
     public void Query_IsVahedScoped()
     {
-        Assert.True(typeof(IVahedScopedQuery).IsAssignableFrom(typeof(GetCrossTabReportQuery)));
+        Assert.True(typeof(IVahedScopedQuery).IsAssignableFrom(typeof(GetMatrixReportQuery)));
     }
 }

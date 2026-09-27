@@ -32,7 +32,7 @@ namespace Accounting.Infrastructure.Repositories;
 /// </para>
 ///
 /// <para>
-/// Compare <see cref="MatrixReportReadRepository"/>, which does follow rule #2: its view joins each
+/// Compare <see cref="AccountReviewReadRepository"/>, which does follow rule #2: its view joins each
 /// تفصیلی level separately (<c>level_code = n</c>), keeps one row per line, and filters
 /// <c>isdeleted = 0</c> in the join. The rule is sound; this particular view is not.
 /// </para>

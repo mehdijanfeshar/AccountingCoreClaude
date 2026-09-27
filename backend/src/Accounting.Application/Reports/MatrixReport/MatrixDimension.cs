@@ -1,15 +1,15 @@
-namespace Accounting.Application.Reports.CrossTab;
+namespace Accounting.Application.Reports.MatrixReport;
 
 /// <summary>
 /// A dimension the cross-tab can put on either axis — the same ten levels
-/// <see cref="MatrixReport.MatrixReportLevel"/> offers, deliberately declared as its own type.
+/// <see cref="AccountReview.AccountReviewLevel"/> offers, deliberately declared as its own type.
 ///
 /// <para>
-/// <b>Why a separate enum rather than reusing <c>MatrixReportLevel</c>.</b> There, a level is
+/// <b>Why a separate enum rather than reusing <c>AccountReviewLevel</c>.</b> There, a level is
 /// "which level am I aggregating at" and the report has exactly one. Here it is "what goes on this
 /// axis", and there are two independent choices. Sharing the type would couple two reports that
 /// are free to grow apart — the moment this one gains نوع سند or کاربر as an axis (both are
-/// columns on the same view), <c>MatrixReportLevel</c> would inherit a value that is meaningless
+/// columns on the same view), <c>AccountReviewLevel</c> would inherit a value that is meaningless
 /// as a drill-down level. The numeric values are kept identical so the two are trivially
 /// comparable when reading logs.
 /// </para>
@@ -20,7 +20,7 @@ namespace Accounting.Application.Reports.CrossTab;
 /// reason a pivot across any pair of them is one <c>GROUP BY</c> with no joins.
 /// </para>
 /// </summary>
-public enum CrossTabDimension
+public enum MatrixDimension
 {
     /// <summary>گروه.</summary>
     Group = 1,

@@ -143,7 +143,7 @@ public sealed class OracleBooleanProjectionTests
     {
         using var context = CreateOracleContext();
 
-        // The shape MatrixReportReadRepository actually uses now: ISDELETED read and compared as a
+        // The shape AccountReviewReadRepository actually uses now: ISDELETED read and compared as a
         // number, so nothing boolean reaches the SQL.
         var sql = context.VW_CONSOLIDATE_REPORTs
             .AsNoTracking()

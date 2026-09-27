@@ -1,7 +1,7 @@
-namespace Accounting.Application.Reports.MatrixReport;
+namespace Accounting.Application.Reports.AccountReview;
 
 /// <summary>
-/// One aggregated row of گزارش ماتریسی.
+/// One aggregated row of مرور حساب‌ها.
 /// </summary>
 /// <param name="Code">The code at the selected level (گروه/کل/معین code, or تفصیلی code).</param>
 /// <param name="Name">Its name.</param>
@@ -24,7 +24,7 @@ namespace Accounting.Application.Reports.MatrixReport;
 /// and offering a drill-down that lands on an empty table reads as a broken report.
 /// </para>
 /// </summary>
-public sealed record MatrixReportRowDto(
+public sealed record AccountReviewRowDto(
     string Code,
     string Name,
     string LevelLabel,

@@ -9,20 +9,21 @@ using Microsoft.EntityFrameworkCore;
 namespace Accounting.Infrastructure.Tests.Repositories;
 
 /// <summary>
-/// گزارش ماتریسی — aggregation, level pivoting, filtering and unit scoping over the
-/// <c>VW_CONSOLIDATE_REPORT</c> view.
+/// گزارش ماتریسی — the two-axis pivot over <c>VW_CONSOLIDATE_REPORT</c>.
 ///
 /// <para>
-/// The view is created here as a plain SQLite table: SQLite has no equivalent of the Oracle view's
-/// body, and none of it is what these tests are about. What they exercise is our own logic on top
-/// of it — which column each level groups by, how balances are one-sided, and that no row escapes
-/// the year/unit filter.
+/// The view is created as a plain SQLite table, exactly as
+/// <see cref="AccountReviewReadRepositoryTests"/> does: SQLite has no equivalent of the Oracle
+/// view's body and none of it is what these tests are about. What they exercise is our own logic
+/// on top of it — which column each axis groups by, that the dynamically-composed projection
+/// really is translatable, how sparse cells and the column cap behave, and that no row escapes the
+/// year/unit filter.
 /// </para>
 ///
 /// <para>
 /// ⚠️ Standing limitation, and a recorded open risk (#25): SQLite cannot catch Oracle-specific
-/// translation failures. It will not tell us whether this LINQ actually translates on Oracle —
-/// only that the logic is right if it does.
+/// translation failures. It proves the logic, not the Oracle translation. The Oracle side of this
+/// report was checked separately by running the equivalent aggregate against the live view.
 /// </para>
 /// </summary>
 public sealed class MatrixReportReadRepositoryTests : IDisposable
@@ -70,63 +71,33 @@ public sealed class MatrixReportReadRepositoryTests : IDisposable
         return new LegacyDbContext(options);
     }
 
-    private static VW_CONSOLIDATE_REPORT Row(
-        decimal debtor,
-        decimal creditor,
-        string moinCode = "1010",
-        string moinName = "بانک",
-        string kolCode = "10",
-        string kolName = "دارایی جاری",
-        string groupCode = "1",
-        string groupName = "دارایی",
-        string? tafsili1Code = null,
-        string? tafsili1Name = null,
-        string vahedCode = Vahed,
-        string year = Year,
-        string voucherDate = "14030215",
-        string voucherNumber = "000010",
-        int? docLife = 2,
-        int isDeleted = 0) => new()
-        {
-            GROUPCODE = groupCode,
-            GROUPNAME = groupName,
-            KOLCODE = kolCode,
-            KOLNAME = kolName,
-            MOINCODE = moinCode,
-            MOINNAME = moinName,
-            TAFSILICODE1 = tafsili1Code,
-            TAFSILINAME1 = tafsili1Name,
-            DEBTOR = debtor,
-            CREDITOR = creditor,
-            VOUCHERDATE = voucherDate,
-            VOUCHERNUMBER = voucherNumber,
-            DOCLIFE = docLife,
-            YEAR = year,
-            VAHEDCODE = vahedCode,
-            ISDELETED = isDeleted,
-        };
-
     /// <summary>
     /// Seeded with raw INSERTs, not <c>DbSet.AddRange</c>. The entity is keyless by design (it maps
     /// a view), and EF refuses to track a keyless type — "Only entity types with a primary key may
     /// be tracked". That refusal is correct and worth keeping: it is the same property that makes
     /// it impossible to accidentally write through this type in production code.
+    ///
+    /// <para>
+    /// ⚠️ <c>ISDELETED</c> is bound as-is, including null. The sibling matrix-report seeder coerces
+    /// null to 0, which would make <see cref="GetAsync_TreatsNullIsDeletedAsLive"/> pass for the
+    /// wrong reason — it would never exercise a null at all.
+    /// </para>
     /// </summary>
-    private async Task SeedAsync(params VW_CONSOLIDATE_REPORT[] rows)
+    private void Seed(params VW_CONSOLIDATE_REPORT[] rows)
     {
         foreach (var row in rows)
         {
-            await using var command = _connection.CreateCommand();
+            using var command = _connection.CreateCommand();
             command.CommandText =
                 """
                 INSERT INTO VW_CONSOLIDATE_REPORT
                     (GROUPCODE, GROUPNAME, KOLCODE, KOLNAME, MOINCODE, MOINNAME,
                      TAFSILICODE1, TAFSILINAME1, DEBTOR, CREDITOR,
-                     VOUCHERNUMBER, VOUCHERDATE, DOCLIFE, YEAR, VAHEDCODE, ISDELETED)
+                     VOUCHERDATE, DOCLIFE, YEAR, VAHEDCODE, ISDELETED)
                 VALUES
                     ($groupCode, $groupName, $kolCode, $kolName, $moinCode, $moinName,
                      $tafsili1Code, $tafsili1Name, $debtor, $creditor,
-                     $voucherNumber, $voucherDate, $docLife, $year, $vahedCode, $isDeleted)
+                     $voucherDate, $docLife, $year, $vahedCode, $isDeleted)
                 """;
 
             void Bind(string name, object? value)
@@ -142,422 +113,290 @@ public sealed class MatrixReportReadRepositoryTests : IDisposable
             Bind("$tafsili1Name", row.TAFSILINAME1);
             Bind("$debtor", row.DEBTOR);
             Bind("$creditor", row.CREDITOR);
-            Bind("$voucherNumber", row.VOUCHERNUMBER);
             Bind("$voucherDate", row.VOUCHERDATE);
             Bind("$docLife", row.DOCLIFE);
             Bind("$year", row.YEAR);
             Bind("$vahedCode", row.VAHEDCODE);
-            Bind("$isDeleted", row.ISDELETED ?? 0);
+            Bind("$isDeleted", row.ISDELETED);
 
-            await command.ExecuteNonQueryAsync();
+            command.ExecuteNonQuery();
         }
     }
 
-    /// <summary>
-    /// Returns just the rows, which is what most of these tests assert on. The drill-down tests
-    /// below call <see cref="RunFullAsync"/> when they need the scope or the available levels too.
-    /// </summary>
-    private async Task<IReadOnlyList<MatrixReportRowDto>> RunAsync(
-        MatrixReportLevel level,
-        string? fromDate = null,
-        string? toDate = null,
-        string? fromVoucherNo = null,
-        string? toVoucherNo = null,
-        int? docLife = null,
-        params MatrixReportScopeItem[] scope)
-        => (await RunFullAsync(level, fromDate, toDate, fromVoucherNo, toVoucherNo, docLife, scope)).Rows;
+    private static VW_CONSOLIDATE_REPORT Row(
+        string? tafsili1,
+        string? moin,
+        decimal debtor,
+        decimal creditor,
+        string? year = Year,
+        string? vahed = Vahed,
+        int? isDeleted = 0,
+        string? voucherDate = "14030515",
+        int? docLife = 1,
+        string? kol = "11",
+        string? group = "1")
+        => new()
+        {
+            GROUPCODE = group,
+            GROUPNAME = group is null ? null : $"گروه {group}",
+            KOLCODE = kol,
+            KOLNAME = kol is null ? null : $"کل {kol}",
+            MOINCODE = moin,
+            MOINNAME = moin is null ? null : $"معین {moin}",
+            TAFSILICODE1 = tafsili1,
+            TAFSILINAME1 = tafsili1 is null ? null : $"تفصیلی {tafsili1}",
+            DEBTOR = debtor,
+            CREDITOR = creditor,
+            YEAR = year,
+            VAHEDCODE = vahed,
+            ISDELETED = isDeleted,
+            VOUCHERDATE = voucherDate,
+            DOCLIFE = docLife,
+        };
 
-    private async Task<MatrixReportResultDto> RunFullAsync(
-        MatrixReportLevel level,
+    private static GetMatrixReportQuery Query(
+        MatrixDimension row = MatrixDimension.Tafsili1,
+        MatrixDimension column = MatrixDimension.Moin,
         string? fromDate = null,
         string? toDate = null,
-        string? fromVoucherNo = null,
-        string? toVoucherNo = null,
         int? docLife = null,
-        params MatrixReportScopeItem[] scope)
+        string? rowFilter = null,
+        string? columnFilter = null)
+        => new(Year, row, column, fromDate, toDate, docLife, null, rowFilter, columnFilter)
+        {
+            VahedCode = Vahed,
+        };
+
+    private async Task<MatrixResultDto> RunAsync(GetMatrixReportQuery query)
     {
         using var context = CreateContext();
-        var repository = new MatrixReportReadRepository(context);
-
-        return await repository.GetAsync(new GetMatrixReportQuery(
-            Year, level, scope, fromDate, toDate, fromVoucherNo, toVoucherNo, docLife, SystemTypeId: null)
-        { VahedCode = Vahed });
-    }
-
-    private static MatrixReportScopeItem Step(MatrixReportLevel level, string code)
-        => new() { Level = level, Code = code };
-
-    [Fact]
-    public async Task Groups_by_moin_and_sums_both_sides()
-    {
-        await SeedAsync(
-            Row(debtor: 100, creditor: 0, moinCode: "1010"),
-            Row(debtor: 50, creditor: 0, moinCode: "1010"),
-            Row(debtor: 0, creditor: 70, moinCode: "1020", moinName: "صندوق"));
-
-        var result = await RunAsync(MatrixReportLevel.Moin);
-
-        Assert.Equal(2, result.Count);
-        Assert.Equal("1010", result[0].Code);
-        Assert.Equal(150, result[0].Debtor);
-        Assert.Equal(0, result[0].Creditor);
-        Assert.Equal("1020", result[1].Code);
-        Assert.Equal(70, result[1].Creditor);
-    }
-
-    [Fact]
-    public async Task The_same_rows_roll_up_when_the_level_changes()
-    {
-        // Two معین under one کل. The whole point of the report: the level is a pivot, not a filter.
-        await SeedAsync(
-            Row(debtor: 100, creditor: 0, moinCode: "1010", kolCode: "10"),
-            Row(debtor: 40, creditor: 0, moinCode: "1020", kolCode: "10"));
-
-        var byMoin = await RunAsync(MatrixReportLevel.Moin);
-        var byKol = await RunAsync(MatrixReportLevel.Kol);
-        var byGroup = await RunAsync(MatrixReportLevel.Group);
-
-        Assert.Equal(2, byMoin.Count);
-        Assert.Equal(140, Assert.Single(byKol).Debtor);
-        Assert.Equal(140, Assert.Single(byGroup).Debtor);
-    }
-
-    [Fact]
-    public async Task Balances_are_one_sided()
-    {
-        await SeedAsync(
-            Row(debtor: 300, creditor: 120, moinCode: "1010"),
-            Row(debtor: 20, creditor: 90, moinCode: "1020"));
-
-        var result = await RunAsync(MatrixReportLevel.Moin);
-
-        // Exactly one of the two balance columns is non-zero for any row — that is what lets the
-        // report render as two columns instead of one signed number.
-        Assert.Equal(180, result[0].DebtorBalance);
-        Assert.Equal(0, result[0].CreditorBalance);
-        Assert.Equal(0, result[1].DebtorBalance);
-        Assert.Equal(70, result[1].CreditorBalance);
-    }
-
-    [Fact]
-    public async Task Grouping_by_a_tafsili_level_uses_that_levels_column()
-    {
-        await SeedAsync(
-            Row(debtor: 10, creditor: 0, tafsili1Code: "T1", tafsili1Name: "مرکز الف"),
-            Row(debtor: 25, creditor: 0, tafsili1Code: "T1", tafsili1Name: "مرکز الف"),
-            Row(debtor: 5, creditor: 0, tafsili1Code: "T2", tafsili1Name: "مرکز ب"));
-
-        var result = await RunAsync(MatrixReportLevel.Tafsili1);
-
-        Assert.Equal(2, result.Count);
-        Assert.Equal("T1", result[0].Code);
-        Assert.Equal("مرکز الف", result[0].Name);
-        Assert.Equal(35, result[0].Debtor);
-        // The label names the exact level, not the family. All seven تفصیلی levels used to share
-        // one «تفصیلی» label, which is harmless in a flat report and actively confusing in a
-        // drill-down, where «where am I» is the question the label exists to answer.
-        Assert.Equal("تفصیلی ۱", result[0].LevelLabel);
-    }
-
-    [Fact]
-    public async Task Lines_with_no_code_at_the_selected_level_are_excluded_not_grouped_as_blank()
-    {
-        // Every row here has a معین but only one has a تفصیلی at level 1. Grouping by that level
-        // must not invent an empty-titled bucket for the rest.
-        await SeedAsync(
-            Row(debtor: 10, creditor: 0, tafsili1Code: "T1", tafsili1Name: "مرکز الف"),
-            Row(debtor: 999, creditor: 0, tafsili1Code: null),
-            Row(debtor: 999, creditor: 0, tafsili1Code: ""));
-
-        var result = await RunAsync(MatrixReportLevel.Tafsili1);
-
-        var only = Assert.Single(result);
-        Assert.Equal("T1", only.Code);
-        Assert.Equal(10, only.Debtor);
-    }
-
-    [Fact]
-    public async Task Another_units_rows_are_never_included()
-    {
-        await SeedAsync(
-            Row(debtor: 10, creditor: 0, moinCode: "1010"),
-            Row(debtor: 5000, creditor: 0, moinCode: "1010", vahedCode: "9999"));
-
-        var result = await RunAsync(MatrixReportLevel.Moin);
-
-        Assert.Equal(10, Assert.Single(result).Debtor);
-    }
-
-    [Fact]
-    public async Task Another_years_rows_are_never_included()
-    {
-        await SeedAsync(
-            Row(debtor: 10, creditor: 0),
-            Row(debtor: 5000, creditor: 0, year: "1402"));
-
-        Assert.Equal(10, Assert.Single(await RunAsync(MatrixReportLevel.Moin)).Debtor);
-    }
-
-    [Fact]
-    public async Task Deleted_rows_are_excluded()
-    {
-        await SeedAsync(
-            Row(debtor: 10, creditor: 0),
-            Row(debtor: 5000, creditor: 0, isDeleted: 1));
-
-        Assert.Equal(10, Assert.Single(await RunAsync(MatrixReportLevel.Moin)).Debtor);
-    }
-
-    [Fact]
-    public async Task The_date_range_is_inclusive_on_both_bounds()
-    {
-        await SeedAsync(
-            Row(debtor: 1, creditor: 0, moinCode: "A", voucherDate: "14030101"),
-            Row(debtor: 2, creditor: 0, moinCode: "B", voucherDate: "14030215"),
-            Row(debtor: 4, creditor: 0, moinCode: "C", voucherDate: "14030331"),
-            Row(debtor: 8, creditor: 0, moinCode: "D", voucherDate: "14030401"));
-
-        var result = await RunAsync(MatrixReportLevel.Moin, fromDate: "14030215", toDate: "14030331");
-
-        Assert.Equal(["B", "C"], result.Select(r => r.Code).ToArray());
-    }
-
-    [Fact]
-    public async Task The_voucher_number_range_is_inclusive_on_both_bounds()
-    {
-        await SeedAsync(
-            Row(debtor: 1, creditor: 0, moinCode: "A", voucherNumber: "000005"),
-            Row(debtor: 2, creditor: 0, moinCode: "B", voucherNumber: "000010"),
-            Row(debtor: 4, creditor: 0, moinCode: "C", voucherNumber: "000020"));
-
-        var result = await RunAsync(MatrixReportLevel.Moin, fromVoucherNo: "000010", toVoucherNo: "000020");
-
-        Assert.Equal(["B", "C"], result.Select(r => r.Code).ToArray());
-    }
-
-    [Fact]
-    public async Task Doc_life_filters_to_an_exact_state()
-    {
-        await SeedAsync(
-            Row(debtor: 1, creditor: 0, moinCode: "A", docLife: 1),
-            Row(debtor: 2, creditor: 0, moinCode: "B", docLife: 4));
-
-        var result = await RunAsync(MatrixReportLevel.Moin, docLife: 4);
-
-        Assert.Equal("B", Assert.Single(result).Code);
-    }
-
-    [Fact]
-    public async Task Rows_come_back_ordered_by_code()
-    {
-        await SeedAsync(
-            Row(debtor: 1, creditor: 0, moinCode: "3030"),
-            Row(debtor: 1, creditor: 0, moinCode: "1010"),
-            Row(debtor: 1, creditor: 0, moinCode: "2020"));
-
-        var result = await RunAsync(MatrixReportLevel.Moin);
-
-        Assert.Equal(["1010", "2020", "3030"], result.Select(r => r.Code).ToArray());
-    }
-
-    [Fact]
-    public async Task An_empty_result_is_an_empty_list_not_a_null()
-    {
-        var result = await RunAsync(MatrixReportLevel.Moin);
-
-        Assert.Empty(result);
-    }
-
-    // ── Drill-down ────────────────────────────────────────────────────────────────────────────
-    // These are what separate گزارش ماتریسی from a second تراز آزمایشی. Without a scope, "group
-    // by معین" is a flat list; with one, it is «the معین rows inside the کل I opened».
-
-    /// <summary>
-    /// از کل به جزء: opening گروه ۱ and listing کل must show only the کل rows inside it, with
-    /// figures summed from that group's lines alone.
-    /// </summary>
-    [Fact]
-    public async Task Scoping_to_a_group_shows_only_the_kols_inside_it()
-    {
-        await SeedAsync(
-            Row(debtor: 100, creditor: 0, groupCode: "1", kolCode: "10", moinCode: "1010"),
-            Row(debtor: 40, creditor: 0, groupCode: "1", kolCode: "11", moinCode: "1110"),
-            Row(debtor: 900, creditor: 0, groupCode: "2", kolCode: "20", moinCode: "2010"));
-
-        var rows = await RunAsync(MatrixReportLevel.Kol, scope: Step(MatrixReportLevel.Group, "1"));
-
-        Assert.Equal(new[] { "10", "11" }, rows.Select(r => r.Code));
-        Assert.Equal(140m, rows.Sum(r => r.Debtor));
-    }
-
-    [Fact]
-    public async Task Scope_steps_compose_so_a_deeper_path_narrows_further()
-    {
-        await SeedAsync(
-            Row(debtor: 100, creditor: 0, groupCode: "1", kolCode: "10", moinCode: "1010"),
-            Row(debtor: 200, creditor: 0, groupCode: "1", kolCode: "10", moinCode: "1020"),
-            Row(debtor: 300, creditor: 0, groupCode: "1", kolCode: "11", moinCode: "1110"));
-
-        var rows = await RunAsync(
-            MatrixReportLevel.Moin,
-            scope: new[] { Step(MatrixReportLevel.Group, "1"), Step(MatrixReportLevel.Kol, "10") });
-
-        Assert.Equal(new[] { "1010", "1020" }, rows.Select(r => r.Code));
+        return await new MatrixReportReadRepository(context).GetAsync(query);
     }
 
     /// <summary>
-    /// از جزء به کل is the same mechanism read backwards — dropping the deepest step widens the
-    /// report. Asserting it explicitly pins that going up is not a separate code path that could
-    /// drift from going down.
+    /// The core shape: two tafsili rows crossed against two معین columns, each intersection summed
+    /// independently. This is the whole point of the report and is what مرور حساب‌ها cannot do.
     /// </summary>
     [Fact]
-    public async Task Dropping_the_last_scope_step_widens_the_report_again()
+    public async Task GetAsync_CrossesTheTwoDimensions()
     {
-        await SeedAsync(
-            Row(debtor: 100, creditor: 0, groupCode: "1", kolCode: "10", moinCode: "1010"),
-            Row(debtor: 300, creditor: 0, groupCode: "1", kolCode: "11", moinCode: "1110"));
+        Seed(
+            Row("T1", "110101", 100, 0),
+            Row("T1", "110101", 50, 0),
+            Row("T1", "220202", 0, 30),
+            Row("T2", "110101", 7, 0));
 
-        var narrow = await RunAsync(
-            MatrixReportLevel.Moin,
-            scope: new[] { Step(MatrixReportLevel.Group, "1"), Step(MatrixReportLevel.Kol, "10") });
-        var wide = await RunAsync(MatrixReportLevel.Moin, scope: Step(MatrixReportLevel.Group, "1"));
+        var result = await RunAsync(Query());
 
-        Assert.Single(narrow);
-        Assert.Equal(2, wide.Count);
-    }
+        Assert.Equal(["110101", "220202"], result.Columns.Select(c => c.Code));
+        Assert.Equal(["T1", "T2"], result.Rows.Select(r => r.Code));
 
-    [Fact]
-    public async Task Drilling_works_at_tafsili_levels_too()
-    {
-        await SeedAsync(
-            Row(debtor: 100, creditor: 0, moinCode: "1010", tafsili1Code: "T1", tafsili1Name: "مرکز الف"),
-            Row(debtor: 250, creditor: 0, moinCode: "1010", tafsili1Code: "T2", tafsili1Name: "مرکز ب"));
+        var t1 = result.Rows.Single(r => r.Code == "T1");
+        Assert.Equal(150m, t1.Cells.Single(c => c.ColumnCode == "110101").Debtor);
+        Assert.Equal(30m, t1.Cells.Single(c => c.ColumnCode == "220202").Creditor);
 
-        var rows = await RunAsync(MatrixReportLevel.Tafsili1, scope: Step(MatrixReportLevel.Moin, "1010"));
-
-        Assert.Equal(new[] { "T1", "T2" }, rows.Select(r => r.Code));
-        Assert.Equal("مرکز الف", rows[0].Name);
+        var t2 = result.Rows.Single(r => r.Code == "T2");
+        Assert.Equal(7m, Assert.Single(t2.Cells).Debtor);
     }
 
     /// <summary>
-    /// A row only offers a drill-down when something is actually there. Offering one that lands on
-    /// an empty table reads as a broken report, and a معین with no تفصیلی assignment is normal.
+    /// Empty intersections are omitted, not sent as zeroes. A cross-tab is nearly always sparse —
+    /// on live data 8 rows × 8 columns held 15 populated cells — so materialising the full grid
+    /// would spend most of the payload on values the client can infer.
     /// </summary>
     [Fact]
-    public async Task HasChildren_is_false_when_nothing_is_assigned_at_the_next_level()
+    public async Task GetAsync_OmitsEmptyIntersections()
     {
-        await SeedAsync(
-            Row(debtor: 100, creditor: 0, moinCode: "1010", tafsili1Code: "T1"),
-            Row(debtor: 100, creditor: 0, moinCode: "1020", tafsili1Code: null));
+        Seed(Row("T1", "110101", 100, 0), Row("T2", "220202", 0, 40));
 
-        var rows = await RunAsync(MatrixReportLevel.Moin);
+        var result = await RunAsync(Query());
 
-        Assert.True(rows.Single(r => r.Code == "1010").HasChildren);
-        Assert.False(rows.Single(r => r.Code == "1020").HasChildren);
-    }
-
-    [Fact]
-    public async Task The_deepest_tafsili_level_has_nothing_below_it()
-    {
-        await SeedAsync(Row(debtor: 100, creditor: 0, moinCode: "1010", tafsili1Code: "T1"));
-
-        var rows = await RunAsync(MatrixReportLevel.Tafsili7);
-
-        // No TAFSILICODE7 was seeded, so there is nothing to list — and nothing can claim depth
-        // below the deepest level either.
-        Assert.Empty(rows);
+        Assert.Equal(2, result.Columns.Count);
+        Assert.All(result.Rows, r => Assert.Single(r.Cells));
     }
 
     /// <summary>
-    /// The answer to «کدام سطوح؟»: levels with no data inside the current scope are not offered.
+    /// Either axis can be any dimension — the projection is composed from the enum, not written
+    /// out per pair. Crossing گروه against کل must group by those columns and nothing else.
     /// </summary>
     [Fact]
-    public async Task Available_levels_lists_only_levels_that_carry_data_in_scope()
+    public async Task GetAsync_SupportsAnyDimensionPair()
     {
-        await SeedAsync(
-            Row(debtor: 100, creditor: 0, groupCode: "1", kolCode: "10", moinCode: "1010", tafsili1Code: "T1"));
+        Seed(
+            Row("T1", "110101", 10, 0, group: "1", kol: "11"),
+            Row("T2", "220202", 20, 0, group: "1", kol: "12"),
+            Row("T3", "330303", 5, 0, group: "2", kol: "21"));
 
-        var result = await RunFullAsync(MatrixReportLevel.Moin);
+        var result = await RunAsync(Query(MatrixDimension.Group, MatrixDimension.Kol));
 
-        Assert.Contains(MatrixReportLevel.Group, result.AvailableLevels);
-        Assert.Contains(MatrixReportLevel.Moin, result.AvailableLevels);
-        Assert.Contains(MatrixReportLevel.Tafsili1, result.AvailableLevels);
-        Assert.DoesNotContain(MatrixReportLevel.Tafsili2, result.AvailableLevels);
-    }
+        Assert.Equal("گروه", result.RowDimensionLabel);
+        Assert.Equal("کل", result.ColumnDimensionLabel);
+        Assert.Equal(["1", "2"], result.Rows.Select(r => r.Code));
+        Assert.Equal(["11", "12", "21"], result.Columns.Select(c => c.Code));
 
-    [Fact]
-    public async Task Available_levels_narrows_with_the_scope()
-    {
-        await SeedAsync(
-            Row(debtor: 100, creditor: 0, groupCode: "1", kolCode: "10", moinCode: "1010", tafsili1Code: "T1"),
-            Row(debtor: 100, creditor: 0, groupCode: "2", kolCode: "20", moinCode: "2010", tafsili1Code: null));
-
-        var inGroupTwo = await RunFullAsync(MatrixReportLevel.Moin, scope: Step(MatrixReportLevel.Group, "2"));
-
-        Assert.DoesNotContain(MatrixReportLevel.Tafsili1, inGroupTwo.AvailableLevels);
-    }
-
-    [Fact]
-    public async Task Scope_comes_back_with_names_for_the_breadcrumb()
-    {
-        await SeedAsync(
-            Row(
-                debtor: 100,
-                creditor: 0,
-                groupCode: "1",
-                groupName: "دارایی",
-                kolCode: "10",
-                kolName: "دارایی جاری",
-                moinCode: "1010"));
-
-        var result = await RunFullAsync(
-            MatrixReportLevel.Moin,
-            scope: new[] { Step(MatrixReportLevel.Kol, "10"), Step(MatrixReportLevel.Group, "1") });
-
-        // Returned shallowest-first regardless of the order the caller sent, because a breadcrumb
-        // that rendered گروه after کل would read as a different hierarchy than the data has.
-        Assert.Equal(new[] { "1", "10" }, result.Scope.Select(s => s.Code));
-        Assert.Equal(new[] { "دارایی", "دارایی جاری" }, result.Scope.Select(s => s.Name));
+        var group1 = result.Rows.Single(r => r.Code == "1");
+        Assert.Equal(2, group1.Cells.Count);
+        Assert.Equal(30m, group1.Debtor);
     }
 
     /// <summary>
-    /// A mistyped code must still appear in the breadcrumb. Dropping it would make the path the
-    /// user is looking at disagree with the path they asked for.
+    /// A line with no code on either axis is absence, not a category. With two axes an unfiltered
+    /// null would create both a blank row and a blank column, so each side is filtered
+    /// independently.
     /// </summary>
     [Fact]
-    public async Task A_scope_code_that_matches_nothing_is_echoed_with_an_empty_name()
+    public async Task GetAsync_ExcludesRowsMissingACodeOnEitherAxis()
     {
-        await SeedAsync(Row(debtor: 100, creditor: 0, groupCode: "1", moinCode: "1010"));
+        Seed(
+            Row("T1", "110101", 100, 0),
+            Row(null, "110101", 999, 0),
+            Row("T2", null, 888, 0),
+            Row("", "110101", 777, 0));
 
-        var result = await RunFullAsync(MatrixReportLevel.Moin, scope: Step(MatrixReportLevel.Group, "9"));
+        var result = await RunAsync(Query());
+
+        Assert.Equal("T1", Assert.Single(result.Rows).Code);
+        Assert.Equal(100m, result.Debtor);
+    }
+
+    [Fact]
+    public async Task GetAsync_ComputesRowColumnAndGrandTotals()
+    {
+        Seed(
+            Row("T1", "110101", 100, 1),
+            Row("T1", "220202", 20, 2),
+            Row("T2", "110101", 5, 3));
+
+        var result = await RunAsync(Query());
+
+        Assert.Equal(125m, result.Debtor);
+        Assert.Equal(6m, result.Creditor);
+
+        Assert.Equal(120m, result.Rows.Single(r => r.Code == "T1").Debtor);
+        Assert.Equal(105m, result.Columns.Single(c => c.Code == "110101").Debtor);
+        // Both rows contribute to this column: 1 from T1 and 3 from T2.
+        Assert.Equal(4m, result.Columns.Single(c => c.Code == "110101").Creditor);
+    }
+
+    [Fact]
+    public async Task GetAsync_ExcludesOtherYearsUnitsAndDeletedRows()
+    {
+        Seed(
+            Row("T1", "110101", 100, 0),
+            Row("T9", "110101", 1, 0, year: "1402"),
+            Row("T8", "110101", 1, 0, vahed: "9999"),
+            Row("T7", "110101", 1, 0, isDeleted: 1));
+
+        var result = await RunAsync(Query());
+
+        Assert.Equal("T1", Assert.Single(result.Rows).Code);
+        Assert.Equal(100m, result.Debtor);
+    }
+
+    /// <summary>
+    /// <c>ISDELETED</c> is compared as the number it is; a NULL must count as "not deleted", which
+    /// is also how the matrix report treats it.
+    /// </summary>
+    [Fact]
+    public async Task GetAsync_TreatsNullIsDeletedAsLive()
+    {
+        Seed(Row("T1", "110101", 100, 0, isDeleted: null));
+
+        var result = await RunAsync(Query());
+
+        Assert.Equal(100m, result.Debtor);
+    }
+
+    [Fact]
+    public async Task GetAsync_AppliesDateAndDocLifeFilters()
+    {
+        Seed(
+            Row("T1", "110101", 10, 0, voucherDate: "14030101", docLife: 1),
+            Row("T2", "110101", 20, 0, voucherDate: "14030615", docLife: 1),
+            Row("T3", "110101", 40, 0, voucherDate: "14030615", docLife: 4));
+
+        var byDate = await RunAsync(Query(fromDate: "14030201"));
+        Assert.Equal(60m, byDate.Debtor);
+
+        var byDocLife = await RunAsync(Query(docLife: 4));
+        Assert.Equal(40m, byDocLife.Debtor);
+    }
+
+    /// <summary>
+    /// The row/column «شروع با» narrowings are the intended way to tame a wide pivot — they must
+    /// apply to the right axis and nothing else.
+    /// </summary>
+    [Fact]
+    public async Task GetAsync_AppliesRowAndColumnCodeFilters()
+    {
+        Seed(
+            Row("A1", "110101", 10, 0),
+            Row("A2", "220202", 20, 0),
+            Row("B1", "110101", 40, 0));
+
+        var byRow = await RunAsync(Query(rowFilter: "A"));
+        Assert.Equal(["A1", "A2"], byRow.Rows.Select(r => r.Code));
+
+        var byColumn = await RunAsync(Query(columnFilter: "1101"));
+        Assert.Equal(["110101"], byColumn.Columns.Select(c => c.Code));
+        Assert.Equal(["A1", "B1"], byColumn.Rows.Select(r => r.Code));
+    }
+
+    /// <summary>
+    /// When there are more columns than the cap allows, the widest are kept — if the grid cannot
+    /// show everything, the columns worth keeping are the ones carrying the most turnover, not the
+    /// ones that happen to sort first. The kept set is still presented in code order.
+    /// </summary>
+    [Fact]
+    public async Task GetAsync_WhenColumnsExceedTheCap_KeepsTheWidestAndFlagsTruncation()
+    {
+        var rows = Enumerable.Range(0, GetMatrixReportQueryValidator.MaxColumns + 5)
+            .Select(i => Row("T1", $"C{i:D4}", i + 1, 0))
+            .ToArray();
+        Seed(rows);
+
+        var result = await RunAsync(Query());
+
+        Assert.True(result.ColumnsTruncated);
+        Assert.Equal(rows.Length, result.TotalColumnCount);
+        Assert.Equal(GetMatrixReportQueryValidator.MaxColumns, result.Columns.Count);
+
+        // The five smallest were dropped, and what is kept is still in code order.
+        Assert.DoesNotContain(result.Columns, c => c.Code == "C0000");
+        Assert.Contains(result.Columns, c => c.Code == $"C{rows.Length - 1:D4}");
+        Assert.Equal(result.Columns.Select(c => c.Code).Order(StringComparer.Ordinal), result.Columns.Select(c => c.Code));
+    }
+
+    /// <summary>
+    /// The grand total must still describe the WHOLE filtered set when columns were trimmed. A
+    /// total silently re-based onto the visible slice would disagree with the trial balance for the
+    /// same period, and would make a truncated report look complete.
+    /// </summary>
+    [Fact]
+    public async Task GetAsync_WhenTruncated_GrandTotalStillCoversEverything()
+    {
+        var rows = Enumerable.Range(0, GetMatrixReportQueryValidator.MaxColumns + 5)
+            .Select(i => Row("T1", $"C{i:D4}", 1, 0))
+            .ToArray();
+        Seed(rows);
+
+        var result = await RunAsync(Query());
+
+        Assert.True(result.ColumnsTruncated);
+        Assert.Equal(rows.Length, result.Debtor);
+        Assert.Equal(rows.Length, result.Rows.Single().Debtor);
+    }
+
+    [Fact]
+    public async Task GetAsync_WithNoMatchingRows_ReturnsEmptyGridNotAnError()
+    {
+        Seed(Row("T1", "110101", 100, 0, year: "1399"));
+
+        var result = await RunAsync(Query());
 
         Assert.Empty(result.Rows);
-        var step = Assert.Single(result.Scope);
-        Assert.Equal("9", step.Code);
-        Assert.Equal(string.Empty, step.Name);
-    }
-
-    [Fact]
-    public async Task Scope_does_not_escape_the_unit_or_year_filter()
-    {
-        await SeedAsync(
-            Row(debtor: 100, creditor: 0, groupCode: "1", moinCode: "1010"),
-            Row(debtor: 500, creditor: 0, groupCode: "1", moinCode: "1010", vahedCode: "0002"),
-            Row(debtor: 700, creditor: 0, groupCode: "1", moinCode: "1010", year: "1402"));
-
-        var rows = await RunAsync(MatrixReportLevel.Moin, scope: Step(MatrixReportLevel.Group, "1"));
-
-        Assert.Equal(100m, Assert.Single(rows).Debtor);
-    }
-
-    [Fact]
-    public async Task Level_and_label_are_echoed_back()
-    {
-        await SeedAsync(Row(debtor: 100, creditor: 0, moinCode: "1010"));
-
-        var result = await RunFullAsync(MatrixReportLevel.Moin);
-
-        Assert.Equal(MatrixReportLevel.Moin, result.Level);
-        Assert.Equal("معین", result.LevelLabel);
+        Assert.Empty(result.Columns);
+        Assert.Equal(0m, result.Debtor);
+        Assert.False(result.ColumnsTruncated);
     }
 }

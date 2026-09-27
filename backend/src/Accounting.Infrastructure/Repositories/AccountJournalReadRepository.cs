@@ -32,7 +32,7 @@ namespace Accounting.Infrastructure.Repositories;
 /// </list>
 ///
 /// <para>
-/// Compare <see cref="MatrixReportReadRepository"/>, which does follow rule #2: its view keeps one
+/// Compare <see cref="AccountReviewReadRepository"/>, which does follow rule #2: its view keeps one
 /// row per line and filters <c>isdeleted = 0</c> in the join. The rule is sound; this particular
 /// view is not.
 /// </para>

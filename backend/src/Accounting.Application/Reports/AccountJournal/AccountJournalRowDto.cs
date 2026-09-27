@@ -4,7 +4,7 @@ namespace Accounting.Application.Reports.AccountJournal;
 /// One posting line of دفتر روزنامه — a single ردیف سند in chronological order.
 ///
 /// <para>
-/// Unlike تراز آزمایشی and گزارش ماتریسی, nothing here is aggregated: the journal's whole purpose
+/// Unlike تراز آزمایشی and مرور حساب‌ها, nothing here is aggregated: the journal's whole purpose
 /// is to show every movement in sequence, so each row is one line of one voucher.
 /// </para>
 /// </summary>

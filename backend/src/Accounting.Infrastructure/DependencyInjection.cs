@@ -91,9 +91,9 @@ public static class DependencyInjection
         services.AddScoped<IVahedTypeReadRepository, VahedTypeReadRepository>();
         services.AddScoped<IUnitAccessReadRepository, UnitAccessReadRepository>();
         services.AddScoped<IYearReadRepository, YearReadRepository>();
-        services.AddScoped<IMatrixReportReadRepository, MatrixReportReadRepository>();
+        services.AddScoped<IAccountReviewReadRepository, AccountReviewReadRepository>();
         // Reads the same verified view as the matrix report, crossed on two axes instead of one.
-        services.AddScoped<ICrossTabReportReadRepository, CrossTabReportReadRepository>();
+        services.AddScoped<IMatrixReportReadRepository, MatrixReportReadRepository>();
         services.AddScoped<IVoucherReviewReadRepository, VoucherReviewReadRepository>();
         services.AddScoped<IAccountJournalReadRepository, AccountJournalReadRepository>();
         services.AddScoped<IWorkShopReadRepository, WorkShopReadRepository>();
