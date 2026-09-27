@@ -94,6 +94,15 @@ public partial class LegacyDbContext : DbContext
 
     public virtual DbSet<TB_PAYRECIVHEAD> TB_PAYRECIVHEADs { get; set; }
 
+    // Petty-cash module, chunk 1 (2026-09-27) — new "side" tables, explicit owner-approved
+    // exception to the "no new tables" rule (docs/tankhah-khazaneh-module.md §0/§3). Prefix
+    // TB_PC_ (تنخواه); the core write model stays on Legacy TB_CHARGEANDCOST_HEAD/DETAIL.
+    public virtual DbSet<TB_PC_DOC_EVENT> TB_PC_DOC_EVENTs { get; set; }
+
+    public virtual DbSet<TB_PC_EXPENSE_DOC> TB_PC_EXPENSE_DOCs { get; set; }
+
+    public virtual DbSet<TB_PC_FUND_SETTING> TB_PC_FUND_SETTINGs { get; set; }
+
     public virtual DbSet<TB_PERSON_ACTION> TB_PERSON_ACTIONs { get; set; }
 
     public virtual DbSet<TB_PREDESCRIB> TB_PREDESCRIBs { get; set; }
@@ -1114,13 +1123,21 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.CHARGEANDCOST_DATE)
                 .HasMaxLength(8)
                 .IsUnicode(false);
-            entity.Property(e => e.CHARGEANDCOST_TYPE).HasColumnType("NUMBER(1)");
+            // CHARGEANDCOST_TYPE / STATUS: NUMBER(1) columns fixed 2026-09-27 from the incorrect
+            // bool scaffold (petty-cash module prerequisite; CLAUDE.md risk #2). Following the
+            // phase 25 convention exactly: .HasConversion<int>() PLUS dropping
+            // .HasColumnType("NUMBER(1)") — the Oracle provider picks its bool vs numeric mapping
+            // by store type name, not CLR type, so keeping the NUMBER(1) column type would defeat
+            // the converter (LegacyEnumMappingConventionTests enforces both halves of this).
+            entity.Property(e => e.CHARGEANDCOST_TYPE)
+                .HasConversion<int>();
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.DESCRIPTION)
                 .HasMaxLength(200)
                 .IsUnicode(false);
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
-            entity.Property(e => e.STATUS).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.STATUS)
+                .HasConversion<int>();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDCODE)
                 .HasMaxLength(4)
@@ -1171,6 +1188,199 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.YEAR)
                 .HasMaxLength(4)
                 .IsUnicode(false);
+        });
+
+        // Petty-cash module, chunk 1 (2026-09-27) — three new "side" tables, explicit
+        // owner-approved exception to the "no new tables" rule (docs/tankhah-khazaneh-module.md
+        // §0/§3). None of the three has a sys_guid() DEFAULT on ID (risk #11 in CLAUDE.md), so
+        // every write path generates the Guid application-side, exactly like every other entity
+        // added since phase 15.
+        modelBuilder.Entity<TB_PC_FUND_SETTING>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_PC_FUND_SETTING");
+
+            entity.ToTable("TB_PC_FUND_SETTING");
+
+            // 1:1 with TB_REVOLVING_FUND — mirrors the real UNIQUE constraint the DDL script
+            // declares (backend/db/044_petty_cash.sql).
+            entity.HasIndex(e => e.REVOLVINGFUND_ID, "UK_PC_FUND_SETTING").IsUnique();
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.REVOLVINGFUND_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.CUSTODIAN_USERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CUSTODIAN_NAME)
+                .HasMaxLength(200)
+                .IsUnicode(false);
+            entity.Property(e => e.PER_DOC_LIMIT).HasColumnType("NUMBER(25)");
+            entity.Property(e => e.ALERT_THRESHOLD_PERCENT).HasColumnType("NUMBER(3)");
+            // NUMBER(1) enum column — .HasConversion<int?>() and no .HasColumnType("NUMBER(1)"),
+            // per the phase 25/28 convention (LegacyEnumMappingConventionTests enforces both).
+            entity.Property(e => e.SETTLEMENT_PERIOD)
+                .HasConversion<int?>();
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+
+            entity.HasOne(d => d.REVOLVINGFUND)
+                .WithMany()
+                .HasForeignKey(d => d.REVOLVINGFUND_ID)
+                .HasConstraintName("FK_PC_FUND_SETTING_REVOLVING");
+        });
+
+        modelBuilder.Entity<TB_PC_EXPENSE_DOC>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_PC_EXPENSE_DOC");
+
+            entity.ToTable("TB_PC_EXPENSE_DOC");
+
+            // 1:1 with TB_CHARGEANDCOST_HEAD — mirrors the real UNIQUE constraint in the DDL.
+            entity.HasIndex(e => e.CHARGEANDCOSTHEAD_ID, "UK_PC_EXPENSE_DOC").IsUnique();
+            // Supports the کارتابل list query's (vahedCode, year, state) filter/count and the
+            // funds-list balance aggregation's (fund, state) grouping.
+            entity.HasIndex(e => new { e.VAHEDCODE, e.YEAR, e.DOC_STATE }, "IDX_PC_EXPENSE_DOC_STATE");
+            entity.HasIndex(e => e.REVOLVINGFUND_ID, "IDX_PC_EXPENSE_DOC_FUND");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.CHARGEANDCOSTHEAD_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.REVOLVINGFUND_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            // NUMBER(2), non-nullable — same convention, wider store type (up to 2 digits) since
+            // this enum already has 7 members and بخش ۲ reserves more.
+            entity.Property(e => e.DOC_STATE)
+                .HasConversion<int>();
+            entity.Property(e => e.VENDOR_NAME)
+                .HasMaxLength(200)
+                .IsUnicode(false);
+            entity.Property(e => e.VENDOR_NATIONAL_ID)
+                .HasMaxLength(11)
+                .IsUnicode(false);
+            entity.Property(e => e.INVOICE_NO)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.INVOICE_DATE)
+                .HasMaxLength(8)
+                .IsUnicode(false);
+            entity.Property(e => e.EVIDENCE_TYPE)
+                .HasConversion<int?>();
+            entity.Property(e => e.AMOUNT_BEFORE_TAX).HasColumnType("NUMBER(25)");
+            entity.Property(e => e.VAT_AMOUNT).HasColumnType("NUMBER(25)");
+            entity.Property(e => e.SUBMITTED_DATE).HasPrecision(6);
+            entity.Property(e => e.RETURN_DEADLINE)
+                .HasMaxLength(8)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+
+            entity.HasOne(d => d.CHARGEANDCOSTHEAD)
+                .WithMany()
+                .HasForeignKey(d => d.CHARGEANDCOSTHEAD_ID)
+                .HasConstraintName("FK_PC_EXPENSE_DOC_HEAD");
+
+            entity.HasOne(d => d.REVOLVINGFUND)
+                .WithMany()
+                .HasForeignKey(d => d.REVOLVINGFUND_ID)
+                .HasConstraintName("FK_PC_EXPENSE_DOC_REVOLVING");
+        });
+
+        modelBuilder.Entity<TB_PC_DOC_EVENT>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_PC_DOC_EVENT");
+
+            entity.ToTable("TB_PC_DOC_EVENT");
+
+            entity.HasIndex(e => e.EXPENSE_DOC_ID, "IDX_PC_DOC_EVENT_EXPENSEDOC");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.EXPENSE_DOC_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.ACTION)
+                .HasConversion<int>();
+            entity.Property(e => e.FROM_STATE)
+                .HasConversion<int?>();
+            entity.Property(e => e.TO_STATE)
+                .HasConversion<int?>();
+            entity.Property(e => e.NOTE)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.RETURN_REASONS)
+                .HasMaxLength(200)
+                .IsUnicode(false);
+            entity.Property(e => e.CLIENT_IP)
+                .HasMaxLength(45)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+
+            entity.HasOne(d => d.EXPENSE_DOC)
+                .WithMany()
+                .HasForeignKey(d => d.EXPENSE_DOC_ID)
+                .HasConstraintName("FK_PC_DOC_EVENT_EXPENSEDOC");
         });
 
         modelBuilder.Entity<TB_CHECK>(entity =>

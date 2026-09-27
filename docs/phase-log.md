@@ -16,6 +16,59 @@
 
 ---
 
+### فاز ۴۴ (بخش ۱) — ماژول «تنخواه و خزانه‌داری»: پیش‌نیاز enum + سه جدول جانبی + تعریف تنخواه + ثبت صورت‌هزینه + کارتابل (۲۰۲۶-۰۹-۲۷، فقط بک‌اند)
+
+طبق نقشهٔ راه `docs/tankhah-khazaneh-module.md` (سند مرجع این ماژول) — بخش ۱ از ۴+. **استثنای صریح صاحب پروژه بر قانون «هیچ جدول جدیدی»**: سه جدول جانبی جدید با پیشوند `TB_PC_`، فقط برای دادهٔ این ماژول که در schema Legacy جایی ندارد؛ هستهٔ نوشتن همچنان `TB_CHARGEANDCOST_HEAD`/`DETAIL` است.
+
+**پیش‌نیاز — رفع دو ستون `bool`→enum روی `TB_CHARGEANDCOST_HEAD`:** `CHARGEANDCOST_TYPE` (۱=شارژ، ۲=هزینه‌کرد) و `STATUS` (۰=موقت، ۱=بررسی‌شده، ۲=تایید دائم — ⚠️ **از صفر شروع می‌شود**، بر خلاف اکثر enumهای دیگر پروژه) طبق قرارداد فاز ۲۵/۲۸ اصلاح شدند: `ChargeAndCostType`/`ChargeAndCostStatus` جدید در `Accounting.Domain/ValueObjects`، `.HasConversion<int>()` + حذف `.HasColumnType("NUMBER(1)")` در `LegacyDbContext`. این دو ستون در `docs/centralaccount-business-reference.md` §۲۴-۱ لیست نشده بودند، پس آن سند دست‌نخورد. `LegacyEnumMappingConventionTests` (که مدل‌محور است و به‌صورت خودکار enumهای جدید را هم می‌بیند) بدون تغییر همچنان سبز است.
+
+**سه جدول جدید** (DDL در `backend/db/044_petty_cash.sql` — **روی هیچ دیتابیسی اجرا نشد**، طبق محدودیت صریح کار):
+- `TB_PC_FUND_SETTING` — ۱:۱ با `TB_REVOLVING_FUND` (تنخواه‌دار، سقف هر سند، آستانهٔ هشدار، دورهٔ تسویه).
+- `TB_PC_EXPENSE_DOC` — ۱:۱ با `TB_CHARGEANDCOST_HEAD` نوع هزینه‌کرد (فروشنده، فاکتور، ارزش‌افزوده، وضعیت هفت‌تایی، و **خودِ `REVOLVINGFUND_ID`** — یافتهٔ زندهٔ سند مرجع: ردیف‌های Legacy موجود هیچ تنخواه‌ای در `TB_CHARGEANDCOST_DETAIL` ندارند، پس این ستون تنها منبع حقیقت است).
+- `TB_PC_DOC_EVENT` — «گردش عملیات»، فقط درج.
+
+**Domain:** ۶ enum جدید (`ChargeAndCostType`, `ChargeAndCostStatus`, `PettyCashDocState` هفت‌مقداری، `PettyCashEvidenceType`, `PettyCashSettlementPeriod`, `PettyCashDocAction` — مقادیر ۵+ عمداً برای بخش ۲ رزرو شدند) + سه Entity POCO جدید در `Accounting.Domain/Entity/`.
+
+**`PettyCashStatusMap`** (`Accounting.Application/Common/Security/`) — تنها جای نگاشت `PettyCashDocState`→`ChargeAndCostStatus`: فقط تأییدشده/تسویه‌شده → تایید دائم(۲)، بقیه → موقت(۰).
+
+**`PettyCashDocEditability`** (همان الگوی `VoucherEditability`) — فقط پیش‌نویس/برگشتی قابل ویرایش‌اند، فقط پیش‌نویس قابل حذف.
+
+**Application/Api — ۹ Endpoint روی `PettyCashController` (`api/petty-cash/...`)**، همه `IVahedScoped`، فقط `GET`/`POST`:
+
+```
+GET  api/petty-cash/funds                                          → آرایهٔ خام PettyCashFundDto[] (نه PagedResult)
+GET  api/petty-cash/funds/{fundId}/settings                        → PettyCashFundSettingDto، یا ۴۰۴ اگر تنظیم نشده
+POST api/petty-cash/funds/{fundId}/settings                        → upsert
+GET  api/petty-cash/expense-docs?pageNumber=&pageSize=&fundId=&state=&states=&search=
+                                                                    → { page: PagedResult<...>, stateCounts: [...] }
+GET  api/petty-cash/expense-docs/{id}                              → PettyCashExpenseDocDto
+POST api/petty-cash/expense-docs                                   → 201 + { id } (submit=true آنی ارسال می‌کند)
+POST api/petty-cash/expense-docs/{id}/update
+POST api/petty-cash/expense-docs/{id}/submit                       → بدون بدنه
+POST api/petty-cash/expense-docs/{id}/delete                       → بدون بدنه
+GET  api/petty-cash/expense-docs/{id}/events                       → PettyCashDocEventDto[]
+```
+
+نکات هماهنگی قرارداد که حین کار از فرانت (که موازی روی همین طراحی کار می‌کرد) دریافت و اعمال شد:
+1. `GET funds` آرایهٔ خام برمی‌گرداند، نه `PagedResult` — چون `IPettyCashFundReadRepository.GetAllAsync` بدون paging طراحی شد (تعداد تنخواه هر واحد کم است، مثل الگوی `GetVahedTypesQuery`).
+2. `GET funds/{fundId}/settings` وقتی خودِ تنخواه وجود دارد ولی هنوز تنظیمی ثبت نشده، **۴۰۴** می‌دهد (نه ۲۰۰ با `null`) — فرانت ۴۰۴ را «هنوز پیکربندی نشده» تفسیر می‌کند.
+3. `stateCounts` در لیست صورت‌هزینه‌ها با `fundId`/`search` اعمال‌شده ولی **بدون** فیلتر `state`/`states` محاسبه می‌شود — یک درخواست، همهٔ badgeهای تب‌های کارتابل را پر می‌کند.
+4. پارامتر کوئری اختیاری `states` (کاما-جدا، مثل `states=2,3,4`) به‌عنوان فیلتر OR اضافه شد؛ وقتی غیرخالی باشد بر `state` تک‌مقداری اولویت دارد (`PettyCashExpenseDocFilter`). تب «در جریان» (جدید+در انتظار بررسی+برگشتی) حالا با یک درخواست پر می‌شود، نه سه‌تا.
+
+**تصمیم‌های محافظه‌کارانه که سند طراحی صراحتاً پوشش نداده بود** (ثبت در همین بخش، طبق دستور کار — به‌جای توقف):
+- **سال مالی (`YEAR`) در بدنهٔ Create/Update وجود ندارد** — چون §۵ سند فیلدی برایش نگذاشته بود. مشتق شد از **چهار کاراکتر اول `RegisterDate`** (قرارداد سراسری `YYYYMMDD`). اگر معنای واقعی چیز دیگری است (مثلاً سال مالی جلسهٔ کاربر، نه سال ثبت)، باید تصحیح شود.
+- **قاعدهٔ تکراری‌نبودن** فقط وقتی هر دو `vendorNationalId` و `invoiceNo` غیرخالی باشند اعمال می‌شود (وگرنه معنای تشخیص تکراری نامعلوم است).
+- **`invoiceDate` فقط هنگام `submit=true` الزامی است** — برای یک پیش‌نویس، قاعدهٔ «سال مالی جاری» چیزی برای بررسی ندارد.
+- **حذف صورت‌هزینه، سرسند و دیتیل Legacy را هم نرم حذف می‌کند** (سند طراحی این را صریح نگفته بود؛ تصمیم گرفته شد چون این پروژه هرگز حذف فیزیکی ندارد و یتیم‌ماندن سرسند Legacy در جدول‌های اصلی حسابداری نامطلوب بود).
+- **`IClientInfoProvider`** (جدید، `Accounting.Application.Common.Interfaces`) — انتزاع کوچک برای `CLIENT_IP` بدون وابستهکردن `Accounting.Application` به ASP.NET Core؛ پیاده‌سازی (`HttpContextClientInfoProvider`) در `Accounting.Api.Security`، دقیقاً هم‌الگوی `ICurrentUser`.
+- **`IPettyCashSubmitRuleChecker`** (سرویس Scoped جدید) — سه قاعدهٔ فقط-در-Submit (سال مالی فاکتور، سقف هر سند، موجودی نقد) را بین `CreatePettyCashExpenseDoc` (وقتی `submit=true`) و `SubmitPettyCashExpenseDoc` مشترک می‌کند، تا از‌هم واگرا نشوند — همان الگوی «یک قاعده، یک خانه»ی `VoucherTafsiliLevelGuard`.
+
+**⚠️ به دستور صریح صاحب پروژه، در همین بخش هیچ تست جدیدی نوشته نشد و `dotnet test` اجرا نشد** (صرفه‌جویی توکن) — فقط `dotnet build` روی کل solution («۰ خطا») تأیید شد. فهرست کامل تست‌هایی که باید بعداً نوشته شوند (validators، state rules، معادلهٔ موجودی، تشخیص تکراری، سقف هر سند، sync با Legacy، `PettyCashStatusMap`، نوشتن Event در همان تراکنش، تست SQLite برای mapping، و گسترش convention testهای vahed-scoped/POST-only/enum-mapping) در گزارش نهایی هَندآف همین کار ثبت شده و باید در جلسهٔ بعدی افزوده شوند. تعداد تست پروژه هنوز **۲۹۹۰** است (بدون تغییر نسبت به فاز ۴۳-ب).
+
+⚠️ **خارج از دامنهٔ این بخش** (طبق §۸ سند طراحی): نقش‌ها/RBAC، بررسی/برگشت/رد/تأیید سند (بخش ۲)، پیوست، ترمیم/شارژ و تسویهٔ دوره (بخش ۳)، و کل ماژول خزانه (بخش ۴+).
+
+---
+
 ### فاز ۴۳-ب — جابه‌جایی نام دو گزارش: «ماتریسی» به گزارشی رفت که واقعاً ماتریس است (۲۰۲۶-۰۹-۲۷، هر دو ریپو)
 
 **نقد صاحب پروژه:** «این گزارش ماتریسی بیشتر به گزارش متقاطع می‌آید؛ به‌جای گزارش ماتریسی نوع گزارشش به چی می‌خوره؟» — و بعد تصمیم صریح: نام «ماتریسی» به گزارش متقاطع داده شود و گزارش قبلی نام درست خودش را بگیرد.

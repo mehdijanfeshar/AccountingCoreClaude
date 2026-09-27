@@ -158,6 +158,20 @@ public static class DependencyInjection
         services.AddScoped<ITafsiliRepository, TafsiliRepository>();
         services.AddScoped<ITafsiliReadRepository, TafsiliReadRepository>();
 
+        // Petty-cash module, chunk 1 (2026-09-27). IChargeAndCostRepository is the composite
+        // write path for the Legacy TB_CHARGEANDCOST_HEAD/DETAIL pair — not an independent CRUD
+        // surface, see that interface's XML doc. The three TB_PC_* repositories are the new
+        // "side" tables (owner-approved exception to "no new tables";
+        // docs/tankhah-khazaneh-module.md §0/§3).
+        services.AddScoped<IChargeAndCostRepository, ChargeAndCostRepository>();
+        services.AddScoped<IPettyCashFundSettingRepository, PettyCashFundSettingRepository>();
+        services.AddScoped<IPettyCashExpenseDocRepository, PettyCashExpenseDocRepository>();
+        services.AddScoped<IPettyCashDocEventRepository, PettyCashDocEventRepository>();
+
+        services.AddScoped<IPettyCashFundReadRepository, PettyCashFundReadRepository>();
+        services.AddScoped<IPettyCashExpenseDocReadRepository, PettyCashExpenseDocReadRepository>();
+        services.AddScoped<IPettyCashDocEventReadRepository, PettyCashDocEventReadRepository>();
+
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 
         return services;

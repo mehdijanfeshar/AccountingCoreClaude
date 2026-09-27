@@ -142,6 +142,10 @@ builder.Services.AddAuthorizationBuilder()
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 
+// Petty-cash module, chunk 1 — TB_PC_DOC_EVENT.CLIENT_IP without Accounting.Application taking
+// any ASP.NET Core dependency. See IClientInfoProvider XML doc.
+builder.Services.AddScoped<IClientInfoProvider, HttpContextClientInfoProvider>();
+
 // Turns the untrusted X-Vahed-Code header plus the token's own unit claim into the one
 // effective scope every IVahedScoped request runs under (phase 37-B). Scoped, because it reads
 // per-request state through ICurrentUser.

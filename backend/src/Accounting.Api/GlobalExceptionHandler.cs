@@ -119,6 +119,53 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Conflict",
                     voucherNotEditableException.PublicDetail)),
 
+            // Petty-cash module, chunk 1. Same state-based-refusal shape as
+            // VoucherNotEditableException above, just for TB_PC_EXPENSE_DOC's own state machine.
+            PettyCashDocNotEditableException pettyCashDocNotEditableException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashDocNotEditableException.PublicDetail)),
+
+            // Application-level duplicate (no DB UNIQUE constraint backs it — a rejected or
+            // soft-deleted document must not block reuse of the same invoice number). 409: the
+            // request itself is well-formed, it conflicts with another existing document.
+            PettyCashDuplicateExpenseDocException pettyCashDuplicateExpenseDocException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashDuplicateExpenseDocException.PublicDetail)),
+
+            // The three Submit-only §4 rules — all 400, since each is "this specific amount,
+            // right now, does not fit", not a conflict with another resource.
+            PettyCashPerDocLimitExceededException pettyCashPerDocLimitExceededException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    pettyCashPerDocLimitExceededException.PublicDetail)),
+
+            PettyCashInsufficientCashBalanceException pettyCashInsufficientCashBalanceException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    pettyCashInsufficientCashBalanceException.PublicDetail)),
+
+            PettyCashInvoiceYearMismatchException pettyCashInvoiceYearMismatchException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    pettyCashInvoiceYearMismatchException.PublicDetail)),
+
             NotFoundException => (
                 StatusCodes.Status404NotFound,
                 BuildProblemDetails(

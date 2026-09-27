@@ -58,6 +58,12 @@ public static class DependencyInjection
         // issuing one database read per line.
         services.AddScoped<IVoucherTafsiliLevelGuard, VoucherTafsiliLevelGuard>();
 
+        // Petty-cash module, chunk 1 — the three §4 rules that apply only at Submit, shared by
+        // CreatePettyCashExpenseDoc (when submit=true) and SubmitPettyCashExpenseDoc so the two
+        // paths cannot drift apart. See IPettyCashSubmitRuleChecker XML doc.
+        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashSubmitRuleChecker,
+            Accounting.Application.PettyCash.Commands.Common.PettyCashSubmitRuleChecker>();
+
         return services;
     }
 }
