@@ -1,17 +1,26 @@
+using Accounting.Domain.ValueObjects;
+
 namespace Accounting.Application.PettyCash.Queries;
 
 /// <summary>
-/// Read-side projection of one <c>TB_REVOLVING_FUND</c> row plus its (optional)
-/// <c>TB_PC_FUND_SETTING</c> and its computed §2 balance summary — the
-/// <c>GET api/petty-cash/funds</c> list item, per <c>docs/tankhah-khazaneh-module.md</c> §5.
+/// Read-side projection of one <c>TB_PC_FUND</c> row plus its computed §2 balance summary. Used by
+/// both <c>GET api/petty-cash/funds</c> (list) and <c>GET api/petty-cash/funds/{fundId}</c>
+/// (single) — per <c>docs/tankhah-khazaneh-module.md</c> §5. The Domain entity never crosses the
+/// Application boundary (CLAUDE.md rule 6).
 /// </summary>
-/// <param name="Id">TB_REVOLVING_FUND.ID.</param>
-/// <param name="Code">TB_REVOLVING_FUND.CODE.</param>
-/// <param name="Name">TB_REVOLVING_FUND.NAME.</param>
-/// <param name="Ceiling">TB_REVOLVING_FUND.DEFAULTAMOUNT — سقف.</param>
-/// <param name="AccountCodeId">TB_REVOLVING_FUND.ACCOUNTCODE_ID.</param>
+/// <param name="Id">TB_PC_FUND.ID.</param>
+/// <param name="Code">TB_PC_FUND.CODE.</param>
+/// <param name="Name">TB_PC_FUND.NAME.</param>
+/// <param name="CustodianUserId">TB_PC_FUND.CUSTODIAN_USERID — تنخواه‌دار مسئول.</param>
+/// <param name="CustodianName">TB_PC_FUND.CUSTODIAN_NAME.</param>
+/// <param name="Ceiling">TB_PC_FUND.CEILING — سقف تنخواه.</param>
+/// <param name="PerDocLimit">TB_PC_FUND.PER_DOC_LIMIT — سقف هر سند.</param>
+/// <param name="AlertThresholdPercent">TB_PC_FUND.ALERT_THRESHOLD_PERCENT.</param>
+/// <param name="AccountCodeId">TB_PC_FUND.ACCOUNTCODE_ID.</param>
 /// <param name="AccountCodeTitle">Display-only: <c>TB_ACCOUNTCODE.ACCCODENAME</c> of the linked معین.</param>
-/// <param name="Settings"><see langword="null"/> when the fund has no <c>TB_PC_FUND_SETTING</c> row yet.</param>
+/// <param name="SettlementPeriod">TB_PC_FUND.SETTLEMENT_PERIOD.</param>
+/// <param name="IsActive">TB_PC_FUND.IS_ACTIVE — false blocks new صورت‌هزینه creation/Submit.</param>
+/// <param name="IsDeleted">TB_PC_FUND.ISDELETED. Exposed as-is, same reasoning as <c>RevolvingFundDto.IsDeleted</c>.</param>
 /// <param name="CashBalance">§2: <c>Ceiling − (ApprovedAmount + InFlightAmount)</c>.</param>
 /// <param name="ApprovedAmount">Sum of documents currently تأییدشده (منتظر ترمیم).</param>
 /// <param name="ApprovedCount">Count of the same set.</param>
@@ -21,10 +30,16 @@ public sealed record PettyCashFundDto(
     Guid Id,
     string Code,
     string Name,
-    decimal? Ceiling,
+    string CustodianUserId,
+    string? CustodianName,
+    decimal Ceiling,
+    decimal PerDocLimit,
+    int? AlertThresholdPercent,
     Guid? AccountCodeId,
     string? AccountCodeTitle,
-    PettyCashFundSettingDto? Settings,
+    PettyCashSettlementPeriod? SettlementPeriod,
+    bool IsActive,
+    bool IsDeleted,
     decimal CashBalance,
     decimal ApprovedAmount,
     int ApprovedCount,

@@ -11,8 +11,8 @@ namespace Accounting.Application.PettyCash.Queries;
 /// <param name="DocNumber"><c>"TH-" + Code</c>.</param>
 /// <param name="Code">TB_CHARGEANDCOST_HEAD.CHARGEANDCOST_CODE (zero-padded, 5 digits).</param>
 /// <param name="RegisterDate">TB_CHARGEANDCOST_HEAD.CHARGEANDCOST_DATE (YYYYMMDD).</param>
-/// <param name="FundId">TB_PC_EXPENSE_DOC.REVOLVINGFUND_ID.</param>
-/// <param name="FundName">Display-only: TB_REVOLVING_FUND.NAME.</param>
+/// <param name="FundId">TB_PC_EXPENSE_DOC.FUND_ID.</param>
+/// <param name="FundName">Display-only: TB_PC_FUND.NAME.</param>
 /// <param name="ExpenseId">TB_CHARGEANDCOST_DETAIL.EXPENSE_ID.</param>
 /// <param name="ExpenseName">Display-only: TB_EXPENCE.EXPENCENAME.</param>
 /// <param name="VendorName">TB_PC_EXPENSE_DOC.VENDOR_NAME.</param>

@@ -166,6 +166,16 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Bad Request",
                     pettyCashInvoiceYearMismatchException.PublicDetail)),
 
+            // Petty-cash module, chunk 2-ب — attachment content exceeds the 10 MiB cap. 400: the
+            // request's own payload does not fit a rule, same shape as the three §4 rules above.
+            PettyCashAttachmentTooLargeException pettyCashAttachmentTooLargeException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    pettyCashAttachmentTooLargeException.PublicDetail)),
+
             // Petty-cash module, chunk 2 (بخش ۲). Wrong DOC_STATE for the requested review
             // action — same state-based-refusal shape as PettyCashDocNotEditableException.
             PettyCashReviewStateConflictException pettyCashReviewStateConflictException => (
@@ -192,6 +202,35 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             PettyCashBulkApproveConflictException pettyCashBulkApproveConflictException => (
                 StatusCodes.Status409Conflict,
                 BuildBulkApproveConflictProblemDetails(httpContext, pettyCashBulkApproveConflictException)),
+
+            // Petty-cash module, 2026-09-28 decision (TB_PC_FUND). Application-level duplicate
+            // code check — same reasoning as PettyCashDuplicateExpenseDocException above.
+            PettyCashFundCodeDuplicateException pettyCashFundCodeDuplicateException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashFundCodeDuplicateException.PublicDetail)),
+
+            // Inactive-fund refusal on Create/Submit — state-based, same shape as
+            // PettyCashDocNotEditableException.
+            PettyCashFundInactiveException pettyCashFundInactiveException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashFundInactiveException.PublicDetail)),
+
+            // Delete guard: fund still has live صورت‌هزینه rows.
+            PettyCashFundHasExpenseDocsException pettyCashFundHasExpenseDocsException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashFundHasExpenseDocsException.PublicDetail)),
 
             NotFoundException => (
                 StatusCodes.Status404NotFound,
@@ -257,6 +296,16 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     StatusCodes.Status403Forbidden,
                     "Forbidden",
                     pettyCashReviewerAccessDeniedException.PublicDetail)),
+
+            // Petty-cash module, chunk 2-ب: attachment add/delete is owner-only, not a
+            // بررسی‌کننده action — plain permissions gap, same shape as the reviewer one above.
+            PettyCashAttachmentOwnerOnlyException pettyCashAttachmentOwnerOnlyException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    pettyCashAttachmentOwnerOnlyException.PublicDetail)),
 
             _ => (
                 StatusCodes.Status500InternalServerError,

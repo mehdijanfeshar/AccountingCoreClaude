@@ -1,24 +1,31 @@
 using Accounting.Application.PettyCash.Commands.ApprovePettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Commands.BulkApprovePettyCashExpenseDocs;
 using Accounting.Application.PettyCash.Commands.CreatePettyCashExpenseDoc;
+using Accounting.Application.PettyCash.Commands.CreatePettyCashFund;
+using Accounting.Application.PettyCash.Commands.DeletePettyCashAttachment;
 using Accounting.Application.PettyCash.Commands.DeletePettyCashExpenseDoc;
+using Accounting.Application.PettyCash.Commands.DeletePettyCashFund;
 using Accounting.Application.PettyCash.Commands.DeletePettyCashFundReviewer;
 using Accounting.Application.PettyCash.Commands.RejectPettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Commands.ReturnPettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Commands.StartReviewPettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Commands.SubmitPettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Commands.UpdatePettyCashExpenseDoc;
+using Accounting.Application.PettyCash.Commands.UpdatePettyCashFund;
+using Accounting.Application.PettyCash.Commands.UploadPettyCashAttachment;
 using Accounting.Application.PettyCash.Commands.UpsertPettyCashFundReviewer;
-using Accounting.Application.PettyCash.Commands.UpsertPettyCashFundSetting;
 using Accounting.Application.PettyCash.Queries;
+using Accounting.Application.PettyCash.Queries.GetPettyCashAttachmentFile;
+using Accounting.Application.PettyCash.Queries.GetPettyCashAttachments;
 using Accounting.Application.PettyCash.Queries.GetPettyCashDocEvents;
 using Accounting.Application.PettyCash.Queries.GetPettyCashExpenseDocById;
 using Accounting.Application.PettyCash.Queries.GetPettyCashExpenseDocs;
+using Accounting.Application.PettyCash.Queries.GetPettyCashFundById;
 using Accounting.Application.PettyCash.Queries.GetPettyCashFundReviewers;
 using Accounting.Application.PettyCash.Queries.GetPettyCashFunds;
-using Accounting.Application.PettyCash.Queries.GetPettyCashFundSetting;
 using Accounting.Domain.ValueObjects;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Accounting.Api.Controllers;
@@ -47,9 +54,9 @@ public sealed class PettyCashController : ControllerBase
     }
 
     /// <summary>
-    /// Every تنخواه fund belonging to the caller's unit, with تنظیمات and computed §2 balance
-    /// summary. Returns a bare array (not <see cref="Accounting.Application.Common.PagedResult{T}"/>),
-    /// per the frontend contract.
+    /// Every تنخواه fund belonging to the caller's unit, with computed §2 balance summary. Returns
+    /// a bare array (not <see cref="Accounting.Application.Common.PagedResult{T}"/>), per the
+    /// frontend contract.
     /// </summary>
     [HttpGet("funds")]
     [ProducesResponseType(typeof(IReadOnlyList<PettyCashFundDto>), StatusCodes.Status200OK)]
@@ -62,48 +69,101 @@ public sealed class PettyCashController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>
-    /// A fund's تنظیمات. Returns <b>404</b> both when the fund itself does not exist AND when it
-    /// exists but has no تنظیمات row yet — the frontend treats 404 as "not configured" either way
-    /// (see <see cref="GetPettyCashFundSettingQuery"/>).
-    /// </summary>
-    [HttpGet("funds/{fundId:guid}/settings")]
-    [ProducesResponseType(typeof(PettyCashFundSettingDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetFundSettings(Guid fundId, CancellationToken cancellationToken)
-    {
-        var result = await _mediator.Send(new GetPettyCashFundSettingQuery(fundId), cancellationToken);
-
-        return Ok(result);
-    }
-
-    /// <summary>Creates or fully replaces a fund's تنظیمات — «upsert».</summary>
-    [HttpPost("funds/{fundId:guid}/settings")]
-    [ProducesResponseType(typeof(UpsertPettyCashFundSettingResponse), StatusCodes.Status200OK)]
+    /// <summary>Returns a single تنخواه by <c>ID</c>, or 404 when it does not exist.</summary>
+    [HttpGet("funds/{fundId:guid}")]
+    [ProducesResponseType(typeof(PettyCashFundDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> UpsertFundSettings(
-        Guid fundId,
-        [FromBody] UpsertPettyCashFundSettingRequest request,
+    public async Task<IActionResult> GetFundById(Guid fundId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPettyCashFundByIdQuery(fundId), cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>
+    /// Creates a new تنخواه (<c>TB_PC_FUND</c> row) — the module's own, fully independent تنخواه
+    /// definition (2026-09-28 decision; does not touch <c>TB_REVOLVING_FUND</c>).
+    /// </summary>
+    [HttpPost("funds")]
+    [ProducesResponseType(typeof(CreatePettyCashFundResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateFund(
+        [FromBody] CreatePettyCashFundRequest request,
         CancellationToken cancellationToken)
     {
-        var command = new UpsertPettyCashFundSettingCommand(
-            fundId,
+        var command = new CreatePettyCashFundCommand(
+            request.Code,
+            request.Name,
             request.CustodianUserId,
             request.CustodianName,
+            request.Ceiling,
             request.PerDocLimit,
             request.AlertThresholdPercent,
-            request.SettlementPeriod);
+            request.AccountCodeId,
+            request.SettlementPeriod,
+            request.IsActive);
+
+        var id = await _mediator.Send(command, cancellationToken);
+
+        return CreatedAtAction(nameof(GetFundById), new { fundId = id }, new CreatePettyCashFundResponse(id));
+    }
+
+    /// <summary>Fully replaces an existing تنخواه. <c>fundId</c> is taken from the route, never the body.</summary>
+    [HttpPost("funds/{fundId:guid}/update")]
+    [ProducesResponseType(typeof(UpdatePettyCashFundResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateFund(
+        Guid fundId,
+        [FromBody] UpdatePettyCashFundRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new UpdatePettyCashFundCommand(
+            fundId,
+            request.Code,
+            request.Name,
+            request.CustodianUserId,
+            request.CustodianName,
+            request.Ceiling,
+            request.PerDocLimit,
+            request.AlertThresholdPercent,
+            request.AccountCodeId,
+            request.SettlementPeriod,
+            request.IsActive);
 
         await _mediator.Send(command, cancellationToken);
 
-        return Ok(new UpsertPettyCashFundSettingResponse(fundId));
+        return Ok(new UpdatePettyCashFundResponse(fundId));
+    }
+
+    /// <summary>
+    /// Soft-deletes a تنخواه. Refused (409) while it still has non-deleted صورت‌هزینه rows.
+    /// </summary>
+    [HttpPost("funds/{fundId:guid}/delete")]
+    [ProducesResponseType(typeof(DeletePettyCashFundResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteFund(Guid fundId, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeletePettyCashFundCommand(fundId), cancellationToken);
+
+        return Ok(new DeletePettyCashFundResponse(fundId));
     }
 
     /// <summary>
@@ -434,6 +494,104 @@ public sealed class PettyCashController : ControllerBase
         return Ok(new DeletePettyCashFundReviewerResponse(id));
     }
 
+    /// <summary>
+    /// بخش ۲-ب — every non-deleted پیوست's metadata for a صورت‌هزینه (never the file bytes). Any
+    /// caller with VahedScope access to the document may call this — not owner-only.
+    /// </summary>
+    [HttpGet("expense-docs/{id:guid}/attachments")]
+    [ProducesResponseType(typeof(IReadOnlyList<PettyCashAttachmentDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetAttachments(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPettyCashAttachmentsQuery(id), cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// بخش ۲-ب — uploads a پیوست. Only while the document is پیش‌نویس/برگشتی, only by the
+    /// document's own owner (<see cref="Accounting.Application.Common.Interfaces.ICurrentUser.UserId"/>
+    /// == <c>TB_PC_EXPENSE_DOC.ADDUSERID</c>). Reads the multipart <see cref="IFormFile"/> here and
+    /// converts it to bytes before dispatching <see cref="UploadPettyCashAttachmentCommand"/> —
+    /// <c>Accounting.Application</c> takes no ASP.NET Core dependency, same boundary as every
+    /// other command in this project.
+    /// </summary>
+    [HttpPost("expense-docs/{id:guid}/attachments")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(UploadPettyCashAttachmentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UploadAttachment(
+        Guid id,
+        [FromForm] UploadPettyCashAttachmentRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.File is null || request.File.Length == 0)
+        {
+            ModelState.AddModelError(nameof(request.File), "فایل پیوست الزامی است.");
+
+            return ValidationProblem(ModelState);
+        }
+
+        await using var stream = new MemoryStream();
+        await request.File.CopyToAsync(stream, cancellationToken);
+
+        var attachName = string.IsNullOrWhiteSpace(request.AttachName) ? request.File.FileName : request.AttachName!;
+
+        var command = new UploadPettyCashAttachmentCommand(id, attachName, request.File.ContentType, stream.ToArray());
+
+        var attachmentId = await _mediator.Send(command, cancellationToken);
+
+        return Ok(new UploadPettyCashAttachmentResponse(attachmentId));
+    }
+
+    /// <summary>بخش ۲-ب — downloads a پیوست's bytes. The only endpoint on this controller that returns file content.</summary>
+    [HttpGet("expense-docs/{id:guid}/attachments/{attachmentId:guid}/download")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DownloadAttachment(Guid id, Guid attachmentId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPettyCashAttachmentFileQuery(id, attachmentId), cancellationToken);
+
+        if (result is null)
+        {
+            return NotFound();
+        }
+
+        return File(result.Content, result.ContentType ?? "application/octet-stream", result.AttachName);
+    }
+
+    /// <summary>
+    /// بخش ۲-ب — soft-deletes a پیوست. Only while the document is پیش‌نویس/برگشتی, only by the
+    /// document's own owner.
+    /// </summary>
+    [HttpPost("expense-docs/{id:guid}/attachments/{attachmentId:guid}/delete")]
+    [ProducesResponseType(typeof(DeletePettyCashAttachmentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteAttachment(Guid id, Guid attachmentId, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeletePettyCashAttachmentCommand(id, attachmentId), cancellationToken);
+
+        return Ok(new DeletePettyCashAttachmentResponse(attachmentId));
+    }
+
     /// <summary>«گردش عملیات» — the full audit trail for one صورت‌هزینه.</summary>
     [HttpGet("expense-docs/{id:guid}/events")]
     [ProducesResponseType(typeof(IReadOnlyList<PettyCashDocEventDto>), StatusCodes.Status200OK)]
@@ -450,16 +608,40 @@ public sealed class PettyCashController : ControllerBase
     }
 }
 
-/// <summary>Request body for <see cref="PettyCashController.UpsertFundSettings"/>. <c>FundId</c> comes from the route.</summary>
-public sealed record UpsertPettyCashFundSettingRequest(
-    string? CustodianUserId,
+/// <summary>Request body for <see cref="PettyCashController.CreateFund"/>.</summary>
+public sealed record CreatePettyCashFundRequest(
+    string Code,
+    string Name,
+    string CustodianUserId,
     string? CustodianName,
-    decimal? PerDocLimit,
+    decimal Ceiling,
+    decimal PerDocLimit,
     int? AlertThresholdPercent,
-    PettyCashSettlementPeriod? SettlementPeriod);
+    Guid? AccountCodeId,
+    PettyCashSettlementPeriod? SettlementPeriod,
+    bool IsActive);
 
-/// <summary>Response body for a successful <see cref="PettyCashController.UpsertFundSettings"/> call.</summary>
-public sealed record UpsertPettyCashFundSettingResponse(Guid FundId);
+/// <summary>Response body for a successful <see cref="PettyCashController.CreateFund"/> call.</summary>
+public sealed record CreatePettyCashFundResponse(Guid Id);
+
+/// <summary>Request body for <see cref="PettyCashController.UpdateFund"/>. <c>FundId</c> comes from the route.</summary>
+public sealed record UpdatePettyCashFundRequest(
+    string Code,
+    string Name,
+    string CustodianUserId,
+    string? CustodianName,
+    decimal Ceiling,
+    decimal PerDocLimit,
+    int? AlertThresholdPercent,
+    Guid? AccountCodeId,
+    PettyCashSettlementPeriod? SettlementPeriod,
+    bool IsActive);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.UpdateFund"/> call.</summary>
+public sealed record UpdatePettyCashFundResponse(Guid FundId);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.DeleteFund"/> call.</summary>
+public sealed record DeletePettyCashFundResponse(Guid FundId);
 
 /// <summary>Request body for <see cref="PettyCashController.Create"/>.</summary>
 public sealed record CreatePettyCashExpenseDocRequest(
@@ -542,3 +724,24 @@ public sealed record UpsertPettyCashFundReviewerResponse(Guid Id);
 
 /// <summary>Response body for a successful <see cref="PettyCashController.DeleteFundReviewer"/> call.</summary>
 public sealed record DeletePettyCashFundReviewerResponse(Guid Id);
+
+/// <summary>
+/// Multipart/form-data request body for <see cref="PettyCashController.UploadAttachment"/>. A
+/// plain class rather than a positional record — ASP.NET Core's form-value binder for
+/// <see cref="IFormFile"/> properties is most reliably exercised against settable properties, and
+/// no other command in this project's API binds from a multipart form, so there is no existing
+/// precedent to follow here. <see cref="AttachName"/> is optional; the controller falls back to
+/// the uploaded file's own name when omitted.
+/// </summary>
+public sealed class UploadPettyCashAttachmentRequest
+{
+    public IFormFile File { get; set; } = null!;
+
+    public string? AttachName { get; set; }
+}
+
+/// <summary>Response body for a successful <see cref="PettyCashController.UploadAttachment"/> call.</summary>
+public sealed record UploadPettyCashAttachmentResponse(Guid Id);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.DeleteAttachment"/> call.</summary>
+public sealed record DeletePettyCashAttachmentResponse(Guid Id);

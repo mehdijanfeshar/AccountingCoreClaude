@@ -12,7 +12,7 @@ namespace Accounting.Infrastructure.Repositories;
 /// EF Core (Oracle) implementation of <see cref="IPettyCashExpenseDocReadRepository"/>.
 ///
 /// Joins <c>TB_PC_EXPENSE_DOC</c> to its Legacy <c>TB_CHARGEANDCOST_HEAD</c>/
-/// <c>TB_CHARGEANDCOST_DETAIL</c>/<c>TB_EXPENCE</c> chain and to <c>TB_REVOLVING_FUND</c>, all
+/// <c>TB_CHARGEANDCOST_DETAIL</c>/<c>TB_EXPENCE</c> chain and to <c>TB_PC_FUND</c>, all
 /// with plain query-syntax joins on explicit FK columns (never nested-collection navigation
 /// dereferences), so the translation stays simple and predictable on both SQLite (tests) and
 /// Oracle. <c>TB_CHARGEANDCOST_DETAIL.CHARGEANDCOSTHEAD_ID</c>/<c>EXPENSE_ID</c> are both
@@ -24,7 +24,7 @@ public sealed class PettyCashExpenseDocReadRepository : IPettyCashExpenseDocRead
     private sealed record Row(
         TB_PC_EXPENSE_DOC Doc,
         TB_CHARGEANDCOST_HEAD Head,
-        TB_REVOLVING_FUND Fund,
+        TB_PC_FUND Fund,
         TB_CHARGEANDCOST_DETAIL? Detail,
         TB_EXPENCE? Expense);
 
@@ -54,7 +54,7 @@ public sealed class PettyCashExpenseDocReadRepository : IPettyCashExpenseDocRead
 
         if (fundId is { } id)
         {
-            docs = docs.Where(d => d.REVOLVINGFUND_ID == id);
+            docs = docs.Where(d => d.FUND_ID == id);
         }
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -104,7 +104,7 @@ public sealed class PettyCashExpenseDocReadRepository : IPettyCashExpenseDocRead
             from doc in _dbContext.TB_PC_EXPENSE_DOCs.AsNoTracking()
             where orderedIds.Contains(doc.ID)
             join head in _dbContext.TB_CHARGEANDCOST_HEADs.AsNoTracking() on doc.CHARGEANDCOSTHEAD_ID equals head.ID
-            join fund in _dbContext.TB_REVOLVING_FUNDs.AsNoTracking() on doc.REVOLVINGFUND_ID equals fund.ID
+            join fund in _dbContext.TB_PC_FUNDs.AsNoTracking() on doc.FUND_ID equals fund.ID
             join detail in _dbContext.TB_CHARGEANDCOST_DETAILs.AsNoTracking()
                 on (Guid?)doc.CHARGEANDCOSTHEAD_ID equals detail.CHARGEANDCOSTHEAD_ID into detailGroup
             from detail in detailGroup.DefaultIfEmpty()
@@ -180,7 +180,7 @@ public sealed class PettyCashExpenseDocReadRepository : IPettyCashExpenseDocRead
         var row = await (
             from doc in _dbContext.TB_PC_EXPENSE_DOCs.AsNoTracking()
             join head in _dbContext.TB_CHARGEANDCOST_HEADs.AsNoTracking() on doc.CHARGEANDCOSTHEAD_ID equals head.ID
-            join fund in _dbContext.TB_REVOLVING_FUNDs.AsNoTracking() on doc.REVOLVINGFUND_ID equals fund.ID
+            join fund in _dbContext.TB_PC_FUNDs.AsNoTracking() on doc.FUND_ID equals fund.ID
             join detail in _dbContext.TB_CHARGEANDCOST_DETAILs.AsNoTracking()
                 on (Guid?)doc.CHARGEANDCOSTHEAD_ID equals detail.CHARGEANDCOSTHEAD_ID into detailGroup
             from detail in detailGroup.DefaultIfEmpty()
@@ -199,7 +199,7 @@ public sealed class PettyCashExpenseDocReadRepository : IPettyCashExpenseDocRead
         "TH-" + row.Head.CHARGEANDCOST_CODE,
         row.Head.CHARGEANDCOST_CODE,
         row.Head.CHARGEANDCOST_DATE,
-        row.Doc.REVOLVINGFUND_ID,
+        row.Doc.FUND_ID,
         row.Fund.NAME,
         row.Detail?.EXPENSE_ID ?? Guid.Empty,
         row.Expense?.EXPENCENAME,

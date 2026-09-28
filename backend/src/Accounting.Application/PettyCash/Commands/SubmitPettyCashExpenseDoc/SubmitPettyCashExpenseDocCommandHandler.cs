@@ -12,7 +12,7 @@ public sealed class SubmitPettyCashExpenseDocCommandHandler : IRequestHandler<Su
 {
     private readonly IPettyCashExpenseDocRepository _expenseDocRepository;
     private readonly IChargeAndCostRepository _chargeAndCostRepository;
-    private readonly IRevolvingFundRepository _revolvingFundRepository;
+    private readonly IPettyCashFundRepository _pettyCashFundRepository;
     private readonly IPettyCashDocEventRepository _eventRepository;
     private readonly IPettyCashSubmitRuleChecker _submitRuleChecker;
     private readonly IUnitOfWork _unitOfWork;
@@ -22,7 +22,7 @@ public sealed class SubmitPettyCashExpenseDocCommandHandler : IRequestHandler<Su
     public SubmitPettyCashExpenseDocCommandHandler(
         IPettyCashExpenseDocRepository expenseDocRepository,
         IChargeAndCostRepository chargeAndCostRepository,
-        IRevolvingFundRepository revolvingFundRepository,
+        IPettyCashFundRepository pettyCashFundRepository,
         IPettyCashDocEventRepository eventRepository,
         IPettyCashSubmitRuleChecker submitRuleChecker,
         IUnitOfWork unitOfWork,
@@ -31,7 +31,7 @@ public sealed class SubmitPettyCashExpenseDocCommandHandler : IRequestHandler<Su
     {
         _expenseDocRepository = expenseDocRepository;
         _chargeAndCostRepository = chargeAndCostRepository;
-        _revolvingFundRepository = revolvingFundRepository;
+        _pettyCashFundRepository = pettyCashFundRepository;
         _eventRepository = eventRepository;
         _submitRuleChecker = submitRuleChecker;
         _unitOfWork = unitOfWork;
@@ -52,8 +52,14 @@ public sealed class SubmitPettyCashExpenseDocCommandHandler : IRequestHandler<Su
 
         PettyCashDocEditability.EnsureEditable(doc.ID, fromState);
 
-        var fund = await _revolvingFundRepository.GetForUpdateAsync(doc.REVOLVINGFUND_ID, request.VahedCode, cancellationToken)
-            ?? throw new NotFoundException("RevolvingFund", doc.REVOLVINGFUND_ID);
+        var fund = await _pettyCashFundRepository.GetForUpdateAsync(doc.FUND_ID, request.VahedCode, cancellationToken)
+            ?? throw new NotFoundException("PettyCashFund", doc.FUND_ID);
+
+        // 2026-09-28 rule: an inactive تنخواه accepts no Submit either.
+        if (!fund.IS_ACTIVE)
+        {
+            throw new PettyCashFundInactiveException(doc.FUND_ID);
+        }
 
         var totalAmount = (doc.AMOUNT_BEFORE_TAX ?? 0m) + (doc.VAT_AMOUNT ?? 0m);
         var year = doc.YEAR ?? string.Empty;
@@ -63,8 +69,9 @@ public sealed class SubmitPettyCashExpenseDocCommandHandler : IRequestHandler<Su
         // IPettyCashSubmitRuleChecker XML doc.
         await _submitRuleChecker.EnsureSubmittableAsync(
             doc.ID,
-            doc.REVOLVINGFUND_ID,
-            fund.DEFAULTAMOUNT,
+            doc.FUND_ID,
+            fund.CEILING,
+            fund.PER_DOC_LIMIT,
             doc.INVOICE_DATE,
             year,
             totalAmount,

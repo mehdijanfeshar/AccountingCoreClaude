@@ -7,7 +7,7 @@ namespace Accounting.Application.PettyCash.Commands.Common;
 ///
 /// <b>The rule</b> (<c>docs/tankhah-khazaneh-module.md</c>, تصمیم‌های بخش ۲، قاعدهٔ SoD):
 /// (الف) the caller must have an active (<c>ISDELETED == false</c>) <c>TB_PC_REVIEWER</c> row for
-/// the document's <c>REVOLVINGFUND_ID</c>, otherwise <b>403</b>; (ب) the caller must not be the
+/// the document's <c>FUND_ID</c>, otherwise <b>403</b>; (ب) the caller must not be the
 /// document's own creator (<c>ADDUSERID</c>), otherwise <b>409</b> (segregation of duties, not a
 /// permissions gap). Checked in that order.
 /// </summary>
@@ -20,7 +20,7 @@ public interface IPettyCashReviewAuthorizer
     /// </summary>
     Task EnsureCanReviewAsync(
         Guid expenseDocId,
-        Guid revolvingFundId,
+        Guid fundId,
         string documentCreatorUserId,
         CancellationToken cancellationToken = default);
 }

@@ -18,17 +18,17 @@ public sealed class PettyCashReviewAuthorizer : IPettyCashReviewAuthorizer
 
     public async Task EnsureCanReviewAsync(
         Guid expenseDocId,
-        Guid revolvingFundId,
+        Guid fundId,
         string documentCreatorUserId,
         CancellationToken cancellationToken = default)
     {
         var userId = _currentUser.UserId;
 
-        var reviewer = await _reviewerRepository.GetByFundAndUserIdAsync(revolvingFundId, userId, cancellationToken);
+        var reviewer = await _reviewerRepository.GetByFundAndUserIdAsync(fundId, userId, cancellationToken);
 
         if (reviewer is null || reviewer.ISDELETED)
         {
-            throw new PettyCashReviewerAccessDeniedException(expenseDocId, revolvingFundId);
+            throw new PettyCashReviewerAccessDeniedException(expenseDocId, fundId);
         }
 
         if (string.Equals(userId, documentCreatorUserId, StringComparison.Ordinal))

@@ -18,7 +18,7 @@ namespace Accounting.Application.PettyCash.Commands.CreatePettyCashExpenseDoc;
 /// </summary>
 public sealed class CreatePettyCashExpenseDocCommandHandler : IRequestHandler<CreatePettyCashExpenseDocCommand, Guid>
 {
-    private readonly IRevolvingFundRepository _revolvingFundRepository;
+    private readonly IPettyCashFundRepository _pettyCashFundRepository;
     private readonly IExpenseRepository _expenseRepository;
     private readonly IChargeAndCostRepository _chargeAndCostRepository;
     private readonly IPettyCashExpenseDocRepository _expenseDocRepository;
@@ -34,7 +34,7 @@ public sealed class CreatePettyCashExpenseDocCommandHandler : IRequestHandler<Cr
     private const int LegacyPayToMaxLength = 100;
 
     public CreatePettyCashExpenseDocCommandHandler(
-        IRevolvingFundRepository revolvingFundRepository,
+        IPettyCashFundRepository pettyCashFundRepository,
         IExpenseRepository expenseRepository,
         IChargeAndCostRepository chargeAndCostRepository,
         IPettyCashExpenseDocRepository expenseDocRepository,
@@ -44,7 +44,7 @@ public sealed class CreatePettyCashExpenseDocCommandHandler : IRequestHandler<Cr
         ICurrentUser currentUser,
         IClientInfoProvider clientInfoProvider)
     {
-        _revolvingFundRepository = revolvingFundRepository;
+        _pettyCashFundRepository = pettyCashFundRepository;
         _expenseRepository = expenseRepository;
         _chargeAndCostRepository = chargeAndCostRepository;
         _expenseDocRepository = expenseDocRepository;
@@ -57,8 +57,14 @@ public sealed class CreatePettyCashExpenseDocCommandHandler : IRequestHandler<Cr
 
     public async Task<Guid> Handle(CreatePettyCashExpenseDocCommand request, CancellationToken cancellationToken)
     {
-        var fund = await _revolvingFundRepository.GetForUpdateAsync(request.FundId, request.VahedCode, cancellationToken)
-            ?? throw new NotFoundException("RevolvingFund", request.FundId);
+        var fund = await _pettyCashFundRepository.GetForUpdateAsync(request.FundId, request.VahedCode, cancellationToken)
+            ?? throw new NotFoundException("PettyCashFund", request.FundId);
+
+        // 2026-09-28 rule: an inactive تنخواه accepts no new صورت‌هزینه at all (draft or submitted).
+        if (!fund.IS_ACTIVE)
+        {
+            throw new PettyCashFundInactiveException(request.FundId);
+        }
 
         _ = await _expenseRepository.GetForUpdateAsync(request.ExpenseId, request.VahedCode, cancellationToken)
             ?? throw new NotFoundException("Expense", request.ExpenseId);
@@ -85,7 +91,8 @@ public sealed class CreatePettyCashExpenseDocCommandHandler : IRequestHandler<Cr
             await _submitRuleChecker.EnsureSubmittableAsync(
                 docId,
                 request.FundId,
-                fund.DEFAULTAMOUNT,
+                fund.CEILING,
+                fund.PER_DOC_LIMIT,
                 request.InvoiceDate,
                 year,
                 totalAmount,
@@ -147,7 +154,7 @@ public sealed class CreatePettyCashExpenseDocCommandHandler : IRequestHandler<Cr
         {
             ID = docId,
             CHARGEANDCOSTHEAD_ID = head.ID,
-            REVOLVINGFUND_ID = request.FundId,
+            FUND_ID = request.FundId,
             DOC_STATE = initialState,
             VENDOR_NAME = request.VendorName,
             VENDOR_NATIONAL_ID = request.VendorNationalId,

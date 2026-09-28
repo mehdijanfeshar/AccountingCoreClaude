@@ -5,21 +5,18 @@ namespace Accounting.Application.PettyCash.Commands.Common;
 
 public sealed class PettyCashSubmitRuleChecker : IPettyCashSubmitRuleChecker
 {
-    private readonly IPettyCashFundSettingRepository _fundSettingRepository;
     private readonly IPettyCashExpenseDocRepository _expenseDocRepository;
 
-    public PettyCashSubmitRuleChecker(
-        IPettyCashFundSettingRepository fundSettingRepository,
-        IPettyCashExpenseDocRepository expenseDocRepository)
+    public PettyCashSubmitRuleChecker(IPettyCashExpenseDocRepository expenseDocRepository)
     {
-        _fundSettingRepository = fundSettingRepository;
         _expenseDocRepository = expenseDocRepository;
     }
 
     public async Task EnsureSubmittableAsync(
         Guid expenseDocId,
-        Guid revolvingFundId,
-        decimal? fundCeiling,
+        Guid fundId,
+        decimal fundCeiling,
+        decimal perDocLimit,
         string? invoiceDate,
         string year,
         decimal totalAmount,
@@ -32,17 +29,15 @@ public sealed class PettyCashSubmitRuleChecker : IPettyCashSubmitRuleChecker
             throw new PettyCashInvoiceYearMismatchException(expenseDocId, invoiceDate, year);
         }
 
-        var settings = await _fundSettingRepository.GetByFundIdAsync(revolvingFundId, cancellationToken);
-
-        if (settings is { PER_DOC_LIMIT: { } limit } && totalAmount > limit)
+        if (totalAmount > perDocLimit)
         {
-            throw new PettyCashPerDocLimitExceededException(expenseDocId, totalAmount, limit);
+            throw new PettyCashPerDocLimitExceededException(expenseDocId, totalAmount, perDocLimit);
         }
 
         var exposure = await _expenseDocRepository.GetFundExposureAsync(
-            revolvingFundId, vahedCode, excludeDocId, cancellationToken);
+            fundId, vahedCode, excludeDocId, cancellationToken);
 
-        var cashBalance = (fundCeiling ?? 0m) - exposure.ApprovedAmount - exposure.InFlightAmount;
+        var cashBalance = fundCeiling - exposure.ApprovedAmount - exposure.InFlightAmount;
 
         if (totalAmount > cashBalance)
         {

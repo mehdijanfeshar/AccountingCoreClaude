@@ -10,9 +10,12 @@ namespace Accounting.Domain.Entity;
 /// schema Legacy جایی ندارند (<c>docs/tankhah-khazaneh-module.md</c> §۱/§۳).
 ///
 /// ۱:۱ با <see cref="TB_CHARGEANDCOST_HEAD"/> — <c>UK_PC_EXPENSE_DOC</c> روی
-/// <c>CHARGEANDCOSTHEAD_ID</c>. <c>REVOLVINGFUND_ID</c> اینجا نگه داشته می‌شود، نه روی ردیف
+/// <c>CHARGEANDCOSTHEAD_ID</c>. <c>FUND_ID</c> اینجا نگه داشته می‌شود، نه روی ردیف
 /// Legacy — یافتهٔ زندهٔ §۱: هزینه‌کردهای موجود هیچ <c>REVOLVINGFUND_ID</c> ای در
 /// <c>TB_CHARGEANDCOST_DETAIL</c> ندارند. <c>ID</c> بدون <c>DEFAULT sys_guid()</c> (ریسک #۱۱).
+///
+/// <c>FUND_ID</c> از تصمیم ۲۰۲۶-۰۹-۲۸ به <see cref="TB_PC_FUND"/> اشاره می‌کند (پیش‌تر
+/// <c>REVOLVINGFUND_ID</c> به <c>TB_REVOLVING_FUND</c>) — <c>docs/tankhah-khazaneh-module.md</c> §۰.
 /// </summary>
 public partial class TB_PC_EXPENSE_DOC
 {
@@ -20,7 +23,7 @@ public partial class TB_PC_EXPENSE_DOC
 
     public Guid CHARGEANDCOSTHEAD_ID { get; set; }
 
-    public Guid REVOLVINGFUND_ID { get; set; }
+    public Guid FUND_ID { get; set; }
 
     public PettyCashDocState DOC_STATE { get; set; }
 
@@ -58,5 +61,5 @@ public partial class TB_PC_EXPENSE_DOC
 
     public virtual TB_CHARGEANDCOST_HEAD? CHARGEANDCOSTHEAD { get; set; }
 
-    public virtual TB_REVOLVING_FUND? REVOLVINGFUND { get; set; }
+    public virtual TB_PC_FUND? FUND { get; set; }
 }

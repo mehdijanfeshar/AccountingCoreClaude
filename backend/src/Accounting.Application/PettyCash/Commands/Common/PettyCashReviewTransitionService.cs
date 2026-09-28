@@ -52,7 +52,7 @@ public sealed class PettyCashReviewTransitionService : IPettyCashReviewTransitio
         // (الف) reviewer-of-this-fund check → 403, then (ب) SoD check → 409. Both before the
         // state check below, so a caller with no business reviewing this document at all never
         // learns anything about its current state.
-        await _reviewAuthorizer.EnsureCanReviewAsync(doc.ID, doc.REVOLVINGFUND_ID, doc.ADDUSERID, cancellationToken);
+        await _reviewAuthorizer.EnsureCanReviewAsync(doc.ID, doc.FUND_ID, doc.ADDUSERID, cancellationToken);
 
         var fromState = doc.DOC_STATE;
 

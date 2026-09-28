@@ -28,7 +28,7 @@ public sealed class DeletePettyCashFundReviewerCommandHandler : IRequestHandler<
         // treated the same as "does not exist" — the caller has no legitimate path-based reason
         // to distinguish the two (same reasoning DeletePettyCashExpenseDoc et al. apply to a
         // mismatched/missing id).
-        if (reviewer is null || reviewer.REVOLVINGFUND_ID != request.FundId)
+        if (reviewer is null || reviewer.FUND_ID != request.FundId)
         {
             throw new NotFoundException("PettyCashReviewer", request.Id);
         }

@@ -60,18 +60,20 @@ public sealed class PettyCashExpenseDocRepository : IPettyCashExpenseDocReposito
             query = query.Where(d => d.ID != id);
         }
 
-        return await query.AnyAsync(cancellationToken);
+        // CountAsync, not AnyAsync: the Oracle provider renders AnyAsync as
+        // "CASE WHEN EXISTS ... THEN True ELSE False", which pre-23ai Oracle rejects (ORA-00904).
+        return await query.CountAsync(cancellationToken) > 0;
     }
 
     public async Task<PettyCashFundExposure> GetFundExposureAsync(
-        Guid revolvingFundId,
+        Guid fundId,
         string vahedCode,
         Guid? excludeDocId,
         CancellationToken cancellationToken = default)
     {
         var query = _dbContext.TB_PC_EXPENSE_DOCs
             .AsNoTracking()
-            .Where(d => d.REVOLVINGFUND_ID == revolvingFundId && d.VAHEDCODE == vahedCode && !d.ISDELETED);
+            .Where(d => d.FUND_ID == fundId && d.VAHEDCODE == vahedCode && !d.ISDELETED);
 
         if (excludeDocId is { } id)
         {

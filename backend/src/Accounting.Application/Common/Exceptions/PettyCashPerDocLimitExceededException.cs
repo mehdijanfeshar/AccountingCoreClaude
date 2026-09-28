@@ -2,11 +2,11 @@ namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by <c>SubmitPettyCashExpenseDocCommandHandler</c> when a document's total amount
-/// exceeds its fund's configured <c>TB_PC_FUND_SETTING.PER_DOC_LIMIT</c>
-/// (<c>docs/tankhah-khazaneh-module.md</c> §4: "مبلغ کل ≤ «سقف هر سند» تنخواه (اگر تعریف
-/// شده)"). Only checked at Submit, and only when a per-document limit is actually configured —
-/// a fund with no limit set has none to exceed. 400: the request itself (this specific amount,
-/// on this specific fund, right now) is invalid, not a conflict with another resource.
+/// exceeds its fund's <c>TB_PC_FUND.PER_DOC_LIMIT</c> (<c>docs/tankhah-khazaneh-module.md</c> §4:
+/// "مبلغ کل ≤ «سقف هر سند» تنخواه"). Only checked at Submit. Since the 2026-09-28 TB_PC_FUND
+/// cutover this column is mandatory (every fund has one), so the check always applies. 400: the
+/// request itself (this specific amount, on this specific fund, right now) is invalid, not a
+/// conflict with another resource.
 /// </summary>
 public sealed class PettyCashPerDocLimitExceededException : Exception
 {

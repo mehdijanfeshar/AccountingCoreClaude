@@ -42,7 +42,7 @@ public interface IPettyCashExpenseDocRepository
     /// previously Draft (not yet counted at all) or Returned (already counted as in-flight).
     /// </summary>
     Task<PettyCashFundExposure> GetFundExposureAsync(
-        Guid revolvingFundId,
+        Guid fundId,
         string vahedCode,
         Guid? excludeDocId,
         CancellationToken cancellationToken = default);

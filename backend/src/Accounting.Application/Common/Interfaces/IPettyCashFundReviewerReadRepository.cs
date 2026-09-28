@@ -10,12 +10,12 @@ namespace Accounting.Application.Common.Interfaces;
 public interface IPettyCashFundReviewerReadRepository
 {
     /// <summary>
-    /// Every active (<c>ISDELETED == false</c>) reviewer row for
-    /// <paramref name="revolvingFundId"/>, scoped to <paramref name="vahedCode"/>. Returns an
-    /// empty list — never <see langword="null"/> — when there are none.
+    /// Every active (<c>ISDELETED == false</c>) reviewer row for <paramref name="fundId"/>, scoped
+    /// to <paramref name="vahedCode"/>. Returns an empty list — never <see langword="null"/> — when
+    /// there are none.
     /// </summary>
     Task<IReadOnlyList<PettyCashFundReviewerDto>> GetByFundIdAsync(
-        Guid revolvingFundId,
+        Guid fundId,
         string vahedCode,
         CancellationToken cancellationToken = default);
 }

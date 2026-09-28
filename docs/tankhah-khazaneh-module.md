@@ -10,11 +10,27 @@
 3. **بخش فروش نداریم** (سازمان تأمین اجتماعی). «تخصیص دریافت به فاکتورهای باز مشتری» (ص ۱۸) ساخته **نمی‌شود**؛ فقط طوری طراحی می‌کنیم که بعداً بشود اضافه‌اش کرد (هیچ جدول/ستونی برای آن ساخته نمی‌شود).
 4. **ترتیب کار:** به ترتیب پاورپوینت — اول تنخواه، بعد خزانه.
 
+### تصمیم ۲۰۲۶-۰۹-۲۸: جدول مستقل تنخواه
+
+**چه چیزی عوض شد:** تنخواهِ این ماژول دیگر روی `TB_REVOLVING_FUND` نیست. جدول جدید و کاملاً مستقل
+`TB_PC_FUND` (فیلدها: کد، عنوان، تنخواه‌دار، سقف تنخواه = `CEILING`، سقف هر سند = `PER_DOC_LIMIT`
+(اینجا الزامی، برخلاف `TB_PC_FUND_SETTING` قدیم)، آستانهٔ هشدار، حساب معین، دورهٔ تسویه، وضعیت
+فعال/غیرفعال) جایگزین **هر دوِ** `TB_REVOLVING_FUND` (برای این ماژول) و `TB_PC_FUND_SETTING`
+(که کاملاً حذف شد) می‌شود. `TB_PC_EXPENSE_DOC.REVOLVINGFUND_ID` و `TB_PC_REVIEWER.REVOLVINGFUND_ID`
+به `FUND_ID` تغییر نام یافتند و اکنون به `TB_PC_FUND` اشاره می‌کنند. DDL: `backend/db/047_petty_cash_fund.sql`
+(شامل پاک‌سازی دادهٔ تستِ موجود این ماژول — همه به تنخواه‌های قدیمی اشاره داشتند).
+
+**چرا:** تصمیم صریح صاحب پروژه — این ماژول نباید هیچ وابستگی‌ای به `TB_REVOLVING_FUND` یا
+تنخواه‌های قبلی (که در صفحهٔ قدیمی اطلاعات پایه ساخته/ویرایش می‌شدند) داشته باشد. این عمداً
+**استثنایی دومی** روی قاعدهٔ Legacy-as-Domain است، روی استثنای اول (تصمیم ۲۰۲۶-۰۹-۲۷، بند ۲ بالا)
+سوار شده — `TB_REVOLVING_FUND` برای بقیهٔ پروژه (صفحهٔ قدیمی تنخواه) دست‌نخورده می‌ماند.
+
 ## ۱. نگاشت پاورپوینت به schema
 
 | مفهوم پاورپوینت | Legacy (هسته) | جدول جدید (جانبی) |
 |---|---|---|
-| تنخواه (سقف، حساب معین) | `TB_REVOLVING_FUND` (`DEFAULTAMOUNT` = سقف، `ACCOUNTCODE_ID` = معین) | `TB_PC_FUND_SETTING` — سقف هر سند، آستانهٔ هشدار، تنخواه‌دار، دورهٔ تسویه |
+| ~~تنخواه (سقف، حساب معین)~~ | ~~`TB_REVOLVING_FUND` (`DEFAULTAMOUNT` = سقف، `ACCOUNTCODE_ID` = معین)~~ | ~~`TB_PC_FUND_SETTING`~~ — **منسوخ، ۲۰۲۶-۰۹-۲۸** |
+| تنخواه (سقف، حساب معین، تنخواه‌دار، سقف هر سند، …) | — (مستقل از Legacy) | `TB_PC_FUND` — همهٔ فیلدهای تعریف تنخواه، یک‌جا (تصمیم ۲۰۲۶-۰۹-۲۸ بالا) |
 | صورت‌هزینه (TH-xxxxx) | `TB_CHARGEANDCOST_HEAD` نوع ۲ (هزینه‌کرد) + **یک** ردیف `TB_CHARGEANDCOST_DETAIL` (`EXPENSE_ID`, `PAYTO`, `CREDITOR`) | `TB_PC_EXPENSE_DOC` — فروشنده، فاکتور، ارزش افزوده، **وضعیت ۷تایی**، تنخواه |
 | گردش عملیات (Audit Trail، ص ۱۲) | — | `TB_PC_DOC_EVENT` |
 | ترمیم / شارژ (RCH، ص ۹) | `TB_CHARGEANDCOST_HEAD` نوع ۱ + `TB_CHARGE_LINK_COST` (کدام هزینه با کدام شارژ ترمیم شد) | (در بخش سوم تصمیم‌گیری می‌شود) |
@@ -50,10 +66,12 @@
 
 همه با ستون‌های Audit استاندارد پروژه (`CREATEDDATE`, `UPDATEDDATE`, `ADDUSERID`, `CHANGEUSERID`, `VAHEDCODE`, `YEAR`, `ISDELETED`) و `ID CHAR(36)` بدون `DEFAULT sys_guid()` (ریسک #۱۱). مبلغ‌ها `NUMBER(25)` مثل Legacy.
 
-- **`TB_PC_FUND_SETTING`** — ۱:۱ با `TB_REVOLVING_FUND` (UNIQUE روی `REVOLVINGFUND_ID`):
-  `CUSTODIAN_USERID VARCHAR2(10)`, `CUSTODIAN_NAME VARCHAR2(200)`, `PER_DOC_LIMIT NUMBER(25)`, `ALERT_THRESHOLD_PERCENT NUMBER(3)`, `SETTLEMENT_PERIOD NUMBER(1)` (1=ماهانه، 2=فصلی).
+- ~~**`TB_PC_FUND_SETTING`** — ۱:۱ با `TB_REVOLVING_FUND` (UNIQUE روی `REVOLVINGFUND_ID`):
+  `CUSTODIAN_USERID VARCHAR2(10)`, `CUSTODIAN_NAME VARCHAR2(200)`, `PER_DOC_LIMIT NUMBER(25)`, `ALERT_THRESHOLD_PERCENT NUMBER(3)`, `SETTLEMENT_PERIOD NUMBER(1)` (1=ماهانه، 2=فصلی).~~ — **منسوخ، ۲۰۲۶-۰۹-۲۸** (`DROP TABLE`، `backend/db/047_petty_cash_fund.sql`؛ ادغام‌شده در `TB_PC_FUND`، به بخش ۰ رجوع کنید).
+- **`TB_PC_FUND`** (۲۰۲۶-۰۹-۲۸، `backend/db/047_petty_cash_fund.sql`) — مستقل، بدون FK به Legacy، UNIQUE روی `(VAHEDCODE, CODE)`:
+  `CODE VARCHAR2(50) NOT NULL`, `NAME VARCHAR2(200) NOT NULL`, `CUSTODIAN_USERID VARCHAR2(10) NOT NULL`, `CUSTODIAN_NAME VARCHAR2(200)`, `CEILING NUMBER(25) NOT NULL` (سقف تنخواه)، `PER_DOC_LIMIT NUMBER(25) NOT NULL` (سقف هر سند، اینجا الزامی)، `ALERT_THRESHOLD_PERCENT NUMBER(3)`, `ACCOUNTCODE_ID CHAR(36)` (FK به `TB_ACCOUNTCODE`)، `SETTLEMENT_PERIOD NUMBER(1)` (1=ماهانه، 2=فصلی)، `IS_ACTIVE NUMBER(1) DEFAULT 1 NOT NULL`.
 - **`TB_PC_EXPENSE_DOC`** — ۱:۱ با `TB_CHARGEANDCOST_HEAD` (UNIQUE روی `CHARGEANDCOSTHEAD_ID`):
-  `REVOLVINGFUND_ID CHAR(36) NOT NULL`, `DOC_STATE NUMBER(2) NOT NULL`, `VENDOR_NAME VARCHAR2(200)`, `VENDOR_NATIONAL_ID VARCHAR2(11)`, `INVOICE_NO VARCHAR2(50)`, `INVOICE_DATE VARCHAR2(8)`, `EVIDENCE_TYPE NUMBER(1)` (1=فاکتور رسمی، 2=رسید، 3=سایر)، `AMOUNT_BEFORE_TAX NUMBER(25)`, `VAT_AMOUNT NUMBER(25)`, `SUBMITTED_DATE TIMESTAMP`, `RETURN_DEADLINE VARCHAR2(8)`.
+  `FUND_ID CHAR(36) NOT NULL` (تا ۲۰۲۶-۰۹-۲۷ به نام `REVOLVINGFUND_ID` و اشاره به `TB_REVOLVING_FUND`؛ از ۲۰۲۶-۰۹-۲۸ به `TB_PC_FUND`)، `DOC_STATE NUMBER(2) NOT NULL`, `VENDOR_NAME VARCHAR2(200)`, `VENDOR_NATIONAL_ID VARCHAR2(11)`, `INVOICE_NO VARCHAR2(50)`, `INVOICE_DATE VARCHAR2(8)`, `EVIDENCE_TYPE NUMBER(1)` (1=فاکتور رسمی، 2=رسید، 3=سایر)، `AMOUNT_BEFORE_TAX NUMBER(25)`, `VAT_AMOUNT NUMBER(25)`, `SUBMITTED_DATE TIMESTAMP`, `RETURN_DEADLINE VARCHAR2(8)`.
 - **`TB_PC_DOC_EVENT`** — تاریخچهٔ اقدامات (فقط درج، هرگز ویرایش/حذف):
   `EXPENSE_DOC_ID CHAR(36) NOT NULL`, `ACTION NUMBER(2)`, `FROM_STATE NUMBER(2)`, `TO_STATE NUMBER(2)`, `NOTE VARCHAR2(1000)`, `RETURN_REASONS VARCHAR2(200)` (کدهای دلیل با `,`), `CLIENT_IP VARCHAR2(45)`.
 
@@ -66,21 +84,26 @@
 | فقط `Draft` و `Returned` قابل ویرایش‌اند | Update | ۴۰۹ |
 | فقط `Draft` قابل حذف است | Delete | ۴۰۹ |
 | مبلغ کل = قبل از مالیات + ارزش افزوده؛ ارزش افزوده ≥ ۰ و ≤ مبلغ قبل از مالیات | همه | ۴۰۰ |
-| مبلغ کل ≤ «سقف هر سند» تنخواه (اگر تعریف شده) | Submit | ۴۰۰ |
-| مبلغ کل ≤ موجودی نقد تنخواه | Submit | ۴۰۰ |
+| مبلغ کل ≤ `TB_PC_FUND.PER_DOC_LIMIT` («سقف هر سند» — از ۲۰۲۶-۰۹-۲۸ همیشه تعریف‌شده، الزامی) | Submit | ۴۰۰ |
+| مبلغ کل ≤ موجودی نقد تنخواه (`CEILING` منهای در جریان/تأییدشده) | Submit | ۴۰۰ |
 | تکراری نبودن (شناسه ملی فروشنده + شماره فاکتور) بین اسناد حذف‌نشده و ردنشده | Create/Update | ۴۰۹ |
 | تاریخ فاکتور در سال مالی جاری (`INVOICE_DATE` با `YEAR` شروع شود) | Submit | ۴۰۰ |
 | نرخ ارزش افزوده **در سرور hardcode نمی‌شود** (CHANGELOG §۵: قابل تنظیم)؛ فرم ۱۰٪ پیشنهاد می‌دهد و کاربر تأیید می‌کند | — | — |
 | هر تغییر وضعیت یک ردیف `TB_PC_DOC_EVENT` در **همان تراکنش** | همه | — |
+| تنخواهٔ غیرفعال (`TB_PC_FUND.IS_ACTIVE = false`) هیچ صورت‌هزینهٔ جدیدی نمی‌پذیرد (**۲۰۲۶-۰۹-۲۸**) | Create/Submit | ۴۰۹ |
+| کد تنخواه در همان واحد تکراری نباشد (**۲۰۲۶-۰۹-۲۸**) | Create/Update (فاند) | ۴۰۹ |
+| حذف تنخواه فقط وقتی صورت‌هزینهٔ حذف‌نشده‌ای ندارد (**۲۰۲۶-۰۹-۲۸**) | Delete (فاند) | ۴۰۹ |
 
 شمارهٔ سند: `CHARGEANDCOST_CODE` = بیشینهٔ عددی کد نوع ۲ در (واحد، سال) + ۱، با `PadLeft(5,'0')`؛ نمایش `TH-` + کد.
 
 ## ۵. API (بخش اول) — همه `IVahedScoped`، فقط `GET`/`POST`
 
 ```
-GET  api/petty-cash/funds                          تنخواه‌ها + تنظیمات + خلاصهٔ موجودی (نقد/تأییدشده/در جریان)
-GET  api/petty-cash/funds/{fundId}/settings
-POST api/petty-cash/funds/{fundId}/settings        upsert
+GET  api/petty-cash/funds                          تنخواه‌ها (TB_PC_FUND) + خلاصهٔ موجودی (نقد/تأییدشده/در جریان)
+GET  api/petty-cash/funds/{fundId}                 یک تنخواه
+POST api/petty-cash/funds                          ساخت تنخواه (۲۰۲۶-۰۹-۲۸)
+POST api/petty-cash/funds/{fundId}/update          (۲۰۲۶-۰۹-۲۸)
+POST api/petty-cash/funds/{fundId}/delete          حذف نرم؛ ۴۰۹ اگر صورت‌هزینهٔ حذف‌نشده دارد (۲۰۲۶-۰۹-۲۸)
 GET  api/petty-cash/expense-docs?state=&fundId=&search=&pageNumber=&pageSize=   + شمارش هر وضعیت
 GET  api/petty-cash/expense-docs/{id}
 POST api/petty-cash/expense-docs                   ساخت پیش‌نویس (با submit=true مستقیم ارسال)
@@ -119,13 +142,13 @@ GET  api/petty-cash/expense-docs/{id}/events       گردش عملیات
 
 ```sql
 TB_PC_REVIEWER
-  ID CHAR(36) PK, REVOLVINGFUND_ID CHAR(36) NOT NULL FK->TB_REVOLVING_FUND,
+  ID CHAR(36) PK, FUND_ID CHAR(36) NOT NULL FK->TB_PC_FUND,  -- تا ۲۰۲۶-۰۹-۲۷: REVOLVINGFUND_ID FK->TB_REVOLVING_FUND
   REVIEWER_USERID VARCHAR2(10) NOT NULL,   -- فضای هویتی ICurrentUser.UserId/ADDUSERID، نه کد ملی
   REVIEWER_NAME VARCHAR2(200),
-  + ستون‌های Audit استاندارد + UNIQUE(REVOLVINGFUND_ID, REVIEWER_USERID)
+  + ستون‌های Audit استاندارد + UNIQUE(FUND_ID, REVIEWER_USERID)
 ```
 
-**قاعدهٔ SoD:** اکشن‌های بررسی/تأیید/برگشت/رد فقط برای کاربری مجازند که (۱) ردیف فعال در `TB_PC_REVIEWER` برای همان `REVOLVINGFUND_ID` دارد (وگرنه ۴۰۳) و (۲) `ICurrentUser.UserId != TB_PC_EXPENSE_DOC.ADDUSERID` (وگرنه ۴۰۹ — تعارض منافع، نه نبود دسترسی).
+**قاعدهٔ SoD:** اکشن‌های بررسی/تأیید/برگشت/رد فقط برای کاربری مجازند که (۱) ردیف فعال در `TB_PC_REVIEWER` برای همان `FUND_ID` دارد (وگرنه ۴۰۳) و (۲) `ICurrentUser.UserId != TB_PC_EXPENSE_DOC.ADDUSERID` (وگرنه ۴۰۹ — تعارض منافع، نه نبود دسترسی).
 
 **پیوست:** جدول جانبی جدید `TB_PC_ATTACHMENT` (BLOB در DB، هم‌الگو با `TB_ATTACH` Legacy — نه ستون جدید روی آن، نه فایل‌سیستم/Blob storage که در پروژه سابقه ندارد):
 
@@ -156,7 +179,7 @@ TB_PC_ATTACHMENT
 - **قاعدهٔ تکراری‌نبودن (§۴)** فقط وقتی `vendorNationalId` **و** `invoiceNo` هر دو غیرخالی باشند اعمال می‌شود؛ در غیر این صورت معنای «تکراری» نامعلوم است.
 - **`invoiceDate` فقط هنگام `submit=true` الزامی است** — قاعدهٔ «سال مالی جاری» روی یک پیش‌نویس چیزی برای بررسی ندارد.
 - **حذف صورت‌هزینه، سرسند و دیتیل Legacy (`TB_CHARGEANDCOST_HEAD`/`DETAIL`) را هم نرم حذف می‌کند** — سند این را صریح نگفته بود؛ انتخاب شد چون این پروژه هرگز حذف فیزیکی انجام نمی‌دهد و یتیم‌ماندن سرسند در جدول‌های اصلی حسابداری نامطلوب است.
-- **`GET api/petty-cash/funds` آرایهٔ خام برمی‌گرداند** (نه `PagedResult`) و **`GET .../settings` برای تنخواهِ بدون تنظیمات ۴۰۴ می‌دهد** — هر دو به درخواست هماهنگ‌سازی قرارداد با فرانت (که موازی ساخته می‌شد)، نه از خودِ این سند.
+- **`GET api/petty-cash/funds` آرایهٔ خام برمی‌گرداند** (نه `PagedResult`) و ~~**`GET .../settings` برای تنخواهِ بدون تنظیمات ۴۰۴ می‌دهد**~~ — به درخواست هماهنگ‌سازی قرارداد با فرانت (که موازی ساخته می‌شد)، نه از خودِ این سند. **منسوخ، ۲۰۲۶-۰۹-۲۸:** endpoint جداگانهٔ `.../settings` حذف شد؛ تنظیمات حالا ستون‌های خودِ `TB_PC_FUND` هستند و با CRUD معمول فاند خوانده/نوشته می‌شوند (به بخش ۰ رجوع کنید).
 - **پارامتر کوئری `states` (کاما-جدا)** به لیست صورت‌هزینه‌ها اضافه شد؛ در سند اصلی نبود، از همان درخواست هماهنگ‌سازی آمد.
 
 جزئیات کامل و کد در `docs/phase-log.md` بخش «فاز ۴۴ (بخش ۱)».

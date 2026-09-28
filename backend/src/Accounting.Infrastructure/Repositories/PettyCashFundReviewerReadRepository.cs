@@ -15,14 +15,14 @@ public sealed class PettyCashFundReviewerReadRepository : IPettyCashFundReviewer
     }
 
     public async Task<IReadOnlyList<PettyCashFundReviewerDto>> GetByFundIdAsync(
-        Guid revolvingFundId,
+        Guid fundId,
         string vahedCode,
         CancellationToken cancellationToken = default)
     {
         return await _dbContext.TB_PC_REVIEWERs
             .AsNoTracking()
-            .Where(r => r.REVOLVINGFUND_ID == revolvingFundId && !r.ISDELETED && r.VAHEDCODE == vahedCode)
-            .Select(r => new PettyCashFundReviewerDto(r.ID, r.REVOLVINGFUND_ID, r.REVIEWER_USERID, r.REVIEWER_NAME))
+            .Where(r => r.FUND_ID == fundId && !r.ISDELETED && r.VAHEDCODE == vahedCode)
+            .Select(r => new PettyCashFundReviewerDto(r.ID, r.FUND_ID, r.REVIEWER_USERID, r.REVIEWER_NAME))
             .ToListAsync(cancellationToken);
     }
 }

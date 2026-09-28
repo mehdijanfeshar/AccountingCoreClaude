@@ -20,13 +20,13 @@ public sealed class PettyCashFundReviewerRepository : IPettyCashFundReviewerRepo
     }
 
     public Task<TB_PC_REVIEWER?> GetByFundAndUserIdAsync(
-        Guid revolvingFundId,
+        Guid fundId,
         string reviewerUserId,
         CancellationToken cancellationToken = default)
     {
         return _dbContext.TB_PC_REVIEWERs
             .FirstOrDefaultAsync(
-                r => r.REVOLVINGFUND_ID == revolvingFundId && r.REVIEWER_USERID == reviewerUserId,
+                r => r.FUND_ID == fundId && r.REVIEWER_USERID == reviewerUserId,
                 cancellationToken);
     }
 

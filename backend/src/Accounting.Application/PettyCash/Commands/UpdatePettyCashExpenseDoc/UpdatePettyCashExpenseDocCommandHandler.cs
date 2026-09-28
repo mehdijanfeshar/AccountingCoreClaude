@@ -11,7 +11,7 @@ public sealed class UpdatePettyCashExpenseDocCommandHandler : IRequestHandler<Up
 {
     private readonly IPettyCashExpenseDocRepository _expenseDocRepository;
     private readonly IChargeAndCostRepository _chargeAndCostRepository;
-    private readonly IRevolvingFundRepository _revolvingFundRepository;
+    private readonly IPettyCashFundRepository _pettyCashFundRepository;
     private readonly IExpenseRepository _expenseRepository;
     private readonly IPettyCashDocEventRepository _eventRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -23,7 +23,7 @@ public sealed class UpdatePettyCashExpenseDocCommandHandler : IRequestHandler<Up
     public UpdatePettyCashExpenseDocCommandHandler(
         IPettyCashExpenseDocRepository expenseDocRepository,
         IChargeAndCostRepository chargeAndCostRepository,
-        IRevolvingFundRepository revolvingFundRepository,
+        IPettyCashFundRepository pettyCashFundRepository,
         IExpenseRepository expenseRepository,
         IPettyCashDocEventRepository eventRepository,
         IUnitOfWork unitOfWork,
@@ -32,7 +32,7 @@ public sealed class UpdatePettyCashExpenseDocCommandHandler : IRequestHandler<Up
     {
         _expenseDocRepository = expenseDocRepository;
         _chargeAndCostRepository = chargeAndCostRepository;
-        _revolvingFundRepository = revolvingFundRepository;
+        _pettyCashFundRepository = pettyCashFundRepository;
         _expenseRepository = expenseRepository;
         _eventRepository = eventRepository;
         _unitOfWork = unitOfWork;
@@ -51,8 +51,8 @@ public sealed class UpdatePettyCashExpenseDocCommandHandler : IRequestHandler<Up
 
         PettyCashDocEditability.EnsureEditable(doc.ID, doc.DOC_STATE);
 
-        _ = await _revolvingFundRepository.GetForUpdateAsync(request.FundId, request.VahedCode, cancellationToken)
-            ?? throw new NotFoundException("RevolvingFund", request.FundId);
+        _ = await _pettyCashFundRepository.GetForUpdateAsync(request.FundId, request.VahedCode, cancellationToken)
+            ?? throw new NotFoundException("PettyCashFund", request.FundId);
 
         _ = await _expenseRepository.GetForUpdateAsync(request.ExpenseId, request.VahedCode, cancellationToken)
             ?? throw new NotFoundException("Expense", request.ExpenseId);
@@ -73,7 +73,7 @@ public sealed class UpdatePettyCashExpenseDocCommandHandler : IRequestHandler<Up
         var now = DateTime.UtcNow;
         var userId = _currentUser.UserId;
 
-        doc.REVOLVINGFUND_ID = request.FundId;
+        doc.FUND_ID = request.FundId;
         doc.VENDOR_NAME = request.VendorName;
         doc.VENDOR_NATIONAL_ID = request.VendorNationalId;
         doc.INVOICE_NO = request.InvoiceNo;

@@ -160,11 +160,13 @@ public static class DependencyInjection
 
         // Petty-cash module, chunk 1 (2026-09-27). IChargeAndCostRepository is the composite
         // write path for the Legacy TB_CHARGEANDCOST_HEAD/DETAIL pair — not an independent CRUD
-        // surface, see that interface's XML doc. The three TB_PC_* repositories are the new
+        // surface, see that interface's XML doc. The TB_PC_* repositories are the module's own
         // "side" tables (owner-approved exception to "no new tables";
-        // docs/tankhah-khazaneh-module.md §0/§3).
+        // docs/tankhah-khazaneh-module.md §0/§3). IPettyCashFundRepository (2026-09-28) replaced
+        // IPettyCashFundSettingRepository when TB_PC_FUND absorbed TB_REVOLVING_FUND/
+        // TB_PC_FUND_SETTING for this module entirely.
         services.AddScoped<IChargeAndCostRepository, ChargeAndCostRepository>();
-        services.AddScoped<IPettyCashFundSettingRepository, PettyCashFundSettingRepository>();
+        services.AddScoped<IPettyCashFundRepository, PettyCashFundRepository>();
         services.AddScoped<IPettyCashExpenseDocRepository, PettyCashExpenseDocRepository>();
         services.AddScoped<IPettyCashDocEventRepository, PettyCashDocEventRepository>();
 
@@ -176,6 +178,10 @@ public static class DependencyInjection
         // تصمیم‌های بخش ۲).
         services.AddScoped<IPettyCashFundReviewerRepository, PettyCashFundReviewerRepository>();
         services.AddScoped<IPettyCashFundReviewerReadRepository, PettyCashFundReviewerReadRepository>();
+
+        // Petty-cash module, chunk 2-ب — file attachments side table (same doc, پیوست section).
+        services.AddScoped<IPettyCashAttachmentRepository, PettyCashAttachmentRepository>();
+        services.AddScoped<IPettyCashAttachmentReadRepository, PettyCashAttachmentReadRepository>();
 
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 

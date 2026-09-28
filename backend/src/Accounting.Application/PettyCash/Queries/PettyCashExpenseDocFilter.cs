@@ -10,7 +10,7 @@ namespace Accounting.Application.PettyCash.Queries;
 /// <c>PettyCashExpenseDocReadRepository.GetPagedAsync</c>), so a caller who wants the «در جریان»
 /// tab (New + PendingReview + Returned combined) can ask for it in one request instead of three.
 /// </summary>
-/// <param name="FundId">Exact-match filter on REVOLVINGFUND_ID.</param>
+/// <param name="FundId">Exact-match filter on FUND_ID.</param>
 /// <param name="State">Exact-match filter on DOC_STATE. Ignored when <see cref="States"/> is non-empty.</param>
 /// <param name="States">OR filter on DOC_STATE — matches any of the listed states.</param>
 /// <param name="Search">Free-text match against CHARGEANDCOST_CODE, VENDOR_NAME, INVOICE_NO and DESCRIPTION.</param>
