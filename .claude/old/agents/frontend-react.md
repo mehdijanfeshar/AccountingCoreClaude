@@ -16,7 +16,7 @@ Stack: Vite 6 + React 19 + TS + MUI/RTL + React Query + React Hook Form + Zod.
 ## سه قاعدهٔ الزامی (در کد هم کامنت شده‌اند)
 
 1. **هرگز `PUT`/`DELETE` نزن** — الگوی بک‌اند `POST {id}/update` و `POST {id}/delete` است. همهٔ URLها فقط از `createResourceApi` ساخته شوند.
-2. **`vahedCode` فقط از طریق هدر `X-Vahed-Code` و فقط از `SessionContext`** (فاز ۳۷-ب؛ قاعدهٔ قدیمی «هرگز نفرست» منسوخ است). هرگز در بدنه یا query نفرست. `year` واقعاً پارامتر query است.
+2. **هرگز `vahedCode` از کلاینت نفرست** — سمت سرور از توکن تحمیل می‌شود (فاز ۱۹). ولی `year` واقعاً پارامتر query است.
 3. **شکل خطا فقط RFC 7807 ProblemDetails است** — بک‌اند ما envelope `{succeeded, code, messages, data}` پروژهٔ Angular قدیمی را **ندارد**؛ آن الگو را بازنساز.
 
 ## تفصیلی شناور

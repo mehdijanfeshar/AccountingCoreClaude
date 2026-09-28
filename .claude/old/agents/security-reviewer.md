@@ -1,7 +1,7 @@
 ---
 name: security-reviewer
 description: متخصص بازبینی امنیتی سیستم حسابداری. Authentication، Authorization، Permission، Audit، Sensitive Data، API Security، Injection، IDOR و Multi-tenancy را بررسی می‌کند.
-tools: Read, Bash, Grep, Glob
+tools: Read, Write, Edit, Bash, Grep, Glob
 model: sonnet
 ---
 

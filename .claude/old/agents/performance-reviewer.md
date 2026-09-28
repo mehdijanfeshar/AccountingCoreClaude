@@ -1,7 +1,7 @@
 ---
 name: performance-reviewer
 description: متخصص Performance و Scalability برای .NET، EF Core، Dapper و Oracle. روی Query Plan، Index، N+1، Materialized View، Pagination، Concurrency و گزارش‌های حجیم تمرکز می‌کند.
-tools: Read, Bash, Grep, Glob
+tools: Read, Write, Edit, Bash, Grep, Glob
 model: sonnet
 ---
 
