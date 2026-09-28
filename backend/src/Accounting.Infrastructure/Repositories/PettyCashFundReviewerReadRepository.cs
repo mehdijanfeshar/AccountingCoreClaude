@@ -22,7 +22,7 @@ public sealed class PettyCashFundReviewerReadRepository : IPettyCashFundReviewer
         return await _dbContext.TB_PC_REVIEWERs
             .AsNoTracking()
             .Where(r => r.FUND_ID == fundId && !r.ISDELETED && r.VAHEDCODE == vahedCode)
-            .Select(r => new PettyCashFundReviewerDto(r.ID, r.FUND_ID, r.REVIEWER_USERID, r.REVIEWER_NAME))
+            .Select(r => new PettyCashFundReviewerDto(r.ID, r.FUND_ID, r.REVIEWER_USERID, r.REVIEWER_NAME, r.ROLE))
             .ToListAsync(cancellationToken);
     }
 }

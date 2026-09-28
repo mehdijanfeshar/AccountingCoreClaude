@@ -183,3 +183,57 @@ TB_PC_ATTACHMENT
 - **پارامتر کوئری `states` (کاما-جدا)** به لیست صورت‌هزینه‌ها اضافه شد؛ در سند اصلی نبود، از همان درخواست هماهنگ‌سازی آمد.
 
 جزئیات کامل و کد در `docs/phase-log.md` بخش «فاز ۴۴ (بخش ۱)».
+
+### تصمیم‌های تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸): نقش‌ها، تأیید دومرحله‌ای، قفل فیلد
+
+پیاده‌سازی نهایی صفحات ۷/۸/۱۲/۱۳ پاورپوینت روی هستهٔ بخش ۲ بالا.
+
+**نقش‌ها (ص ۱۳):** enum جدید `PettyCashRole`: `Inspector=1` (بازرس مالی)، `FinanceManager=2`
+(مدیر مالی)، `ChiefExecutive=3` (مدیرعامل). تنخواه‌دار نقش جداگانه نیست — همان
+`TB_PC_FUND.CUSTODIAN_USERID`. `TB_PC_REVIEWER.ROLE NUMBER(2) DEFAULT 1 NOT NULL`؛ `UK_PC_REVIEWER`
+به `(FUND_ID, REVIEWER_USERID, ROLE)` عریض شد — یک کاربر می‌تواند روی یک تنخواه بیش از یک نقش
+داشته باشد. `TB_PC_FUND.FINANCE_MANAGER_APPROVAL_LIMIT NUMBER(25) DEFAULT 500000000 NOT NULL`
+(«تا ۵۰۰ م»، در Create/Update فاند الزامی و `> 0`). DDL: `backend/db/048_petty_cash_roles.sql`.
+
+**ثبت سند فقط توسط تنخواه‌دار:** Create/Update/Submit/Delete صورت‌هزینه اکنون
+`ICurrentUser.UserId == TB_PC_FUND.CUSTODIAN_USERID` را چک می‌کنند — وگرنه ۴۰۳
+(`PettyCashNotCustodianException`).
+
+**تأیید دومرحله‌ای (ص ۱۲):** `TB_PC_EXPENSE_DOC` ستون‌های جدید `VERIFIED_BY_USERID`/`VERIFIED_DATE`
+گرفت. `PettyCashDocAction` مقادیر جدید `Verify=9` و `FinalApprove=10` گرفت (`Approve=6` برای دادهٔ
+تاریخی می‌ماند، دیگر تولید نمی‌شود).
+
+- `POST expense-docs/{id}/verify` `{ note? }`: فقط `PendingReview`، فقط `Inspector` همان تنخواه،
+  ≠ ایجادکننده، و هنوز verify نشده (وگرنه ۴۰۹ `PettyCashAlreadyVerifiedException`). وضعیت سند
+  **تغییر نمی‌کند**؛ فقط `VERIFIED_BY_USERID/DATE` ست و رویداد `Verify` (from=to=PendingReview)
+  ثبت می‌شود.
+- `POST expense-docs/{id}/approve` = «تأیید نهایی»: فقط `PendingReview` و فقط اگر verify شده
+  (وگرنه ۴۰۹ `PettyCashNotVerifiedException`). کاربر باید ≠ ایجادکننده (۴۰۹، مثل قبل) و ≠
+  `VERIFIED_BY_USERID` (۴۰۹ جدید `PettyCashVerifierCannotApproveException`). مبلغ کل ≤
+  `FINANCE_MANAGER_APPROVAL_LIMIT` ⇒ نقش `FinanceManager` یا `ChiefExecutive` کافی است؛ بیشتر ⇒
+  فقط `ChiefExecutive` (وگرنه ۴۰۳ `PettyCashApprovalAuthorityExceededException`، پیام «سقف
+  اختیار»). منطق در سرویس مشترک `PettyCashFinalApprovalService` است، نه دیگر
+  `PettyCashReviewTransitionService` (که فقط StartReview/Return/Reject را پوشش می‌دهد).
+- `bulk-approve`: همان `PettyCashFinalApprovalService` برای هر id (all-or-nothing)؛ دلایل شکست
+  جدید در `failedIds`: `not-verified`، `over-authority` (و `self-review` هم برای تعارض ایجادکننده
+  هم برای تعارض verifier).
+- `return`/`reject`: مجاز برای `Inspector` یا `FinanceManager` یا `ChiefExecutive` همان تنخواه، ≠
+  ایجادکننده (بدون تغییر نسبت به بخش ۲ قدیم، فقط اکنون نقش‌محور). `return` علاوه بر رفتار قبلی،
+  `VERIFIED_BY_USERID/DATE` را پاک می‌کند — سند برگشتی دوباره باید کنترل شود.
+- `IPettyCashReviewAuthorizer.EnsureCanReviewAsync` اکنون `allowedRoles` می‌گیرد و زیرمجموعهٔ
+  نقش‌های فعال کاربر که در `allowedRoles` است را برمی‌گرداند — منطق نقش/SoD یک‌جا مانده.
+
+**قفل فیلدبه‌فیلد (ص ۸) — پیاده شد:** کلاس ایستای `PettyCashReturnFieldPolicy`
+(`Accounting.Application.Common.Security`) نگاشت دلیل برگشت → فیلدهای مجاز:
+`AttachmentIncomplete` → فقط پیوست (هیچ فیلد فرم)؛ `ExpenseAccountIncorrect` → `expenseId`؛
+`AmountMismatch` → `amountBeforeTax, vatAmount, invoiceNo, invoiceDate, evidenceType`؛
+`DescriptionNeedsClarification` → `description`؛ `Other` → همهٔ فیلدها (`null` در API، یعنی
+بدون محدودیت). `UpdatePettyCashExpenseDocCommandHandler` فیلدهای واقعاً تغییرکرده را (روی
+`TB_PC_EXPENSE_DOC` + سرسند/دیتیل Legacy برای `registerDate`/`description`/`expenseId`) با آخرین
+دلایل رویداد `Return` (`IPettyCashDocEventReadRepository.GetLastReturnEventAsync`) می‌سنجد؛ خارج از
+مجموعهٔ مجاز ⇒ ۴۰۹ (`PettyCashReturnFieldLockedException`، نام فیلدها در پیام). آپلود/حذف پیوست
+روی سند برگشتی همین سیاست را چک می‌کند (`PettyCashReturnFieldPolicy.CanEditAttachments`).
+`GetPettyCashExpenseDocById` فیلد `editableFields: string[] | null` را برمی‌گرداند (`null` = همه/
+قاعدهٔ عادی؛ در غیر این صورت نام‌های camelCase بدنهٔ update + `"attachments"` در صورت مجاز بودن).
+
+جزئیات کامل و کد در `docs/phase-log.md` بخش «فاز ۴۴ (بخش ۲، تکمیل)».

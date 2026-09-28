@@ -26,6 +26,7 @@ public sealed class StartReviewPettyCashExpenseDocCommandHandler : IRequestHandl
             PettyCashDocState.New,
             PettyCashDocState.PendingReview,
             PettyCashDocAction.StartReview,
+            new[] { PettyCashRole.Inspector },
             note: null,
             returnReasonsCsv: null,
             returnDeadline: null,

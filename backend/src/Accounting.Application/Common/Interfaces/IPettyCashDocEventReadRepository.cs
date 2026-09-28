@@ -18,4 +18,15 @@ public interface IPettyCashDocEventReadRepository
         Guid expenseDocId,
         string vahedCode,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The most recent <see cref="Accounting.Domain.ValueObjects.PettyCashDocAction.Return"/>
+    /// event for <paramref name="expenseDocId"/>, or <see langword="null"/> when there is none —
+    /// backs <c>Accounting.Application.Common.Security.PettyCashReturnFieldPolicy</c>'s
+    /// field-lock check (تکمیل بخش ۲، ۲۰۲۶-۰۹-۲۸). No ownership check here — callers already hold
+    /// a change-tracked, ownership-verified parent document by this point.
+    /// </summary>
+    Task<PettyCashDocEventDto?> GetLastReturnEventAsync(
+        Guid expenseDocId,
+        CancellationToken cancellationToken = default);
 }

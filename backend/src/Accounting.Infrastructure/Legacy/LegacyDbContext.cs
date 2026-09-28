@@ -1231,6 +1231,7 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.CEILING).HasColumnType("NUMBER(25)");
             entity.Property(e => e.PER_DOC_LIMIT).HasColumnType("NUMBER(25)");
+            entity.Property(e => e.FINANCE_MANAGER_APPROVAL_LIMIT).HasColumnType("NUMBER(25)");
             entity.Property(e => e.ALERT_THRESHOLD_PERCENT).HasColumnType("NUMBER(3)");
             entity.Property(e => e.ACCOUNTCODE_ID)
                 .HasMaxLength(36)
@@ -1318,6 +1319,10 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.RETURN_DEADLINE)
                 .HasMaxLength(8)
                 .IsUnicode(false);
+            entity.Property(e => e.VERIFIED_BY_USERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.VERIFIED_DATE).HasPrecision(6);
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.ADDUSERID)
@@ -1409,9 +1414,11 @@ public partial class LegacyDbContext : DbContext
 
             entity.ToTable("TB_PC_REVIEWER");
 
-            // Mirrors the real UNIQUE constraint in backend/db/047_petty_cash_fund.sql (rebuilt
-            // there on FUND_ID after the 2026-09-28 TB_PC_FUND cutover — same UK_PC_REVIEWER name).
-            entity.HasIndex(e => new { e.FUND_ID, e.REVIEWER_USERID }, "UK_PC_REVIEWER").IsUnique();
+            // Mirrors the real UNIQUE constraint in backend/db/048_petty_cash_roles.sql (widened to
+            // include ROLE at تکمیل بخش ۲, 2026-09-28 — a single user may hold more than one role on
+            // the same fund; same UK_PC_REVIEWER name, previously (FUND_ID, REVIEWER_USERID) only —
+            // see backend/db/047_petty_cash_fund.sql for that earlier shape).
+            entity.HasIndex(e => new { e.FUND_ID, e.REVIEWER_USERID, e.ROLE }, "UK_PC_REVIEWER").IsUnique();
             entity.HasIndex(e => e.FUND_ID, "IDX_PC_REVIEWER_FUND");
 
             entity.Property(e => e.ID)
@@ -1430,6 +1437,11 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.REVIEWER_NAME)
                 .HasMaxLength(200)
                 .IsUnicode(false);
+            // NUMBER(2), non-nullable — same convention as every other PettyCash*-enum column in
+            // this module (LegacyEnumMappingConventionTests enforces both .HasConversion<int>() and
+            // no explicit .HasColumnType()).
+            entity.Property(e => e.ROLE)
+                .HasConversion<int>();
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.ADDUSERID)

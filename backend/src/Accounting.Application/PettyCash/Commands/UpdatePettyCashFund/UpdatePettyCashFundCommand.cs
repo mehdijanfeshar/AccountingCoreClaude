@@ -18,6 +18,7 @@ public sealed record UpdatePettyCashFundCommand(
     string? CustodianName,
     decimal Ceiling,
     decimal PerDocLimit,
+    decimal FinanceManagerApprovalLimit,
     int? AlertThresholdPercent,
     Guid? AccountCodeId,
     PettyCashSettlementPeriod? SettlementPeriod,

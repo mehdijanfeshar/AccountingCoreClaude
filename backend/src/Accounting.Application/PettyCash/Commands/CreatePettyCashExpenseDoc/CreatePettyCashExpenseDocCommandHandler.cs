@@ -60,6 +60,12 @@ public sealed class CreatePettyCashExpenseDocCommandHandler : IRequestHandler<Cr
         var fund = await _pettyCashFundRepository.GetForUpdateAsync(request.FundId, request.VahedCode, cancellationToken)
             ?? throw new NotFoundException("PettyCashFund", request.FundId);
 
+        // تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸): only the fund's own custodian may create a صورت‌هزینه against it.
+        if (!string.Equals(_currentUser.UserId, fund.CUSTODIAN_USERID, StringComparison.Ordinal))
+        {
+            throw new PettyCashNotCustodianException(request.FundId);
+        }
+
         // 2026-09-28 rule: an inactive تنخواه accepts no new صورت‌هزینه at all (draft or submitted).
         if (!fund.IS_ACTIVE)
         {

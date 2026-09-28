@@ -14,6 +14,7 @@ using Accounting.Application.PettyCash.Commands.UpdatePettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Commands.UpdatePettyCashFund;
 using Accounting.Application.PettyCash.Commands.UploadPettyCashAttachment;
 using Accounting.Application.PettyCash.Commands.UpsertPettyCashFundReviewer;
+using Accounting.Application.PettyCash.Commands.VerifyPettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Queries;
 using Accounting.Application.PettyCash.Queries.GetPettyCashAttachmentFile;
 using Accounting.Application.PettyCash.Queries.GetPettyCashAttachments;
@@ -106,6 +107,7 @@ public sealed class PettyCashController : ControllerBase
             request.CustodianName,
             request.Ceiling,
             request.PerDocLimit,
+            request.FinanceManagerApprovalLimit,
             request.AlertThresholdPercent,
             request.AccountCodeId,
             request.SettlementPeriod,
@@ -138,6 +140,7 @@ public sealed class PettyCashController : ControllerBase
             request.CustodianName,
             request.Ceiling,
             request.PerDocLimit,
+            request.FinanceManagerApprovalLimit,
             request.AlertThresholdPercent,
             request.AccountCodeId,
             request.SettlementPeriod,
@@ -365,7 +368,32 @@ public sealed class PettyCashController : ControllerBase
         return Ok(new StartReviewPettyCashExpenseDocResponse(id));
     }
 
-    /// <summary>بخش ۲ — moves a صورت‌هزینه from «در انتظار بررسی» to «تأییدشده».</summary>
+    /// <summary>
+    /// تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸) — «تأیید کنترل» توسط بازرس، گام اول تأیید دومرحله‌ای. وضعیت سند
+    /// تغییر نمی‌کند.
+    /// </summary>
+    [HttpPost("expense-docs/{id:guid}/verify")]
+    [ProducesResponseType(typeof(VerifyPettyCashExpenseDocResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> Verify(
+        Guid id,
+        [FromBody] VerifyPettyCashExpenseDocRequest? request,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new VerifyPettyCashExpenseDocCommand(id, request?.Note), cancellationToken);
+
+        return Ok(new VerifyPettyCashExpenseDocResponse(id));
+    }
+
+    /// <summary>
+    /// بخش ۲ — «تأیید نهایی» (تکمیل بخش ۲): moves a صورت‌هزینه from «در انتظار بررسی» to
+    /// «تأییدشده». فقط پس از <see cref="Verify"/>.
+    /// </summary>
     [HttpPost("expense-docs/{id:guid}/approve")]
     [ProducesResponseType(typeof(ApprovePettyCashExpenseDocResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -473,7 +501,7 @@ public sealed class PettyCashController : ControllerBase
         CancellationToken cancellationToken)
     {
         var id = await _mediator.Send(
-            new UpsertPettyCashFundReviewerCommand(fundId, request.ReviewerUserId, request.ReviewerName),
+            new UpsertPettyCashFundReviewerCommand(fundId, request.ReviewerUserId, request.ReviewerName, request.Role),
             cancellationToken);
 
         return Ok(new UpsertPettyCashFundReviewerResponse(id));
@@ -616,6 +644,7 @@ public sealed record CreatePettyCashFundRequest(
     string? CustodianName,
     decimal Ceiling,
     decimal PerDocLimit,
+    decimal FinanceManagerApprovalLimit,
     int? AlertThresholdPercent,
     Guid? AccountCodeId,
     PettyCashSettlementPeriod? SettlementPeriod,
@@ -632,6 +661,7 @@ public sealed record UpdatePettyCashFundRequest(
     string? CustodianName,
     decimal Ceiling,
     decimal PerDocLimit,
+    decimal FinanceManagerApprovalLimit,
     int? AlertThresholdPercent,
     Guid? AccountCodeId,
     PettyCashSettlementPeriod? SettlementPeriod,
@@ -689,6 +719,12 @@ public sealed record DeletePettyCashExpenseDocResponse(Guid Id);
 /// <summary>Response body for a successful <see cref="PettyCashController.StartReview"/> call.</summary>
 public sealed record StartReviewPettyCashExpenseDocResponse(Guid Id);
 
+/// <summary>Request body for <see cref="PettyCashController.Verify"/>. May be omitted entirely (no note).</summary>
+public sealed record VerifyPettyCashExpenseDocRequest(string? Note);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.Verify"/> call.</summary>
+public sealed record VerifyPettyCashExpenseDocResponse(Guid Id);
+
 /// <summary>Request body for <see cref="PettyCashController.Approve"/>. May be omitted entirely (no note).</summary>
 public sealed record ApprovePettyCashExpenseDocRequest(string? Note);
 
@@ -717,7 +753,7 @@ public sealed record BulkApprovePettyCashExpenseDocsRequest(IReadOnlyList<Guid> 
 public sealed record BulkApprovePettyCashExpenseDocsResponse(IReadOnlyList<Guid> Ids);
 
 /// <summary>Request body for <see cref="PettyCashController.UpsertFundReviewer"/>. <c>FundId</c> comes from the route.</summary>
-public sealed record UpsertPettyCashFundReviewerRequest(string ReviewerUserId, string? ReviewerName);
+public sealed record UpsertPettyCashFundReviewerRequest(string ReviewerUserId, string? ReviewerName, PettyCashRole Role);
 
 /// <summary>Response body for a successful <see cref="PettyCashController.UpsertFundReviewer"/> call.</summary>
 public sealed record UpsertPettyCashFundReviewerResponse(Guid Id);

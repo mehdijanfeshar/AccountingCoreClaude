@@ -31,6 +31,12 @@ public partial class TB_PC_REVIEWER
 
     public string? REVIEWER_NAME { get; set; }
 
+    /// <summary>نقش این بررسی‌کننده روی این تنخواه (بازرس/مدیر مالی/مدیرعامل) — تکمیل بخش ۲
+    /// (۲۰۲۶-۰۹-۲۸). <c>UK_PC_REVIEWER</c> از این تاریخ روی (<see cref="FUND_ID"/>,
+    /// <see cref="REVIEWER_USERID"/>, <see cref="ROLE"/>) یکتاست — یک کاربر می‌تواند روی یک تنخواه
+    /// بیش از یک نقش داشته باشد.</summary>
+    public Accounting.Domain.ValueObjects.PettyCashRole ROLE { get; set; }
+
     public DateTime CREATEDDATE { get; set; }
 
     public DateTime? UPDATEDDATE { get; set; }

@@ -59,6 +59,7 @@ public sealed class CreatePettyCashFundCommandHandler : IRequestHandler<CreatePe
             CUSTODIAN_NAME = request.CustodianName,
             CEILING = request.Ceiling,
             PER_DOC_LIMIT = request.PerDocLimit,
+            FINANCE_MANAGER_APPROVAL_LIMIT = request.FinanceManagerApprovalLimit,
             ALERT_THRESHOLD_PERCENT = request.AlertThresholdPercent,
             ACCOUNTCODE_ID = request.AccountCodeId,
             SETTLEMENT_PERIOD = request.SettlementPeriod,

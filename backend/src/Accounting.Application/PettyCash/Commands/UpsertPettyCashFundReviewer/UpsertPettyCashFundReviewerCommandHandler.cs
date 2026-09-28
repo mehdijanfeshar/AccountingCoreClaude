@@ -34,7 +34,8 @@ public sealed class UpsertPettyCashFundReviewerCommandHandler : IRequestHandler<
         }
 
         var now = DateTime.UtcNow;
-        var existing = await _reviewerRepository.GetByFundAndUserIdAsync(request.FundId, request.ReviewerUserId, cancellationToken);
+        var existing = await _reviewerRepository.GetByFundUserAndRoleAsync(
+            request.FundId, request.ReviewerUserId, request.Role, cancellationToken);
 
         if (existing is null)
         {
@@ -44,6 +45,7 @@ public sealed class UpsertPettyCashFundReviewerCommandHandler : IRequestHandler<
                 FUND_ID = request.FundId,
                 REVIEWER_USERID = request.ReviewerUserId,
                 REVIEWER_NAME = request.ReviewerName,
+                ROLE = request.Role,
                 VAHEDCODE = request.VahedCode,
                 ADDUSERID = _currentUser.UserId,
                 CREATEDDATE = now,

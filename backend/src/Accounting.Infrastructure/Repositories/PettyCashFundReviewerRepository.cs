@@ -1,5 +1,6 @@
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,15 +20,29 @@ public sealed class PettyCashFundReviewerRepository : IPettyCashFundReviewerRepo
         await _dbContext.TB_PC_REVIEWERs.AddAsync(reviewer, cancellationToken);
     }
 
-    public Task<TB_PC_REVIEWER?> GetByFundAndUserIdAsync(
+    public Task<TB_PC_REVIEWER?> GetByFundUserAndRoleAsync(
         Guid fundId,
         string reviewerUserId,
+        PettyCashRole role,
         CancellationToken cancellationToken = default)
     {
         return _dbContext.TB_PC_REVIEWERs
             .FirstOrDefaultAsync(
-                r => r.FUND_ID == fundId && r.REVIEWER_USERID == reviewerUserId,
+                r => r.FUND_ID == fundId && r.REVIEWER_USERID == reviewerUserId && r.ROLE == role,
                 cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<PettyCashRole>> GetActiveRolesAsync(
+        Guid fundId,
+        string reviewerUserId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.TB_PC_REVIEWERs
+            .AsNoTracking()
+            .Where(r => r.FUND_ID == fundId && r.REVIEWER_USERID == reviewerUserId && !r.ISDELETED)
+            .Select(r => r.ROLE)
+            .Distinct()
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<TB_PC_REVIEWER?> GetForUpdateAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default)

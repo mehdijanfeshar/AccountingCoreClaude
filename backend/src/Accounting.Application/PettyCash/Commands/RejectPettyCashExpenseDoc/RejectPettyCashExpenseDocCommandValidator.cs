@@ -8,6 +8,10 @@ public sealed class RejectPettyCashExpenseDocCommandValidator : AbstractValidato
     {
         RuleFor(x => x.Id).NotEmpty();
 
-        RuleFor(x => x.Note).MaximumLength(1000);
+        // صفحهٔ ۷ پاورپوینت: «رد نیازمند دلیل است».
+        RuleFor(x => x.Note)
+            .NotEmpty()
+            .WithMessage("دلیل رد الزامی است.")
+            .MaximumLength(1000);
     }
 }

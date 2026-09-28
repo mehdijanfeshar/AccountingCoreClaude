@@ -63,6 +63,7 @@ public sealed class UpdatePettyCashFundCommandHandler : IRequestHandler<UpdatePe
         entity.CUSTODIAN_NAME = request.CustodianName;
         entity.CEILING = request.Ceiling;
         entity.PER_DOC_LIMIT = request.PerDocLimit;
+        entity.FINANCE_MANAGER_APPROVAL_LIMIT = request.FinanceManagerApprovalLimit;
         entity.ALERT_THRESHOLD_PERCENT = request.AlertThresholdPercent;
         entity.ACCOUNTCODE_ID = request.AccountCodeId;
         entity.SETTLEMENT_PERIOD = request.SettlementPeriod;

@@ -13,5 +13,7 @@ public sealed class UpsertPettyCashFundReviewerCommandValidator : AbstractValida
             .MaximumLength(10);
 
         RuleFor(x => x.ReviewerName).MaximumLength(200);
+
+        RuleFor(x => x.Role).IsInEnum();
     }
 }

@@ -15,6 +15,9 @@ namespace Accounting.Application.PettyCash.Queries;
 /// <param name="CustodianName">TB_PC_FUND.CUSTODIAN_NAME.</param>
 /// <param name="Ceiling">TB_PC_FUND.CEILING — سقف تنخواه.</param>
 /// <param name="PerDocLimit">TB_PC_FUND.PER_DOC_LIMIT — سقف هر سند.</param>
+/// <param name="FinanceManagerApprovalLimit">TB_PC_FUND.FINANCE_MANAGER_APPROVAL_LIMIT — سقف اختیار
+/// تأیید نهایی نقش مدیر مالی؛ بیشتر از این فقط مدیرعامل می‌تواند تأیید نهایی کند (تکمیل بخش ۲،
+/// ۲۰۲۶-۰۹-۲۸).</param>
 /// <param name="AlertThresholdPercent">TB_PC_FUND.ALERT_THRESHOLD_PERCENT.</param>
 /// <param name="AccountCodeId">TB_PC_FUND.ACCOUNTCODE_ID.</param>
 /// <param name="AccountCodeTitle">Display-only: <c>TB_ACCOUNTCODE.ACCCODENAME</c> of the linked معین.</param>
@@ -34,6 +37,7 @@ public sealed record PettyCashFundDto(
     string? CustodianName,
     decimal Ceiling,
     decimal PerDocLimit,
+    decimal FinanceManagerApprovalLimit,
     int? AlertThresholdPercent,
     Guid? AccountCodeId,
     string? AccountCodeTitle,

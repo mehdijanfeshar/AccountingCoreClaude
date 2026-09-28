@@ -18,6 +18,13 @@ public sealed class RejectPettyCashExpenseDocCommandHandler : IRequestHandler<Re
         _unitOfWork = unitOfWork;
     }
 
+    private static readonly PettyCashRole[] AllowedRoles =
+    {
+        PettyCashRole.Inspector,
+        PettyCashRole.FinanceManager,
+        PettyCashRole.ChiefExecutive,
+    };
+
     public async Task Handle(RejectPettyCashExpenseDocCommand request, CancellationToken cancellationToken)
     {
         await _transitionService.TransitionAsync(
@@ -26,6 +33,7 @@ public sealed class RejectPettyCashExpenseDocCommandHandler : IRequestHandler<Re
             PettyCashDocState.PendingReview,
             PettyCashDocState.Rejected,
             PettyCashDocAction.Reject,
+            AllowedRoles,
             request.Note,
             returnReasonsCsv: null,
             returnDeadline: null,

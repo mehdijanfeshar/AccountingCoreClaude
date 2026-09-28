@@ -26,6 +26,9 @@ namespace Accounting.Application.PettyCash.Commands.CreatePettyCashFund;
 /// <param name="CustodianName">CUSTODIAN_NAME column (optional display name).</param>
 /// <param name="Ceiling">CEILING column (required, &gt; 0) — سقف تنخواه.</param>
 /// <param name="PerDocLimit">PER_DOC_LIMIT column (required, &gt; 0 and ≤ <see cref="Ceiling"/>) — سقف هر سند.</param>
+/// <param name="FinanceManagerApprovalLimit">FINANCE_MANAGER_APPROVAL_LIMIT column (required, &gt; 0)
+/// — تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸، صفحهٔ ۱۳ پاورپوینت): سقف اختیار تأیید نهایی نقش مدیر مالی؛ بیشتر از
+/// این فقط مدیرعامل می‌تواند تأیید نهایی کند.</param>
 /// <param name="AlertThresholdPercent">ALERT_THRESHOLD_PERCENT column (optional, 0..100).</param>
 /// <param name="AccountCodeId">Optional link to <c>TB_ACCOUNTCODE</c> (<c>FK_PC_FUND_ACCOUNTCODE</c>).</param>
 /// <param name="SettlementPeriod">SETTLEMENT_PERIOD column (optional).</param>
@@ -37,6 +40,7 @@ public sealed record CreatePettyCashFundCommand(
     string? CustodianName,
     decimal Ceiling,
     decimal PerDocLimit,
+    decimal FinanceManagerApprovalLimit,
     int? AlertThresholdPercent,
     Guid? AccountCodeId,
     PettyCashSettlementPeriod? SettlementPeriod,

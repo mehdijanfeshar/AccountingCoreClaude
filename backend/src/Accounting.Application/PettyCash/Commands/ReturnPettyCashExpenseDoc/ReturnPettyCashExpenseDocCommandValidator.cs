@@ -41,7 +41,11 @@ public sealed class ReturnPettyCashExpenseDocCommandValidator : AbstractValidato
             .WithMessage("مهلت باید تاریخی بعد از امروز باشد.")
             .When(x => !string.IsNullOrEmpty(x.Deadline) && System.Text.RegularExpressions.Regex.IsMatch(x.Deadline, LegacyJalaliDatePattern));
 
-        RuleFor(x => x.Note).MaximumLength(1000);
+        // صفحهٔ ۸ پاورپوینت: «توضیح برای تنخواه‌دار *» اجباری است.
+        RuleFor(x => x.Note)
+            .NotEmpty()
+            .WithMessage("توضیح برای تنخواه‌دار الزامی است.")
+            .MaximumLength(1000);
     }
 
     /// <summary>Today as a Legacy <c>YYYYMMDD</c> Jalali string — same approach as

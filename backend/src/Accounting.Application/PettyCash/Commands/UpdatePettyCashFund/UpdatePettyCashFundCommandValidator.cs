@@ -31,6 +31,9 @@ public sealed class UpdatePettyCashFundCommandValidator : AbstractValidator<Upda
             .LessThanOrEqualTo(x => x.Ceiling)
                 .WithMessage("سقف هر سند نمی‌تواند از سقف تنخواه بیشتر باشد.");
 
+        RuleFor(x => x.FinanceManagerApprovalLimit)
+            .GreaterThan(0);
+
         RuleFor(x => x.AlertThresholdPercent)
             .InclusiveBetween(0, 100)
             .When(x => x.AlertThresholdPercent.HasValue);

@@ -14,6 +14,7 @@ public sealed class UpdatePettyCashExpenseDocCommandHandler : IRequestHandler<Up
     private readonly IPettyCashFundRepository _pettyCashFundRepository;
     private readonly IExpenseRepository _expenseRepository;
     private readonly IPettyCashDocEventRepository _eventRepository;
+    private readonly IPettyCashDocEventReadRepository _eventReadRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
     private readonly IClientInfoProvider _clientInfoProvider;
@@ -26,6 +27,7 @@ public sealed class UpdatePettyCashExpenseDocCommandHandler : IRequestHandler<Up
         IPettyCashFundRepository pettyCashFundRepository,
         IExpenseRepository expenseRepository,
         IPettyCashDocEventRepository eventRepository,
+        IPettyCashDocEventReadRepository eventReadRepository,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
         IClientInfoProvider clientInfoProvider)
@@ -35,6 +37,7 @@ public sealed class UpdatePettyCashExpenseDocCommandHandler : IRequestHandler<Up
         _pettyCashFundRepository = pettyCashFundRepository;
         _expenseRepository = expenseRepository;
         _eventRepository = eventRepository;
+        _eventReadRepository = eventReadRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _clientInfoProvider = clientInfoProvider;
@@ -51,8 +54,14 @@ public sealed class UpdatePettyCashExpenseDocCommandHandler : IRequestHandler<Up
 
         PettyCashDocEditability.EnsureEditable(doc.ID, doc.DOC_STATE);
 
-        _ = await _pettyCashFundRepository.GetForUpdateAsync(request.FundId, request.VahedCode, cancellationToken)
+        var fund = await _pettyCashFundRepository.GetForUpdateAsync(request.FundId, request.VahedCode, cancellationToken)
             ?? throw new NotFoundException("PettyCashFund", request.FundId);
+
+        // تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸): only the fund's own custodian may update its صورت‌هزینه‌ها.
+        if (!string.Equals(_currentUser.UserId, fund.CUSTODIAN_USERID, StringComparison.Ordinal))
+        {
+            throw new PettyCashNotCustodianException(request.FundId);
+        }
 
         _ = await _expenseRepository.GetForUpdateAsync(request.ExpenseId, request.VahedCode, cancellationToken)
             ?? throw new NotFoundException("Expense", request.ExpenseId);
@@ -66,6 +75,36 @@ public sealed class UpdatePettyCashExpenseDocCommandHandler : IRequestHandler<Up
             {
                 throw new PettyCashDuplicateExpenseDocException(request.VendorNationalId, request.InvoiceNo);
             }
+        }
+
+        // Loaded here (before any mutation below) so the تکمیل بخش ۲ field-lock check right below
+        // can compare against pre-update values — both on TB_PC_EXPENSE_DOC directly and on the
+        // Legacy head/detail rows some of the compared fields actually live on.
+        var head = await _chargeAndCostRepository.GetHeadForUpdateAsync(doc.CHARGEANDCOSTHEAD_ID, request.VahedCode, cancellationToken);
+        var detail = await _chargeAndCostRepository.GetSingleDetailForUpdateAsync(doc.CHARGEANDCOSTHEAD_ID, cancellationToken);
+
+        // تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸، «قفل فیلدبه‌فیلد»، صفحهٔ ۸ پاورپوینت): a Returned document may
+        // only have the fields its most recent Return event's reasons permit changed.
+        if (doc.DOC_STATE == PettyCashDocState.Returned)
+        {
+            var lastReturn = await _eventReadRepository.GetLastReturnEventAsync(doc.ID, cancellationToken);
+            var reasonCodes = PettyCashReturnFieldPolicy.ParseReasonCodes(lastReturn?.ReturnReasons);
+
+            var changedFields = new List<string>();
+
+            if (doc.FUND_ID != request.FundId) changedFields.Add("fundId");
+            if (detail is not null && detail.EXPENSE_ID != request.ExpenseId) changedFields.Add("expenseId");
+            if (head is not null && head.CHARGEANDCOST_DATE != request.RegisterDate) changedFields.Add("registerDate");
+            if (!string.Equals(doc.VENDOR_NAME, request.VendorName, StringComparison.Ordinal)) changedFields.Add("vendorName");
+            if (doc.VENDOR_NATIONAL_ID != request.VendorNationalId) changedFields.Add("vendorNationalId");
+            if (doc.INVOICE_NO != request.InvoiceNo) changedFields.Add("invoiceNo");
+            if (doc.INVOICE_DATE != request.InvoiceDate) changedFields.Add("invoiceDate");
+            if (doc.EVIDENCE_TYPE != request.EvidenceType) changedFields.Add("evidenceType");
+            if (doc.AMOUNT_BEFORE_TAX != request.AmountBeforeTax) changedFields.Add("amountBeforeTax");
+            if (doc.VAT_AMOUNT != request.VatAmount) changedFields.Add("vatAmount");
+            if (head is not null && head.DESCRIPTION != request.Description) changedFields.Add("description");
+
+            PettyCashReturnFieldPolicy.EnsureFieldsAllowed(doc.ID, changedFields, reasonCodes);
         }
 
         var year = request.Year;
@@ -85,8 +124,6 @@ public sealed class UpdatePettyCashExpenseDocCommandHandler : IRequestHandler<Up
         doc.CHANGEUSERID = userId;
         doc.UPDATEDDATE = now;
 
-        var head = await _chargeAndCostRepository.GetHeadForUpdateAsync(doc.CHARGEANDCOSTHEAD_ID, request.VahedCode, cancellationToken);
-
         if (head is not null)
         {
             head.CHARGEANDCOST_DATE = request.RegisterDate;
@@ -95,8 +132,6 @@ public sealed class UpdatePettyCashExpenseDocCommandHandler : IRequestHandler<Up
             head.CHANGEUSERID = userId;
             head.UPDATEDDATE = now;
         }
-
-        var detail = await _chargeAndCostRepository.GetSingleDetailForUpdateAsync(doc.CHARGEANDCOSTHEAD_ID, cancellationToken);
 
         if (detail is not null)
         {

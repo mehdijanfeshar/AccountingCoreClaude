@@ -14,4 +14,5 @@ public sealed record PettyCashDocEventDto(
     string? Note,
     string? ReturnReasons,
     string UserId,
-    DateTime CreatedDate);
+    DateTime CreatedDate,
+    string? ClientIp);

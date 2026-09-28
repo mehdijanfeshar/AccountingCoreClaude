@@ -307,6 +307,65 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Forbidden",
                     pettyCashAttachmentOwnerOnlyException.PublicDetail)),
 
+            // Petty-cash module, تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸): create/submit/update/delete is
+            // custodian-only — plain permissions gap, same shape as the two above.
+            PettyCashNotCustodianException pettyCashNotCustodianException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    pettyCashNotCustodianException.PublicDetail)),
+
+            // Two-stage approval (تکمیل بخش ۲): final approval attempted before an inspector
+            // verified control, or verify attempted twice — both state conflicts, same shape as
+            // PettyCashReviewStateConflictException.
+            PettyCashNotVerifiedException pettyCashNotVerifiedException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashNotVerifiedException.PublicDetail)),
+
+            PettyCashAlreadyVerifiedException pettyCashAlreadyVerifiedException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashAlreadyVerifiedException.PublicDetail)),
+
+            // Caller holds a final-approval-capable role but not enough authority for this
+            // amount — distinct from PettyCashReviewerAccessDeniedException (no role at all).
+            PettyCashApprovalAuthorityExceededException pettyCashApprovalAuthorityExceededException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    pettyCashApprovalAuthorityExceededException.PublicDetail)),
+
+            // Second SoD rule (تکمیل بخش ۲): verifier cannot also give final approval — same
+            // conflict-of-interest shape as PettyCashSelfReviewConflictException.
+            PettyCashVerifierCannotApproveException pettyCashVerifierCannotApproveException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashVerifierCannotApproveException.PublicDetail)),
+
+            // Field-by-field lock on a Returned document (تکمیل بخش ۲، صفحهٔ ۸) — caller may edit
+            // the document right now, just not these particular fields.
+            PettyCashReturnFieldLockedException pettyCashReturnFieldLockedException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashReturnFieldLockedException.PublicDetail)),
+
             _ => (
                 StatusCodes.Status500InternalServerError,
                 BuildProblemDetails(

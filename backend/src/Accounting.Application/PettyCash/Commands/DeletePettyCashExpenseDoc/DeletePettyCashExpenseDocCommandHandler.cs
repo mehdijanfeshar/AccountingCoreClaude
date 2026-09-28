@@ -10,6 +10,7 @@ namespace Accounting.Application.PettyCash.Commands.DeletePettyCashExpenseDoc;
 public sealed class DeletePettyCashExpenseDocCommandHandler : IRequestHandler<DeletePettyCashExpenseDocCommand>
 {
     private readonly IPettyCashExpenseDocRepository _expenseDocRepository;
+    private readonly IPettyCashFundRepository _pettyCashFundRepository;
     private readonly IChargeAndCostRepository _chargeAndCostRepository;
     private readonly IPettyCashDocEventRepository _eventRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -18,6 +19,7 @@ public sealed class DeletePettyCashExpenseDocCommandHandler : IRequestHandler<De
 
     public DeletePettyCashExpenseDocCommandHandler(
         IPettyCashExpenseDocRepository expenseDocRepository,
+        IPettyCashFundRepository pettyCashFundRepository,
         IChargeAndCostRepository chargeAndCostRepository,
         IPettyCashDocEventRepository eventRepository,
         IUnitOfWork unitOfWork,
@@ -25,6 +27,7 @@ public sealed class DeletePettyCashExpenseDocCommandHandler : IRequestHandler<De
         IClientInfoProvider clientInfoProvider)
     {
         _expenseDocRepository = expenseDocRepository;
+        _pettyCashFundRepository = pettyCashFundRepository;
         _chargeAndCostRepository = chargeAndCostRepository;
         _eventRepository = eventRepository;
         _unitOfWork = unitOfWork;
@@ -39,6 +42,15 @@ public sealed class DeletePettyCashExpenseDocCommandHandler : IRequestHandler<De
         if (doc is null)
         {
             throw new NotFoundException("PettyCashExpenseDoc", request.Id);
+        }
+
+        // تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸): only the fund's own custodian may delete its صورت‌هزینه‌ها.
+        var fund = await _pettyCashFundRepository.GetForUpdateAsync(doc.FUND_ID, request.VahedCode, cancellationToken)
+            ?? throw new NotFoundException("PettyCashFund", doc.FUND_ID);
+
+        if (!string.Equals(_currentUser.UserId, fund.CUSTODIAN_USERID, StringComparison.Ordinal))
+        {
+            throw new PettyCashNotCustodianException(doc.FUND_ID);
         }
 
         // Checked BEFORE the idempotent already-deleted short-circuit, so a document that is

@@ -2,6 +2,7 @@ using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Common.Security;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.PettyCash.Commands.UploadPettyCashAttachment;
@@ -10,17 +11,20 @@ public sealed class UploadPettyCashAttachmentCommandHandler : IRequestHandler<Up
 {
     private readonly IPettyCashExpenseDocRepository _expenseDocRepository;
     private readonly IPettyCashAttachmentRepository _attachmentRepository;
+    private readonly IPettyCashDocEventReadRepository _eventReadRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
     public UploadPettyCashAttachmentCommandHandler(
         IPettyCashExpenseDocRepository expenseDocRepository,
         IPettyCashAttachmentRepository attachmentRepository,
+        IPettyCashDocEventReadRepository eventReadRepository,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser)
     {
         _expenseDocRepository = expenseDocRepository;
         _attachmentRepository = attachmentRepository;
+        _eventReadRepository = eventReadRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
     }
@@ -42,6 +46,19 @@ public sealed class UploadPettyCashAttachmentCommandHandler : IRequestHandler<Up
         if (!string.Equals(_currentUser.UserId, doc.ADDUSERID, StringComparison.Ordinal))
         {
             throw new PettyCashAttachmentOwnerOnlyException(doc.ID);
+        }
+
+        // تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸، «قفل فیلدبه‌فیلد»، صفحهٔ ۸): on a Returned document, attachments
+        // may only be touched when the return reasons include AttachmentIncomplete or Other.
+        if (doc.DOC_STATE == PettyCashDocState.Returned)
+        {
+            var lastReturn = await _eventReadRepository.GetLastReturnEventAsync(doc.ID, cancellationToken);
+            var reasonCodes = PettyCashReturnFieldPolicy.ParseReasonCodes(lastReturn?.ReturnReasons);
+
+            if (!PettyCashReturnFieldPolicy.CanEditAttachments(reasonCodes))
+            {
+                throw new PettyCashReturnFieldLockedException(doc.ID, new[] { "attachments" });
+            }
         }
 
         // Belt-and-suspenders against UploadPettyCashAttachmentCommandValidator's identical rule

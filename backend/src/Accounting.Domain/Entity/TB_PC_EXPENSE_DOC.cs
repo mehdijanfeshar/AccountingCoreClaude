@@ -45,6 +45,14 @@ public partial class TB_PC_EXPENSE_DOC
 
     public string? RETURN_DEADLINE { get; set; }
 
+    /// <summary>فضای هویتی <c>ICurrentUser.UserId</c>/<c>ADDUSERID</c> — بازرسی که کنترل این سند
+    /// را در <c>PendingReview</c> تأیید کرد (اکشن <see cref="PettyCashDocAction.Verify"/>). تکمیل
+    /// بخش ۲ (۲۰۲۶-۰۹-۲۸، تأیید دومرحله‌ای). <c>ReturnPettyCashExpenseDocCommandHandler</c>
+    /// این را هنگام برگشت سند پاک می‌کند — سند برگشتی دوباره باید کنترل شود.</summary>
+    public string? VERIFIED_BY_USERID { get; set; }
+
+    public DateTime? VERIFIED_DATE { get; set; }
+
     public DateTime CREATEDDATE { get; set; }
 
     public DateTime? UPDATEDDATE { get; set; }

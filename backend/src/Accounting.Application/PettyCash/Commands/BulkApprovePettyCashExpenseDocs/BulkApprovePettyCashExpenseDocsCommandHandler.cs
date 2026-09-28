@@ -1,14 +1,13 @@
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.PettyCash.Commands.Common;
-using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.PettyCash.Commands.BulkApprovePettyCashExpenseDocs;
 
 /// <summary>
-/// Validates and stages every id's Approve transition via
-/// <see cref="IPettyCashReviewTransitionService"/> before ever calling
+/// Validates and stages every id's final-approval transition via
+/// <see cref="IPettyCashFinalApprovalService"/> before ever calling
 /// <see cref="IUnitOfWork.SaveChangesAsync"/> — see that interface's XML doc for why this alone
 /// guarantees all-or-nothing without an explicit DB transaction. The per-id
 /// <c>try/catch</c> below is a deliberate validation-aggregation pattern, not exception
@@ -20,14 +19,14 @@ namespace Accounting.Application.PettyCash.Commands.BulkApprovePettyCashExpenseD
 /// </summary>
 public sealed class BulkApprovePettyCashExpenseDocsCommandHandler : IRequestHandler<BulkApprovePettyCashExpenseDocsCommand>
 {
-    private readonly IPettyCashReviewTransitionService _transitionService;
+    private readonly IPettyCashFinalApprovalService _finalApprovalService;
     private readonly IUnitOfWork _unitOfWork;
 
     public BulkApprovePettyCashExpenseDocsCommandHandler(
-        IPettyCashReviewTransitionService transitionService,
+        IPettyCashFinalApprovalService finalApprovalService,
         IUnitOfWork unitOfWork)
     {
-        _transitionService = transitionService;
+        _finalApprovalService = finalApprovalService;
         _unitOfWork = unitOfWork;
     }
 
@@ -39,16 +38,7 @@ public sealed class BulkApprovePettyCashExpenseDocsCommandHandler : IRequestHand
         {
             try
             {
-                await _transitionService.TransitionAsync(
-                    id,
-                    request.VahedCode,
-                    PettyCashDocState.PendingReview,
-                    PettyCashDocState.Approved,
-                    PettyCashDocAction.Approve,
-                    note: null,
-                    returnReasonsCsv: null,
-                    returnDeadline: null,
-                    cancellationToken);
+                await _finalApprovalService.FinalApproveAsync(id, request.VahedCode, note: null, cancellationToken);
             }
             catch (NotFoundException)
             {
@@ -66,9 +56,21 @@ public sealed class BulkApprovePettyCashExpenseDocsCommandHandler : IRequestHand
             {
                 failures[id] = "self-review";
             }
+            catch (PettyCashVerifierCannotApproveException)
+            {
+                failures[id] = "self-review";
+            }
             catch (PettyCashReviewStateConflictException)
             {
                 failures[id] = "invalid-state";
+            }
+            catch (PettyCashNotVerifiedException)
+            {
+                failures[id] = "not-verified";
+            }
+            catch (PettyCashApprovalAuthorityExceededException)
+            {
+                failures[id] = "over-authority";
             }
         }
 

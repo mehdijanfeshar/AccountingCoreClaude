@@ -1,5 +1,6 @@
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Common.Security;
 using Accounting.Application.PettyCash.Queries;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
@@ -191,7 +192,37 @@ public sealed class PettyCashExpenseDocReadRepository : IPettyCashExpenseDocRead
             select new Row(doc, head, fund, detail, expense))
             .FirstOrDefaultAsync(cancellationToken);
 
-        return row is null ? null : ToDto(row, DateTime.UtcNow);
+        if (row is null)
+        {
+            return null;
+        }
+
+        // تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸، «قفل فیلدبه‌فیلد»، صفحهٔ ۸): editableFields is only ever
+        // non-null while the document is Returned — computed here (not on the list endpoint) since
+        // it needs one extra query per document.
+        IReadOnlyList<string>? editableFields = null;
+
+        if (row.Doc.DOC_STATE == PettyCashDocState.Returned)
+        {
+            var returnReasonsCsv = await _dbContext.TB_PC_DOC_EVENTs
+                .AsNoTracking()
+                .Where(e => e.EXPENSE_DOC_ID == row.Doc.ID && e.ACTION == PettyCashDocAction.Return)
+                .OrderByDescending(e => e.CREATEDDATE)
+                .ThenByDescending(e => e.ID)
+                .Select(e => e.RETURN_REASONS)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            var reasonCodes = PettyCashReturnFieldPolicy.ParseReasonCodes(returnReasonsCsv);
+            var fields = PettyCashReturnFieldPolicy.GetEditableFields(reasonCodes);
+
+            editableFields = fields is null
+                ? null
+                : PettyCashReturnFieldPolicy.CanEditAttachments(reasonCodes)
+                    ? fields.Append("attachments").ToList()
+                    : fields;
+        }
+
+        return ToDto(row, DateTime.UtcNow, editableFields);
     }
 
     private static PettyCashExpenseDocListItemDto ToListItemDto(Row row, DateTime now) => new(
@@ -209,9 +240,11 @@ public sealed class PettyCashExpenseDocReadRepository : IPettyCashExpenseDocRead
         row.Doc.DOC_STATE,
         row.Doc.SUBMITTED_DATE,
         row.Doc.SUBMITTED_DATE is { } submitted ? (int)(now - submitted).TotalDays : null,
-        row.Doc.ADDUSERID);
+        row.Doc.ADDUSERID,
+        row.Doc.VERIFIED_BY_USERID,
+        row.Doc.VERIFIED_DATE);
 
-    private static PettyCashExpenseDocDto ToDto(Row row, DateTime now)
+    private static PettyCashExpenseDocDto ToDto(Row row, DateTime now, IReadOnlyList<string>? editableFields)
     {
         var listItem = ToListItemDto(row, now);
 
@@ -237,6 +270,9 @@ public sealed class PettyCashExpenseDocReadRepository : IPettyCashExpenseDocRead
             row.Doc.EVIDENCE_TYPE,
             row.Doc.AMOUNT_BEFORE_TAX,
             row.Doc.VAT_AMOUNT,
-            row.Doc.RETURN_DEADLINE);
+            row.Doc.RETURN_DEADLINE,
+            listItem.VerifiedByUserId,
+            listItem.VerifiedDate,
+            editableFields);
     }
 }

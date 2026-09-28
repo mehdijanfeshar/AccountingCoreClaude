@@ -1,4 +1,5 @@
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Interfaces;
 
@@ -13,13 +14,27 @@ public interface IPettyCashFundReviewerRepository
 
     /// <summary>
     /// Loads the single change-tracked reviewer row for (<paramref name="fundId"/>,
-    /// <paramref name="reviewerUserId"/>) — the pair <c>UK_PC_REVIEWER</c> is unique on — or
-    /// <see langword="null"/> when none exists yet. Returns soft-deleted rows too (both the
-    /// upsert command, which reactivates them, and
+    /// <paramref name="reviewerUserId"/>, <paramref name="role"/>) — the triple <c>UK_PC_REVIEWER</c>
+    /// is unique on since تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸؛ پیش‌تر فقط (fundId, reviewerUserId)) — or
+    /// <see langword="null"/> when none exists yet. Returns soft-deleted rows too (both the upsert
+    /// command, which reactivates them, and
     /// <c>Accounting.Application.PettyCash.Commands.Common.IPettyCashReviewAuthorizer</c>, which
     /// must treat them as inactive, need to see them).
     /// </summary>
-    Task<TB_PC_REVIEWER?> GetByFundAndUserIdAsync(
+    Task<TB_PC_REVIEWER?> GetByFundUserAndRoleAsync(
+        Guid fundId,
+        string reviewerUserId,
+        PettyCashRole role,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Every distinct <see cref="PettyCashRole"/> the caller holds as an active
+    /// (<c>ISDELETED == false</c>) reviewer for <paramref name="fundId"/> — a user may hold more
+    /// than one role on the same fund since the same 2026-09-28 unique-key widening. Empty when
+    /// the user has no active reviewer row for this fund at all. Backs
+    /// <c>IPettyCashReviewAuthorizer.EnsureCanReviewAsync</c>.
+    /// </summary>
+    Task<IReadOnlyList<PettyCashRole>> GetActiveRolesAsync(
         Guid fundId,
         string reviewerUserId,
         CancellationToken cancellationToken = default);

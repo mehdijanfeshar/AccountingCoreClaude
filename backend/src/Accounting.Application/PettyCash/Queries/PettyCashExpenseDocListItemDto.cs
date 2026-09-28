@@ -22,6 +22,8 @@ namespace Accounting.Application.PettyCash.Queries;
 /// <param name="SubmittedDate">TB_PC_EXPENSE_DOC.SUBMITTED_DATE.</param>
 /// <param name="AgeDays">Days since <paramref name="SubmittedDate"/>, or <see langword="null"/> for <see cref="PettyCashDocState.Draft"/> (which is never submitted).</param>
 /// <param name="AddUserId">TB_PC_EXPENSE_DOC.ADDUSERID.</param>
+/// <param name="VerifiedByUserId">TB_PC_EXPENSE_DOC.VERIFIED_BY_USERID — تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸).</param>
+/// <param name="VerifiedDate">TB_PC_EXPENSE_DOC.VERIFIED_DATE.</param>
 public sealed record PettyCashExpenseDocListItemDto(
     Guid Id,
     string DocNumber,
@@ -37,4 +39,6 @@ public sealed record PettyCashExpenseDocListItemDto(
     PettyCashDocState State,
     DateTime? SubmittedDate,
     int? AgeDays,
-    string AddUserId);
+    string AddUserId,
+    string? VerifiedByUserId,
+    DateTime? VerifiedDate);

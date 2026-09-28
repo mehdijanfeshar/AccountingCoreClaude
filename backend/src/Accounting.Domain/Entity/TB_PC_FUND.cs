@@ -34,6 +34,11 @@ public partial class TB_PC_FUND
     /// <summary>سقف هر سند — پیش‌تر <c>TB_PC_FUND_SETTING.PER_DOC_LIMIT</c>، آنجا اختیاری بود، اینجا الزامی.</summary>
     public decimal PER_DOC_LIMIT { get; set; }
 
+    /// <summary>سقف اختیار تأیید نهایی نقش <see cref="Accounting.Domain.ValueObjects.PettyCashRole.FinanceManager"/>
+    /// («تا ۵۰۰ م» صفحهٔ ۱۳ پاورپوینت) — بیشتر از این فقط <see cref="Accounting.Domain.ValueObjects.PettyCashRole.ChiefExecutive"/>
+    /// می‌تواند تأیید نهایی کند. تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸).</summary>
+    public decimal FINANCE_MANAGER_APPROVAL_LIMIT { get; set; }
+
     public int? ALERT_THRESHOLD_PERCENT { get; set; }
 
     public Guid? ACCOUNTCODE_ID { get; set; }

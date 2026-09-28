@@ -55,6 +55,12 @@ public sealed class SubmitPettyCashExpenseDocCommandHandler : IRequestHandler<Su
         var fund = await _pettyCashFundRepository.GetForUpdateAsync(doc.FUND_ID, request.VahedCode, cancellationToken)
             ?? throw new NotFoundException("PettyCashFund", doc.FUND_ID);
 
+        // تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸): only the fund's own custodian may submit its صورت‌هزینه‌ها.
+        if (!string.Equals(_currentUser.UserId, fund.CUSTODIAN_USERID, StringComparison.Ordinal))
+        {
+            throw new PettyCashNotCustodianException(doc.FUND_ID);
+        }
+
         // 2026-09-28 rule: an inactive تنخواه accepts no Submit either.
         if (!fund.IS_ACTIVE)
         {
