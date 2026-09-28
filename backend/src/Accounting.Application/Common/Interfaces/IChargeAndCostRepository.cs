@@ -41,4 +41,29 @@ public interface IChargeAndCostRepository
     /// <c>IdentityHeadRepository.GetNextSerialAsync</c>'s "highest + 1, gaps allowed" shape.
     /// </summary>
     Task<int> GetNextCodeAsync(string vahedCode, string year, ChargeAndCostType type, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stages a new <see cref="TB_CHARGE_LINK_COST"/> row — «کدام هزینه با کدام شارژ ترمیم شد»
+    /// (بخش ۳-الف، <c>docs/tankhah-khazaneh-module.md</c>). Only stages — never calls
+    /// SaveChanges.
+    /// </summary>
+    Task AddLinkAsync(TB_CHARGE_LINK_COST link, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// True when at least one non-deleted <see cref="TB_CHARGE_LINK_COST"/> row already links
+    /// <paramref name="costId"/> (a <c>TB_CHARGEANDCOST_DETAIL.ID</c>) to any ترمیم — backs the
+    /// «هیچ سندی دو بار ترمیم نمی‌شود» rule, checked immediately before each link is inserted so a
+    /// race between two concurrent ترمیم requests over the same صورت‌هزینه is still caught (a
+    /// unique DB constraint is not planned for this pair, so this is the only guard).
+    /// </summary>
+    Task<bool> ExistsActiveLinkForCostAsync(Guid costId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Every non-deleted <see cref="TB_CHARGE_LINK_COST"/> row for <paramref name="chargeId"/> (a
+    /// ترمیم's <c>TB_CHARGEANDCOST_HEAD.ID</c>), as change-tracked entities — used by
+    /// <c>RejectPettyCashReplenishmentCommandHandler</c>/<c>DeletePettyCashReplenishmentCommandHandler</c>
+    /// to soft-delete every link so the underlying صورت‌هزینه rows become replenishable again.
+    /// </summary>
+    Task<IReadOnlyList<TB_CHARGE_LINK_COST>> GetActiveLinksByChargeIdAsync(
+        Guid chargeId, CancellationToken cancellationToken = default);
 }

@@ -78,6 +78,21 @@ public static class DependencyInjection
         services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashFinalApprovalService,
             Accounting.Application.PettyCash.Commands.Common.PettyCashFinalApprovalService>();
 
+        // بخش ۳-الف (۲۰۲۶-۰۹-۲۸) — role authorizer shared by every ترمیم command. See
+        // IPettyCashReplenishmentAuthorizer XML doc.
+        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashReplenishmentAuthorizer,
+            Accounting.Application.PettyCash.Commands.Common.PettyCashReplenishmentAuthorizer>();
+        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashRefundRecorderAuthorizer,
+            Accounting.Application.PettyCash.Commands.Common.PettyCashRefundRecorderAuthorizer>();
+
+        // بخش ۳-ب (۲۰۲۶-۰۹-۲۸) — settlement period boundaries/opening balance (shared by the
+        // preview query and the count/finalize commands) and the settlement GL voucher builder
+        // (shared shape with every other voucher write path — see its own XML doc).
+        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashSettlementPeriodProvisioner,
+            Accounting.Application.PettyCash.Commands.Common.PettyCashSettlementPeriodProvisioner>();
+        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashSettlementVoucherBuilder,
+            Accounting.Application.PettyCash.Commands.Common.PettyCashSettlementVoucherBuilder>();
+
         return services;
     }
 }

@@ -22,4 +22,15 @@ public enum PettyCashRole
 
     /// <summary>مدیرعامل — تأیید نهایی بدون سقف مبلغ، و مجاز به <c>Return</c>/<c>Reject</c>.</summary>
     ChiefExecutive = 3,
+
+    /// <summary>حسابدار ارشد — بخش ۳-الف (<c>docs/tankhah-khazaneh-module.md</c>، ۲۰۲۶-۰۹-۲۸).
+    /// فعلاً هیچ اکشن ترمیم/استردادی به این نقش اختصاص داده نشده (تصمیم محافظه‌کارانهٔ همان تاریخ:
+    /// ایجاد/ارسال/حذف پیش‌نویس ترمیم فقط <see cref="FinanceManager"/> یا <see cref="Treasurer"/>)؛
+    /// مقدار رزرو شده تا endpoint بررسی‌کنندگان خودکار (<c>funds/{fundId}/reviewers</c>) بتواند
+    /// این نقش را هم بپذیرد.</summary>
+    SeniorAccountant = 4,
+
+    /// <summary>خزانه‌دار — بخش ۳-الف: اجرای پرداخت ترمیم (<c>record-payment</c>) و، طبق
+    /// <c>TB_PC_FUND.REFUND_RECORDER</c>، احتمالاً ثبت استرداد وجه.</summary>
+    Treasurer = 5,
 }

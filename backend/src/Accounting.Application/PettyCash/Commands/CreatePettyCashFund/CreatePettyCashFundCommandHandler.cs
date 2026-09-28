@@ -64,6 +64,7 @@ public sealed class CreatePettyCashFundCommandHandler : IRequestHandler<CreatePe
             ACCOUNTCODE_ID = request.AccountCodeId,
             SETTLEMENT_PERIOD = request.SettlementPeriod,
             IS_ACTIVE = request.IsActive,
+            REFUND_RECORDER = request.RefundRecorder,
             VAHEDCODE = request.VahedCode,
             ADDUSERID = _currentUser.UserId,
             CREATEDDATE = DateTime.UtcNow,

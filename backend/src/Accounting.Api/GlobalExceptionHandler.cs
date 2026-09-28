@@ -366,6 +366,184 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Conflict",
                     pettyCashReturnFieldLockedException.PublicDetail)),
 
+            // بخش ۳-الف (۲۰۲۶-۰۹-۲۸) — ترمیم/شارژ و استرداد وجه. No documents to build a ترمیم
+            // from — 409, same shape as PettyCashFundHasExpenseDocsException.
+            PettyCashNoDocumentsToReplenishException pettyCashNoDocumentsToReplenishException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashNoDocumentsToReplenishException.PublicDetail)),
+
+            // Race guard: a صورت‌هزینه already picked up by another concurrent ترمیم request.
+            PettyCashDocAlreadyReplenishedException pettyCashDocAlreadyReplenishedException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashDocAlreadyReplenishedException.PublicDetail)),
+
+            // Wrong STATE for a ترمیم action — same state-based-refusal shape as
+            // PettyCashReviewStateConflictException.
+            PettyCashReplenishmentStateConflictException pettyCashReplenishmentStateConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashReplenishmentStateConflictException.PublicDetail)),
+
+            // Caller holds none of the roles a ترمیم action requires — straight permissions gap.
+            PettyCashReplenishmentRoleRequiredException pettyCashReplenishmentRoleRequiredException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    pettyCashReplenishmentRoleRequiredException.PublicDetail)),
+
+            // SoD: ترمیم's own creator cannot also approve it.
+            PettyCashReplenishmentApproverConflictException pettyCashReplenishmentApproverConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashReplenishmentApproverConflictException.PublicDetail)),
+
+            // SoD: ترمیم's own approver cannot also record its payment.
+            PettyCashReplenishmentPayerConflictException pettyCashReplenishmentPayerConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashReplenishmentPayerConflictException.PublicDetail)),
+
+            // Defensive ceiling guard on ترمیم totals — 400, same shape as the §4 Submit rules.
+            PettyCashReplenishmentExceedsCeilingException pettyCashReplenishmentExceedsCeilingException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    pettyCashReplenishmentExceedsCeilingException.PublicDetail)),
+
+            // Caller is not TB_PC_FUND.REFUND_RECORDER's designated recorder for this fund.
+            PettyCashRefundRecorderMismatchException pettyCashRefundRecorderMismatchException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    pettyCashRefundRecorderMismatchException.PublicDetail)),
+
+            // بخش ۳-ب (تسویهٔ دوره) — straight permissions gap: caller is not an active
+            // SeniorAccountant reviewer of the fund.
+            PettyCashSettlementRoleRequiredException pettyCashSettlementRoleRequiredException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    pettyCashSettlementRoleRequiredException.PublicDetail)),
+
+            // SoD — caller created at least one of the صورت‌هزینه rows being settled.
+            PettyCashSettlementSoDConflictException pettyCashSettlementSoDConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashSettlementSoDConflictException.PublicDetail)),
+
+            // Missing acknowledgeInFlightTransfer=true on the request itself — 400, fixable by
+            // resubmitting with the flag set.
+            PettyCashSettlementInFlightAcknowledgeRequiredException pettyCashSettlementInFlightAcknowledgeRequiredException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    pettyCashSettlementInFlightAcknowledgeRequiredException.PublicDetail)),
+
+            // Draft period has no COUNTED_BALANCE yet — state conflict, same shape as
+            // PettyCashReplenishmentStateConflictException.
+            PettyCashSettlementCountedBalanceRequiredException pettyCashSettlementCountedBalanceRequiredException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashSettlementCountedBalanceRequiredException.PublicDetail)),
+
+            // Recorded COUNTED_BALANCE disagrees with the computed closing cash balance.
+            PettyCashSettlementCountedBalanceMismatchException pettyCashSettlementCountedBalanceMismatchException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashSettlementCountedBalanceMismatchException.PublicDetail)),
+
+            // No صورت‌هزینه eligible for this settlement — same "nothing to act on" shape as
+            // PettyCashNoDocumentsToReplenishException.
+            PettyCashSettlementNoDocumentsException pettyCashSettlementNoDocumentsException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashSettlementNoDocumentsException.PublicDetail)),
+
+            // Fund has no حساب معین configured — settlement voucher credit line cannot be built.
+            PettyCashSettlementFundAccountMissingException pettyCashSettlementFundAccountMissingException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashSettlementFundAccountMissingException.PublicDetail)),
+
+            // A مادهٔ هزینه in the settlement has no حساب معین configured.
+            PettyCashSettlementExpenseAccountMissingException pettyCashSettlementExpenseAccountMissingException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashSettlementExpenseAccountMissingException.PublicDetail)),
+
+            // تفصیلی الزامی violation on a server-derived settlement voucher line — 409, not 400
+            // (see that exception's own XML doc for why).
+            PettyCashSettlementTafsiliMissingException pettyCashSettlementTafsiliMissingException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashSettlementTafsiliMissingException.PublicDetail)),
+
+            // Defensive unbalanced-voucher guard — should never actually fire; see its XML doc.
+            PettyCashSettlementUnbalancedException pettyCashSettlementUnbalancedException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashSettlementUnbalancedException.PublicDetail)),
+
+            // A استرداد's own date falls inside an already-finalized settlement period.
+            PettyCashRefundLockedBySettledPeriodException pettyCashRefundLockedBySettledPeriodException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    pettyCashRefundLockedBySettledPeriodException.PublicDetail)),
+
             _ => (
                 StatusCodes.Status500InternalServerError,
                 BuildProblemDetails(

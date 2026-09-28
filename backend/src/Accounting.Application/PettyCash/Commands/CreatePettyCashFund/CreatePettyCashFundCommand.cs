@@ -33,6 +33,9 @@ namespace Accounting.Application.PettyCash.Commands.CreatePettyCashFund;
 /// <param name="AccountCodeId">Optional link to <c>TB_ACCOUNTCODE</c> (<c>FK_PC_FUND_ACCOUNTCODE</c>).</param>
 /// <param name="SettlementPeriod">SETTLEMENT_PERIOD column (optional).</param>
 /// <param name="IsActive">IS_ACTIVE column — an inactive fund accepts no new صورت‌هزینه/Submit.</param>
+/// <param name="RefundRecorder">REFUND_RECORDER column — بخش ۳-الف (۲۰۲۶-۰۹-۲۸): چه نقشی مجاز به
+/// ثبت استرداد وجه روی این تنخواه است. صاحب پروژه: نباید در کد ثابت باشد، مدیر مالی اینجا تعیین
+/// می‌کند. Defaults to <see cref="PettyCashRefundRecorder.Treasurer"/> when omitted.</param>
 public sealed record CreatePettyCashFundCommand(
     string Code,
     string Name,
@@ -44,7 +47,8 @@ public sealed record CreatePettyCashFundCommand(
     int? AlertThresholdPercent,
     Guid? AccountCodeId,
     PettyCashSettlementPeriod? SettlementPeriod,
-    bool IsActive) : IRequest<Guid>, IVahedScopedCommand
+    bool IsActive,
+    PettyCashRefundRecorder RefundRecorder = PettyCashRefundRecorder.Treasurer) : IRequest<Guid>, IVahedScopedCommand
 {
     /// <summary>
     /// Organizational unit code — never bound from the request body

@@ -47,6 +47,12 @@ public partial class TB_PC_FUND
 
     public bool IS_ACTIVE { get; set; }
 
+    /// <summary>چه نقشی مجاز به ثبت استرداد وجه (<c>TB_PC_REFUND</c>) روی همین تنخواه است — بخش
+    /// ۳-الف (۲۰۲۶-۰۹-۲۸، صفحهٔ ۱۱ پاورپوینت). صاحب پروژه: نباید در کد ثابت باشد؛ مدیر مالی آن را
+    /// در تعریف/ویرایش تنخواه تعیین می‌کند. <c>DEFAULT 2</c> (<see cref="PettyCashRefundRecorder.Treasurer"/>)
+    /// در DB.</summary>
+    public PettyCashRefundRecorder REFUND_RECORDER { get; set; }
+
     public DateTime CREATEDDATE { get; set; }
 
     public DateTime? UPDATEDDATE { get; set; }

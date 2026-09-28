@@ -1,19 +1,31 @@
 using Accounting.Application.PettyCash.Commands.ApprovePettyCashExpenseDoc;
+using Accounting.Application.PettyCash.Commands.ApprovePettyCashReplenishment;
 using Accounting.Application.PettyCash.Commands.BulkApprovePettyCashExpenseDocs;
 using Accounting.Application.PettyCash.Commands.CreatePettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Commands.CreatePettyCashFund;
+using Accounting.Application.PettyCash.Commands.Common;
+using Accounting.Application.PettyCash.Commands.CountPettyCashSettlement;
+using Accounting.Application.PettyCash.Commands.CreatePettyCashRefund;
+using Accounting.Application.PettyCash.Commands.CreatePettyCashReplenishment;
 using Accounting.Application.PettyCash.Commands.DeletePettyCashAttachment;
 using Accounting.Application.PettyCash.Commands.DeletePettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Commands.DeletePettyCashFund;
 using Accounting.Application.PettyCash.Commands.DeletePettyCashFundReviewer;
+using Accounting.Application.PettyCash.Commands.DeletePettyCashRefund;
+using Accounting.Application.PettyCash.Commands.DeletePettyCashReplenishment;
+using Accounting.Application.PettyCash.Commands.FinalizePettyCashSettlement;
+using Accounting.Application.PettyCash.Commands.RecordPettyCashReplenishmentPayment;
 using Accounting.Application.PettyCash.Commands.RejectPettyCashExpenseDoc;
+using Accounting.Application.PettyCash.Commands.RejectPettyCashReplenishment;
 using Accounting.Application.PettyCash.Commands.ReturnPettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Commands.StartReviewPettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Commands.SubmitPettyCashExpenseDoc;
+using Accounting.Application.PettyCash.Commands.SubmitPettyCashReplenishment;
 using Accounting.Application.PettyCash.Commands.UpdatePettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Commands.UpdatePettyCashFund;
 using Accounting.Application.PettyCash.Commands.UploadPettyCashAttachment;
 using Accounting.Application.PettyCash.Commands.UpsertPettyCashFundReviewer;
+using Accounting.Application.PettyCash.Commands.UpsertPettyCashFundTafsilis;
 using Accounting.Application.PettyCash.Commands.VerifyPettyCashExpenseDoc;
 using Accounting.Application.PettyCash.Queries;
 using Accounting.Application.PettyCash.Queries.GetPettyCashAttachmentFile;
@@ -22,8 +34,17 @@ using Accounting.Application.PettyCash.Queries.GetPettyCashDocEvents;
 using Accounting.Application.PettyCash.Queries.GetPettyCashExpenseDocById;
 using Accounting.Application.PettyCash.Queries.GetPettyCashExpenseDocs;
 using Accounting.Application.PettyCash.Queries.GetPettyCashFundById;
+using Accounting.Application.PettyCash.Queries.GetPettyCashFundDashboard;
+using Accounting.Application.PettyCash.Queries.GetPettyCashFundLedger;
 using Accounting.Application.PettyCash.Queries.GetPettyCashFundReviewers;
 using Accounting.Application.PettyCash.Queries.GetPettyCashFunds;
+using Accounting.Application.PettyCash.Queries.GetPettyCashFundSettlementPreview;
+using Accounting.Application.PettyCash.Queries.GetPettyCashFundSettlements;
+using Accounting.Application.PettyCash.Queries.GetPettyCashFundTafsilis;
+using Accounting.Application.PettyCash.Queries.GetPettyCashRefunds;
+using Accounting.Application.PettyCash.Queries.GetPettyCashReplenishmentById;
+using Accounting.Application.PettyCash.Queries.GetPettyCashReplenishmentPreview;
+using Accounting.Application.PettyCash.Queries.GetPettyCashReplenishments;
 using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Http;
@@ -111,7 +132,8 @@ public sealed class PettyCashController : ControllerBase
             request.AlertThresholdPercent,
             request.AccountCodeId,
             request.SettlementPeriod,
-            request.IsActive);
+            request.IsActive,
+            request.RefundRecorder);
 
         var id = await _mediator.Send(command, cancellationToken);
 
@@ -144,7 +166,8 @@ public sealed class PettyCashController : ControllerBase
             request.AlertThresholdPercent,
             request.AccountCodeId,
             request.SettlementPeriod,
-            request.IsActive);
+            request.IsActive,
+            request.RefundRecorder);
 
         await _mediator.Send(command, cancellationToken);
 
@@ -634,7 +657,376 @@ public sealed class PettyCashController : ControllerBase
 
         return Ok(result);
     }
+
+    // ==================== بخش ۳-الف: ترمیم/شارژ، استرداد، داشبورد، گردش ====================
+
+    /// <summary>پیش‌نمایش ترمیم بعدی — همان مبلغ/خطوط/اسنادی که <see cref="CreateReplenishment"/> اگر همین الان فراخوانی شود می‌سازد.</summary>
+    [HttpGet("funds/{fundId:guid}/replenishment-preview")]
+    [ProducesResponseType(typeof(PettyCashReplenishmentPreviewDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetReplenishmentPreview(Guid fundId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPettyCashReplenishmentPreviewQuery(fundId), cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>
+    /// می‌سازد و — در همان لحظه — هر صورت‌هزینهٔ تأییدشدهٔ منتظر ترمیم را لینک می‌کند. ۴۰۹ اگر
+    /// هیچ صورت‌هزینه‌ای برای ترمیم نیست.
+    /// </summary>
+    [HttpPost("replenishments")]
+    [ProducesResponseType(typeof(CreatePettyCashReplenishmentResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateReplenishment(
+        [FromBody] CreatePettyCashReplenishmentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new CreatePettyCashReplenishmentCommand(
+            request.FundId,
+            request.SourceBankAccountId,
+            request.PaymentMethod,
+            request.RegisterDate,
+            request.Year,
+            request.Note,
+            request.Submit);
+
+        var id = await _mediator.Send(command, cancellationToken);
+
+        return CreatedAtAction(nameof(GetReplenishmentById), new { id }, new CreatePettyCashReplenishmentResponse(id));
+    }
+
+    /// <summary>فهرست صفحه‌بندی‌شدهٔ ترمیم‌ها.</summary>
+    [HttpGet("replenishments")]
+    [ProducesResponseType(typeof(Accounting.Application.Common.PagedResult<PettyCashReplenishmentListItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetReplenishments(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] Guid? fundId = null,
+        [FromQuery] PettyCashReplenishmentState? state = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(new GetPettyCashReplenishmentsQuery(pageNumber, pageSize, fundId, state), cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>یک ترمیم، با خطوط به تفکیک حساب و فهرست اسناد.</summary>
+    [HttpGet("replenishments/{id:guid}")]
+    [ProducesResponseType(typeof(PettyCashReplenishmentDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetReplenishmentById(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPettyCashReplenishmentByIdQuery(id), cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>Draft → PendingFinanceManager. بدون بدنه.</summary>
+    [HttpPost("replenishments/{id:guid}/submit")]
+    [ProducesResponseType(typeof(SubmitPettyCashReplenishmentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> SubmitReplenishment(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new SubmitPettyCashReplenishmentCommand(id), cancellationToken);
+
+        return Ok(new SubmitPettyCashReplenishmentResponse(id));
+    }
+
+    /// <summary>PendingFinanceManager → PendingTreasurer. فقط نقش FinanceManager همان تنخواه، ≠ ایجادکننده.</summary>
+    [HttpPost("replenishments/{id:guid}/approve")]
+    [ProducesResponseType(typeof(ApprovePettyCashReplenishmentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ApproveReplenishment(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new ApprovePettyCashReplenishmentCommand(id), cancellationToken);
+
+        return Ok(new ApprovePettyCashReplenishmentResponse(id));
+    }
+
+    /// <summary>در هر دو وضعیت Pending → Rejected؛ لینک‌های اسناد نرم‌حذف می‌شوند.</summary>
+    [HttpPost("replenishments/{id:guid}/reject")]
+    [ProducesResponseType(typeof(RejectPettyCashReplenishmentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> RejectReplenishment(
+        Guid id,
+        [FromBody] RejectPettyCashReplenishmentRequest? request,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new RejectPettyCashReplenishmentCommand(id, request?.Note), cancellationToken);
+
+        return Ok(new RejectPettyCashReplenishmentResponse(id));
+    }
+
+    /// <summary>
+    /// PendingTreasurer → Paid. فقط نقش Treasurer همان تنخواه، ≠ تأییدکننده. ⚠️ موقت — سند GL
+    /// اینجا صادر نمی‌شود؛ رجوع به <see cref="RecordPettyCashReplenishmentPaymentCommand"/> XML doc.
+    /// </summary>
+    [HttpPost("replenishments/{id:guid}/record-payment")]
+    [ProducesResponseType(typeof(RecordPettyCashReplenishmentPaymentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> RecordReplenishmentPayment(
+        Guid id,
+        [FromBody] RecordPettyCashReplenishmentPaymentRequest? request,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new RecordPettyCashReplenishmentPaymentCommand(id, request?.PaidDate), cancellationToken);
+
+        return Ok(new RecordPettyCashReplenishmentPaymentResponse(id));
+    }
+
+    /// <summary>حذف نرم — فقط Draft.</summary>
+    [HttpPost("replenishments/{id:guid}/delete")]
+    [ProducesResponseType(typeof(DeletePettyCashReplenishmentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteReplenishment(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeletePettyCashReplenishmentCommand(id), cancellationToken);
+
+        return Ok(new DeletePettyCashReplenishmentResponse(id));
+    }
+
+    /// <summary>فهرست استردادهای یک تنخواه.</summary>
+    [HttpGet("funds/{fundId:guid}/refunds")]
+    [ProducesResponseType(typeof(IReadOnlyList<PettyCashRefundDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetRefunds(Guid fundId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPettyCashRefundsQuery(fundId), cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>ثبت استرداد وجه. مجاز بودن کاربر را <c>TB_PC_FUND.REFUND_RECORDER</c> تعیین می‌کند.</summary>
+    [HttpPost("refunds")]
+    [ProducesResponseType(typeof(CreatePettyCashRefundResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateRefund(
+        [FromBody] CreatePettyCashRefundRequest request,
+        CancellationToken cancellationToken)
+    {
+        var command = new CreatePettyCashRefundCommand(request.FundId, request.Amount, request.RefundDate, request.Reason);
+
+        var id = await _mediator.Send(command, cancellationToken);
+
+        return CreatedAtAction(nameof(GetRefunds), new { fundId = request.FundId }, new CreatePettyCashRefundResponse(id));
+    }
+
+    /// <summary>حذف نرم استرداد وجه.</summary>
+    [HttpPost("refunds/{id:guid}/delete")]
+    [ProducesResponseType(typeof(DeletePettyCashRefundResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteRefund(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeletePettyCashRefundCommand(id), cancellationToken);
+
+        return Ok(new DeletePettyCashRefundResponse(id));
+    }
+
+    /// <summary>داشبورد تنخواه (صفحهٔ ۴).</summary>
+    [HttpGet("funds/{fundId:guid}/dashboard")]
+    [ProducesResponseType(typeof(PettyCashFundDashboardDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetDashboard(Guid fundId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPettyCashFundDashboardQuery(fundId), cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>گزارش گردش تنخواه (صفحهٔ ۱۱).</summary>
+    [HttpGet("funds/{fundId:guid}/ledger")]
+    [ProducesResponseType(typeof(PettyCashFundLedgerDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetLedger(
+        Guid fundId,
+        [FromQuery] string? from,
+        [FromQuery] string? to,
+        [FromQuery] string? type,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPettyCashFundLedgerQuery(fundId, from, to, type), cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>تفصیلی(های) حساب معین تنخواه — بخش ۳-ب.</summary>
+    [HttpGet("funds/{fundId:guid}/tafsilis")]
+    [ProducesResponseType(typeof(IReadOnlyList<PettyCashSettlementTafsiliDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetFundTafsilis(Guid fundId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPettyCashFundTafsilisQuery(fundId), cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>جایگزینی کامل تفصیلی(های) حساب معین تنخواه — بخش ۳-ب.</summary>
+    [HttpPost("funds/{fundId:guid}/tafsilis")]
+    [ProducesResponseType(typeof(UpsertPettyCashFundTafsilisResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpsertFundTafsilis(
+        Guid fundId,
+        [FromBody] UpsertPettyCashFundTafsilisRequest request,
+        CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new UpsertPettyCashFundTafsilisCommand(fundId, request.Tafsilis), cancellationToken);
+
+        return Ok(new UpsertPettyCashFundTafsilisResponse(fundId));
+    }
+
+    /// <summary>پیش‌نمایش دورهٔ جاریِ قابل‌بستنِ تسویه — بخش ۳-ب.</summary>
+    [HttpGet("funds/{fundId:guid}/settlement")]
+    [ProducesResponseType(typeof(PettyCashSettlementPreviewDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetSettlementPreview(Guid fundId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPettyCashFundSettlementPreviewQuery(fundId), cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>ذخیرهٔ شمارش صندوق دورهٔ جاری — بخش ۳-ب. دورهٔ Draft را در صورت نبود می‌سازد.</summary>
+    [HttpPost("funds/{fundId:guid}/settlement/count")]
+    [ProducesResponseType(typeof(CountPettyCashSettlementResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CountSettlement(
+        Guid fundId,
+        [FromBody] CountPettyCashSettlementRequest request,
+        CancellationToken cancellationToken)
+    {
+        var periodId = await _mediator.Send(new CountPettyCashSettlementCommand(fundId, request.CountedBalance), cancellationToken);
+
+        return Ok(new CountPettyCashSettlementResponse(periodId));
+    }
+
+    /// <summary>
+    /// صدور سند حسابداری و نهایی‌سازی دورهٔ تسویه — بخش ۳-ب. فقط نقش SeniorAccountant همان تنخواه، ≠
+    /// سازندهٔ اسناد منظورشده.
+    /// </summary>
+    [HttpPost("funds/{fundId:guid}/settlement/finalize")]
+    [ProducesResponseType(typeof(FinalizePettyCashSettlementResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> FinalizeSettlement(
+        Guid fundId,
+        [FromBody] FinalizePettyCashSettlementRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new FinalizePettyCashSettlementCommand(fundId, request.AcknowledgeInFlightTransfer), cancellationToken);
+
+        return Ok(new FinalizePettyCashSettlementResponse(
+            result.PeriodId, result.VoucherHeadId, result.VoucherDocNum, result.SettledDocCount));
+    }
+
+    /// <summary>تاریخچهٔ دوره‌های نهایی‌شدهٔ تسویه — بخش ۳-ب.</summary>
+    [HttpGet("funds/{fundId:guid}/settlements")]
+    [ProducesResponseType(typeof(IReadOnlyList<PettyCashSettlementHistoryItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetSettlements(Guid fundId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPettyCashFundSettlementsQuery(fundId), cancellationToken);
+
+        return Ok(result);
+    }
 }
+
+/// <summary>Request body for <see cref="PettyCashController.UpsertFundTafsilis"/>.</summary>
+public sealed record UpsertPettyCashFundTafsilisRequest(
+    IReadOnlyList<PettyCashFundTafsiliLinkInput>? Tafsilis);
+
+public sealed record UpsertPettyCashFundTafsilisResponse(Guid FundId);
+
+/// <summary>Request body for <see cref="PettyCashController.CountSettlement"/>.</summary>
+public sealed record CountPettyCashSettlementRequest(decimal CountedBalance);
+
+public sealed record CountPettyCashSettlementResponse(Guid PeriodId);
+
+/// <summary>Request body for <see cref="PettyCashController.FinalizeSettlement"/>.</summary>
+public sealed record FinalizePettyCashSettlementRequest(bool AcknowledgeInFlightTransfer = false);
+
+public sealed record FinalizePettyCashSettlementResponse(
+    Guid PeriodId, Guid VoucherHeadId, string VoucherDocNum, int SettledDocCount);
 
 /// <summary>Request body for <see cref="PettyCashController.CreateFund"/>.</summary>
 public sealed record CreatePettyCashFundRequest(
@@ -648,7 +1040,8 @@ public sealed record CreatePettyCashFundRequest(
     int? AlertThresholdPercent,
     Guid? AccountCodeId,
     PettyCashSettlementPeriod? SettlementPeriod,
-    bool IsActive);
+    bool IsActive,
+    PettyCashRefundRecorder RefundRecorder = PettyCashRefundRecorder.Treasurer);
 
 /// <summary>Response body for a successful <see cref="PettyCashController.CreateFund"/> call.</summary>
 public sealed record CreatePettyCashFundResponse(Guid Id);
@@ -665,7 +1058,8 @@ public sealed record UpdatePettyCashFundRequest(
     int? AlertThresholdPercent,
     Guid? AccountCodeId,
     PettyCashSettlementPeriod? SettlementPeriod,
-    bool IsActive);
+    bool IsActive,
+    PettyCashRefundRecorder RefundRecorder = PettyCashRefundRecorder.Treasurer);
 
 /// <summary>Response body for a successful <see cref="PettyCashController.UpdateFund"/> call.</summary>
 public sealed record UpdatePettyCashFundResponse(Guid FundId);
@@ -781,3 +1175,48 @@ public sealed record UploadPettyCashAttachmentResponse(Guid Id);
 
 /// <summary>Response body for a successful <see cref="PettyCashController.DeleteAttachment"/> call.</summary>
 public sealed record DeletePettyCashAttachmentResponse(Guid Id);
+
+// ==================== بخش ۳-الف: request/response DTOs ====================
+
+/// <summary>Request body for <see cref="PettyCashController.CreateReplenishment"/>.</summary>
+public sealed record CreatePettyCashReplenishmentRequest(
+    Guid FundId,
+    Guid SourceBankAccountId,
+    PettyCashPaymentMethod PaymentMethod,
+    string RegisterDate,
+    string Year,
+    string? Note,
+    bool Submit);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.CreateReplenishment"/> call.</summary>
+public sealed record CreatePettyCashReplenishmentResponse(Guid Id);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.SubmitReplenishment"/> call.</summary>
+public sealed record SubmitPettyCashReplenishmentResponse(Guid Id);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.ApproveReplenishment"/> call.</summary>
+public sealed record ApprovePettyCashReplenishmentResponse(Guid Id);
+
+/// <summary>Request body for <see cref="PettyCashController.RejectReplenishment"/>. May be omitted entirely (no note).</summary>
+public sealed record RejectPettyCashReplenishmentRequest(string? Note);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.RejectReplenishment"/> call.</summary>
+public sealed record RejectPettyCashReplenishmentResponse(Guid Id);
+
+/// <summary>Request body for <see cref="PettyCashController.RecordReplenishmentPayment"/>. May be omitted entirely (no override date).</summary>
+public sealed record RecordPettyCashReplenishmentPaymentRequest(DateTime? PaidDate);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.RecordReplenishmentPayment"/> call.</summary>
+public sealed record RecordPettyCashReplenishmentPaymentResponse(Guid Id);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.DeleteReplenishment"/> call.</summary>
+public sealed record DeletePettyCashReplenishmentResponse(Guid Id);
+
+/// <summary>Request body for <see cref="PettyCashController.CreateRefund"/>.</summary>
+public sealed record CreatePettyCashRefundRequest(Guid FundId, decimal Amount, string RefundDate, string? Reason);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.CreateRefund"/> call.</summary>
+public sealed record CreatePettyCashRefundResponse(Guid Id);
+
+/// <summary>Response body for a successful <see cref="PettyCashController.DeleteRefund"/> call.</summary>
+public sealed record DeletePettyCashRefundResponse(Guid Id);

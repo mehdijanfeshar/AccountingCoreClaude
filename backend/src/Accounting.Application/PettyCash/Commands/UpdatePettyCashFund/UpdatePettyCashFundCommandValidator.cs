@@ -42,6 +42,8 @@ public sealed class UpdatePettyCashFundCommandValidator : AbstractValidator<Upda
             .IsInEnum()
             .When(x => x.SettlementPeriod.HasValue);
 
+        RuleFor(x => x.RefundRecorder).IsInEnum();
+
         RuleFor(x => x.VahedCode)
             .NotEmpty()
             .MaximumLength(4);

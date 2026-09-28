@@ -68,6 +68,7 @@ public sealed class UpdatePettyCashFundCommandHandler : IRequestHandler<UpdatePe
         entity.ACCOUNTCODE_ID = request.AccountCodeId;
         entity.SETTLEMENT_PERIOD = request.SettlementPeriod;
         entity.IS_ACTIVE = request.IsActive;
+        entity.REFUND_RECORDER = request.RefundRecorder;
         entity.CHANGEUSERID = _currentUser.UserId;
         entity.UPDATEDDATE = DateTime.UtcNow;
 

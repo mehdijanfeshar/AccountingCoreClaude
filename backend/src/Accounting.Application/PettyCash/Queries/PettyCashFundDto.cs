@@ -29,6 +29,7 @@ namespace Accounting.Application.PettyCash.Queries;
 /// <param name="ApprovedCount">Count of the same set.</param>
 /// <param name="InFlightAmount">Sum of documents currently جدید/در انتظار بررسی/برگشتی.</param>
 /// <param name="InFlightCount">Count of the same set.</param>
+/// <param name="RefundRecorder">TB_PC_FUND.REFUND_RECORDER — بخش ۳-الف (۲۰۲۶-۰۹-۲۸).</param>
 public sealed record PettyCashFundDto(
     Guid Id,
     string Code,
@@ -48,4 +49,5 @@ public sealed record PettyCashFundDto(
     decimal ApprovedAmount,
     int ApprovedCount,
     decimal InFlightAmount,
-    int InFlightCount);
+    int InFlightCount,
+    PettyCashRefundRecorder RefundRecorder);

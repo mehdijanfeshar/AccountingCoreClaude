@@ -24,4 +24,16 @@ public static class PettyCashStatusMap
         state is PettyCashDocState.Approved or PettyCashDocState.Settled
             ? ChargeAndCostStatus.Accepted
             : ChargeAndCostStatus.Temporary;
+
+    /// <summary>
+    /// بخش ۳-الف (۲۰۲۶-۰۹-۲۸، <c>docs/tankhah-khazaneh-module.md</c>) — same "one mapping, one
+    /// home" rule, extended to <see cref="PettyCashReplenishmentState"/> (the ترمیم/شارژ side of
+    /// <c>TB_CHARGEANDCOST_HEAD</c>). Only <see cref="PettyCashReplenishmentState.Paid"/> maps to
+    /// <see cref="ChargeAndCostStatus.Accepted"/> — mirrors <see cref="ToLegacyStatus(PettyCashDocState)"/>'s
+    /// "only the state that means money has actually, finally moved counts as accepted" rule.
+    /// </summary>
+    public static ChargeAndCostStatus ToLegacyStatus(PettyCashReplenishmentState state) =>
+        state == PettyCashReplenishmentState.Paid
+            ? ChargeAndCostStatus.Accepted
+            : ChargeAndCostStatus.Temporary;
 }

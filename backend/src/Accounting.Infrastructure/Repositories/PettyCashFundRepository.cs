@@ -29,7 +29,11 @@ public sealed class PettyCashFundRepository : IPettyCashFundRepository
         string vahedCode,
         CancellationToken cancellationToken = default)
     {
+        // Includes ACCOUNTCODE — the settlement preview/voucher-builder read path (part 3-b)
+        // needs the linked account's code/title without a second round trip; harmless extra join
+        // for every other caller of this method.
         var entity = await _dbContext.TB_PC_FUNDs
+            .Include(f => f.ACCOUNTCODE)
             .FirstOrDefaultAsync(f => f.ID == id, cancellationToken);
 
         // Fetched by ID alone, then judged — a WHERE on VAHEDCODE could not tell "no such row"
@@ -65,5 +69,18 @@ public sealed class PettyCashFundRepository : IPettyCashFundRepository
             .AsNoTracking()
             .Where(d => d.FUND_ID == fundId && !d.ISDELETED)
             .CountAsync(cancellationToken) > 0;
+    }
+
+    public async Task AddFundTafsiliLinkAsync(TB_PC_FUND_LINK_TAFSILI link, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.TB_PC_FUND_LINK_TAFSILIs.AddAsync(link, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TB_PC_FUND_LINK_TAFSILI>> GetActiveFundTafsiliLinksAsync(
+        Guid fundId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.TB_PC_FUND_LINK_TAFSILIs
+            .Where(l => l.FUND_ID == fundId && !l.ISDELETED)
+            .ToListAsync(cancellationToken);
     }
 }

@@ -1,15 +1,23 @@
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Application.PettyCash.Common;
 
 namespace Accounting.Application.PettyCash.Commands.Common;
 
 public sealed class PettyCashSubmitRuleChecker : IPettyCashSubmitRuleChecker
 {
     private readonly IPettyCashExpenseDocRepository _expenseDocRepository;
+    private readonly IPettyCashReplenishmentRepository _replenishmentRepository;
+    private readonly IPettyCashRefundRepository _refundRepository;
 
-    public PettyCashSubmitRuleChecker(IPettyCashExpenseDocRepository expenseDocRepository)
+    public PettyCashSubmitRuleChecker(
+        IPettyCashExpenseDocRepository expenseDocRepository,
+        IPettyCashReplenishmentRepository replenishmentRepository,
+        IPettyCashRefundRepository refundRepository)
     {
         _expenseDocRepository = expenseDocRepository;
+        _replenishmentRepository = replenishmentRepository;
+        _refundRepository = refundRepository;
     }
 
     public async Task EnsureSubmittableAsync(
@@ -37,7 +45,12 @@ public sealed class PettyCashSubmitRuleChecker : IPettyCashSubmitRuleChecker
         var exposure = await _expenseDocRepository.GetFundExposureAsync(
             fundId, vahedCode, excludeDocId, cancellationToken);
 
-        var cashBalance = fundCeiling - exposure.ApprovedAmount - exposure.InFlightAmount;
+        // بخش ۳-الف: extended equation — see PettyCashBalanceCalculator XML doc.
+        var paidReplenishmentTotal = await _replenishmentRepository.GetPaidTotalAsync(fundId, vahedCode, cancellationToken);
+        var refundTotal = await _refundRepository.GetTotalAsync(fundId, vahedCode, cancellationToken);
+
+        var cashBalance = PettyCashBalanceCalculator.CashBalance(
+            fundCeiling, exposure.ApprovedAmount, exposure.InFlightAmount, paidReplenishmentTotal, refundTotal);
 
         if (totalAmount > cashBalance)
         {

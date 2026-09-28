@@ -113,6 +113,8 @@ POST api/petty-cash/expense-docs/{id}/delete
 GET  api/petty-cash/expense-docs/{id}/events       گردش عملیات
 ```
 
+بخش ۲ و بخش ۳-الف endpoint‌های خودشان را افزودند — رجوع به «API افزوده» زیر همان بخش‌ها و بخش ۹ (بخش ۳ — طراحی، ۲۰۲۶-۰۹-۲۸).
+
 ## ۶. منوی فرانت — گروه «تنخواه و خزانه‌داری»
 
 به ترتیب پاورپوینت؛ موردهای ساخته‌نشده «به‌زودی» نمایش داده می‌شوند (الگوی موجود `navConfig.tsx`):
@@ -237,3 +239,85 @@ TB_PC_ATTACHMENT
 قاعدهٔ عادی؛ در غیر این صورت نام‌های camelCase بدنهٔ update + `"attachments"` در صورت مجاز بودن).
 
 جزئیات کامل و کد در `docs/phase-log.md` بخش «فاز ۴۴ (بخش ۲، تکمیل)».
+
+## ۹. بخش ۳ — طراحی (۲۰۲۶-۰۹-۲۸): درخواست ترمیم، استرداد وجه، داشبورد، گزارش گردش
+
+پیاده‌سازی صفحات ۹/۴/۱۱ پاورپوینت. کد: `Accounting.Application/PettyCash/{Commands,Queries}/...*Replenishment*`, `...*Refund*`, `GetPettyCashFundDashboard`, `GetPettyCashFundLedger`. DDL: `backend/db/049_petty_cash_replenishment.sql` (اجرا نشده).
+
+### نقش‌ها
+`PettyCashRole` گسترش یافت: `SeniorAccountant=4` (فعلاً بدون consumer — رزرو برای بعد)، `Treasurer=5`. روی همان `TB_PC_REVIEWER.ROLE`.
+
+### ترمیم/شارژ (`TB_PC_REPLENISHMENT`)
+۱:۱ با `TB_CHARGEANDCOST_HEAD` نوع `Charge` (`ACCOUNT_ID` = حساب بانکی مبدأ). هر صورت‌هزینهٔ منظورشده یک `TB_CHARGE_LINK_COST` (`CHARGE_ID`→head, `COST_ID`→`TB_CHARGEANDCOST_DETAIL.ID`). `STATE`: `Draft→PendingFinanceManager→PendingTreasurer→Paid`، یا `Rejected` از هر Pending. کد نمایشی کامل `"RCH-" + شمارهٔ ۵رقمی` (همان شمارندهٔ `IChargeAndCostRepository.GetNextCodeAsync` با `ChargeAndCostType.Charge`، فقط با پیشوند متفاوت). `STATUS` Legacy فقط از `PettyCashStatusMap.ToLegacyStatus(PettyCashReplenishmentState)` — فقط `Paid`→`Accepted`.
+
+**تصمیم محافظه‌کارانه (فیلد اضافه‌شده):** `POST replenishments` علاوه بر `{fundId, sourceBankAccountId, paymentMethod, note?, submit}`، دو فیلد الزامی `registerDate`/`year` هم می‌گیرد — `TB_CHARGEANDCOST_HEAD.CHARGEANDCOST_DATE`/`YEAR` در Legacy `NOT NULL`اند و سند طراحی شکل بدنه را برایشان مشخص نکرده بود؛ همان الگوی «تصمیم‌های محافظه‌کارانهٔ بخش ۱» برای `year` تکرار شد.
+
+مجوز ایجاد/ارسال/حذف پیش‌نویس: فقط نقش `FinanceManager` یا `Treasurer` همان تنخواه (تصمیم محافظه‌کارانه — صفحهٔ ۹ نقش فعال «مدیر مالی» است، ولی خزانه‌دار هم منطقاً باید بتواند). `approve` فقط `FinanceManager`، ≠ ایجادکننده. `record-payment` فقط `Treasurer`، ≠ تأییدکننده. `reject` هر دو نقش، بدون چک تعارض ایجادکننده (سند صراحتاً نگفته بود).
+
+**«هیچ سندی دو بار ترمیم نمی‌شود»:** `IChargeAndCostRepository.ExistsActiveLinkForCostAsync` بلافاصله پیش از درج هر لینک دوباره چک می‌شود (نه فقط روی snapshot پیش‌نمایش) — ۴۰۹ `PettyCashDocAlreadyReplenishedException` اگر رقابت رخ دهد.
+
+**`record-payment` موقت است:** فقط `STATE` را `Paid` می‌کند؛ هیچ سند حسابداری (بدهکار تنخواه/بستانکار بانک) صادر نمی‌شود — طبق صفحهٔ ۱۰، آن سند به اجرای پرداخت خزانه (بخش ۴+) تعلق دارد.
+
+### استرداد وجه (`TB_PC_REFUND`)
+بدون معادل Legacy. `TB_PC_FUND.REFUND_RECORDER` (enum `PettyCashRefundRecorder`، پیش‌فرض `Treasurer`) تعیین می‌کند چه کسی مجاز به ثبت/حذف است — `Custodian` یعنی `TB_PC_FUND.CUSTODIAN_USERID`، بقیه یعنی نقش فعال متناظر در `TB_PC_REVIEWER`. چک مشترک در `PettyCashRefundRecorderAuthorizer` (Create و Delete هر دو صدایش می‌زنند). کد نمایشی `"REF-" + شمارهٔ ۵رقمی` (شمارندهٔ مستقل `IPettyCashRefundRepository.GetNextCodeAsync`، بدون `Year`، چون `TB_PC_REFUND.YEAR` — مثل بقیهٔ ستون‌های Audit این ماژول — اختیاری است).
+
+⚠️ **باز مانده برای بخش ۳-ب:** حذف استرداد باید در دورهٔ تسویهٔ نهایی‌شده مسدود شود؛ چون این پروژه هنوز دوره‌ای برای تنخواه ندارد (`TB_PC_SETTLEMENT_PERIOD` بخش ۳-ب)، این چک اینجا اعمال نشده.
+
+### فرمول موجودی نقد (متمرکز در `PettyCashBalanceCalculator`)
+```
+موجودی نقد = CEILING − Σ(مبلغ اسناد New,PendingReview,Returned,Approved) + Σ(TOTAL_AMOUNT ترمیم‌های Paid) + Σ(AMOUNT استردادهای حذف‌نشده)
+```
+همه‌جا از همین تابع استفاده می‌شود: `PettyCashFundReadRepository` (فهرست/تک تنخواه)، `PettyCashSubmitRuleChecker` (کنترل سقف Submit)، پیش‌نمایش ترمیم، داشبورد. اسناد Approved حتی بعد از ترمیم `Paid` هم در این جمع می‌مانند (چون هنوز `Settled` نشده‌اند، بخش ۳-ب)؛ جملهٔ «+ترمیم Paid» دقیقاً همان مبلغ را جبران می‌کند چون `TOTAL_AMOUNT` یک ترمیم از روی همان اسناد ساخته شده — این تعادل تصریحاً بررسی و تأیید شد.
+
+### داشبورد (`GET funds/{fundId}/dashboard`)
+معادلهٔ تراز صفحهٔ ۴ («سقف = نقد + تأییدشده + در جریان») با فرمول بالا جایگزین شد؛ استخراج جبری نشان می‌دهد فرم همیشه‌درستِ آن (پس از ساده‌سازیِ جملهٔ «ترمیم پرداخت‌شدهٔ هنوز‌تسویه‌نشده» که دقیقاً حذف می‌شود):
+```
+CEILING = Cash + AwaitingReplenishment + InFlight − RefundTotal
+```
+(`AwaitingReplenishment` = تأییدشده‌های بدون لینک به ترمیم Paid = `ApprovedAmount − PaidReplenishmentTotal`). فیلد `replenishedNotSettled` در پاسخ فقط نمایشی است؛ `balanced` از فرم کامل‌ترِ معادله (شامل همان جمله، به‌عنوان یک تست صحت دادهٔ واقعی) حساب می‌شود — جزئیات در `PettyCashDashboardBalanceCheckDto` XML doc.
+
+### گزارش گردش تنخواه (`GET funds/{fundId}/ledger?from=&to=&type=`)
+⚠️ **تصمیم موجودی اولیه:** `CEILING` همیشه پیش از هر بازهٔ درخواستی («تخصیص سقف اولیه») لحاظ می‌شود — پیشنهاد خودِ سند طراحی. ⚠️ **تصمیم مهم‌تر:** این گزارش «تاریخچهٔ حرکت واقعی وجه» است، نه معادل لحظه‌ایِ فرمول موجودی نقد — فقط صورت‌هزینه‌های `Approved`/`Settled` ردیف «پرداخت» می‌سازند (نه `New`/`PendingReview`/`Returned`، که فرمول §۲ آن‌ها را هم کم می‌کند). پس `closingBalance` وقتی `to`=امروز باشد با `cashBalance` فعلی برابر **نیست** — اختلافشان دقیقاً مجموع اسناد در جریان است؛ عمدی، نه باگ (مستند در `PettyCashFundLedgerDto` XML doc). فیلتر/گروه‌بندی روی جدول‌های ساده انجام می‌شود (سه کوئری تخت جدا برای ترمیم/صورت‌هزینه/استرداد، merge و jمع در C#) — نه یک projection رکوردی حاصل LeftJoin، طبق هشدار خودِ این سند دربارهٔ شکستن روی اوراکل. `PAID_DATE` (تنها ستون `TIMESTAMP` این بخش) با `PersianCalendar` به رشتهٔ شمسی `YYYYMMDD` تبدیل می‌شود تا با بقیهٔ ستون‌های تاریخ این ماژول (که همه از ابتدا Persian `VARCHAR2(8)`اند) قابل‌مقایسه بماند.
+
+### API افزوده (بخش ۳-الف)
+```
+GET  api/petty-cash/funds/{fundId}/replenishment-preview
+POST api/petty-cash/replenishments                 { fundId, sourceBankAccountId, paymentMethod, registerDate, year, note?, submit }
+GET  api/petty-cash/replenishments?fundId=&state=&pageNumber=&pageSize=
+GET  api/petty-cash/replenishments/{id}
+POST api/petty-cash/replenishments/{id}/submit
+POST api/petty-cash/replenishments/{id}/approve
+POST api/petty-cash/replenishments/{id}/reject               { note? }
+POST api/petty-cash/replenishments/{id}/record-payment       { paidDate? }
+POST api/petty-cash/replenishments/{id}/delete
+GET  api/petty-cash/funds/{fundId}/refunds
+POST api/petty-cash/refunds                         { fundId, amount, refundDate, reason? }
+POST api/petty-cash/refunds/{id}/delete
+GET  api/petty-cash/funds/{fundId}/dashboard
+GET  api/petty-cash/funds/{fundId}/ledger?from=&to=&type=
+```
+
+### بخش ۳-ب (۲۰۲۶-۰۹-۲۸، پیاده شد): تسویهٔ دوره و صدور سند حسابداری
+
+جدول‌های جدید (DDL: `backend/db/050_petty_cash_settlement.sql`، اجرا نشده): `TB_PC_SETTLEMENT_PERIOD` (دورهٔ تسویه، `STATE`: 1=Draft 2=Final)، `TB_PC_FUND_LINK_TAFSILI` (تفصیلی حساب معین تنخواه، permanently-embedded مثل هر `*_LINK_TAFSIL*` دیگر). `PettyCashDocAction.Settle=11` اضافه شد.
+
+**دوره:** مرزها از `TB_PC_FUND.SETTLEMENT_PERIOD` با `PettyCashSettlementPeriodCalculator` (ماهانه/فصلی، تقویم شمسی). دورهٔ جاری یک تنخواه همیشه «بلافاصله بعد از آخرین دورهٔ Final» است (یا دورهٔ ایجاد تنخواه اگر هیچ Final‌ای نیست) — هیچ‌وقت به «امروز» نگاه نمی‌کند، همین دوره‌ها را پشت‌سرهم نگه می‌دارد. `IPettyCashSettlementPeriodProvisioner` (`ComputeCurrentAsync` فقط‌خواندنی برای پیش‌نمایش، `EnsureDraftAsync` idempotent برای count/finalize) تنها جایی است که این را حساب می‌کند.
+
+**مانده ابتدای دوره:** برای اولین دوره = `CEILING`؛ برای بقیه = `COUNTED_BALANCE` قفل‌شدهٔ دورهٔ Final قبلی (نه بازمحاسبهٔ زنده — تصمیم آگاهانه برای جلوگیری از انحراف اگر سندی با تاریخ قدیمی دیر تأیید شود). `IPettyCashSettlementReadRepository.GetPeriodMovementAsync` عمداً از `PettyCashLedgerReadRepository` استفاده نمی‌کند (معناهای «مانده قفل‌شده» با معنای زندهٔ گزارش گردش فرق دارد)؛ به‌جایش سه کوئری تخت جدا (ترمیم/استرداد/صورت‌هزینه) دارد.
+
+**اسناد منظورشده:** صورت‌هزینه‌های `Approved` با `CHARGEANDCOST_DATE ≤ PERIOD_END` — بدون کف پایینی (سند دیرتأییدشده هم منظور می‌شود). گروه‌بندی روی `TB_CHARGEANDCOST_DETAIL.EXPENSE_ID` (نه مستقیم حساب) چون `TB_EXPENCE_LINK_TAFSILI` هم روی همین کلید است — یک گروه = دقیقاً یک ترکیب (حساب، مجموعهٔ تفصیلی).
+
+**سند GL:** `PettyCashSettlementVoucherBuilder` (Application) روی همان `IVoucherHeadRepository`/`IVoucherDetailRepository`/`IVoucherTafsiliLevelGuard` که `CreateVoucherHeadCommandHandler`/`CreateVoucherDetailCommandHandler`/`ReverseVoucherCommandHandler` استفاده می‌کنند سوار است — چیزی موازی بازسازی نشد. `DOCLIFE=Temporary` (موقت)، `ISAUTOMATIC=true`، تاریخ=`PERIOD_END`. تراز پیش از `SaveChangesAsync` صریحاً چک می‌شود (`PettyCashSettlementUnbalancedException`، دفاعی — با ساخت ردیف بستانکار از جمع بدهکارها همیشه برقرار است).
+
+**Endpointها (`FinalizePettyCashSettlementCommandHandler` — تراکنش صریح `BeginTransactionAsync`/`CommitTransactionAsync`):**
+```
+GET  api/petty-cash/funds/{fundId}/settlement                    → PettyCashSettlementPreviewDto
+POST api/petty-cash/funds/{fundId}/settlement/count      { countedBalance }
+POST api/petty-cash/funds/{fundId}/settlement/finalize   { acknowledgeInFlightTransfer }
+GET  api/petty-cash/funds/{fundId}/settlements                   → تاریخچهٔ Final
+GET  api/petty-cash/funds/{fundId}/tafsilis
+POST api/petty-cash/funds/{fundId}/tafsilis               { tafsilis: [{tafsiliId, levelId}] }  (جایگزینی کامل)
+```
+`count` بدون محدودیت نقش (§۹ فقط برای `finalize` نقش تعیین کرده). `finalize` فقط `SeniorAccountant`، SoD (کاربر ≠ سازندهٔ هیچ سند منظورشده)، `acknowledgeInFlightTransfer` اگر سند در جریان هست، `countedBalance` باید ثبت و برابر مانده محاسبه‌شده باشد.
+
+**قفل:** `DeletePettyCashRefundCommandHandler` اکنون حذف استرداد را وقتی `REFUND_DATE` داخل بازهٔ یک دورهٔ Final باشد مسدود می‌کند (`PettyCashRefundLockedBySettledPeriodException`، ۴۰۹) — TODO بخش ۳-الف بسته شد. صورت‌هزینهٔ `Settled` از قبل غیرقابل‌ویرایش/حذف/پیوست است (وضعیت پایانی در state machine بخش ۱/۲).

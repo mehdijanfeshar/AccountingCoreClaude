@@ -111,6 +111,19 @@ public partial class LegacyDbContext : DbContext
     // Petty-cash module, chunk 2 (بخش ۲-ب) — file attachments, same owner-approved exception.
     public virtual DbSet<TB_PC_ATTACHMENT> TB_PC_ATTACHMENTs { get; set; }
 
+    // Petty-cash module, بخش ۳-الف (۲۰۲۶-۰۹-۲۸) — ترمیم/شارژ و استرداد وجه، همان استثنای
+    // صریح صاحب پروژه (docs/tankhah-khazaneh-module.md، «بخش ۳ — طراحی»).
+    public virtual DbSet<TB_PC_REPLENISHMENT> TB_PC_REPLENISHMENTs { get; set; }
+
+    public virtual DbSet<TB_PC_REFUND> TB_PC_REFUNDs { get; set; }
+
+    // Petty-cash module, بخش ۳-ب (۲۰۲۶-۰۹-۲۸) — تسویهٔ دوره و سند GL، همان استثنای صریح صاحب
+    // پروژه (docs/tankhah-khazaneh-module.md §۹).
+    public virtual DbSet<TB_PC_SETTLEMENT_PERIOD> TB_PC_SETTLEMENT_PERIODs { get; set; }
+
+    // بخش ۳-ب — تفصیلی(های) حساب معین تنخواه، permanently-embedded مثل هر *_LINK_TAFSIL* دیگر.
+    public virtual DbSet<TB_PC_FUND_LINK_TAFSILI> TB_PC_FUND_LINK_TAFSILIs { get; set; }
+
     public virtual DbSet<TB_PERSON_ACTION> TB_PERSON_ACTIONs { get; set; }
 
     public virtual DbSet<TB_PREDESCRIB> TB_PREDESCRIBs { get; set; }
@@ -1245,6 +1258,12 @@ public partial class LegacyDbContext : DbContext
             // IS_ACTIVE is a genuine two-valued flag (not an enum) — mapped like ISDELETED below,
             // plain bool with an explicit NUMBER(1) column type.
             entity.Property(e => e.IS_ACTIVE).HasColumnType("NUMBER(1)");
+            // بخش ۳-الف (۲۰۲۶-۰۹-۲۸) — NUMBER(1) enum column, same convention as SETTLEMENT_PERIOD
+            // above (LegacyEnumMappingConventionTests enforces .HasConversion<int>() + no explicit
+            // .HasColumnType()). DEFAULT 2 (Treasurer) in DB; non-nullable here since every fund
+            // row must resolve to some recorder.
+            entity.Property(e => e.REFUND_RECORDER)
+                .HasConversion<int>();
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.ADDUSERID)
@@ -1514,6 +1533,265 @@ public partial class LegacyDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(d => d.EXPENSE_DOC_ID)
                 .HasConstraintName("FK_PC_ATTACHMENT_EXPENSEDOC");
+        });
+
+        // Petty-cash module, بخش ۳-الف (۲۰۲۶-۰۹-۲۸) — ترمیم/شارژ (docs/tankhah-khazaneh-module.md،
+        // «بخش ۳ — طراحی»). Same owner-approved exception and no-sys_guid()-DEFAULT convention as
+        // every other TB_PC_* table above. ۱:۱ با TB_CHARGEANDCOST_HEAD نوع Charge.
+        modelBuilder.Entity<TB_PC_REPLENISHMENT>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_PC_REPLENISHMENT");
+
+            entity.ToTable("TB_PC_REPLENISHMENT");
+
+            entity.HasIndex(e => e.CHARGEANDCOSTHEAD_ID, "UK_PC_REPLENISHMENT").IsUnique();
+            entity.HasIndex(e => new { e.FUND_ID, e.STATE }, "IDX_PC_REPLENISHMENT_FUND_STATE");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.CHARGEANDCOSTHEAD_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.FUND_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.CODE)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            // NUMBER(1)/NUMBER(2) enum columns — .HasConversion<int>() and no explicit
+            // .HasColumnType(), per the phase 25/28 convention (LegacyEnumMappingConventionTests
+            // enforces both).
+            entity.Property(e => e.PAYMENT_METHOD)
+                .HasConversion<int>();
+            entity.Property(e => e.STATE)
+                .HasConversion<int>();
+            entity.Property(e => e.TOTAL_AMOUNT).HasColumnType("NUMBER(25)");
+            entity.Property(e => e.NOTE)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.PAID_DATE).HasPrecision(6);
+            entity.Property(e => e.PAID_BY_USERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.APPROVED_BY_USERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+
+            entity.HasOne(d => d.CHARGEANDCOSTHEAD)
+                .WithMany()
+                .HasForeignKey(d => d.CHARGEANDCOSTHEAD_ID)
+                .HasConstraintName("FK_PC_REPLENISHMENT_HEAD");
+
+            entity.HasOne(d => d.FUND)
+                .WithMany()
+                .HasForeignKey(d => d.FUND_ID)
+                .HasConstraintName("FK_PC_REPLENISHMENT_FUND");
+        });
+
+        // Petty-cash module, بخش ۳-الف (۲۰۲۶-۰۹-۲۸) — استرداد وجه (همان سند، صفحهٔ ۱۱ پاورپوینت).
+        // بدون معادل Legacy.
+        modelBuilder.Entity<TB_PC_REFUND>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_PC_REFUND");
+
+            entity.ToTable("TB_PC_REFUND");
+
+            entity.HasIndex(e => e.FUND_ID, "IDX_PC_REFUND_FUND");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.FUND_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.CODE)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.AMOUNT).HasColumnType("NUMBER(25)");
+            entity.Property(e => e.REASON)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.REFUND_DATE)
+                .HasMaxLength(8)
+                .IsUnicode(false);
+            entity.Property(e => e.RECORDED_BY_USERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+
+            entity.HasOne(d => d.FUND)
+                .WithMany()
+                .HasForeignKey(d => d.FUND_ID)
+                .HasConstraintName("FK_PC_REFUND_FUND");
+        });
+
+        // Petty-cash module, بخش ۳-ب (۲۰۲۶-۰۹-۲۸) — دورهٔ تسویه، بدون معادل Legacy.
+        modelBuilder.Entity<TB_PC_SETTLEMENT_PERIOD>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_PC_SETTLEMENT_PERIOD");
+
+            entity.ToTable("TB_PC_SETTLEMENT_PERIOD");
+
+            entity.HasIndex(e => new { e.FUND_ID, e.PERIOD_START, e.PERIOD_END }, "UK_PC_SETTLEMENT_PERIOD").IsUnique();
+            entity.HasIndex(e => new { e.FUND_ID, e.STATE }, "IDX_PC_SETTLEMENT_PERIOD_FUND");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.FUND_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.PERIOD_START)
+                .HasMaxLength(8)
+                .IsUnicode(false);
+            entity.Property(e => e.PERIOD_END)
+                .HasMaxLength(8)
+                .IsUnicode(false);
+            entity.Property(e => e.OPENING_BALANCE).HasColumnType("NUMBER(25)");
+            entity.Property(e => e.COUNTED_BALANCE).HasColumnType("NUMBER(25)");
+            // NUMBER(1) enum column — .HasConversion<int>() and no explicit .HasColumnType(), per
+            // the phase 25/28 convention (LegacyEnumMappingConventionTests enforces both).
+            entity.Property(e => e.STATE)
+                .HasConversion<int>();
+            entity.Property(e => e.VOUCHERSHEAD_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.FINALIZED_BY_USERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.FINALIZED_DATE).HasPrecision(6);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+
+            entity.HasOne(d => d.FUND)
+                .WithMany()
+                .HasForeignKey(d => d.FUND_ID)
+                .HasConstraintName("FK_PC_SETTLEMENT_PERIOD_FUND");
+
+            entity.HasOne(d => d.VOUCHERSHEAD)
+                .WithMany()
+                .HasForeignKey(d => d.VOUCHERSHEAD_ID)
+                .HasConstraintName("FK_PC_SETTLEMENT_PERIOD_VCHR");
+        });
+
+        // بخش ۳-ب — تفصیلی(های) حساب معین تنخواه. هم‌شکل TB_REVOLVINGFUND_LINK_TAFSILI Legacy.
+        modelBuilder.Entity<TB_PC_FUND_LINK_TAFSILI>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_PC_FUND_LINK_TAFSILI");
+
+            entity.ToTable("TB_PC_FUND_LINK_TAFSILI");
+
+            entity.HasIndex(e => e.FUND_ID, "IDX_PC_FUND_LINK_TAFSILI_FUND");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.FUND_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.TAFSILI_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.LEVEL_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+
+            entity.HasOne(d => d.FUND)
+                .WithMany()
+                .HasForeignKey(d => d.FUND_ID)
+                .HasConstraintName("FK_PC_FUND_LINK_TAFSILI_FUND");
+
+            entity.HasOne(d => d.TAFSILI)
+                .WithMany()
+                .HasForeignKey(d => d.TAFSILI_ID)
+                .HasConstraintName("FK_PC_FUND_LINK_TAFSILI_TAF");
+
+            entity.HasOne(d => d.LEVEL)
+                .WithMany()
+                .HasForeignKey(d => d.LEVEL_ID)
+                .HasConstraintName("FK_PC_FUND_LINK_TAFSILI_LVL");
         });
 
         modelBuilder.Entity<TB_CHECK>(entity =>

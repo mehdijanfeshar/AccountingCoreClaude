@@ -99,4 +99,70 @@ public sealed class PettyCashExpenseDocRepository : IPettyCashExpenseDocReposito
 
         return new PettyCashFundExposure(approvedAmount, approvedRows.Count, inFlightAmount, inFlightRows.Count);
     }
+
+    public async Task<IReadOnlyList<PettyCashReplenishableDocRow>> GetApprovedUnlinkedByFundAsync(
+        Guid fundId, string vahedCode, CancellationToken cancellationToken = default)
+    {
+        // Deliberately no navigation-heavy join chain (see PettyCashExpenseDocReadRepository's
+        // XML doc for why): plain query-syntax joins on explicit FK columns only, so the
+        // translation stays simple and predictable on both SQLite (tests) and Oracle.
+        var rows = await (
+            from doc in _dbContext.TB_PC_EXPENSE_DOCs.AsNoTracking()
+            where doc.FUND_ID == fundId && doc.VAHEDCODE == vahedCode && !doc.ISDELETED
+                  && doc.DOC_STATE == PettyCashDocState.Approved
+            join detail in _dbContext.TB_CHARGEANDCOST_DETAILs.AsNoTracking()
+                on (Guid?)doc.CHARGEANDCOSTHEAD_ID equals detail.CHARGEANDCOSTHEAD_ID
+            join expense in _dbContext.TB_EXPENCEs.AsNoTracking()
+                on detail.EXPENSE_ID equals (Guid?)expense.ID into expenseGroup
+            from expense in expenseGroup.DefaultIfEmpty()
+            select new
+            {
+                doc.ID,
+                DetailId = detail.ID,
+                doc.AMOUNT_BEFORE_TAX,
+                doc.VAT_AMOUNT,
+                AccountCodeId = (Guid?)expense.ACCOUNTCODE_ID,
+            })
+            .ToListAsync(cancellationToken);
+
+        var result = new List<PettyCashReplenishableDocRow>(rows.Count);
+
+        foreach (var row in rows)
+        {
+            // Skipping already-linked documents needs a per-row existence check rather than a
+            // single SQL "NOT EXISTS" join, for the same Oracle-translation-safety reason as
+            // PettyCashExpenseDocReadRepository's leaner filter shape — one fund's live Approved
+            // set is small, so this stays cheap.
+            var alreadyLinked = await _dbContext.TB_CHARGE_LINK_COSTs
+                .AsNoTracking()
+                .Where(l => !l.ISDELETED && l.COST_ID == row.DetailId)
+                .CountAsync(cancellationToken) > 0;
+
+            if (alreadyLinked)
+            {
+                continue;
+            }
+
+            result.Add(new PettyCashReplenishableDocRow(
+                row.ID,
+                row.DetailId,
+                (row.AMOUNT_BEFORE_TAX ?? 0m) + (row.VAT_AMOUNT ?? 0m),
+                row.AccountCodeId));
+        }
+
+        return result;
+    }
+
+    public async Task<IReadOnlyList<TB_PC_EXPENSE_DOC>> GetManyForUpdateAsync(
+        IReadOnlyList<Guid> ids, string vahedCode, CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+        {
+            return Array.Empty<TB_PC_EXPENSE_DOC>();
+        }
+
+        return await _dbContext.TB_PC_EXPENSE_DOCs
+            .Where(d => ids.Contains(d.ID) && d.VAHEDCODE == vahedCode)
+            .ToListAsync(cancellationToken);
+    }
 }

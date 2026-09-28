@@ -46,4 +46,33 @@ public interface IPettyCashExpenseDocRepository
         string vahedCode,
         Guid? excludeDocId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// بخش ۳-الف — every currently <see cref="Accounting.Domain.ValueObjects.PettyCashDocState.Approved"/>,
+    /// non-deleted صورت‌هزینه of <paramref name="fundId"/> that has no non-deleted
+    /// <see cref="Accounting.Domain.Entity.TB_CHARGE_LINK_COST"/> row yet — exactly the set
+    /// <c>CreatePettyCashReplenishmentCommandHandler</c> links into a new ترمیم. Each row's
+    /// <see cref="PettyCashReplenishableDocRow.CostId"/> is the single
+    /// <see cref="Accounting.Domain.Entity.TB_CHARGEANDCOST_DETAIL.ID"/> belonging to that
+    /// document's head (<c>docs/centralaccount-business-reference.md</c> §24-5-4: always exactly
+    /// one). Same underlying set <c>IPettyCashReplenishmentReadRepository.GetUnlinkedApprovedGroupedAsync</c>
+    /// computes for display — kept as two separate queries (one write-side, one read-side)
+    /// deliberately, the same shape as <see cref="GetFundExposureAsync"/> vs
+    /// <c>PettyCashFundReadRepository</c>'s own balance query.
+    /// </summary>
+    Task<IReadOnlyList<PettyCashReplenishableDocRow>> GetApprovedUnlinkedByFundAsync(
+        Guid fundId, string vahedCode, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Batch form of <see cref="GetForUpdateAsync"/> — every row among <paramref name="ids"/> that
+    /// belongs to <paramref name="vahedCode"/>, change-tracked, one round trip. Used by
+    /// <c>FinalizePettyCashSettlementCommandHandler</c> (بخش ۳-ب) to both read each document's
+    /// <c>ADDUSERID</c> (SoD check) and mutate <c>DOC_STATE</c> to
+    /// <see cref="Accounting.Domain.ValueObjects.PettyCashDocState.Settled"/> in the same
+    /// <see cref="IUnitOfWork.SaveChangesAsync"/> call — mirrors
+    /// <see cref="IVoucherHeadRepository.GetManyForUpdateAsync"/>'s shape. Returns only the rows
+    /// that exist; a caller that needs to know an id was missing must compare counts itself.
+    /// </summary>
+    Task<IReadOnlyList<TB_PC_EXPENSE_DOC>> GetManyForUpdateAsync(
+        IReadOnlyList<Guid> ids, string vahedCode, CancellationToken cancellationToken = default);
 }

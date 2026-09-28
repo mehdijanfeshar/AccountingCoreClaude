@@ -36,7 +36,8 @@ public sealed class PettyCashFundReadRepository : IPettyCashFundReadRepository
         string? AccountCodeTitle,
         PettyCashSettlementPeriod? SETTLEMENT_PERIOD,
         bool IS_ACTIVE,
-        bool ISDELETED);
+        bool ISDELETED,
+        PettyCashRefundRecorder REFUND_RECORDER);
 
     private readonly LegacyDbContext _dbContext;
 
@@ -60,8 +61,10 @@ public sealed class PettyCashFundReadRepository : IPettyCashFundReadRepository
         }
 
         var stats = await GetDocStatsAsync(vahedCode, cancellationToken);
+        var paidReplenishmentTotals = await GetPaidReplenishmentTotalsAsync(vahedCode, cancellationToken);
+        var refundTotals = await GetRefundTotalsAsync(vahedCode, cancellationToken);
 
-        return funds.Select(fund => ToDto(fund, stats)).ToList();
+        return funds.Select(fund => ToDto(fund, stats, paidReplenishmentTotals, refundTotals)).ToList();
     }
 
     public async Task<PettyCashFundDto?> GetByIdAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default)
@@ -86,8 +89,10 @@ public sealed class PettyCashFundReadRepository : IPettyCashFundReadRepository
         }
 
         var stats = await GetDocStatsAsync(vahedCode, cancellationToken, id);
+        var paidReplenishmentTotals = await GetPaidReplenishmentTotalsAsync(vahedCode, cancellationToken, id);
+        var refundTotals = await GetRefundTotalsAsync(vahedCode, cancellationToken, id);
 
-        return ToDto(fund, stats);
+        return ToDto(fund, stats, paidReplenishmentTotals, refundTotals);
     }
 
     private static IQueryable<FundRow> SelectFundRow(IQueryable<TB_PC_FUND> query) => query.Select(f => new FundRow(
@@ -104,7 +109,51 @@ public sealed class PettyCashFundReadRepository : IPettyCashFundReadRepository
         f.ACCOUNTCODE!.ACCCODENAME,
         f.SETTLEMENT_PERIOD,
         f.IS_ACTIVE,
-        f.ISDELETED));
+        f.ISDELETED,
+        f.REFUND_RECORDER));
+
+    /// <summary>بخش ۳-الف: the "+Σ(TOTAL_AMOUNT ترمیم‌های Paid)" term, grouped per fund — same
+    /// O(1)-queries-regardless-of-fund-count shape as <see cref="GetDocStatsAsync"/>.</summary>
+    private async Task<Dictionary<Guid, decimal>> GetPaidReplenishmentTotalsAsync(
+        string vahedCode, CancellationToken cancellationToken, Guid? onlyFundId = null)
+    {
+        var query = _dbContext.TB_PC_REPLENISHMENTs
+            .AsNoTracking()
+            .Where(r => !r.ISDELETED && r.VAHEDCODE == vahedCode && r.STATE == PettyCashReplenishmentState.Paid);
+
+        if (onlyFundId is { } fundId)
+        {
+            query = query.Where(r => r.FUND_ID == fundId);
+        }
+
+        var grouped = await query
+            .GroupBy(r => r.FUND_ID)
+            .Select(g => new { FundId = g.Key, Total = g.Sum(r => r.TOTAL_AMOUNT) })
+            .ToListAsync(cancellationToken);
+
+        return grouped.ToDictionary(g => g.FundId, g => g.Total);
+    }
+
+    /// <summary>بخش ۳-الف: the "+Σ(AMOUNT استردادهای حذف‌نشده)" term, grouped per fund.</summary>
+    private async Task<Dictionary<Guid, decimal>> GetRefundTotalsAsync(
+        string vahedCode, CancellationToken cancellationToken, Guid? onlyFundId = null)
+    {
+        var query = _dbContext.TB_PC_REFUNDs
+            .AsNoTracking()
+            .Where(r => !r.ISDELETED && r.VAHEDCODE == vahedCode);
+
+        if (onlyFundId is { } fundId)
+        {
+            query = query.Where(r => r.FUND_ID == fundId);
+        }
+
+        var grouped = await query
+            .GroupBy(r => r.FUND_ID)
+            .Select(g => new { FundId = g.Key, Total = g.Sum(r => r.AMOUNT) })
+            .ToListAsync(cancellationToken);
+
+        return grouped.ToDictionary(g => g.FundId, g => g.Total);
+    }
 
     /// <summary>
     /// One grouped query for every fund's §2 balance-equation inputs, rather than one query per
@@ -141,7 +190,9 @@ public sealed class PettyCashFundReadRepository : IPettyCashFundReadRepository
 
     private static PettyCashFundDto ToDto(
         FundRow fund,
-        List<(Guid FundId, PettyCashDocState State, int Count, decimal AmountBeforeTax, decimal Vat)> stats)
+        List<(Guid FundId, PettyCashDocState State, int Count, decimal AmountBeforeTax, decimal Vat)> stats,
+        Dictionary<Guid, decimal> paidReplenishmentTotals,
+        Dictionary<Guid, decimal> refundTotals)
     {
         var approvedStats = stats.Where(s => s.FundId == fund.ID && s.State == PettyCashDocState.Approved).ToList();
         var inFlightStats = stats.Where(s => s.FundId == fund.ID && InFlightStates.Contains(s.State)).ToList();
@@ -151,8 +202,12 @@ public sealed class PettyCashFundReadRepository : IPettyCashFundReadRepository
         var inFlightAmount = inFlightStats.Sum(s => s.AmountBeforeTax + s.Vat);
         var inFlightCount = inFlightStats.Sum(s => s.Count);
 
-        // §2: موجودی نقد = CEILING − Σ(مبلغ کل اسناد در New/PendingReview/Returned/Approved).
-        var cashBalance = fund.CEILING - approvedAmount - inFlightAmount;
+        var paidReplenishmentTotal = paidReplenishmentTotals.GetValueOrDefault(fund.ID);
+        var refundTotal = refundTotals.GetValueOrDefault(fund.ID);
+
+        // بخش ۳-الف: extended equation — see PettyCashBalanceCalculator XML doc.
+        var cashBalance = Accounting.Application.PettyCash.Common.PettyCashBalanceCalculator.CashBalance(
+            fund.CEILING, approvedAmount, inFlightAmount, paidReplenishmentTotal, refundTotal);
 
         return new PettyCashFundDto(
             fund.ID,
@@ -173,6 +228,7 @@ public sealed class PettyCashFundReadRepository : IPettyCashFundReadRepository
             approvedAmount,
             approvedCount,
             inFlightAmount,
-            inFlightCount);
+            inFlightCount,
+            fund.REFUND_RECORDER);
     }
 }

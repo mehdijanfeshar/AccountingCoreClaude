@@ -183,6 +183,18 @@ public static class DependencyInjection
         services.AddScoped<IPettyCashAttachmentRepository, PettyCashAttachmentRepository>();
         services.AddScoped<IPettyCashAttachmentReadRepository, PettyCashAttachmentReadRepository>();
 
+        // Petty-cash module, بخش ۳-الف (۲۰۲۶-۰۹-۲۸) — ترمیم/شارژ و استرداد وجه (same doc، «بخش ۳ —
+        // طراحی»).
+        services.AddScoped<IPettyCashReplenishmentRepository, PettyCashReplenishmentRepository>();
+        services.AddScoped<IPettyCashReplenishmentReadRepository, PettyCashReplenishmentReadRepository>();
+        services.AddScoped<IPettyCashRefundRepository, PettyCashRefundRepository>();
+        services.AddScoped<IPettyCashRefundReadRepository, PettyCashRefundReadRepository>();
+        services.AddScoped<IPettyCashLedgerReadRepository, PettyCashLedgerReadRepository>();
+
+        // Petty-cash module, بخش ۳-ب (۲۰۲۶-۰۹-۲۸) — تسویهٔ دوره و سند GL (same doc §۹).
+        services.AddScoped<IPettyCashSettlementPeriodRepository, PettyCashSettlementPeriodRepository>();
+        services.AddScoped<IPettyCashSettlementReadRepository, PettyCashSettlementReadRepository>();
+
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 
         return services;

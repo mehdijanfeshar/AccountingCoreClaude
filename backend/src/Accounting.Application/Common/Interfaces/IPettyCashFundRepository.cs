@@ -41,4 +41,26 @@ public interface IPettyCashFundRepository
     /// not be deleted (409), per this batch's task description.
     /// </summary>
     Task<bool> HasActiveExpenseDocsAsync(Guid fundId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stages a new <see cref="TB_PC_FUND_LINK_TAFSILI"/> row for insert. Only stages — the
+    /// handler still owns the single <see cref="IUnitOfWork.SaveChangesAsync"/>.
+    ///
+    /// Deliberately NOT named <c>AddAsync</c>: same reasoning as
+    /// <see cref="IExpenseRepository.AddTafsiliLinkAsync"/> — <c>TB_PC_FUND_LINK_TAFSILI</c> is a
+    /// permanently-embedded link table (team rule, <c>docs/tamin-core-entity-reference.md</c>
+    /// section 5; <c>NoIndependentLinkTableWritePathTests</c>) mutated only via this
+    /// explicitly-named, parent-scoped method on the PARENT aggregate's own repository, never via
+    /// an aggregate-root-shaped <c>AddAsync</c>/<c>GetForUpdateAsync</c> pair.
+    /// </summary>
+    Task AddFundTafsiliLinkAsync(TB_PC_FUND_LINK_TAFSILI link, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the fund's currently-active (<c>ISDELETED == false</c>)
+    /// <see cref="TB_PC_FUND_LINK_TAFSILI"/> rows, change-tracked, so the upsert handler can
+    /// reconcile the caller's requested replacement set against them. Returns an empty list —
+    /// never <see langword="null"/> — when the fund has none yet.
+    /// </summary>
+    Task<IReadOnlyList<TB_PC_FUND_LINK_TAFSILI>> GetActiveFundTafsiliLinksAsync(
+        Guid fundId, CancellationToken cancellationToken = default);
 }

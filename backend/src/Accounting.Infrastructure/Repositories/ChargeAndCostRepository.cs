@@ -88,4 +88,27 @@ public sealed class ChargeAndCostRepository : IChargeAndCostRepository
 
         return highest + 1;
     }
+
+    public async Task AddLinkAsync(TB_CHARGE_LINK_COST link, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.TB_CHARGE_LINK_COSTs.AddAsync(link, cancellationToken);
+    }
+
+    public async Task<bool> ExistsActiveLinkForCostAsync(Guid costId, CancellationToken cancellationToken = default)
+    {
+        // CountAsync, not AnyAsync — same Oracle-provider reasoning as
+        // PettyCashExpenseDocRepository.ExistsActiveDuplicateAsync.
+        return await _dbContext.TB_CHARGE_LINK_COSTs
+            .AsNoTracking()
+            .Where(l => !l.ISDELETED && l.COST_ID == costId)
+            .CountAsync(cancellationToken) > 0;
+    }
+
+    public async Task<IReadOnlyList<TB_CHARGE_LINK_COST>> GetActiveLinksByChargeIdAsync(
+        Guid chargeId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.TB_CHARGE_LINK_COSTs
+            .Where(l => !l.ISDELETED && l.CHARGE_ID == chargeId)
+            .ToListAsync(cancellationToken);
+    }
 }

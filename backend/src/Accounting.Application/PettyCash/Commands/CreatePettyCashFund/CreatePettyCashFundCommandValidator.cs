@@ -46,6 +46,8 @@ public sealed class CreatePettyCashFundCommandValidator : AbstractValidator<Crea
             .IsInEnum()
             .When(x => x.SettlementPeriod.HasValue);
 
+        RuleFor(x => x.RefundRecorder).IsInEnum();
+
         RuleFor(x => x.VahedCode)
             .NotEmpty()
             .MaximumLength(4);

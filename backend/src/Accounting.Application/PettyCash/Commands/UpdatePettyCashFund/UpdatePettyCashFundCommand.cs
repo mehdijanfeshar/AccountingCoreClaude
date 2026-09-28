@@ -22,7 +22,8 @@ public sealed record UpdatePettyCashFundCommand(
     int? AlertThresholdPercent,
     Guid? AccountCodeId,
     PettyCashSettlementPeriod? SettlementPeriod,
-    bool IsActive) : IRequest, IVahedScopedCommand
+    bool IsActive,
+    PettyCashRefundRecorder RefundRecorder = PettyCashRefundRecorder.Treasurer) : IRequest, IVahedScopedCommand
 {
     [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
