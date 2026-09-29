@@ -1,6 +1,8 @@
+using Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems;
 using Accounting.Application.Common;
 using Accounting.Application.Treasury.Commands.ApprovePaymentRequest;
 using Accounting.Application.Treasury.Commands.BulkApprovePaymentRequests;
+using Accounting.Application.Treasury.Commands.Common;
 using Accounting.Application.Treasury.Commands.CreatePaymentRequest;
 using Accounting.Application.Treasury.Commands.CreateTreasuryRole;
 using Accounting.Application.Treasury.Commands.DeletePaymentRequest;
@@ -12,6 +14,7 @@ using Accounting.Application.Treasury.Commands.UpdatePaymentRequest;
 using Accounting.Application.Treasury.Commands.UpsertTreasurySetting;
 using Accounting.Application.Treasury.Queries;
 using Accounting.Application.Treasury.Queries.GetApprovalCartable;
+using Accounting.Application.Treasury.Queries.GetBeneficiaryTafsilis;
 using Accounting.Application.Treasury.Queries.GetPaymentRequestById;
 using Accounting.Application.Treasury.Queries.GetPaymentRequests;
 using Accounting.Application.Treasury.Queries.GetTreasuryRoles;
@@ -69,7 +72,9 @@ public sealed class TreasuryController : ControllerBase
         [FromBody] UpsertTreasurySettingRequest request, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(
-            new UpsertTreasurySettingCommand(request.CeoApprovalThreshold, request.BulkApproveLimit), cancellationToken);
+            new UpsertTreasurySettingCommand(
+                request.CeoApprovalThreshold, request.BulkApproveLimit, request.BeneficiaryTafsilGroupId),
+            cancellationToken);
 
         return Ok(result);
     }
@@ -179,7 +184,7 @@ public sealed class TreasuryController : ControllerBase
             request.InvoiceRef,
             request.InvoiceApproved,
             request.ExpenseAccountId,
-            request.CostCenterTafsiliId,
+            request.CostCenterTafsilis ?? Array.Empty<PaymentRequestTafsiliLinkInput>(),
             request.AmountBeforeTax,
             request.VatPercent,
             request.VatAmount,
@@ -218,7 +223,7 @@ public sealed class TreasuryController : ControllerBase
             request.InvoiceRef,
             request.InvoiceApproved,
             request.ExpenseAccountId,
-            request.CostCenterTafsiliId,
+            request.CostCenterTafsilis ?? Array.Empty<PaymentRequestTafsiliLinkInput>(),
             request.AmountBeforeTax,
             request.VatPercent,
             request.VatAmount,
@@ -353,12 +358,36 @@ public sealed class TreasuryController : ControllerBase
 
         return Ok(result);
     }
+
+    // ==================== تفصیلی ذی‌نفع (اصلاح ۴-الف، ۲۰۲۶-۰۹-۲۹) ====================
+
+    /// <summary>
+    /// صفحه‌ای از تفصیلی(های) عضو گروه تفصیلی ذی‌نفعِ تعریف‌شده برای واحد — صفحهٔ خالی (نه خطا)
+    /// اگر واحد هنوز گروهی تعریف نکرده باشد.
+    /// </summary>
+    [HttpGet("beneficiary-tafsilis")]
+    [ProducesResponseType(typeof(PagedResult<TafsiliLookupItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetBeneficiaryTafsilis(
+        [FromQuery] string? search = null,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(
+            new GetBeneficiaryTafsilisQuery(search, pageNumber, pageSize), cancellationToken);
+
+        return Ok(result);
+    }
 }
 
 // ==================== تنظیمات: request/response DTOs ====================
 
 /// <summary>Request body for <see cref="TreasuryController.UpsertSettings"/>.</summary>
-public sealed record UpsertTreasurySettingRequest(decimal CeoApprovalThreshold, decimal BulkApproveLimit);
+public sealed record UpsertTreasurySettingRequest(
+    decimal CeoApprovalThreshold, decimal BulkApproveLimit, Guid? BeneficiaryTafsilGroupId);
 
 // ==================== نقش‌ها: request/response DTOs ====================
 
@@ -382,7 +411,7 @@ public sealed record CreatePaymentRequestRequest(
     string? InvoiceRef,
     bool InvoiceApproved,
     Guid ExpenseAccountId,
-    Guid? CostCenterTafsiliId,
+    IReadOnlyList<PaymentRequestTafsiliLinkInput>? CostCenterTafsilis,
     decimal AmountBeforeTax,
     decimal? VatPercent,
     decimal? VatAmount,
@@ -407,7 +436,7 @@ public sealed record UpdatePaymentRequestRequest(
     string? InvoiceRef,
     bool InvoiceApproved,
     Guid ExpenseAccountId,
-    Guid? CostCenterTafsiliId,
+    IReadOnlyList<PaymentRequestTafsiliLinkInput>? CostCenterTafsilis,
     decimal AmountBeforeTax,
     decimal? VatPercent,
     decimal? VatAmount,

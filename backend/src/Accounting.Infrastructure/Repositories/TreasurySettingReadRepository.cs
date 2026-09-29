@@ -14,12 +14,46 @@ public sealed class TreasurySettingReadRepository : ITreasurySettingReadReposito
         _dbContext = dbContext;
     }
 
-    public Task<TreasurySettingDto?> GetByVahedAsync(string vahedCode, CancellationToken cancellationToken = default)
+    public async Task<TreasurySettingDto?> GetByVahedAsync(string vahedCode, CancellationToken cancellationToken = default)
     {
-        return _dbContext.TB_TR_SETTINGs
+        var setting = await _dbContext.TB_TR_SETTINGs
             .AsNoTracking()
             .Where(s => s.VAHEDCODE == vahedCode && !s.ISDELETED)
-            .Select(s => new TreasurySettingDto(s.ID, s.CEO_APPROVAL_THRESHOLD, s.BULK_APPROVE_LIMIT))
+            .Select(s => new
+            {
+                s.ID,
+                s.CEO_APPROVAL_THRESHOLD,
+                s.BULK_APPROVE_LIMIT,
+                s.BENEFICIARY_TAFSIL_GROUP_ID,
+            })
             .FirstOrDefaultAsync(cancellationToken);
+
+        if (setting is null)
+        {
+            return null;
+        }
+
+        string? groupCode = null;
+        string? groupName = null;
+
+        if (setting.BENEFICIARY_TAFSIL_GROUP_ID is { } groupId)
+        {
+            var group = await _dbContext.TB_TAFSIL_GROUPs
+                .AsNoTracking()
+                .Where(g => g.ID == groupId)
+                .Select(g => new { g.TAFSILGROUP_CODE, g.TAFSILGROUP_NAME })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            groupCode = group?.TAFSILGROUP_CODE;
+            groupName = group?.TAFSILGROUP_NAME;
+        }
+
+        return new TreasurySettingDto(
+            setting.ID,
+            setting.CEO_APPROVAL_THRESHOLD,
+            setting.BULK_APPROVE_LIMIT,
+            setting.BENEFICIARY_TAFSIL_GROUP_ID,
+            groupCode,
+            groupName);
     }
 }

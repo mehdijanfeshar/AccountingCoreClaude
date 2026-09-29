@@ -19,6 +19,7 @@ public sealed class CreatePaymentRequestCommandHandler : IRequestHandler<CreateP
     private readonly IAccountCodeReadRepository _accountCodeReadRepository;
     private readonly IBankAccountReadRepository _bankAccountReadRepository;
     private readonly IPaymentRequestSubmitRuleChecker _submitRuleChecker;
+    private readonly IPaymentRequestTafsiliValidator _tafsiliValidator;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
     private readonly IClientInfoProvider _clientInfoProvider;
@@ -29,6 +30,7 @@ public sealed class CreatePaymentRequestCommandHandler : IRequestHandler<CreateP
         IAccountCodeReadRepository accountCodeReadRepository,
         IBankAccountReadRepository bankAccountReadRepository,
         IPaymentRequestSubmitRuleChecker submitRuleChecker,
+        IPaymentRequestTafsiliValidator tafsiliValidator,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
         IClientInfoProvider clientInfoProvider)
@@ -38,6 +40,7 @@ public sealed class CreatePaymentRequestCommandHandler : IRequestHandler<CreateP
         _accountCodeReadRepository = accountCodeReadRepository;
         _bankAccountReadRepository = bankAccountReadRepository;
         _submitRuleChecker = submitRuleChecker;
+        _tafsiliValidator = tafsiliValidator;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _clientInfoProvider = clientInfoProvider;
@@ -50,6 +53,14 @@ public sealed class CreatePaymentRequestCommandHandler : IRequestHandler<CreateP
 
         _ = await _bankAccountReadRepository.GetByIdAsync(request.PaymentAccountId, request.VahedCode, cancellationToken)
             ?? throw new NotFoundException("BankAccount", request.PaymentAccountId);
+
+        var costCenterTafsilis = request.CostCenterTafsilis;
+
+        await _tafsiliValidator.EnsureCostCenterTafsilisValidAsync(
+            request.ExpenseAccountId, costCenterTafsilis, request.VahedCode, cancellationToken);
+
+        await _tafsiliValidator.EnsureBeneficiaryTafsiliValidAsync(
+            request.BeneficiaryTafsiliId, request.VahedCode, cancellationToken);
 
         var id = Guid.NewGuid();
 
@@ -91,7 +102,6 @@ public sealed class CreatePaymentRequestCommandHandler : IRequestHandler<CreateP
             INVOICE_REF = request.InvoiceRef,
             INVOICE_APPROVED = request.InvoiceApproved,
             EXPENSE_ACCOUNT_ID = request.ExpenseAccountId,
-            COST_CENTER_TAFSILI_ID = request.CostCenterTafsiliId,
             AMOUNT_BEFORE_TAX = request.AmountBeforeTax,
             VAT_PERCENT = request.VatPercent,
             VAT_AMOUNT = vatAmount,
@@ -112,6 +122,24 @@ public sealed class CreatePaymentRequestCommandHandler : IRequestHandler<CreateP
         };
 
         await _paymentRequestRepository.AddAsync(paymentRequest, cancellationToken);
+
+        foreach (var link in costCenterTafsilis)
+        {
+            await _paymentRequestRepository.AddCostCenterTafsiliLinkAsync(
+                new TB_TR_PAYMENT_REQUEST_LINK_TAFSILI
+                {
+                    ID = Guid.NewGuid(),
+                    PAYMENT_REQUEST_ID = id,
+                    TAFSILI_ID = link.TafsiliId,
+                    LEVEL_ID = link.LevelId,
+                    VAHEDCODE = request.VahedCode,
+                    YEAR = request.Year,
+                    ADDUSERID = userId,
+                    CREATEDDATE = now,
+                    ISDELETED = false,
+                },
+                cancellationToken);
+        }
 
         await _eventRepository.AddAsync(
             new TB_TR_PAYMENT_REQUEST_EVENT

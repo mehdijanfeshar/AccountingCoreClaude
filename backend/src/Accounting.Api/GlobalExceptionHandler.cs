@@ -611,6 +611,26 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Conflict",
                     paymentRequestSettingsMissingException.PublicDetail)),
 
+            // اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹): BeneficiaryTafsiliId سِت شده اما واحد گروه تفصیلی ذی‌نفع
+            // ندارد — همان شکل PaymentRequestSettingsMissingException (409، مشکل تنظیمات واحد).
+            PaymentRequestBeneficiaryGroupNotConfiguredException paymentRequestBeneficiaryGroupNotConfiguredException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    paymentRequestBeneficiaryGroupNotConfiguredException.PublicDetail)),
+
+            // اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹): گروه تعریف شده، ولی تفصیلی ارسالی عضوش نیست — خطای مقدار
+            // ورودی، نه تعارض تنظیمات (400).
+            PaymentRequestBeneficiaryTafsiliNotInGroupException paymentRequestBeneficiaryTafsiliNotInGroupException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    paymentRequestBeneficiaryTafsiliNotInGroupException.PublicDetail)),
+
             // Submit-only rules — 400, same shape as the petty-cash §4 Submit rules.
             PaymentRequestDueDatePastException paymentRequestDueDatePastException => (
                 StatusCodes.Status400BadRequest,

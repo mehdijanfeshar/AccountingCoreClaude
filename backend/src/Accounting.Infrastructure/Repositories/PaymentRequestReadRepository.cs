@@ -107,17 +107,52 @@ public sealed class PaymentRequestReadRepository : IPaymentRequestReadRepository
                 e.ID, e.ACTION, e.FROM_STATE, e.TO_STATE, e.NOTE, e.ADDUSERID, e.CREATEDDATE, e.CLIENT_IP))
             .ToListAsync(cancellationToken);
 
+        string? beneficiaryTafsiliCode = null;
+        string? beneficiaryTafsiliName = null;
+
+        if (entity.BENEFICIARY_TAFSILI_ID is { } beneficiaryTafsiliId)
+        {
+            var beneficiary = await _dbContext.TB_TAFSILIs
+                .AsNoTracking()
+                .Where(t => t.ID == beneficiaryTafsiliId)
+                .Select(t => new { t.TAFSILI_CODE, t.TAFSILI_NAME })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            beneficiaryTafsiliCode = beneficiary?.TAFSILI_CODE;
+            beneficiaryTafsiliName = beneficiary?.TAFSILI_NAME;
+        }
+
+        var costCenterTafsilis = await (
+            from link in _dbContext.TB_TR_PAYMENT_REQUEST_LINK_TAFSILIs.AsNoTracking()
+            where link.PAYMENT_REQUEST_ID == id && !link.ISDELETED
+            join level in _dbContext.TB_LEVEL_TAFSILs.AsNoTracking()
+                on link.LEVEL_ID equals level.ID into levels
+            from level in levels.DefaultIfEmpty()
+            join tafsili in _dbContext.TB_TAFSILIs.AsNoTracking()
+                on link.TAFSILI_ID equals tafsili.ID into tafsilis
+            from tafsili in tafsilis.DefaultIfEmpty()
+            orderby level.LEVEL_CODE
+            select new PaymentRequestCostCenterTafsiliDto(
+                link.LEVEL_ID,
+                level.LEVEL_NAME,
+                link.TAFSILI_ID,
+                tafsili.TAFSILI_CODE,
+                tafsili.TAFSILI_NAME))
+            .ToListAsync(cancellationToken);
+
         return new PaymentRequestDto(
             entity.ID,
             entity.CODE,
             entity.BENEFICIARY_NAME,
             entity.BENEFICIARY_NATIONAL_ID,
             entity.BENEFICIARY_TAFSILI_ID,
+            beneficiaryTafsiliCode,
+            beneficiaryTafsiliName,
             entity.PAYMENT_TYPE,
             entity.INVOICE_REF,
             entity.INVOICE_APPROVED,
             entity.EXPENSE_ACCOUNT_ID,
-            entity.COST_CENTER_TAFSILI_ID,
+            costCenterTafsilis,
             entity.AMOUNT_BEFORE_TAX,
             entity.VAT_PERCENT,
             entity.VAT_AMOUNT,

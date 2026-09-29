@@ -12,6 +12,11 @@ namespace Accounting.Domain.Entity;
 /// <c>NET_PAYABLE_AMOUNT</c> همیشه سرور محاسبه می‌کند (قبل از مالیات + ارزش‌افزوده − کسور بیمه) —
 /// هرگز مستقیماً از ورودی گرفته نمی‌شود. <c>ID</c> بدون <c>DEFAULT sys_guid()</c> (ریسک #۱۱)؛
 /// همیشه application-side تولید می‌شود، مثل بقیهٔ جدول‌های جانبی این ماژول.
+///
+/// <b>اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹).</b> ستون تک‌سطحی <c>COST_CENTER_TAFSILI_ID</c> حذف شد — تفصیلی(های)
+/// مرکز هزینه اکنون چندسطحی است، در <see cref="TB_TR_PAYMENT_REQUEST_LINK_TAFSILI"/> (یک ردیف
+/// به‌ازای هر سطح الزامی <see cref="EXPENSE_ACCOUNT_ID"/>، کنترل‌شده با
+/// <c>IVoucherTafsiliLevelGuard</c>).
 /// </summary>
 public partial class TB_TR_PAYMENT_REQUEST
 {
@@ -35,8 +40,6 @@ public partial class TB_TR_PAYMENT_REQUEST
 
     /// <summary>FK به <c>TB_ACCOUNTCODE</c> — حساب هزینه.</summary>
     public Guid EXPENSE_ACCOUNT_ID { get; set; }
-
-    public Guid? COST_CENTER_TAFSILI_ID { get; set; }
 
     public decimal AMOUNT_BEFORE_TAX { get; set; }
 

@@ -102,6 +102,11 @@ public static class DependencyInjection
         services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestApprovalService,
             Accounting.Application.Treasury.Commands.Common.PaymentRequestApprovalService>();
 
+        // اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹) — تفصیلی چندسطحی مرکز هزینه + تفصیلی ذی‌نفع اختیاری، مشترک
+        // بین Create/UpdatePaymentRequest. See IPaymentRequestTafsiliValidator XML doc.
+        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestTafsiliValidator,
+            Accounting.Application.Treasury.Commands.Common.PaymentRequestTafsiliValidator>();
+
         return services;
     }
 }

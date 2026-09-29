@@ -40,4 +40,28 @@ public interface IPaymentRequestRepository
         string vahedCode,
         Guid? excludeId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Stages a new <see cref="TB_TR_PAYMENT_REQUEST_LINK_TAFSILI"/> row for insert. Only stages —
+    /// the handler still owns the single <see cref="IUnitOfWork.SaveChangesAsync"/>.
+    ///
+    /// Deliberately NOT named <c>AddAsync</c>: same reasoning as
+    /// <c>IPettyCashFundRepository.AddFundTafsiliLinkAsync</c> —
+    /// <c>TB_TR_PAYMENT_REQUEST_LINK_TAFSILI</c> is a permanently-embedded link table (team rule,
+    /// <c>docs/tamin-core-entity-reference.md</c> section 5; <c>NoIndependentLinkTableWritePathTests</c>)
+    /// mutated only via this explicitly-named, parent-scoped method on the PARENT aggregate's own
+    /// repository, never via an aggregate-root-shaped <c>AddAsync</c>/<c>GetForUpdateAsync</c> pair.
+    /// </summary>
+    Task AddCostCenterTafsiliLinkAsync(
+        TB_TR_PAYMENT_REQUEST_LINK_TAFSILI link, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the request's currently-active (<c>ISDELETED == false</c>)
+    /// <see cref="TB_TR_PAYMENT_REQUEST_LINK_TAFSILI"/> rows, change-tracked, so the Update handler
+    /// can reconcile the caller's full-replace set against them (same shape as
+    /// <c>UpsertPettyCashFundTafsilisCommandHandler</c>). Returns an empty list — never
+    /// <see langword="null"/> — when the request has none yet.
+    /// </summary>
+    Task<IReadOnlyList<TB_TR_PAYMENT_REQUEST_LINK_TAFSILI>> GetActiveCostCenterTafsiliLinksAsync(
+        Guid paymentRequestId, CancellationToken cancellationToken = default);
 }

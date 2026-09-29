@@ -19,6 +19,14 @@ public partial class TB_TR_SETTING
     /// <summary>سقف مبلغ برای واجد شرایط بودن یک درخواست در تأیید گروهی.</summary>
     public decimal BULK_APPROVE_LIMIT { get; set; }
 
+    /// <summary>
+    /// اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹) — گروه تفصیلی‌ای که <c>TB_TR_PAYMENT_REQUEST.BENEFICIARY_TAFSILI_ID</c>
+    /// باید عضوش باشد (از طریق <c>TB_TAFSIL_LINK_TAFSILGROUP</c>). بدون FK واقعی روی
+    /// <c>TB_TAFSIL_GROUP</c> (همان الگوی ریسک #۹/#۱۴) — وجودش سمت Application کنترل می‌شود.
+    /// <see langword="null"/> یعنی واحد هنوز گروهی تعریف نکرده — ثبت ذی‌نفع تفصیلی‌دار رد می‌شود.
+    /// </summary>
+    public Guid? BENEFICIARY_TAFSIL_GROUP_ID { get; set; }
+
     public DateTime CREATEDDATE { get; set; }
 
     public DateTime? UPDATEDDATE { get; set; }

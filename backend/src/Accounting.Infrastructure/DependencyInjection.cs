@@ -205,6 +205,8 @@ public static class DependencyInjection
         services.AddScoped<IPaymentRequestReadRepository, PaymentRequestReadRepository>();
         services.AddScoped<IPaymentRequestEventRepository, PaymentRequestEventRepository>();
         services.AddScoped<IPaymentRequestEventReadRepository, PaymentRequestEventReadRepository>();
+        // اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹) — پیکر «تفصیلی ذی‌نفع».
+        services.AddScoped<ITreasuryBeneficiaryTafsiliReadRepository, TreasuryBeneficiaryTafsiliReadRepository>();
 
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 

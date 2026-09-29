@@ -1,3 +1,4 @@
+using Accounting.Application.Treasury.Commands.Common;
 using FluentValidation;
 
 namespace Accounting.Application.Treasury.Commands.UpdatePaymentRequest;
@@ -21,6 +22,10 @@ public sealed class UpdatePaymentRequestCommandValidator : AbstractValidator<Upd
         RuleFor(x => x.InvoiceRef).MaximumLength(100);
 
         RuleFor(x => x.ExpenseAccountId).NotEmpty();
+
+        RuleFor(x => x.CostCenterTafsilis).NotNull();
+
+        RuleForEach(x => x.CostCenterTafsilis).SetValidator(new PaymentRequestTafsiliLinkInputValidator());
 
         RuleFor(x => x.AmountBeforeTax).GreaterThan(0m);
 

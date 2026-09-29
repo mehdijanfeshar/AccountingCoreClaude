@@ -80,4 +80,18 @@ public sealed class PaymentRequestRepository : IPaymentRequestRepository
 
         return count > 0;
     }
+
+    public async Task AddCostCenterTafsiliLinkAsync(
+        TB_TR_PAYMENT_REQUEST_LINK_TAFSILI link, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.TB_TR_PAYMENT_REQUEST_LINK_TAFSILIs.AddAsync(link, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TB_TR_PAYMENT_REQUEST_LINK_TAFSILI>> GetActiveCostCenterTafsiliLinksAsync(
+        Guid paymentRequestId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.TB_TR_PAYMENT_REQUEST_LINK_TAFSILIs
+            .Where(l => l.PAYMENT_REQUEST_ID == paymentRequestId && !l.ISDELETED)
+            .ToListAsync(cancellationToken);
+    }
 }

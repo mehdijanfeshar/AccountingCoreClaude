@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Application.Treasury.Commands.Common;
 using Accounting.Domain.ValueObjects;
 using MediatR;
 
@@ -23,7 +24,12 @@ namespace Accounting.Application.Treasury.Commands.CreatePaymentRequest;
 /// <param name="InvoiceRef">TB_TR_PAYMENT_REQUEST.INVOICE_REF.</param>
 /// <param name="InvoiceApproved">دستی — تیک ثبت‌کننده که فاکتور را بررسی کرده است.</param>
 /// <param name="ExpenseAccountId">TB_TR_PAYMENT_REQUEST.EXPENSE_ACCOUNT_ID (FK به TB_ACCOUNTCODE — کنترل وجود سمت Application).</param>
-/// <param name="CostCenterTafsiliId">TB_TR_PAYMENT_REQUEST.COST_CENTER_TAFSILI_ID.</param>
+/// <param name="CostCenterTafsilis">
+/// اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹) — تفصیلی(های) مرکز هزینه، یک ورودی به‌ازای هر سطح تفصیلی الزامیِ
+/// <paramref name="ExpenseAccountId"/> (نه فقط سطح اول). کنترل کامل با
+/// <c>IPaymentRequestTafsiliValidator.EnsureCostCenterTafsilisValidAsync</c> — لیست خالی/تهی
+/// یعنی «هیچ تفصیلی‌ای» که فقط وقتی حساب هزینه هیچ سطحی الزامی نکرده باشد معتبر است.
+/// </param>
 /// <param name="AmountBeforeTax">TB_TR_PAYMENT_REQUEST.AMOUNT_BEFORE_TAX.</param>
 /// <param name="VatPercent">وقتی مقدار دارد، VAT_AMOUNT را سرور از روی آن حساب می‌کند (<see cref="VatAmount"/> نادیده گرفته می‌شود).</param>
 /// <param name="VatAmount">فقط وقتی <see cref="VatPercent"/> خالی است استفاده می‌شود — رجوع به <c>PaymentRequestAmountCalculator</c>.</param>
@@ -43,7 +49,7 @@ public sealed record CreatePaymentRequestCommand(
     string? InvoiceRef,
     bool InvoiceApproved,
     Guid ExpenseAccountId,
-    Guid? CostCenterTafsiliId,
+    IReadOnlyList<PaymentRequestTafsiliLinkInput> CostCenterTafsilis,
     decimal AmountBeforeTax,
     decimal? VatPercent,
     decimal? VatAmount,

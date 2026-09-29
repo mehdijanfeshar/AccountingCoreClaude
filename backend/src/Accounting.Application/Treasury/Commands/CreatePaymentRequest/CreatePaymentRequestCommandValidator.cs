@@ -1,10 +1,12 @@
+using Accounting.Application.Treasury.Commands.Common;
 using FluentValidation;
 
 namespace Accounting.Application.Treasury.Commands.CreatePaymentRequest;
 
 /// <summary>Surface-level (syntactic) validation only — Submit-only business rules (settings
 /// existence, due date vs today, invoice-approved consistency, duplicate) live in
-/// <c>IPaymentRequestSubmitRuleChecker</c>, not here.</summary>
+/// <c>IPaymentRequestSubmitRuleChecker</c>; the تفصیلی business rules (level requirement,
+/// beneficiary group membership) live in <c>IPaymentRequestTafsiliValidator</c>, not here.</summary>
 public sealed class CreatePaymentRequestCommandValidator : AbstractValidator<CreatePaymentRequestCommand>
 {
     private const string LegacyJalaliDatePattern = @"^\d{8}$";
@@ -22,6 +24,10 @@ public sealed class CreatePaymentRequestCommandValidator : AbstractValidator<Cre
         RuleFor(x => x.InvoiceRef).MaximumLength(100);
 
         RuleFor(x => x.ExpenseAccountId).NotEmpty();
+
+        RuleFor(x => x.CostCenterTafsilis).NotNull();
+
+        RuleForEach(x => x.CostCenterTafsilis).SetValidator(new PaymentRequestTafsiliLinkInputValidator());
 
         RuleFor(x => x.AmountBeforeTax).GreaterThan(0m);
 

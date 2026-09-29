@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
+using Accounting.Application.Treasury.Commands.Common;
 using Accounting.Domain.ValueObjects;
 using MediatR;
 
@@ -11,7 +12,8 @@ namespace Accounting.Application.Treasury.Commands.UpdatePaymentRequest;
 /// <see cref="PaymentRequestState.Returned"/>, and only by its own creator. Never changes
 /// <c>CODE</c>/<c>VAHEDCODE</c>/<c>YEAR</c>/<c>REQUEST_STATE</c> — use
 /// <c>SubmitPaymentRequestCommand</c> for the state transition. <c>Id</c> is taken from the route,
-/// never the body.
+/// never the body. <see cref="CostCenterTafsilis"/> is a full replacement of the request's
+/// <c>TB_TR_PAYMENT_REQUEST_LINK_TAFSILI</c> set — اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹).
 /// </summary>
 public sealed record UpdatePaymentRequestCommand(
     Guid Id,
@@ -22,7 +24,7 @@ public sealed record UpdatePaymentRequestCommand(
     string? InvoiceRef,
     bool InvoiceApproved,
     Guid ExpenseAccountId,
-    Guid? CostCenterTafsiliId,
+    IReadOnlyList<PaymentRequestTafsiliLinkInput> CostCenterTafsilis,
     decimal AmountBeforeTax,
     decimal? VatPercent,
     decimal? VatAmount,

@@ -15,6 +15,11 @@
 --
 -- Design reference: docs/tankhah-khazaneh-module.md §۱۰ (خزانه‌داری), بخش ۴-الف. Read that
 -- section before changing this script.
+--
+-- ⚠️ اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹، صاحب پروژه): (آ) COST_CENTER_TAFSILI_ID تک‌سطحی حذف شد؛ جایش
+-- TB_TR_PAYMENT_REQUEST_LINK_TAFSILI (چندسطحی، هم‌شکل TB_PC_FUND_LINK_TAFSILI، همان قاعدهٔ
+-- permanently-embedded) را ببین، پایین همین فایل. (ب) TB_TR_SETTING.BENEFICIARY_TAFSIL_GROUP_ID
+-- اضافه شد. جزئیات: docs/tankhah-khazaneh-module.md §۱۰ «اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹)».
 --------------------------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------------------------
@@ -24,11 +29,15 @@
 --------------------------------------------------------------------------------------------------
 CREATE TABLE TB_TR_SETTING
 (
-    ID                       CHAR(36)      NOT NULL,
-    VAHEDCODE                VARCHAR2(4)   NOT NULL,
-    CEO_APPROVAL_THRESHOLD   NUMBER(25)    NOT NULL,
-    BULK_APPROVE_LIMIT       NUMBER(25)    NOT NULL,
-    CREATEDDATE              TIMESTAMP     NOT NULL,
+    ID                          CHAR(36)      NOT NULL,
+    VAHEDCODE                   VARCHAR2(4)   NOT NULL,
+    CEO_APPROVAL_THRESHOLD      NUMBER(25)    NOT NULL,
+    BULK_APPROVE_LIMIT          NUMBER(25)    NOT NULL,
+    -- اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹): گروه تفصیلی‌ای که BENEFICIARY_TAFSILI_ID باید عضوش باشد. بدون FK
+    -- واقعی روی TB_TAFSIL_GROUP (همان الگوی ریسک #۹/#۱۴) — وجودش سمت Application کنترل می‌شود.
+    -- NULL یعنی «هنوز تعریف نشده» — ذی‌نفع تفصیلی‌دار نمی‌تواند ثبت شود تا این تعریف شود.
+    BENEFICIARY_TAFSIL_GROUP_ID CHAR(36),
+    CREATEDDATE                 TIMESTAMP     NOT NULL,
     UPDATEDDATE              TIMESTAMP,
     ADDUSERID                VARCHAR2(10)  NOT NULL,
     CHANGEUSERID             VARCHAR2(10),
@@ -78,7 +87,8 @@ CREATE TABLE TB_TR_PAYMENT_REQUEST
     INVOICE_REF                    VARCHAR2(100),
     INVOICE_APPROVED               NUMBER(1)     DEFAULT 0 NOT NULL,
     EXPENSE_ACCOUNT_ID             CHAR(36)      NOT NULL,   -- TB_ACCOUNTCODE.ID، بدون FK واقعی (بالا را ببین)
-    COST_CENTER_TAFSILI_ID         CHAR(36),
+    -- اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹): ستون تک‌سطحی COST_CENTER_TAFSILI_ID حذف شد — تفصیلی(های) مرکز
+    -- هزینه اکنون چندسطحی است، در TB_TR_PAYMENT_REQUEST_LINK_TAFSILI (پایین همین فایل).
     AMOUNT_BEFORE_TAX              NUMBER(25)    NOT NULL,
     VAT_PERCENT                    NUMBER(5, 2),
     VAT_AMOUNT                     NUMBER(25)    NOT NULL,
@@ -138,3 +148,37 @@ CREATE TABLE TB_TR_PAYMENT_REQUEST_EVENT
 
 -- Backs GET payment-requests/{id} (events)، ordered by CREATEDDATE.
 CREATE INDEX IDX_TR_PAYREQ_EVENT_PAYREQ ON TB_TR_PAYMENT_REQUEST_EVENT (PAYMENT_REQUEST_ID);
+
+--------------------------------------------------------------------------------------------------
+-- TB_TR_PAYMENT_REQUEST_LINK_TAFSILI — اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹، صاحب پروژه). تفصیلی(های) مرکز
+-- هزینهٔ یک درخواست پرداخت — یک ردیف به‌ازای هر سطح تفصیلی الزامی حساب هزینهٔ درخواست
+-- (EXPENSE_ACCOUNT_ID)، نه فقط سطح اول. هم‌شکل دقیق TB_PC_FUND_LINK_TAFSILI (050)، فقط
+-- PAYMENT_REQUEST_ID به‌جای FUND_ID. جدول permanently-embedded — مثل هر *_LINK_TAFSIL* دیگر،
+-- بدون AddAsync/GetForUpdateAsync مستقل خودش (docs/tamin-core-entity-reference.md بخش ۵؛
+-- NoIndependentLinkTableWritePathTests). جایگزین ستون تک‌سطحی حذف‌شدهٔ
+-- TB_TR_PAYMENT_REQUEST.COST_CENTER_TAFSILI_ID (بالا).
+--------------------------------------------------------------------------------------------------
+CREATE TABLE TB_TR_PAYMENT_REQUEST_LINK_TAFSILI
+(
+    ID                   CHAR(36)      NOT NULL,
+    PAYMENT_REQUEST_ID   CHAR(36)      NOT NULL,
+    TAFSILI_ID           CHAR(36)      NOT NULL,
+    LEVEL_ID             CHAR(36)      NOT NULL,
+    CREATEDDATE          TIMESTAMP     NOT NULL,
+    UPDATEDDATE          TIMESTAMP,
+    ADDUSERID            VARCHAR2(10)  NOT NULL,
+    CHANGEUSERID         VARCHAR2(10),
+    VAHEDCODE            VARCHAR2(4),
+    YEAR                 VARCHAR2(4),
+    ISDELETED            NUMBER(1)     DEFAULT 0 NOT NULL,
+    CONSTRAINT PK_TR_PAYREQ_LINK_TAFSILI PRIMARY KEY (ID),
+    CONSTRAINT FK_TR_PAYREQ_LINK_TAF_PAYREQ FOREIGN KEY (PAYMENT_REQUEST_ID)
+        REFERENCES TB_TR_PAYMENT_REQUEST (ID),
+    CONSTRAINT FK_TR_PAYREQ_LINK_TAF_TAF FOREIGN KEY (TAFSILI_ID)
+        REFERENCES TB_TAFSILI (ID),
+    CONSTRAINT FK_TR_PAYREQ_LINK_TAF_LVL FOREIGN KEY (LEVEL_ID)
+        REFERENCES TB_LEVEL_TAFSIL (ID)
+);
+
+-- Backs reconcile (Update، full-replace) و GET payment-requests/{id}.
+CREATE INDEX IDX_TR_PAYREQ_LINK_TAF_PAYREQ ON TB_TR_PAYMENT_REQUEST_LINK_TAFSILI (PAYMENT_REQUEST_ID);

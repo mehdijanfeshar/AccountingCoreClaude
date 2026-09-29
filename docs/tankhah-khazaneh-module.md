@@ -368,6 +368,19 @@ POST api/treasury/payment-requests/{id}/return           { reason }
 POST api/treasury/payment-requests/{id}/reject           { reason }
 POST api/treasury/payment-requests/bulk-approve          { ids: [] }
 GET  api/treasury/approval-cartable?pageNumber=&pageSize=
+GET  api/treasury/beneficiary-tafsilis?search=&pageNumber=&pageSize=
 ```
 
-فایل‌ها: `Accounting.Application/Treasury/**`، `Accounting.Infrastructure/Repositories/{PaymentRequest,TreasurySetting,TreasuryRole}*.cs`، `Accounting.Api/Controllers/TreasuryController.cs`.
+فایل‌ها: `Accounting.Application/Treasury/**`، `Accounting.Infrastructure/Repositories/{PaymentRequest,TreasurySetting,TreasuryRole,TreasuryBeneficiaryTafsili}*.cs`، `Accounting.Api/Controllers/TreasuryController.cs`.
+
+### اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹) — تفصیلی چندسطحی مرکز هزینه + تفصیلی ذی‌نفع اختیاری
+
+دو تصمیم صاحب پروژه، هر دو روی DDL اجرانشدهٔ `051_treasury_payment_request.sql` (در جا ویرایش شد، فایل جدید ساخته نشد):
+
+**آ) مرکز هزینه اکنون چندسطحی است.** ستون تک‌سطحی `COST_CENTER_TAFSILI_ID` حذف شد؛ به‌جایش جدول جدید `TB_TR_PAYMENT_REQUEST_LINK_TAFSILI` (هم‌شکل دقیق `TB_PC_FUND_LINK_TAFSILI` بخش ۳-ب/۹ — `ID, PAYMENT_REQUEST_ID, TAFSILI_ID, LEVEL_ID` + ستون‌های audit + `ISDELETED`؛ FK روی `TB_TR_PAYMENT_REQUEST`/`TB_TAFSILI`/`TB_LEVEL_TAFSIL`). جدول permanently-embedded — بدون `AddAsync`/`GetForUpdateAsync` مستقل (`IPaymentRequestRepository.AddCostCenterTafsiliLinkAsync`/`GetActiveCostCenterTafsiliLinksAsync`، parent-scoped، `NoIndependentLinkTableWritePathTests`-safe). `Create`/`UpdatePaymentRequestCommand` اکنون `costCenterTafsilis: [{ tafsiliId, levelId }]` می‌گیرند (Update = جایگزینی کامل، reconcile هم‌شکل `UpsertPettyCashFundTafsilisCommandHandler`). الزام سطح‌ها با همان `IVoucherTafsiliLevelGuard.EnsureSatisfiedAsync(expenseAccountId, links)` سند حسابداری کنترل می‌شود (خطاهای موجودِ ۴۰۰ — سطح الزامی جا افتاده / سطح غیرمجاز)؛ وجود هر `tafsiliId` هم جدا چک می‌شود (۴۰۴). منطق مشترک: `IPaymentRequestTafsiliValidator` (`Accounting.Application/Treasury/Commands/Common`)، هم در Create هم در Update فراخوانی می‌شود.
+
+**ب) تفصیلی ذی‌نفع اختیاری، از یک گروه تفصیلی تعریف‌شده به‌ازای واحد.** `TB_TR_SETTING.BENEFICIARY_TAFSIL_GROUP_ID CHAR(36) NULL` اضافه شد (بدون FK واقعی روی `TB_TAFSIL_GROUP`، وجودش سمت Application چک می‌شود). `POST api/treasury/settings` این مقدار را می‌گیرد (۴۰۴ اگر گروه وجود نداشته باشد/حذف‌شده باشد). `Create`/`UpdatePaymentRequestCommand` همان `beneficiaryTafsiliId` قبلی را (که همیشه null بود) اکنون واقعاً می‌پذیرند: اگر مقدار دارد ولی واحد گروهی تعریف نکرده → ۴۰۹ (`PaymentRequestBeneficiaryGroupNotConfiguredException`)؛ اگر گروه تعریف شده ولی تفصیلی عضوش نیست (چک از `TB_TAFSIL_LINK_TAFSILGROUP`، غیرحذف‌شده) → ۴۰۰ (`PaymentRequestBeneficiaryTafsiliNotInGroupException`). Endpoint جدید `GET api/treasury/beneficiary-tafsilis?search=&pageNumber=&pageSize=` برای picker فرانت — گروه واحد را از `TB_TR_SETTING` می‌خواند و صفحه‌ای از تفصیلی‌های عضو آن گروه برمی‌گرداند؛ صفحهٔ خالی (نه خطا) اگر گروهی تعریف نشده.
+
+**Detail DTO (`GET payment-requests/{id}`)** اکنون `costCenterTafsilis: [{ levelId, levelName, tafsiliId, tafsiliCode, tafsiliName }]` (به‌جای `costCenterTafsiliId`) و `beneficiaryTafsiliCode`/`beneficiaryTafsiliName` را کنار `beneficiaryTafsiliId` برمی‌گرداند. List DTO تغییری نکرد (بدون نمایش تفصیلی — ارزان نگه داشته شد).
+
+فایل‌های تازه/تغییریافتهٔ کلیدی: `TB_TR_PAYMENT_REQUEST_LINK_TAFSILI` (Domain entity + `LegacyDbContext` mapping)، `Accounting.Application/Treasury/Commands/Common/{PaymentRequestTafsiliLinkInput,IPaymentRequestTafsiliValidator,PaymentRequestTafsiliValidator}.cs`، `Accounting.Application/Common/Interfaces/ITreasuryBeneficiaryTafsiliReadRepository.cs` + `Accounting.Infrastructure/Repositories/TreasuryBeneficiaryTafsiliReadRepository.cs`، `Accounting.Application/Treasury/Queries/GetBeneficiaryTafsilis/**`، دو exception جدید (`PaymentRequestBeneficiaryGroupNotConfiguredException` ۴۰۹، `PaymentRequestBeneficiaryTafsiliNotInGroupException` ۴۰۰) در `GlobalExceptionHandler`.

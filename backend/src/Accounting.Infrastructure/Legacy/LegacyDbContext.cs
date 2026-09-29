@@ -130,6 +130,9 @@ public partial class LegacyDbContext : DbContext
 
     public virtual DbSet<TB_TR_PAYMENT_REQUEST_EVENT> TB_TR_PAYMENT_REQUEST_EVENTs { get; set; }
 
+    // اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹) — تفصیلی(های) چندسطحی مرکز هزینهٔ درخواست پرداخت.
+    public virtual DbSet<TB_TR_PAYMENT_REQUEST_LINK_TAFSILI> TB_TR_PAYMENT_REQUEST_LINK_TAFSILIs { get; set; }
+
     public virtual DbSet<TB_TR_ROLE> TB_TR_ROLEs { get; set; }
 
     public virtual DbSet<TB_TR_SETTING> TB_TR_SETTINGs { get; set; }
@@ -1824,6 +1827,12 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.CEO_APPROVAL_THRESHOLD).HasColumnType("NUMBER(25)");
             entity.Property(e => e.BULK_APPROVE_LIMIT).HasColumnType("NUMBER(25)");
+            // اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹) — بدون FK واقعی روی TB_TAFSIL_GROUP (ریسک #۹/#۱۴).
+            entity.Property(e => e.BENEFICIARY_TAFSIL_GROUP_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.ADDUSERID)
@@ -1918,11 +1927,6 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.INVOICE_APPROVED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.EXPENSE_ACCOUNT_ID)
-                .HasMaxLength(36)
-                .IsUnicode(false)
-                .HasConversion(GuidToChar36Converter.Instance)
-                .IsFixedLength();
-            entity.Property(e => e.COST_CENTER_TAFSILI_ID)
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasConversion(GuidToChar36Converter.Instance)
@@ -2023,6 +2027,68 @@ public partial class LegacyDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(d => d.PAYMENT_REQUEST_ID)
                 .HasConstraintName("FK_TR_PAYREQ_EVENT_PAYREQ");
+        });
+
+        // اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹) — تفصیلی(های) چندسطحی مرکز هزینهٔ درخواست پرداخت. هم‌شکل دقیق
+        // TB_PC_FUND_LINK_TAFSILI. permanently-embedded — بدون AddAsync/GetForUpdateAsync مستقل.
+        modelBuilder.Entity<TB_TR_PAYMENT_REQUEST_LINK_TAFSILI>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_TR_PAYREQ_LINK_TAFSILI");
+
+            entity.ToTable("TB_TR_PAYMENT_REQUEST_LINK_TAFSILI");
+
+            entity.HasIndex(e => e.PAYMENT_REQUEST_ID, "IDX_TR_PAYREQ_LINK_TAF_PAYREQ");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.PAYMENT_REQUEST_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.TAFSILI_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.LEVEL_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+
+            entity.HasOne(d => d.PAYMENT_REQUEST)
+                .WithMany()
+                .HasForeignKey(d => d.PAYMENT_REQUEST_ID)
+                .HasConstraintName("FK_TR_PAYREQ_LINK_TAF_PAYREQ");
+
+            entity.HasOne(d => d.TAFSILI)
+                .WithMany()
+                .HasForeignKey(d => d.TAFSILI_ID)
+                .HasConstraintName("FK_TR_PAYREQ_LINK_TAF_TAF");
+
+            entity.HasOne(d => d.LEVEL)
+                .WithMany()
+                .HasForeignKey(d => d.LEVEL_ID)
+                .HasConstraintName("FK_TR_PAYREQ_LINK_TAF_LVL");
         });
 
         modelBuilder.Entity<TB_CHECK>(entity =>

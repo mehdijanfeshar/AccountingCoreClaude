@@ -9,6 +9,10 @@ public sealed class UpsertTreasurySettingCommandValidator : AbstractValidator<Up
         RuleFor(x => x.CeoApprovalThreshold).GreaterThan(0m);
         RuleFor(x => x.BulkApproveLimit).GreaterThan(0m);
 
+        RuleFor(x => x.BeneficiaryTafsilGroupId)
+            .NotEqual(Guid.Empty)
+            .When(x => x.BeneficiaryTafsilGroupId.HasValue);
+
         RuleFor(x => x.VahedCode)
             .NotEmpty()
             .MaximumLength(4);
