@@ -120,6 +120,22 @@ public static class DependencyInjection
         services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestExecutionAuthorizer,
             Accounting.Application.Treasury.Commands.Common.PaymentRequestExecutionAuthorizer>();
 
+        // خزانه‌داری، بخش ۴-ج (۲۰۲۶-۰۹-۲۹) — دریافت وجه + انتقال وجه
+        // (docs/tankhah-khazaneh-module.md §۱۰). Reuses بخش-۴-ب's PaymentRequestVoucherBuildResult
+        // shape and IPayReciveHeadRepository — see each type's own XML doc.
+        services.AddScoped<Accounting.Application.Treasury.Commands.Common.ITreasuryTreasurerAuthorizer,
+            Accounting.Application.Treasury.Commands.Common.TreasuryTreasurerAuthorizer>();
+        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IReceiptPayerValidator,
+            Accounting.Application.Treasury.Commands.Common.ReceiptPayerValidator>();
+        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IReceiptVoucherBuilder,
+            Accounting.Application.Treasury.Commands.Common.ReceiptVoucherBuilder>();
+        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IReceiptRegistrationService,
+            Accounting.Application.Treasury.Commands.Common.ReceiptRegistrationService>();
+        services.AddScoped<Accounting.Application.Treasury.Commands.Common.ITransferVoucherBuilder,
+            Accounting.Application.Treasury.Commands.Common.TransferVoucherBuilder>();
+        services.AddScoped<Accounting.Application.Treasury.Commands.Common.ITransferApprovalService,
+            Accounting.Application.Treasury.Commands.Common.TransferApprovalService>();
+
         return services;
     }
 }

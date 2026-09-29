@@ -22,6 +22,24 @@ namespace Accounting.Application.Treasury.Queries;
 /// <param name="InsurancePayableAccountId">بخش ۴-ب — <c>TB_TR_SETTING.INSURANCE_PAYABLE_ACCOUNT_ID</c> («حساب بستانکاران بیمه»).</param>
 /// <param name="InsurancePayableAccountCode">نمایشی، فقط وقتی <paramref name="InsurancePayableAccountId"/> مقدار دارد.</param>
 /// <param name="InsurancePayableAccountName">نمایشی، فقط وقتی <paramref name="InsurancePayableAccountId"/> مقدار دارد.</param>
+/// <param name="ReceivablesAccountId">
+/// بخش ۴-ج (۲۰۲۶-۰۹-۲۹) — <c>TB_TR_SETTING.RECEIVABLES_ACCOUNT_ID</c> («حساب‌های دریافتنی»).
+/// <see langword="null"/> یعنی هنوز تعریف نشده — <c>register</c> دریافت با ۴۰۹ رد می‌شود.
+/// </param>
+/// <param name="ReceivablesAccountCode">نمایشی — <c>TB_ACCOUNTCODE.ACCCODE</c>، فقط وقتی <paramref name="ReceivablesAccountId"/> مقدار دارد.</param>
+/// <param name="ReceivablesAccountName">نمایشی — <c>TB_ACCOUNTCODE.ACCCODENAME</c>، فقط وقتی <paramref name="ReceivablesAccountId"/> مقدار دارد.</param>
+/// <param name="CustomerTafsilGroupId">
+/// بخش ۴-ج — <c>TB_TR_SETTING.CUSTOMER_TAFSIL_GROUP_ID</c> — گروه تفصیلی مشتریان (پرداخت‌کنندگان
+/// دریافت وجه)، جدا از <paramref name="BeneficiaryTafsilGroupId"/>. <see langword="null"/> یعنی
+/// هنوز تعریف نشده.
+/// </param>
+/// <param name="CustomerTafsilGroupCode">نمایشی، فقط وقتی <paramref name="CustomerTafsilGroupId"/> مقدار دارد.</param>
+/// <param name="CustomerTafsilGroupName">نمایشی، فقط وقتی <paramref name="CustomerTafsilGroupId"/> مقدار دارد.</param>
+/// <param name="DailyTransferLimit">
+/// بخش ۴-ج — <c>TB_TR_SETTING.DAILY_TRANSFER_LIMIT</c> — سقف مجموع انتقال‌های اجراشده از یک حساب
+/// مبدأ در یک روز. <see langword="null"/> یعنی هنوز تعریف نشده — <c>approve</c> انتقال با ۴۰۹ رد
+/// می‌شود.
+/// </param>
 public sealed record TreasurySettingDto(
     Guid Id,
     decimal CeoApprovalThreshold,
@@ -37,4 +55,11 @@ public sealed record TreasurySettingDto(
     string? VatCreditAccountName,
     Guid? InsurancePayableAccountId,
     string? InsurancePayableAccountCode,
-    string? InsurancePayableAccountName);
+    string? InsurancePayableAccountName,
+    Guid? ReceivablesAccountId,
+    string? ReceivablesAccountCode,
+    string? ReceivablesAccountName,
+    Guid? CustomerTafsilGroupId,
+    string? CustomerTafsilGroupCode,
+    string? CustomerTafsilGroupName,
+    decimal? DailyTransferLimit);

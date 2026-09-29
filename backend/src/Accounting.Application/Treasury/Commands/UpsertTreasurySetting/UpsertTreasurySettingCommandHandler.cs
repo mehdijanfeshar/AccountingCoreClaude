@@ -59,6 +59,24 @@ public sealed class UpsertTreasurySettingCommandHandler : IRequestHandler<Upsert
             "VatCreditAccount", request.VatCreditAccountId, cancellationToken);
         var (insuranceCode, insuranceName) = await EnsureAccountCodeExistsAsync(
             "InsurancePayableAccount", request.InsurancePayableAccountId, cancellationToken);
+        var (receivablesCode, receivablesName) = await EnsureAccountCodeExistsAsync(
+            "ReceivablesAccount", request.ReceivablesAccountId, cancellationToken);
+
+        string? customerGroupCode = null;
+        string? customerGroupName = null;
+
+        if (request.CustomerTafsilGroupId is { } customerGroupId)
+        {
+            var customerGroup = await _tafsilGroupReadRepository.GetByIdAsync(customerGroupId, cancellationToken);
+
+            if (customerGroup is null || customerGroup.IsDeleted)
+            {
+                throw new NotFoundException("TafsilGroup", customerGroupId);
+            }
+
+            customerGroupCode = customerGroup.TafsilGroupCode;
+            customerGroupName = customerGroup.TafsilGroupName;
+        }
 
         var now = DateTime.UtcNow;
         var userId = _currentUser.UserId;
@@ -77,6 +95,9 @@ public sealed class UpsertTreasurySettingCommandHandler : IRequestHandler<Upsert
                 PAYABLES_ACCOUNT_ID = request.PayablesAccountId,
                 VAT_CREDIT_ACCOUNT_ID = request.VatCreditAccountId,
                 INSURANCE_PAYABLE_ACCOUNT_ID = request.InsurancePayableAccountId,
+                RECEIVABLES_ACCOUNT_ID = request.ReceivablesAccountId,
+                CUSTOMER_TAFSIL_GROUP_ID = request.CustomerTafsilGroupId,
+                DAILY_TRANSFER_LIMIT = request.DailyTransferLimit,
                 ADDUSERID = userId,
                 CREATEDDATE = now,
                 ISDELETED = false,
@@ -92,6 +113,9 @@ public sealed class UpsertTreasurySettingCommandHandler : IRequestHandler<Upsert
             setting.PAYABLES_ACCOUNT_ID = request.PayablesAccountId;
             setting.VAT_CREDIT_ACCOUNT_ID = request.VatCreditAccountId;
             setting.INSURANCE_PAYABLE_ACCOUNT_ID = request.InsurancePayableAccountId;
+            setting.RECEIVABLES_ACCOUNT_ID = request.ReceivablesAccountId;
+            setting.CUSTOMER_TAFSIL_GROUP_ID = request.CustomerTafsilGroupId;
+            setting.DAILY_TRANSFER_LIMIT = request.DailyTransferLimit;
             setting.CHANGEUSERID = userId;
             setting.UPDATEDDATE = now;
         }
@@ -113,7 +137,14 @@ public sealed class UpsertTreasurySettingCommandHandler : IRequestHandler<Upsert
             vatName,
             setting.INSURANCE_PAYABLE_ACCOUNT_ID,
             insuranceCode,
-            insuranceName);
+            insuranceName,
+            setting.RECEIVABLES_ACCOUNT_ID,
+            receivablesCode,
+            receivablesName,
+            setting.CUSTOMER_TAFSIL_GROUP_ID,
+            customerGroupCode,
+            customerGroupName,
+            setting.DAILY_TRANSFER_LIMIT);
     }
 
     private async Task<(string? Code, string? Name)> EnsureAccountCodeExistsAsync(

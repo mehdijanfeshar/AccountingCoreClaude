@@ -25,6 +25,18 @@ public sealed class UpsertTreasurySettingCommandValidator : AbstractValidator<Up
             .NotEqual(Guid.Empty)
             .When(x => x.InsurancePayableAccountId.HasValue);
 
+        RuleFor(x => x.ReceivablesAccountId)
+            .NotEqual(Guid.Empty)
+            .When(x => x.ReceivablesAccountId.HasValue);
+
+        RuleFor(x => x.CustomerTafsilGroupId)
+            .NotEqual(Guid.Empty)
+            .When(x => x.CustomerTafsilGroupId.HasValue);
+
+        RuleFor(x => x.DailyTransferLimit)
+            .GreaterThan(0m)
+            .When(x => x.DailyTransferLimit.HasValue);
+
         RuleFor(x => x.VahedCode)
             .NotEmpty()
             .MaximumLength(4);

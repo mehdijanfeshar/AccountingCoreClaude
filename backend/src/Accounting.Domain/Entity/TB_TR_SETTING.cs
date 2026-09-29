@@ -47,6 +47,29 @@ public partial class TB_TR_SETTING
     /// </summary>
     public Guid? INSURANCE_PAYABLE_ACCOUNT_ID { get; set; }
 
+    /// <summary>
+    /// بخش ۴-ج (۲۰۲۶-۰۹-۲۹) — حساب معین «حساب‌های دریافتنی» که ردیف بستانکار سند «دریافت» روی آن
+    /// نوشته می‌شود. FK به <c>TB_ACCOUNTCODE</c>، بدون FK واقعی در EF (همان الگوی ریسک #۹/#۱۴).
+    /// <see langword="null"/> یعنی هنوز تعریف نشده — <c>register</c> دریافت با ۴۰۹ رد می‌شود.
+    /// </summary>
+    public Guid? RECEIVABLES_ACCOUNT_ID { get; set; }
+
+    /// <summary>
+    /// بخش ۴-ج — گروه تفصیلی‌ای که <c>TB_TR_RECEIPT.PAYER_TAFSILI_ID</c> باید عضوش باشد (از طریق
+    /// <c>TB_TAFSIL_LINK_TAFSILGROUP</c>) — همان الگوی <see cref="BENEFICIARY_TAFSIL_GROUP_ID"/>
+    /// ولی گروهی کاملاً جدا («مشتریان»، نه «ذی‌نفعان پرداخت»). بدون FK واقعی روی
+    /// <c>TB_TAFSIL_GROUP</c>. <see langword="null"/> یعنی هنوز تعریف نشده — هیچ دریافتی نمی‌تواند
+    /// ثبت شود تا این تعریف شود.
+    /// </summary>
+    public Guid? CUSTOMER_TAFSIL_GROUP_ID { get; set; }
+
+    /// <summary>
+    /// بخش ۴-ج — سقف مجموع انتقال‌های اجراشده از یک حساب بانکی مبدأ در یک روز (شمسی). بدون مقدار
+    /// پیش‌فرض — تا وقتی تعریف نشود، <c>approve</c> انتقال با ۴۰۹ رد می‌شود (owner decision
+    /// ۲۰۲۶-۰۹-۲۹: «سقف روزانهٔ انتقال (تنظیم، بدون پیش‌فرض؛ نبود آن ⇒ ۴۰۹)»).
+    /// </summary>
+    public decimal? DAILY_TRANSFER_LIMIT { get; set; }
+
     public DateTime CREATEDDATE { get; set; }
 
     public DateTime? UPDATEDDATE { get; set; }

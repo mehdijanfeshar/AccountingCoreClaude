@@ -1,26 +1,46 @@
 using Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems;
 using Accounting.Application.Common;
 using Accounting.Application.Treasury.Commands.ApprovePaymentRequest;
+using Accounting.Application.Treasury.Commands.ApproveTransfer;
 using Accounting.Application.Treasury.Commands.BulkApprovePaymentRequests;
+using Accounting.Application.Treasury.Commands.CancelReceipt;
 using Accounting.Application.Treasury.Commands.Common;
 using Accounting.Application.Treasury.Commands.CreatePaymentRequest;
+using Accounting.Application.Treasury.Commands.CreateReceipt;
+using Accounting.Application.Treasury.Commands.CreateTransfer;
 using Accounting.Application.Treasury.Commands.CreateTreasuryRole;
 using Accounting.Application.Treasury.Commands.DeletePaymentRequest;
+using Accounting.Application.Treasury.Commands.DeleteReceipt;
+using Accounting.Application.Treasury.Commands.DeleteTransfer;
 using Accounting.Application.Treasury.Commands.DeleteTreasuryRole;
 using Accounting.Application.Treasury.Commands.ExecutePaymentRequest;
+using Accounting.Application.Treasury.Commands.RegisterReceipt;
 using Accounting.Application.Treasury.Commands.RejectPaymentRequest;
+using Accounting.Application.Treasury.Commands.RejectTransfer;
 using Accounting.Application.Treasury.Commands.ResumePaymentRequest;
 using Accounting.Application.Treasury.Commands.ReturnPaymentRequest;
+using Accounting.Application.Treasury.Commands.ReturnTransfer;
 using Accounting.Application.Treasury.Commands.SubmitPaymentRequest;
+using Accounting.Application.Treasury.Commands.SubmitTransfer;
 using Accounting.Application.Treasury.Commands.SuspendPaymentRequest;
 using Accounting.Application.Treasury.Commands.UpdatePaymentRequest;
+using Accounting.Application.Treasury.Commands.UpdateReceipt;
+using Accounting.Application.Treasury.Commands.UpdateTransfer;
 using Accounting.Application.Treasury.Commands.UpsertTreasurySetting;
 using Accounting.Application.Treasury.Queries;
 using Accounting.Application.Treasury.Queries.GetApprovalCartable;
+using Accounting.Application.Treasury.Queries.GetBankAccountBalance;
 using Accounting.Application.Treasury.Queries.GetBeneficiaryTafsilis;
+using Accounting.Application.Treasury.Queries.GetCustomerTafsilis;
 using Accounting.Application.Treasury.Queries.GetPaymentRequestAccounting;
 using Accounting.Application.Treasury.Queries.GetPaymentRequestById;
 using Accounting.Application.Treasury.Queries.GetPaymentRequests;
+using Accounting.Application.Treasury.Queries.GetReceiptAccounting;
+using Accounting.Application.Treasury.Queries.GetReceiptById;
+using Accounting.Application.Treasury.Queries.GetReceipts;
+using Accounting.Application.Treasury.Queries.GetTransferAccounting;
+using Accounting.Application.Treasury.Queries.GetTransferById;
+using Accounting.Application.Treasury.Queries.GetTransfers;
 using Accounting.Application.Treasury.Queries.GetTreasuryRoles;
 using Accounting.Application.Treasury.Queries.GetTreasurySetting;
 using Accounting.Domain.ValueObjects;
@@ -87,7 +107,10 @@ public sealed class TreasuryController : ControllerBase
                 request.BeneficiaryTafsilGroupId,
                 request.PayablesAccountId,
                 request.VatCreditAccountId,
-                request.InsurancePayableAccountId),
+                request.InsurancePayableAccountId,
+                request.ReceivablesAccountId,
+                request.CustomerTafsilGroupId,
+                request.DailyTransferLimit),
             cancellationToken);
 
         return Ok(result);
@@ -467,6 +490,389 @@ public sealed class TreasuryController : ControllerBase
 
         return Ok(result);
     }
+
+    // ==================== بخش ۴-ج: دریافت وجه ====================
+
+    /// <summary>صفحه‌ای از دریافت‌های وجه، به‌همراه شمار هر وضعیت (بی‌اثر از فیلتر state).</summary>
+    [HttpGet("receipts")]
+    [ProducesResponseType(typeof(ReceiptListResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetReceipts(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] ReceiptState? state = null,
+        [FromQuery] string? search = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(new GetReceiptsQuery(pageNumber, pageSize, state, search), cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>یک دریافت وجه، یا 404.</summary>
+    [HttpGet("receipts/{id:guid}")]
+    [ProducesResponseType(typeof(ReceiptDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetReceiptById(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetReceiptByIdQuery(id), cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>
+    /// ایجاد یک دریافت وجه به‌صورت پیش‌نویس، یا — وقتی <see cref="CreateTreasuryReceiptRequest.Register"/>
+    /// true باشد — ثبت بلافاصله (صدور سند GL + Legacy PayReciv).
+    /// </summary>
+    [HttpPost("receipts")]
+    [ProducesResponseType(typeof(CreateTreasuryReceiptResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateReceipt(
+        [FromBody] CreateTreasuryReceiptRequest request, CancellationToken cancellationToken)
+    {
+        var command = new CreateReceiptCommand(
+            request.PayerTafsiliId,
+            request.Amount,
+            request.BankAccountId,
+            request.ReceiptMethod,
+            request.ReceiptDate,
+            request.BankReference,
+            request.InvoiceRef,
+            request.Description,
+            request.Year,
+            request.Register);
+
+        var id = await _mediator.Send(command, cancellationToken);
+
+        return CreatedAtAction(nameof(GetReceiptById), new { id }, new CreateTreasuryReceiptResponse(id));
+    }
+
+    /// <summary>جایگزینی کامل. فقط پیش‌نویس.</summary>
+    [HttpPost("receipts/{id:guid}/update")]
+    [ProducesResponseType(typeof(UpdateTreasuryReceiptResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateReceipt(
+        Guid id, [FromBody] UpdateTreasuryReceiptRequest request, CancellationToken cancellationToken)
+    {
+        var command = new UpdateReceiptCommand(
+            id,
+            request.PayerTafsiliId,
+            request.Amount,
+            request.BankAccountId,
+            request.ReceiptMethod,
+            request.ReceiptDate,
+            request.BankReference,
+            request.InvoiceRef,
+            request.Description);
+
+        await _mediator.Send(command, cancellationToken);
+
+        return Ok(new UpdateTreasuryReceiptResponse(id));
+    }
+
+    /// <summary>حذف نرم. فقط پیش‌نویس.</summary>
+    [HttpPost("receipts/{id:guid}/delete")]
+    [ProducesResponseType(typeof(DeleteTreasuryReceiptResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteReceipt(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeleteReceiptCommand(id), cancellationToken);
+
+        return Ok(new DeleteTreasuryReceiptResponse(id));
+    }
+
+    /// <summary>صدور سند GL موقت «دریافت» + Legacy TB_PAYRECIVHEAD/DETAIL. فقط خزانه‌دار، فقط از پیش‌نویس.</summary>
+    [HttpPost("receipts/{id:guid}/register")]
+    [ProducesResponseType(typeof(RegisterTreasuryReceiptResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> RegisterReceipt(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new RegisterReceiptCommand(id), cancellationToken);
+
+        return Ok(new RegisterTreasuryReceiptResponse(id));
+    }
+
+    /// <summary>لغو. فقط پیش‌نویس — دریافتِ ثبت‌شده از طریق سندش اصلاح می‌شود، نه اینجا.</summary>
+    [HttpPost("receipts/{id:guid}/cancel")]
+    [ProducesResponseType(typeof(CancelTreasuryReceiptResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CancelReceipt(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new CancelReceiptCommand(id), cancellationToken);
+
+        return Ok(new CancelTreasuryReceiptResponse(id));
+    }
+
+    /// <summary>سند GL «دریافت» (اگر صادر شده باشد) + کد Legacy PayReciv.</summary>
+    [HttpGet("receipts/{id:guid}/accounting")]
+    [ProducesResponseType(typeof(ReceiptAccountingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetReceiptAccounting(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetReceiptAccountingQuery(id), cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    // ==================== بخش ۴-ج: انتقال وجه ====================
+
+    /// <summary>صفحه‌ای از انتقال‌های وجه، به‌همراه شمار هر وضعیت.</summary>
+    [HttpGet("transfers")]
+    [ProducesResponseType(typeof(TransferListResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTransfers(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] TransferState? state = null,
+        [FromQuery] string? search = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(new GetTransfersQuery(pageNumber, pageSize, state, search), cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>یک انتقال وجه، با «گردش عملیات»، یا 404.</summary>
+    [HttpGet("transfers/{id:guid}")]
+    [ProducesResponseType(typeof(TransferDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTransferById(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetTransferByIdQuery(id), cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>ایجاد یک انتقال وجه به‌صورت پیش‌نویس.</summary>
+    [HttpPost("transfers")]
+    [ProducesResponseType(typeof(CreateTransferResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> CreateTransfer(
+        [FromBody] CreateTransferRequest request, CancellationToken cancellationToken)
+    {
+        var command = new CreateTransferCommand(
+            request.SourceBankAccountId,
+            request.DestBankAccountId,
+            request.Amount,
+            request.TransferDate,
+            request.TransferMethod,
+            request.Reason,
+            request.Year);
+
+        var id = await _mediator.Send(command, cancellationToken);
+
+        return CreatedAtAction(nameof(GetTransferById), new { id }, new CreateTransferResponse(id));
+    }
+
+    /// <summary>جایگزینی کامل. فقط پیش‌نویس یا برگشتی.</summary>
+    [HttpPost("transfers/{id:guid}/update")]
+    [ProducesResponseType(typeof(UpdateTransferResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UpdateTransfer(
+        Guid id, [FromBody] UpdateTransferRequest request, CancellationToken cancellationToken)
+    {
+        var command = new UpdateTransferCommand(
+            id,
+            request.SourceBankAccountId,
+            request.DestBankAccountId,
+            request.Amount,
+            request.TransferDate,
+            request.TransferMethod,
+            request.Reason);
+
+        await _mediator.Send(command, cancellationToken);
+
+        return Ok(new UpdateTransferResponse(id));
+    }
+
+    /// <summary>حذف نرم. فقط پیش‌نویس یا برگشتی.</summary>
+    [HttpPost("transfers/{id:guid}/delete")]
+    [ProducesResponseType(typeof(DeleteTransferResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteTransfer(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeleteTransferCommand(id), cancellationToken);
+
+        return Ok(new DeleteTransferResponse(id));
+    }
+
+    /// <summary>پیش‌نویس/برگشتی → در انتظار اقدام خزانه‌دار. بدون بدنه.</summary>
+    [HttpPost("transfers/{id:guid}/submit")]
+    [ProducesResponseType(typeof(SubmitTransferResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> SubmitTransfer(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new SubmitTransferCommand(id), cancellationToken);
+
+        return Ok(new SubmitTransferResponse(id));
+    }
+
+    /// <summary>
+    /// تأیید — دو کنترل مسدودکننده (موجودی مبدأ، سقف روزانه)، سپس صدور سند GL موقت. فقط
+    /// خزانه‌دار، ≠ ثبت‌کننده، فقط از «در انتظار اقدام خزانه‌دار».
+    /// </summary>
+    [HttpPost("transfers/{id:guid}/approve")]
+    [ProducesResponseType(typeof(ApproveTransferResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ApproveTransfer(
+        Guid id, [FromBody] ApproveTransferRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new ApproveTransferCommand(id, request.BankReference), cancellationToken);
+
+        return Ok(new ApproveTransferResponse(id));
+    }
+
+    /// <summary>بازگشت به ثبت‌کننده برای اصلاح. دلیل اجباری. فقط خزانه‌دار، ≠ ثبت‌کننده.</summary>
+    [HttpPost("transfers/{id:guid}/return")]
+    [ProducesResponseType(typeof(ReturnTransferResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ReturnTransfer(
+        Guid id, [FromBody] ReturnTransferRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new ReturnTransferCommand(id, request.Reason), cancellationToken);
+
+        return Ok(new ReturnTransferResponse(id));
+    }
+
+    /// <summary>رد پایانی. دلیل اجباری. فقط خزانه‌دار، ≠ ثبت‌کننده.</summary>
+    [HttpPost("transfers/{id:guid}/reject")]
+    [ProducesResponseType(typeof(RejectTransferResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> RejectTransfer(
+        Guid id, [FromBody] RejectTransferRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new RejectTransferCommand(id, request.Reason), cancellationToken);
+
+        return Ok(new RejectTransferResponse(id));
+    }
+
+    /// <summary>سند GL «انتقال» (اگر صادر شده باشد).</summary>
+    [HttpGet("transfers/{id:guid}/accounting")]
+    [ProducesResponseType(typeof(TransferAccountingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetTransferAccounting(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetTransferAccountingQuery(id), cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    // ==================== بخش ۴-ج: موجودی حساب بانکی + تفصیلی مشتریان ====================
+
+    /// <summary>موجودی فعلی (سال شمسی جاری) یک حساب بانکی — برای «موجودی فعلی/پس از انتقال» فرانت.</summary>
+    [HttpGet("bank-accounts/{id:guid}/balance")]
+    [ProducesResponseType(typeof(BankAccountBalanceDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetBankAccountBalance(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetBankAccountBalanceQuery(id), cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>
+    /// صفحه‌ای از تفصیلی(های) عضو گروه تفصیلی مشتریانِ تعریف‌شده برای واحد — صفحهٔ خالی (نه خطا)
+    /// اگر واحد هنوز گروهی تعریف نکرده باشد.
+    /// </summary>
+    [HttpGet("customer-tafsilis")]
+    [ProducesResponseType(typeof(PagedResult<TafsiliLookupItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetCustomerTafsilis(
+        [FromQuery] string? search = null,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(
+            new GetCustomerTafsilisQuery(search, pageNumber, pageSize), cancellationToken);
+
+        return Ok(result);
+    }
 }
 
 // ==================== تنظیمات: request/response DTOs ====================
@@ -478,7 +884,10 @@ public sealed record UpsertTreasurySettingRequest(
     Guid? BeneficiaryTafsilGroupId,
     Guid? PayablesAccountId,
     Guid? VatCreditAccountId,
-    Guid? InsurancePayableAccountId);
+    Guid? InsurancePayableAccountId,
+    Guid? ReceivablesAccountId,
+    Guid? CustomerTafsilGroupId,
+    decimal? DailyTransferLimit);
 
 // ==================== نقش‌ها: request/response DTOs ====================
 
@@ -588,3 +997,95 @@ public sealed record SuspendPaymentRequestResponse(Guid Id);
 
 /// <summary>Response body for a successful <see cref="TreasuryController.ResumePaymentRequest"/> call.</summary>
 public sealed record ResumePaymentRequestResponse(Guid Id);
+
+// ==================== بخش ۴-ج: دریافت وجه — request/response DTOs ====================
+
+/// <summary>Request body for <see cref="TreasuryController.CreateReceipt"/>.</summary>
+public sealed record CreateTreasuryReceiptRequest(
+    Guid PayerTafsiliId,
+    decimal Amount,
+    Guid BankAccountId,
+    TreasuryPaymentMethod ReceiptMethod,
+    string ReceiptDate,
+    string BankReference,
+    string? InvoiceRef,
+    string? Description,
+    string Year,
+    bool Register);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.CreateReceipt"/> call.</summary>
+public sealed record CreateTreasuryReceiptResponse(Guid Id);
+
+/// <summary>Request body for <see cref="TreasuryController.UpdateReceipt"/>. <c>Id</c> is taken from the route.</summary>
+public sealed record UpdateTreasuryReceiptRequest(
+    Guid PayerTafsiliId,
+    decimal Amount,
+    Guid BankAccountId,
+    TreasuryPaymentMethod ReceiptMethod,
+    string ReceiptDate,
+    string BankReference,
+    string? InvoiceRef,
+    string? Description);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.UpdateReceipt"/> call.</summary>
+public sealed record UpdateTreasuryReceiptResponse(Guid Id);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.DeleteReceipt"/> call.</summary>
+public sealed record DeleteTreasuryReceiptResponse(Guid Id);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.RegisterReceipt"/> call.</summary>
+public sealed record RegisterTreasuryReceiptResponse(Guid Id);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.CancelReceipt"/> call.</summary>
+public sealed record CancelTreasuryReceiptResponse(Guid Id);
+
+// ==================== بخش ۴-ج: انتقال وجه — request/response DTOs ====================
+
+/// <summary>Request body for <see cref="TreasuryController.CreateTransfer"/>.</summary>
+public sealed record CreateTransferRequest(
+    Guid SourceBankAccountId,
+    Guid DestBankAccountId,
+    decimal Amount,
+    string TransferDate,
+    TreasuryPaymentMethod TransferMethod,
+    string Reason,
+    string Year);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.CreateTransfer"/> call.</summary>
+public sealed record CreateTransferResponse(Guid Id);
+
+/// <summary>Request body for <see cref="TreasuryController.UpdateTransfer"/>. <c>Id</c> is taken from the route.</summary>
+public sealed record UpdateTransferRequest(
+    Guid SourceBankAccountId,
+    Guid DestBankAccountId,
+    decimal Amount,
+    string TransferDate,
+    TreasuryPaymentMethod TransferMethod,
+    string Reason);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.UpdateTransfer"/> call.</summary>
+public sealed record UpdateTransferResponse(Guid Id);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.DeleteTransfer"/> call.</summary>
+public sealed record DeleteTransferResponse(Guid Id);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.SubmitTransfer"/> call.</summary>
+public sealed record SubmitTransferResponse(Guid Id);
+
+/// <summary>Request body for <see cref="TreasuryController.ApproveTransfer"/>.</summary>
+public sealed record ApproveTransferRequest(string BankReference);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.ApproveTransfer"/> call.</summary>
+public sealed record ApproveTransferResponse(Guid Id);
+
+/// <summary>Request body for <see cref="TreasuryController.ReturnTransfer"/>.</summary>
+public sealed record ReturnTransferRequest(string Reason);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.ReturnTransfer"/> call.</summary>
+public sealed record ReturnTransferResponse(Guid Id);
+
+/// <summary>Request body for <see cref="TreasuryController.RejectTransfer"/>.</summary>
+public sealed record RejectTransferRequest(string Reason);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.RejectTransfer"/> call.</summary>
+public sealed record RejectTransferResponse(Guid Id);

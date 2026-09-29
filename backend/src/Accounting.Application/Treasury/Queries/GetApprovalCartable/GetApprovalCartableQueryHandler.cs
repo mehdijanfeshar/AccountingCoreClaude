@@ -10,13 +10,16 @@ using MediatR;
 namespace Accounting.Application.Treasury.Queries.GetApprovalCartable;
 
 /// <summary>
-/// Merges two independent, flat sources into one کارتابل, in C# (never a cross-module SQL join —
+/// Merges three independent, flat sources into one کارتابل, in C# (never a cross-module SQL join —
 /// <c>docs/tankhah-khazaneh-module.md</c> §۱۰): (۱) درخواست‌های پرداخت currently
 /// PendingUnitManager/PendingFinanceManager/PendingCeo (<see cref="IPaymentRequestReadRepository.GetPendingForCartableAsync"/>),
 /// (۲) تنخواه ترمیم‌های currently <see cref="Domain.ValueObjects.PettyCashReplenishmentState.PendingTreasurer"/>
 /// from the existing <see cref="IPettyCashReplenishmentReadRepository"/> (نمایشی‌فقط — این ماژول
-/// چیزی به تنخواه اضافه/تغییر نمی‌دهد). Sorted by age (oldest first), then paged in memory —
-/// acceptable for a کارتابل-sized list (never large enough to warrant a shared, cross-module view).
+/// چیزی به تنخواه اضافه/تغییر نمی‌دهد)، (۳) خزانه‌داری بخش ۴-ج — انتقال‌های وجه currently
+/// <see cref="Domain.ValueObjects.TransferState.PendingTreasurer"/> (<see cref="ITreasuryTransferReadRepository.GetPendingForCartableAsync"/>);
+/// <c>pendingForMe</c> reuses the SAME <c>callerTreasuryRoles</c> lookup already fetched for source
+/// (۱). Sorted by age (oldest first), then paged in memory — acceptable for a کارتابل-sized list
+/// (never large enough to warrant a shared, cross-module view).
 /// </summary>
 public sealed class GetApprovalCartableQueryHandler : IRequestHandler<GetApprovalCartableQuery, PagedResult<ApprovalCartableItemDto>>
 {
@@ -24,6 +27,7 @@ public sealed class GetApprovalCartableQueryHandler : IRequestHandler<GetApprova
     private readonly IPettyCashReplenishmentReadRepository _replenishmentReadRepository;
     private readonly IPettyCashFundReviewerReadRepository _fundReviewerReadRepository;
     private readonly ITreasuryRoleRepository _treasuryRoleRepository;
+    private readonly ITreasuryTransferReadRepository _transferReadRepository;
     private readonly ICurrentUser _currentUser;
 
     /// <summary>
@@ -39,12 +43,14 @@ public sealed class GetApprovalCartableQueryHandler : IRequestHandler<GetApprova
         IPettyCashReplenishmentReadRepository replenishmentReadRepository,
         IPettyCashFundReviewerReadRepository fundReviewerReadRepository,
         ITreasuryRoleRepository treasuryRoleRepository,
+        ITreasuryTransferReadRepository transferReadRepository,
         ICurrentUser currentUser)
     {
         _paymentRequestReadRepository = paymentRequestReadRepository;
         _replenishmentReadRepository = replenishmentReadRepository;
         _fundReviewerReadRepository = fundReviewerReadRepository;
         _treasuryRoleRepository = treasuryRoleRepository;
+        _transferReadRepository = transferReadRepository;
         _currentUser = currentUser;
     }
 
@@ -81,6 +87,32 @@ public sealed class GetApprovalCartableQueryHandler : IRequestHandler<GetApprova
                 PaymentRequestStateConflictException.StateLabel(pr.RequestState),
                 ageDays,
                 pr.DueDate,
+                pendingForMe));
+        }
+
+        // خزانه‌داری، بخش ۴-ج (۲۰۲۶-۰۹-۲۹) — سومین منبع: انتقال‌های وجه PendingTreasurer. همان
+        // callerTreasuryRoles بالا (یک کوئری، هر سه منبع را پوشش می‌دهد — Treasurer برای هم اجرای
+        // پرداخت/ثبت دریافت هم تأیید انتقال یکی است).
+        var pendingTransfers = await _transferReadRepository.GetPendingForCartableAsync(request.VahedCode, cancellationToken);
+
+        foreach (var transfer in pendingTransfers)
+        {
+            var pendingForMe = callerTreasuryRoles.Contains(TreasuryRole.Treasurer)
+                && !string.Equals(transfer.AddUserId, userId, StringComparison.Ordinal);
+
+            var ageDays = (int)(now - transfer.CreatedDate).TotalDays;
+
+            items.Add(new ApprovalCartableItemDto(
+                "transfer",
+                transfer.Id,
+                transfer.Code,
+                transfer.Code,
+                null,
+                transfer.Amount,
+                (int)transfer.State,
+                TreasuryTransferStateConflictException.StateLabel(transfer.State),
+                ageDays,
+                transfer.TransferDate,
                 pendingForMe));
         }
 

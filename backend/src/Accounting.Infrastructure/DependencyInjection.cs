@@ -208,6 +208,18 @@ public static class DependencyInjection
         // اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹) — پیکر «تفصیلی ذی‌نفع».
         services.AddScoped<ITreasuryBeneficiaryTafsiliReadRepository, TreasuryBeneficiaryTafsiliReadRepository>();
 
+        // بخش ۴-ب (۲۰۲۶-۰۹-۲۹) — extracted شرکت‌شده در بخش ۴-ج هم: پروجکشن سند GL برای
+        // GET .../accounting endpointها (docs/tankhah-khazaneh-module.md §۱۰).
+        services.AddScoped<IVoucherAccountingReader, VoucherAccountingReader>();
+
+        // خزانه‌داری، بخش ۴-ج (۲۰۲۶-۰۹-۲۹) — دریافت وجه + انتقال وجه.
+        services.AddScoped<ITreasuryReceiptRepository, TreasuryReceiptRepository>();
+        services.AddScoped<ITreasuryReceiptReadRepository, TreasuryReceiptReadRepository>();
+        services.AddScoped<ITreasuryTransferRepository, TreasuryTransferRepository>();
+        services.AddScoped<ITreasuryTransferReadRepository, TreasuryTransferReadRepository>();
+        services.AddScoped<ITreasuryTransferEventRepository, TreasuryTransferEventRepository>();
+        services.AddScoped<ITreasuryBankAccountBalanceReadRepository, TreasuryBankAccountBalanceReadRepository>();
+
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 
         return services;

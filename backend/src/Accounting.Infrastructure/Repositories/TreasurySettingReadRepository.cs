@@ -28,6 +28,9 @@ public sealed class TreasurySettingReadRepository : ITreasurySettingReadReposito
                 s.PAYABLES_ACCOUNT_ID,
                 s.VAT_CREDIT_ACCOUNT_ID,
                 s.INSURANCE_PAYABLE_ACCOUNT_ID,
+                s.RECEIVABLES_ACCOUNT_ID,
+                s.CUSTOMER_TAFSIL_GROUP_ID,
+                s.DAILY_TRANSFER_LIMIT,
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -54,6 +57,22 @@ public sealed class TreasurySettingReadRepository : ITreasurySettingReadReposito
         var (payablesCode, payablesName) = await GetAccountCodeLabelAsync(setting.PAYABLES_ACCOUNT_ID, cancellationToken);
         var (vatCode, vatName) = await GetAccountCodeLabelAsync(setting.VAT_CREDIT_ACCOUNT_ID, cancellationToken);
         var (insuranceCode, insuranceName) = await GetAccountCodeLabelAsync(setting.INSURANCE_PAYABLE_ACCOUNT_ID, cancellationToken);
+        var (receivablesCode, receivablesName) = await GetAccountCodeLabelAsync(setting.RECEIVABLES_ACCOUNT_ID, cancellationToken);
+
+        string? customerGroupCode = null;
+        string? customerGroupName = null;
+
+        if (setting.CUSTOMER_TAFSIL_GROUP_ID is { } customerGroupId)
+        {
+            var customerGroup = await _dbContext.TB_TAFSIL_GROUPs
+                .AsNoTracking()
+                .Where(g => g.ID == customerGroupId)
+                .Select(g => new { g.TAFSILGROUP_CODE, g.TAFSILGROUP_NAME })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            customerGroupCode = customerGroup?.TAFSILGROUP_CODE;
+            customerGroupName = customerGroup?.TAFSILGROUP_NAME;
+        }
 
         return new TreasurySettingDto(
             setting.ID,
@@ -70,7 +89,14 @@ public sealed class TreasurySettingReadRepository : ITreasurySettingReadReposito
             vatName,
             setting.INSURANCE_PAYABLE_ACCOUNT_ID,
             insuranceCode,
-            insuranceName);
+            insuranceName,
+            setting.RECEIVABLES_ACCOUNT_ID,
+            receivablesCode,
+            receivablesName,
+            setting.CUSTOMER_TAFSIL_GROUP_ID,
+            customerGroupCode,
+            customerGroupName,
+            setting.DAILY_TRANSFER_LIMIT);
     }
 
     private async Task<(string? Code, string? Name)> GetAccountCodeLabelAsync(Guid? accountCodeId, CancellationToken cancellationToken)

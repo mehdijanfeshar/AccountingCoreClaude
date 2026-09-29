@@ -733,6 +733,103 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Forbidden",
                     paymentRequestTreasurerRoleRequiredException.PublicDetail)),
 
+            // خزانه‌داری، بخش ۴-ج (۲۰۲۶-۰۹-۲۹) — دریافت وجه + انتقال وجه.
+            TreasurySettingValueMissingException treasurySettingValueMissingException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    treasurySettingValueMissingException.PublicDetail)),
+
+            TreasuryVoucherAccountConfigException treasuryVoucherAccountConfigException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    treasuryVoucherAccountConfigException.PublicDetail)),
+
+            // Defensive — same posture as PaymentRequestVoucherTafsiliMissingException.
+            TreasuryVoucherTafsiliMissingException treasuryVoucherTafsiliMissingException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    treasuryVoucherTafsiliMissingException.PublicDetail)),
+
+            // گروه تعریف شده، ولی تفصیلی ارسالی عضوش نیست — خطای مقدار ورودی (۴۰۰)، نه تعارض
+            // تنظیمات (که TreasurySettingValueMissingException، ۴۰۹، پوشش می‌دهد).
+            TreasuryTafsiliNotInGroupException treasuryTafsiliNotInGroupException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    treasuryTafsiliNotInGroupException.PublicDetail)),
+
+            // فقط خزانه‌دار می‌تواند register/approve کند — ۴۰۳، نه ۴۰۹.
+            TreasuryTreasurerRoleRequiredException treasuryTreasurerRoleRequiredException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    treasuryTreasurerRoleRequiredException.PublicDetail)),
+
+            TreasuryReceiptStateConflictException treasuryReceiptStateConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    treasuryReceiptStateConflictException.PublicDetail)),
+
+            // Application-level duplicate (no DB UNIQUE constraint backs it) — 409.
+            TreasuryReceiptDuplicateBankReferenceException treasuryReceiptDuplicateBankReferenceException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    treasuryReceiptDuplicateBankReferenceException.PublicDetail)),
+
+            TreasuryTransferStateConflictException treasuryTransferStateConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    treasuryTransferStateConflictException.PublicDetail)),
+
+            // SoD: تأییدکننده/برگشت‌دهنده/ردکننده ≠ ثبت‌کنندهٔ انتقال.
+            TreasuryTransferApproverConflictException treasuryTransferApproverConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    treasuryTransferApproverConflictException.PublicDetail)),
+
+            // Blocking control (a) — موجودی حساب بانکی مبدأ کافی نیست.
+            TreasuryTransferInsufficientBalanceException treasuryTransferInsufficientBalanceException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    treasuryTransferInsufficientBalanceException.PublicDetail)),
+
+            // Blocking control (b) — سقف روزانهٔ انتقال.
+            TreasuryTransferDailyLimitExceededException treasuryTransferDailyLimitExceededException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    treasuryTransferDailyLimitExceededException.PublicDetail)),
+
             _ => (
                 StatusCodes.Status500InternalServerError,
                 BuildProblemDetails(
