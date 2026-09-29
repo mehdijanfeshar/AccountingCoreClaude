@@ -10,7 +10,8 @@ public sealed record GetPaymentRequestsQuery(
     int PageNumber,
     int PageSize,
     PaymentRequestState? State,
-    string? Search) : IRequest<PaymentRequestListResult>, IVahedScopedQuery
+    string? Search,
+    bool ForExecution = false) : IRequest<PaymentRequestListResult>, IVahedScopedQuery
 {
     [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;

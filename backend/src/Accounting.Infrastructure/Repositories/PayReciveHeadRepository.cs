@@ -41,4 +41,35 @@ public sealed class PayReciveHeadRepository : IPayReciveHeadRepository
 
         return entity;
     }
+
+    public async Task<int> GetNextCodeAsync(string vahedCode, string year, CancellationToken cancellationToken = default)
+    {
+        var existingCodes = await _dbContext.TB_PAYRECIVHEADs
+            .AsNoTracking()
+            .Where(h => h.VAHEDCODE == vahedCode && h.YEAR == year)
+            .Select(h => h.PAYRECIVCODE)
+            .ToListAsync(cancellationToken);
+
+        var highest = 0;
+
+        foreach (var code in existingCodes)
+        {
+            if (int.TryParse(code, out var parsed) && parsed > highest)
+            {
+                highest = parsed;
+            }
+        }
+
+        return highest + 1;
+    }
+
+    public async Task AddDetailAsync(TB_PAYRECIVDETAIL payReciveDetail, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.TB_PAYRECIVDETAILs.AddAsync(payReciveDetail, cancellationToken);
+    }
+
+    public async Task AddDetailTafsiliLinkAsync(TB_PAYRECIVDETAIL_LINK_TAFSILI tafsiliLink, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.TB_PAYRECIVDETAIL_LINK_TAFSILIs.AddAsync(tafsiliLink, cancellationToken);
+    }
 }

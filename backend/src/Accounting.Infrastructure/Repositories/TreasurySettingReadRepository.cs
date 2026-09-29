@@ -25,6 +25,9 @@ public sealed class TreasurySettingReadRepository : ITreasurySettingReadReposito
                 s.CEO_APPROVAL_THRESHOLD,
                 s.BULK_APPROVE_LIMIT,
                 s.BENEFICIARY_TAFSIL_GROUP_ID,
+                s.PAYABLES_ACCOUNT_ID,
+                s.VAT_CREDIT_ACCOUNT_ID,
+                s.INSURANCE_PAYABLE_ACCOUNT_ID,
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -48,12 +51,41 @@ public sealed class TreasurySettingReadRepository : ITreasurySettingReadReposito
             groupName = group?.TAFSILGROUP_NAME;
         }
 
+        var (payablesCode, payablesName) = await GetAccountCodeLabelAsync(setting.PAYABLES_ACCOUNT_ID, cancellationToken);
+        var (vatCode, vatName) = await GetAccountCodeLabelAsync(setting.VAT_CREDIT_ACCOUNT_ID, cancellationToken);
+        var (insuranceCode, insuranceName) = await GetAccountCodeLabelAsync(setting.INSURANCE_PAYABLE_ACCOUNT_ID, cancellationToken);
+
         return new TreasurySettingDto(
             setting.ID,
             setting.CEO_APPROVAL_THRESHOLD,
             setting.BULK_APPROVE_LIMIT,
             setting.BENEFICIARY_TAFSIL_GROUP_ID,
             groupCode,
-            groupName);
+            groupName,
+            setting.PAYABLES_ACCOUNT_ID,
+            payablesCode,
+            payablesName,
+            setting.VAT_CREDIT_ACCOUNT_ID,
+            vatCode,
+            vatName,
+            setting.INSURANCE_PAYABLE_ACCOUNT_ID,
+            insuranceCode,
+            insuranceName);
+    }
+
+    private async Task<(string? Code, string? Name)> GetAccountCodeLabelAsync(Guid? accountCodeId, CancellationToken cancellationToken)
+    {
+        if (accountCodeId is not { } id)
+        {
+            return (null, null);
+        }
+
+        var account = await _dbContext.TB_ACCOUNTCODEs
+            .AsNoTracking()
+            .Where(a => a.ID == id)
+            .Select(a => new { a.ACCCODE, a.ACCCODENAME })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return (account?.ACCCODE, account?.ACCCODENAME);
     }
 }

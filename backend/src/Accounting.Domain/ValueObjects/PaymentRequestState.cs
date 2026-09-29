@@ -33,4 +33,12 @@ public enum PaymentRequestState
 
     /// <summary>ردشده — پایانی، با دلیل اجباری.</summary>
     Rejected = 7,
+
+    /// <summary>بخش ۴-ب — اجرا شد؛ سند «پرداخت» (شمارهٔ ۲) صادر و <c>TB_PAYRECIVHEAD/DETAIL</c>
+    /// نوشته شد. پایانی — از اینجا برگشت/رد ممکن نیست (سند شناسایی بدهی از قبل صادر شده).</summary>
+    Executed = 8,
+
+    /// <summary>بخش ۴-ب — موقتاً معلق (دلیل اجباری). فقط از <see cref="ReadyForExecution"/> و فقط
+    /// دوباره به همان‌جا برمی‌گردد (<c>resume</c>)؛ سند شناسایی بدهی دست‌نخورده می‌ماند.</summary>
+    Suspended = 9,
 }

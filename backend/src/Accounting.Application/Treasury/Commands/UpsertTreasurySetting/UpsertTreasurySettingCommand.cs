@@ -19,10 +19,21 @@ namespace Accounting.Application.Treasury.Commands.UpsertTreasurySetting;
 /// requests). When provided, the handler validates the group exists and is not soft-deleted (404
 /// otherwise).
 /// </param>
+/// <param name="PayablesAccountId">
+/// بخش ۴-ب (۲۰۲۶-۰۹-۲۹) — <c>TB_TR_SETTING.PAYABLES_ACCOUNT_ID</c> («حساب بستانکاران»).
+/// <see langword="null"/> clears it (صدور سند شناسایی بدهی با ۴۰۹ رد می‌شود تا وقتی دوباره
+/// تعریف شود). When provided, the handler validates it exists in <c>TB_ACCOUNTCODE</c> (404
+/// otherwise).
+/// </param>
+/// <param name="VatCreditAccountId">بخش ۴-ب — <c>TB_TR_SETTING.VAT_CREDIT_ACCOUNT_ID</c> («حساب اعتبار مالیات بر ارزش‌افزوده»)، همان قاعدهٔ اعتبارسنجی بالا.</param>
+/// <param name="InsurancePayableAccountId">بخش ۴-ب — <c>TB_TR_SETTING.INSURANCE_PAYABLE_ACCOUNT_ID</c> («حساب بستانکاران بیمه»)، همان قاعدهٔ اعتبارسنجی بالا.</param>
 public sealed record UpsertTreasurySettingCommand(
     decimal CeoApprovalThreshold,
     decimal BulkApproveLimit,
-    Guid? BeneficiaryTafsilGroupId) : IRequest<TreasurySettingDto>, IVahedScopedCommand
+    Guid? BeneficiaryTafsilGroupId,
+    Guid? PayablesAccountId,
+    Guid? VatCreditAccountId,
+    Guid? InsurancePayableAccountId) : IRequest<TreasurySettingDto>, IVahedScopedCommand
 {
     [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;

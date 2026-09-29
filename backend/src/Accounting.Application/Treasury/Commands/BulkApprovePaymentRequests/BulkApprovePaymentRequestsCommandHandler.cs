@@ -67,6 +67,28 @@ public sealed class BulkApprovePaymentRequestsCommandHandler : IRequestHandler<B
             {
                 failures[id] = "over-bulk-limit";
             }
+            // بخش ۴-ب — ساخت سند «شناسایی بدهی» در همین گذار (فقط وقتی toState ==
+            // ReadyForExecution باشد) می‌تواند به همین دلایل شکست بخورد؛ همان all-or-nothing.
+            catch (PaymentRequestTreasurySettingAccountMissingException)
+            {
+                failures[id] = "liability-voucher-account-missing";
+            }
+            catch (PaymentRequestPayablesBeneficiaryRequiredException)
+            {
+                failures[id] = "liability-voucher-beneficiary-required";
+            }
+            catch (PaymentRequestVoucherAccountConfigException)
+            {
+                failures[id] = "liability-voucher-account-config";
+            }
+            catch (PaymentRequestVoucherTafsiliMissingException)
+            {
+                failures[id] = "liability-voucher-tafsili-missing";
+            }
+            catch (PaymentRequestVoucherUnbalancedException)
+            {
+                failures[id] = "liability-voucher-unbalanced";
+            }
         }
 
         if (failures.Count > 0)

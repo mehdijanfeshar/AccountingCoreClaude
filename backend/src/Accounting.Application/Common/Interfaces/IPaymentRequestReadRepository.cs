@@ -18,11 +18,17 @@ public interface IPaymentRequestReadRepository
     /// <paramref name="search"/> matches <c>CODE</c>/<c>BENEFICIARY_NAME</c> (case-insensitive,
     /// substring).
     /// </summary>
+    /// <param name="forExecution">
+    /// بخش ۴-ب — وقتی <see langword="true"/>، <paramref name="state"/> نادیده گرفته می‌شود و فقط
+    /// <see cref="PaymentRequestState.ReadyForExecution"/>/<see cref="PaymentRequestState.Suspended"/>
+    /// برمی‌گردد (صفحهٔ اجرای پرداخت خزانه‌دار — این دو وضعیت را با هم می‌خواهد، نه جدا).
+    /// </param>
     Task<PaymentRequestListResult> GetPagedAsync(
         int pageNumber,
         int pageSize,
         PaymentRequestState? state,
         string? search,
+        bool forExecution,
         string vahedCode,
         CancellationToken cancellationToken = default);
 
@@ -41,4 +47,12 @@ public interface IPaymentRequestReadRepository
     /// </summary>
     Task<IReadOnlyList<PaymentRequestListItemDto>> GetPendingForCartableAsync(
         string vahedCode, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// <c>GET payment-requests/{id}/accounting</c> — بخش ۴-ب. Projects the request's
+    /// <c>LIABILITY_VOUCHER_ID</c>/<c>PAYMENT_VOUCHER_ID</c> (if any) into full voucher line
+    /// detail (account code/name, تفصیلی labels), plus its <c>PAYRECIVHEAD_ID</c>'s
+    /// <c>PAYRECIVCODE</c>. Returns <see langword="null"/> when no row with that <c>ID</c> exists.
+    /// </summary>
+    Task<PaymentRequestAccountingDto?> GetAccountingAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
 }

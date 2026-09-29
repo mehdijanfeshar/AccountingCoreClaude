@@ -31,6 +31,8 @@ public sealed class PaymentRequestStateConflictException : Exception
         PaymentRequestState.ReadyForExecution => "آمادهٔ اجرا",
         PaymentRequestState.Returned => "برگشتی",
         PaymentRequestState.Rejected => "ردشده",
+        PaymentRequestState.Executed => "اجراشده",
+        PaymentRequestState.Suspended => "معلق",
         _ => "نامشخص",
     };
 }

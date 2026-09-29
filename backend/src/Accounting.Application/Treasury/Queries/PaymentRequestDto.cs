@@ -37,4 +37,16 @@ public sealed record PaymentRequestDto(
     Guid? PayRecivHeadId,
     string AddUserId,
     DateTime CreatedDate,
+    /// <summary>بخش ۴-ب — سند «شناسایی بدهی» (شمارهٔ ۱)، در لحظهٔ تأیید نهایی صادر می‌شود.</summary>
+    Guid? LiabilityVoucherId,
+    string? LiabilityVoucherNumber,
+    /// <summary>بخش ۴-ب — سند «پرداخت» (شمارهٔ ۲)، در لحظهٔ اجرا صادر می‌شود.</summary>
+    Guid? PaymentVoucherId,
+    string? PaymentVoucherNumber,
+    string? BankReference,
+    string? PaidDate,
+    string? DestinationIban,
+    string? ExecutedBy,
+    DateTime? ExecutedDate,
+    string? SuspendReason,
     IReadOnlyList<PaymentRequestEventDto> Events);

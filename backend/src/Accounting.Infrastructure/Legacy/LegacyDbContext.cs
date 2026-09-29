@@ -1833,6 +1833,22 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false)
                 .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
+            // بخش ۴-ب (۲۰۲۶-۰۹-۲۹) — بدون FK واقعی روی TB_ACCOUNTCODE (ریسک #۹/#۱۴).
+            entity.Property(e => e.PAYABLES_ACCOUNT_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAT_CREDIT_ACCOUNT_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.INSURANCE_PAYABLE_ACCOUNT_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.ADDUSERID)
@@ -1958,6 +1974,33 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false)
                 .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
+            // بخش ۴-ب (۲۰۲۶-۰۹-۲۹) — اجرای پرداخت + دو سند GL خودکار.
+            entity.Property(e => e.LIABILITY_VOUCHER_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.PAYMENT_VOUCHER_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.BANK_REFERENCE)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+            entity.Property(e => e.PAID_DATE)
+                .HasMaxLength(8)
+                .IsUnicode(false);
+            entity.Property(e => e.DESTINATION_IBAN)
+                .HasMaxLength(26)
+                .IsUnicode(false);
+            entity.Property(e => e.EXECUTED_BY)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.EXECUTED_DATE).HasPrecision(6);
+            entity.Property(e => e.SUSPEND_REASON)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.ADDUSERID)

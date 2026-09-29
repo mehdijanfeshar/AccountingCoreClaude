@@ -72,6 +72,38 @@ public partial class TB_TR_PAYMENT_REQUEST
     /// <summary>بخش ۴-ب پر می‌کند — سرسند Legacy پرداخت اجراشده.</summary>
     public Guid? PAYRECIVHEAD_ID { get; set; }
 
+    /// <summary>
+    /// بخش ۴-ب (۲۰۲۶-۰۹-۲۹) — سند «شناسایی بدهی» (شمارهٔ ۱)، در همان لحظهٔ گذار به
+    /// <see cref="Accounting.Domain.ValueObjects.PaymentRequestState.ReadyForExecution"/> صادر
+    /// می‌شود (تأیید تکی یا گروهی، هرکدام آخرین مرحله باشد). <see langword="null"/> فقط پیش از آن
+    /// گذار.
+    /// </summary>
+    public Guid? LIABILITY_VOUCHER_ID { get; set; }
+
+    /// <summary>بخش ۴-ب — سند «پرداخت» (شمارهٔ ۲)، در لحظهٔ اجرا (<c>execute</c>) صادر می‌شود.</summary>
+    public Guid? PAYMENT_VOUCHER_ID { get; set; }
+
+    /// <summary>بخش ۴-ب — شمارهٔ پیگیری/مرجع بانکی که خزانه‌دار دستی وارد می‌کند. الزامی در
+    /// <c>execute</c>.</summary>
+    public string? BANK_REFERENCE { get; set; }
+
+    /// <summary>بخش ۴-ب — تاریخ واقعی پرداخت، شمسی <c>YYYYMMDD</c>. الزامی در <c>execute</c>؛
+    /// تاریخ سند «پرداخت» هم همین است.</summary>
+    public string? PAID_DATE { get; set; }
+
+    /// <summary>بخش ۴-ب — شمارهٔ شبای مقصد، اختیاری (فرمت <c>IR</c> + ۲۴ رقم چک می‌شود).</summary>
+    public string? DESTINATION_IBAN { get; set; }
+
+    /// <summary>بخش ۴-ب — کاربری که <c>execute</c> را ثبت کرد.</summary>
+    public string? EXECUTED_BY { get; set; }
+
+    /// <summary>بخش ۴-ب — زمان ثبت <c>execute</c>.</summary>
+    public DateTime? EXECUTED_DATE { get; set; }
+
+    /// <summary>بخش ۴-ب — دلیل آخرین تعلیق (<c>suspend</c>). با <c>resume</c> پاک نمی‌شود — فقط
+    /// آخرین دلیل را نگه می‌دارد، برای تاریخچهٔ کامل به «گردش عملیات» (رویدادها) مراجعه کن.</summary>
+    public string? SUSPEND_REASON { get; set; }
+
     public DateTime CREATEDDATE { get; set; }
 
     public DateTime? UPDATEDDATE { get; set; }

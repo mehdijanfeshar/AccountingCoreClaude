@@ -14,5 +14,5 @@ public sealed class GetPaymentRequestsQueryHandler : IRequestHandler<GetPaymentR
 
     public Task<PaymentRequestListResult> Handle(GetPaymentRequestsQuery request, CancellationToken cancellationToken)
         => _paymentRequestReadRepository.GetPagedAsync(
-            request.PageNumber, request.PageSize, request.State, request.Search, request.VahedCode, cancellationToken);
+            request.PageNumber, request.PageSize, request.State, request.Search, request.ForExecution, request.VahedCode, cancellationToken);
 }

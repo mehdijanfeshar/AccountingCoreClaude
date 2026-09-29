@@ -13,6 +13,7 @@ public sealed class UpsertTreasurySettingCommandHandler : IRequestHandler<Upsert
     private readonly ITreasurySettingRepository _settingRepository;
     private readonly ITreasuryRoleAuthorizer _roleAuthorizer;
     private readonly ITafsilGroupReadRepository _tafsilGroupReadRepository;
+    private readonly IAccountCodeReadRepository _accountCodeReadRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
@@ -20,12 +21,14 @@ public sealed class UpsertTreasurySettingCommandHandler : IRequestHandler<Upsert
         ITreasurySettingRepository settingRepository,
         ITreasuryRoleAuthorizer roleAuthorizer,
         ITafsilGroupReadRepository tafsilGroupReadRepository,
+        IAccountCodeReadRepository accountCodeReadRepository,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser)
     {
         _settingRepository = settingRepository;
         _roleAuthorizer = roleAuthorizer;
         _tafsilGroupReadRepository = tafsilGroupReadRepository;
+        _accountCodeReadRepository = accountCodeReadRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
     }
@@ -50,6 +53,13 @@ public sealed class UpsertTreasurySettingCommandHandler : IRequestHandler<Upsert
             groupName = group.TafsilGroupName;
         }
 
+        var (payablesCode, payablesName) = await EnsureAccountCodeExistsAsync(
+            "PayablesAccount", request.PayablesAccountId, cancellationToken);
+        var (vatCode, vatName) = await EnsureAccountCodeExistsAsync(
+            "VatCreditAccount", request.VatCreditAccountId, cancellationToken);
+        var (insuranceCode, insuranceName) = await EnsureAccountCodeExistsAsync(
+            "InsurancePayableAccount", request.InsurancePayableAccountId, cancellationToken);
+
         var now = DateTime.UtcNow;
         var userId = _currentUser.UserId;
 
@@ -64,6 +74,9 @@ public sealed class UpsertTreasurySettingCommandHandler : IRequestHandler<Upsert
                 CEO_APPROVAL_THRESHOLD = request.CeoApprovalThreshold,
                 BULK_APPROVE_LIMIT = request.BulkApproveLimit,
                 BENEFICIARY_TAFSIL_GROUP_ID = request.BeneficiaryTafsilGroupId,
+                PAYABLES_ACCOUNT_ID = request.PayablesAccountId,
+                VAT_CREDIT_ACCOUNT_ID = request.VatCreditAccountId,
+                INSURANCE_PAYABLE_ACCOUNT_ID = request.InsurancePayableAccountId,
                 ADDUSERID = userId,
                 CREATEDDATE = now,
                 ISDELETED = false,
@@ -76,6 +89,9 @@ public sealed class UpsertTreasurySettingCommandHandler : IRequestHandler<Upsert
             setting.CEO_APPROVAL_THRESHOLD = request.CeoApprovalThreshold;
             setting.BULK_APPROVE_LIMIT = request.BulkApproveLimit;
             setting.BENEFICIARY_TAFSIL_GROUP_ID = request.BeneficiaryTafsilGroupId;
+            setting.PAYABLES_ACCOUNT_ID = request.PayablesAccountId;
+            setting.VAT_CREDIT_ACCOUNT_ID = request.VatCreditAccountId;
+            setting.INSURANCE_PAYABLE_ACCOUNT_ID = request.InsurancePayableAccountId;
             setting.CHANGEUSERID = userId;
             setting.UPDATEDDATE = now;
         }
@@ -88,6 +104,29 @@ public sealed class UpsertTreasurySettingCommandHandler : IRequestHandler<Upsert
             setting.BULK_APPROVE_LIMIT,
             setting.BENEFICIARY_TAFSIL_GROUP_ID,
             groupCode,
-            groupName);
+            groupName,
+            setting.PAYABLES_ACCOUNT_ID,
+            payablesCode,
+            payablesName,
+            setting.VAT_CREDIT_ACCOUNT_ID,
+            vatCode,
+            vatName,
+            setting.INSURANCE_PAYABLE_ACCOUNT_ID,
+            insuranceCode,
+            insuranceName);
+    }
+
+    private async Task<(string? Code, string? Name)> EnsureAccountCodeExistsAsync(
+        string entityLabel, Guid? accountCodeId, CancellationToken cancellationToken)
+    {
+        if (accountCodeId is not { } id)
+        {
+            return (null, null);
+        }
+
+        var account = await _accountCodeReadRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException(entityLabel, id);
+
+        return (account.AccCode, account.AccCodeName);
     }
 }

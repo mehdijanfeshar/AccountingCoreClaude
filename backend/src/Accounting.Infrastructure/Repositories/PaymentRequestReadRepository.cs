@@ -42,6 +42,7 @@ public sealed class PaymentRequestReadRepository : IPaymentRequestReadRepository
         int pageSize,
         PaymentRequestState? state,
         string? search,
+        bool forExecution,
         string vahedCode,
         CancellationToken cancellationToken = default)
     {
@@ -54,7 +55,9 @@ public sealed class PaymentRequestReadRepository : IPaymentRequestReadRepository
             .Select(g => new PaymentRequestStateCountDto(g.Key, g.Count()))
             .ToListAsync(cancellationToken);
 
-        var filtered = state is { } s ? scoped.Where(p => p.REQUEST_STATE == s) : scoped;
+        var filtered = forExecution
+            ? scoped.Where(p => p.REQUEST_STATE == PaymentRequestState.ReadyForExecution || p.REQUEST_STATE == PaymentRequestState.Suspended)
+            : state is { } s ? scoped.Where(p => p.REQUEST_STATE == s) : scoped;
 
         var totalCount = await filtered.CountAsync(cancellationToken);
 
@@ -140,6 +143,9 @@ public sealed class PaymentRequestReadRepository : IPaymentRequestReadRepository
                 tafsili.TAFSILI_NAME))
             .ToListAsync(cancellationToken);
 
+        var liabilityVoucherNumber = await GetVoucherDocNumAsync(entity.LIABILITY_VOUCHER_ID, cancellationToken);
+        var paymentVoucherNumber = await GetVoucherDocNumAsync(entity.PAYMENT_VOUCHER_ID, cancellationToken);
+
         return new PaymentRequestDto(
             entity.ID,
             entity.CODE,
@@ -168,7 +174,133 @@ public sealed class PaymentRequestReadRepository : IPaymentRequestReadRepository
             entity.PAYRECIVHEAD_ID,
             entity.ADDUSERID,
             entity.CREATEDDATE,
+            entity.LIABILITY_VOUCHER_ID,
+            liabilityVoucherNumber,
+            entity.PAYMENT_VOUCHER_ID,
+            paymentVoucherNumber,
+            entity.BANK_REFERENCE,
+            entity.PAID_DATE,
+            entity.DESTINATION_IBAN,
+            entity.EXECUTED_BY,
+            entity.EXECUTED_DATE,
+            entity.SUSPEND_REASON,
             events);
+    }
+
+    private async Task<string?> GetVoucherDocNumAsync(Guid? voucherHeadId, CancellationToken cancellationToken)
+    {
+        if (voucherHeadId is not { } id)
+        {
+            return null;
+        }
+
+        return await _dbContext.TB_VOUCHERSHEADs
+            .AsNoTracking()
+            .Where(v => v.ID == id)
+            .Select(v => v.DOC_NUM)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<PaymentRequestAccountingDto?> GetAccountingAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.TB_TR_PAYMENT_REQUESTs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.ID == id, cancellationToken);
+
+        if (entity is null)
+        {
+            return null;
+        }
+
+        VahedOwnership.EnsureOwned(entity.VAHEDCODE, vahedCode, id, "PaymentRequest");
+
+        var liabilityVoucher = await GetVoucherAccountingAsync(entity.LIABILITY_VOUCHER_ID, cancellationToken);
+        var paymentVoucher = await GetVoucherAccountingAsync(entity.PAYMENT_VOUCHER_ID, cancellationToken);
+
+        string? payRecivCode = null;
+
+        if (entity.PAYRECIVHEAD_ID is { } payRecivHeadId)
+        {
+            payRecivCode = await _dbContext.TB_PAYRECIVHEADs
+                .AsNoTracking()
+                .Where(h => h.ID == payRecivHeadId)
+                .Select(h => h.PAYRECIVCODE)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        return new PaymentRequestAccountingDto(liabilityVoucher, paymentVoucher, payRecivCode);
+    }
+
+    private async Task<PaymentRequestVoucherAccountingDto?> GetVoucherAccountingAsync(
+        Guid? voucherHeadId, CancellationToken cancellationToken)
+    {
+        if (voucherHeadId is not { } id)
+        {
+            return null;
+        }
+
+        var head = await _dbContext.TB_VOUCHERSHEADs
+            .AsNoTracking()
+            .Where(v => v.ID == id)
+            .Select(v => new { v.ID, v.DOC_NUM, v.DATE_DOC, v.DOCLIFE })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (head is null)
+        {
+            return null;
+        }
+
+        var details = await _dbContext.TB_VOUCHERSDETAILs
+            .AsNoTracking()
+            .Where(d => d.VOUCHERSHEAD_ID == id && d.ISDELETED != true)
+            .OrderBy(d => d.RADIF)
+            .Select(d => new { d.ID, d.ACCOUNT_ID, d.DEBTOR, d.CREDITOR })
+            .ToListAsync(cancellationToken);
+
+        var lines = new List<PaymentRequestVoucherLineAccountingDto>();
+
+        foreach (var detail in details)
+        {
+            string? accountCode = null;
+            string? accountName = null;
+
+            if (detail.ACCOUNT_ID is { } accountCodeId)
+            {
+                var account = await _dbContext.TB_ACCOUNTCODEs
+                    .AsNoTracking()
+                    .Where(a => a.ID == accountCodeId)
+                    .Select(a => new { a.ACCCODE, a.ACCCODENAME })
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                accountCode = account?.ACCCODE;
+                accountName = account?.ACCCODENAME;
+            }
+
+            var tafsiliLabels = await (
+                from link in _dbContext.TB_VOUCHERDETAIL_LINK_TAFSILIs.AsNoTracking()
+                where link.VOUCHERSDETAIL_ID == detail.ID && !link.ISDELETED
+                join tafsili in _dbContext.TB_TAFSILIs.AsNoTracking()
+                    on link.TAFSILI_ID equals tafsili.ID into tafsilis
+                from tafsili in tafsilis.DefaultIfEmpty()
+                select tafsili != null ? tafsili.TAFSILI_CODE + " - " + tafsili.TAFSILI_NAME : null)
+                .ToListAsync(cancellationToken);
+
+            lines.Add(new PaymentRequestVoucherLineAccountingDto(
+                accountCode,
+                accountName,
+                string.Join("، ", tafsiliLabels.Where(l => l is not null)),
+                detail.DEBTOR ?? 0,
+                detail.CREDITOR ?? 0));
+        }
+
+        return new PaymentRequestVoucherAccountingDto(
+            head.ID,
+            head.DOC_NUM,
+            head.DATE_DOC,
+            head.DOCLIFE,
+            lines,
+            lines.Sum(l => l.Debit),
+            lines.Sum(l => l.Credit));
     }
 
     public async Task<IReadOnlyList<PaymentRequestListItemDto>> GetPendingForCartableAsync(

@@ -673,6 +673,66 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 StatusCodes.Status409Conflict,
                 BuildPaymentRequestBulkApproveConflictProblemDetails(httpContext, paymentRequestBulkApproveConflictException)),
 
+            // خزانه‌داری، بخش ۴-ب (۲۰۲۶-۰۹-۲۹) — اجرای پرداخت + دو سند GL خودکار.
+            PaymentRequestTreasurySettingAccountMissingException paymentRequestTreasurySettingAccountMissingException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    paymentRequestTreasurySettingAccountMissingException.PublicDetail)),
+
+            PaymentRequestVoucherAccountConfigException paymentRequestVoucherAccountConfigException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    paymentRequestVoucherAccountConfigException.PublicDetail)),
+
+            PaymentRequestPayablesBeneficiaryRequiredException paymentRequestPayablesBeneficiaryRequiredException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    paymentRequestPayablesBeneficiaryRequiredException.PublicDetail)),
+
+            PaymentRequestVoucherTafsiliMissingException paymentRequestVoucherTafsiliMissingException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    paymentRequestVoucherTafsiliMissingException.PublicDetail)),
+
+            // Defensive — should never actually fire; see its XML doc.
+            PaymentRequestVoucherUnbalancedException paymentRequestVoucherUnbalancedException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    paymentRequestVoucherUnbalancedException.PublicDetail)),
+
+            // SoD: اجراکننده ≠ ثبت‌کنندهٔ درخواست.
+            PaymentRequestExecutorConflictException paymentRequestExecutorConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    paymentRequestExecutorConflictException.PublicDetail)),
+
+            // فقط خزانه‌دار می‌تواند execute/suspend/resume کند — ۴۰۳، نه ۴۰۹.
+            PaymentRequestTreasurerRoleRequiredException paymentRequestTreasurerRoleRequiredException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    paymentRequestTreasurerRoleRequiredException.PublicDetail)),
+
             _ => (
                 StatusCodes.Status500InternalServerError,
                 BuildProblemDetails(

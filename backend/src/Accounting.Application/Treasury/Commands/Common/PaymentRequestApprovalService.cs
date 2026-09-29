@@ -11,6 +11,7 @@ public sealed class PaymentRequestApprovalService : IPaymentRequestApprovalServi
     private readonly IPaymentRequestEventRepository _eventRepository;
     private readonly ITreasurySettingReadRepository _settingReadRepository;
     private readonly ITreasuryRoleRepository _roleRepository;
+    private readonly IPaymentRequestLiabilityVoucherBuilder _liabilityVoucherBuilder;
     private readonly ICurrentUser _currentUser;
     private readonly IClientInfoProvider _clientInfoProvider;
 
@@ -19,6 +20,7 @@ public sealed class PaymentRequestApprovalService : IPaymentRequestApprovalServi
         IPaymentRequestEventRepository eventRepository,
         ITreasurySettingReadRepository settingReadRepository,
         ITreasuryRoleRepository roleRepository,
+        IPaymentRequestLiabilityVoucherBuilder liabilityVoucherBuilder,
         ICurrentUser currentUser,
         IClientInfoProvider clientInfoProvider)
     {
@@ -26,6 +28,7 @@ public sealed class PaymentRequestApprovalService : IPaymentRequestApprovalServi
         _eventRepository = eventRepository;
         _settingReadRepository = settingReadRepository;
         _roleRepository = roleRepository;
+        _liabilityVoucherBuilder = liabilityVoucherBuilder;
         _currentUser = currentUser;
         _clientInfoProvider = clientInfoProvider;
     }
@@ -71,6 +74,26 @@ public sealed class PaymentRequestApprovalService : IPaymentRequestApprovalServi
         ApplyTransition(request, toState);
 
         await AddEventAsync(request, PaymentRequestEventAction.Approve, fromState, toState, note, vahedCode, cancellationToken);
+
+        // owner decision ۲۰۲۶-۰۹-۲۹ #۲ — سند «شناسایی بدهی» درست در همین گذار صادر می‌شود، در همان
+        // IUnitOfWork.SaveChangesAsync که این متد را فراخوانده (این سرویس خودش SaveChanges صدا
+        // نمی‌زند — همان الگوی همیشگی). اگر ساخت سند شکست بخورد، این exception قبل از هر
+        // SaveChangesAsync پرتاب می‌شود، پس نه گذار وضعیت و نه هیچ ردیف دیگری ذخیره نمی‌شود.
+        if (toState == PaymentRequestState.ReadyForExecution)
+        {
+            var voucherResult = await _liabilityVoucherBuilder.BuildAndStageAsync(request, vahedCode, cancellationToken);
+
+            request.LIABILITY_VOUCHER_ID = voucherResult.VoucherHeadId;
+
+            await AddEventAsync(
+                request,
+                PaymentRequestEventAction.LiabilityVoucherIssued,
+                toState,
+                toState,
+                $"سند شناسایی بدهی شمارهٔ {voucherResult.DocNum} صادر شد.",
+                vahedCode,
+                cancellationToken);
+        }
 
         return request;
     }

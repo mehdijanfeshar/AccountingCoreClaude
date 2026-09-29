@@ -107,6 +107,19 @@ public static class DependencyInjection
         services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestTafsiliValidator,
             Accounting.Application.Treasury.Commands.Common.PaymentRequestTafsiliValidator>();
 
+        // خزانه‌داری، بخش ۴-ب (۲۰۲۶-۰۹-۲۹) — اجرای پرداخت + دو سند GL خودکار
+        // (docs/tankhah-khazaneh-module.md §۱۰). Scoped: PaymentRequestLiabilityVoucherBuilder
+        // memoises its per-(vahedCode,year) DOC_NUM reservation for the lifetime of one request —
+        // see its own XML doc for why bulk-approve needs that.
+        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestPayablesTafsiliResolver,
+            Accounting.Application.Treasury.Commands.Common.PaymentRequestPayablesTafsiliResolver>();
+        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestLiabilityVoucherBuilder,
+            Accounting.Application.Treasury.Commands.Common.PaymentRequestLiabilityVoucherBuilder>();
+        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestPaymentVoucherBuilder,
+            Accounting.Application.Treasury.Commands.Common.PaymentRequestPaymentVoucherBuilder>();
+        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestExecutionAuthorizer,
+            Accounting.Application.Treasury.Commands.Common.PaymentRequestExecutionAuthorizer>();
+
         return services;
     }
 }

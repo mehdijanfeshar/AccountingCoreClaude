@@ -7,14 +7,18 @@ using Accounting.Application.Treasury.Commands.CreatePaymentRequest;
 using Accounting.Application.Treasury.Commands.CreateTreasuryRole;
 using Accounting.Application.Treasury.Commands.DeletePaymentRequest;
 using Accounting.Application.Treasury.Commands.DeleteTreasuryRole;
+using Accounting.Application.Treasury.Commands.ExecutePaymentRequest;
 using Accounting.Application.Treasury.Commands.RejectPaymentRequest;
+using Accounting.Application.Treasury.Commands.ResumePaymentRequest;
 using Accounting.Application.Treasury.Commands.ReturnPaymentRequest;
 using Accounting.Application.Treasury.Commands.SubmitPaymentRequest;
+using Accounting.Application.Treasury.Commands.SuspendPaymentRequest;
 using Accounting.Application.Treasury.Commands.UpdatePaymentRequest;
 using Accounting.Application.Treasury.Commands.UpsertTreasurySetting;
 using Accounting.Application.Treasury.Queries;
 using Accounting.Application.Treasury.Queries.GetApprovalCartable;
 using Accounting.Application.Treasury.Queries.GetBeneficiaryTafsilis;
+using Accounting.Application.Treasury.Queries.GetPaymentRequestAccounting;
 using Accounting.Application.Treasury.Queries.GetPaymentRequestById;
 using Accounting.Application.Treasury.Queries.GetPaymentRequests;
 using Accounting.Application.Treasury.Queries.GetTreasuryRoles;
@@ -61,19 +65,29 @@ public sealed class TreasuryController : ControllerBase
         return result is null ? NotFound() : Ok(result);
     }
 
-    /// <summary>ایجاد یا جایگزینی تنظیمات خزانهٔ واحد. فقط نقش FinanceManager همان واحد.</summary>
+    /// <summary>
+    /// ایجاد یا جایگزینی تنظیمات خزانهٔ واحد. فقط نقش FinanceManager همان واحد. ۴۰۴ اگر
+    /// <c>beneficiaryTafsilGroupId</c>/<c>payablesAccountId</c>/<c>vatCreditAccountId</c>/
+    /// <c>insurancePayableAccountId</c> مقدار داشته باشند ولی وجود نداشته باشند.
+    /// </summary>
     [HttpPost("settings")]
     [ProducesResponseType(typeof(TreasurySettingDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UpsertSettings(
         [FromBody] UpsertTreasurySettingRequest request, CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(
             new UpsertTreasurySettingCommand(
-                request.CeoApprovalThreshold, request.BulkApproveLimit, request.BeneficiaryTafsilGroupId),
+                request.CeoApprovalThreshold,
+                request.BulkApproveLimit,
+                request.BeneficiaryTafsilGroupId,
+                request.PayablesAccountId,
+                request.VatCreditAccountId,
+                request.InsurancePayableAccountId),
             cancellationToken);
 
         return Ok(result);
@@ -140,9 +154,11 @@ public sealed class TreasuryController : ControllerBase
         [FromQuery] int pageSize = 20,
         [FromQuery] PaymentRequestState? state = null,
         [FromQuery] string? search = null,
+        [FromQuery] bool forExecution = false,
         CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetPaymentRequestsQuery(pageNumber, pageSize, state, search), cancellationToken);
+        var result = await _mediator.Send(
+            new GetPaymentRequestsQuery(pageNumber, pageSize, state, search, forExecution), cancellationToken);
 
         return Ok(result);
     }
@@ -340,6 +356,76 @@ public sealed class TreasuryController : ControllerBase
         return Ok(new BulkApprovePaymentRequestsResponse(request.Ids));
     }
 
+    /// <summary>
+    /// بخش ۴-ب — ثبت پرداخت واقعاً انجام‌شده در بانک (بدون یکپارچگی بانکی). سند «پرداخت» صادر و
+    /// TB_PAYRECIVHEAD/DETAIL نوشته می‌شود. فقط خزانه‌دار، ≠ ثبت‌کنندهٔ درخواست، فقط از «آمادهٔ اجرا».
+    /// </summary>
+    [HttpPost("payment-requests/{id:guid}/execute")]
+    [ProducesResponseType(typeof(ExecutePaymentRequestResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ExecutePaymentRequest(
+        Guid id, [FromBody] ExecutePaymentRequestRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(
+            new ExecutePaymentRequestCommand(id, request.BankReference, request.PaidDate, request.DestinationIban, request.PaymentMethod),
+            cancellationToken);
+
+        return Ok(new ExecutePaymentRequestResponse(id));
+    }
+
+    /// <summary>بخش ۴-ب — تعلیق موقت. دلیل اجباری. فقط خزانه‌دار، فقط از «آمادهٔ اجرا».</summary>
+    [HttpPost("payment-requests/{id:guid}/suspend")]
+    [ProducesResponseType(typeof(SuspendPaymentRequestResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> SuspendPaymentRequest(
+        Guid id, [FromBody] SuspendPaymentRequestRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new SuspendPaymentRequestCommand(id, request.Reason), cancellationToken);
+
+        return Ok(new SuspendPaymentRequestResponse(id));
+    }
+
+    /// <summary>بخش ۴-ب — رفع تعلیق. بدون بدنه. فقط خزانه‌دار، فقط از «معلق».</summary>
+    [HttpPost("payment-requests/{id:guid}/resume")]
+    [ProducesResponseType(typeof(ResumePaymentRequestResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ResumePaymentRequest(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new ResumePaymentRequestCommand(id), cancellationToken);
+
+        return Ok(new ResumePaymentRequestResponse(id));
+    }
+
+    /// <summary>بخش ۴-ب — سند «شناسایی بدهی»/«پرداخت» (اگر صادر شده باشند) + کد Legacy PayReciv.</summary>
+    [HttpGet("payment-requests/{id:guid}/accounting")]
+    [ProducesResponseType(typeof(PaymentRequestAccountingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetPaymentRequestAccounting(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetPaymentRequestAccountingQuery(id), cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
     // ==================== کارتابل تأیید ====================
 
     /// <summary>
@@ -387,7 +473,12 @@ public sealed class TreasuryController : ControllerBase
 
 /// <summary>Request body for <see cref="TreasuryController.UpsertSettings"/>.</summary>
 public sealed record UpsertTreasurySettingRequest(
-    decimal CeoApprovalThreshold, decimal BulkApproveLimit, Guid? BeneficiaryTafsilGroupId);
+    decimal CeoApprovalThreshold,
+    decimal BulkApproveLimit,
+    Guid? BeneficiaryTafsilGroupId,
+    Guid? PayablesAccountId,
+    Guid? VatCreditAccountId,
+    Guid? InsurancePayableAccountId);
 
 // ==================== نقش‌ها: request/response DTOs ====================
 
@@ -479,3 +570,21 @@ public sealed record BulkApprovePaymentRequestsRequest(IReadOnlyList<Guid> Ids);
 
 /// <summary>Response body for a successful (all-or-nothing) <see cref="TreasuryController.BulkApprovePaymentRequests"/> call.</summary>
 public sealed record BulkApprovePaymentRequestsResponse(IReadOnlyList<Guid> Ids);
+
+// ==================== بخش ۴-ب: اجرای پرداخت — request/response DTOs ====================
+
+/// <summary>Request body for <see cref="TreasuryController.ExecutePaymentRequest"/>.</summary>
+public sealed record ExecutePaymentRequestRequest(
+    string BankReference, string PaidDate, string? DestinationIban, TreasuryPaymentMethod? PaymentMethod);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.ExecutePaymentRequest"/> call.</summary>
+public sealed record ExecutePaymentRequestResponse(Guid Id);
+
+/// <summary>Request body for <see cref="TreasuryController.SuspendPaymentRequest"/>.</summary>
+public sealed record SuspendPaymentRequestRequest(string Reason);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.SuspendPaymentRequest"/> call.</summary>
+public sealed record SuspendPaymentRequestResponse(Guid Id);
+
+/// <summary>Response body for a successful <see cref="TreasuryController.ResumePaymentRequest"/> call.</summary>
+public sealed record ResumePaymentRequestResponse(Guid Id);
