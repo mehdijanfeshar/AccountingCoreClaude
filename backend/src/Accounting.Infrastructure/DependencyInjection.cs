@@ -195,6 +195,17 @@ public static class DependencyInjection
         services.AddScoped<IPettyCashSettlementPeriodRepository, PettyCashSettlementPeriodRepository>();
         services.AddScoped<IPettyCashSettlementReadRepository, PettyCashSettlementReadRepository>();
 
+        // خزانه‌داری، بخش ۴-الف (۲۰۲۶-۰۹-۲۸) — درخواست پرداخت + کارتابل تأیید. جدول‌های جانبی
+        // کاملاً جدید، همان استثنای صریح صاحب پروژه (docs/tankhah-khazaneh-module.md §۱۰).
+        services.AddScoped<ITreasurySettingRepository, TreasurySettingRepository>();
+        services.AddScoped<ITreasurySettingReadRepository, TreasurySettingReadRepository>();
+        services.AddScoped<ITreasuryRoleRepository, TreasuryRoleRepository>();
+        services.AddScoped<ITreasuryRoleReadRepository, TreasuryRoleReadRepository>();
+        services.AddScoped<IPaymentRequestRepository, PaymentRequestRepository>();
+        services.AddScoped<IPaymentRequestReadRepository, PaymentRequestReadRepository>();
+        services.AddScoped<IPaymentRequestEventRepository, PaymentRequestEventRepository>();
+        services.AddScoped<IPaymentRequestEventReadRepository, PaymentRequestEventReadRepository>();
+
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 
         return services;

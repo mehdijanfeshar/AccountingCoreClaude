@@ -544,6 +544,115 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Conflict",
                     pettyCashRefundLockedBySettledPeriodException.PublicDetail)),
 
+            // خزانه‌داری، بخش ۴-الف (۲۰۲۶-۰۹-۲۸) — درخواست پرداخت. Wrong REQUEST_STATE for the
+            // requested action — same state-based-refusal shape as PettyCashReviewStateConflictException.
+            PaymentRequestStateConflictException paymentRequestStateConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    paymentRequestStateConflictException.PublicDetail)),
+
+            // Update/Delete/Submit is creator-only — plain permissions gap, same shape as
+            // PettyCashNotCustodianException.
+            PaymentRequestNotCreatorException paymentRequestNotCreatorException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    paymentRequestNotCreatorException.PublicDetail)),
+
+            // Caller holds none of the roles the request's current approval stage requires.
+            PaymentRequestRoleRequiredException paymentRequestRoleRequiredException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    paymentRequestRoleRequiredException.PublicDetail)),
+
+            // Unit-wide خزانه‌داری admin gate (settings/roles CRUD) — فقط FinanceManager واحد، با
+            // استثنای bootstrap.
+            TreasuryRoleRequiredException treasuryRoleRequiredException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    treasuryRoleRequiredException.PublicDetail)),
+
+            // SoD: تأییدکننده/برگشت‌دهنده/ردکننده ≠ ثبت‌کننده — conflict-of-interest, not a
+            // permissions gap.
+            PaymentRequestApproverConflictException paymentRequestApproverConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    paymentRequestApproverConflictException.PublicDetail)),
+
+            // SoD: یک کاربر نمی‌تواند دو مرحلهٔ متوالی یک درخواست را تأیید کند.
+            PaymentRequestConsecutiveApproverConflictException paymentRequestConsecutiveApproverConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    paymentRequestConsecutiveApproverConflictException.PublicDetail)),
+
+            // Submit refused: unit has no TB_TR_SETTING row yet.
+            PaymentRequestSettingsMissingException paymentRequestSettingsMissingException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    paymentRequestSettingsMissingException.PublicDetail)),
+
+            // Submit-only rules — 400, same shape as the petty-cash §4 Submit rules.
+            PaymentRequestDueDatePastException paymentRequestDueDatePastException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    paymentRequestDueDatePastException.PublicDetail)),
+
+            PaymentRequestInvoiceNotApprovedException paymentRequestInvoiceNotApprovedException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    paymentRequestInvoiceNotApprovedException.PublicDetail)),
+
+            // Application-level duplicate (no DB UNIQUE constraint backs it) — 409.
+            PaymentRequestDuplicateException paymentRequestDuplicateException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    paymentRequestDuplicateException.PublicDetail)),
+
+            // Only ever thrown inside bulk-approve mode (folded into failedIds below); mapped
+            // defensively in case it ever surfaces on its own.
+            PaymentRequestBulkLimitExceededException paymentRequestBulkLimitExceededException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    paymentRequestBulkLimitExceededException.PublicDetail)),
+
+            // BulkApprove all-or-nothing failure — same failedIds-extension shape as
+            // PettyCashBulkApproveConflictException.
+            PaymentRequestBulkApproveConflictException paymentRequestBulkApproveConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildPaymentRequestBulkApproveConflictProblemDetails(httpContext, paymentRequestBulkApproveConflictException)),
+
             _ => (
                 StatusCodes.Status500InternalServerError,
                 BuildProblemDetails(
@@ -624,6 +733,25 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
     private static ProblemDetails BuildBulkApproveConflictProblemDetails(
         HttpContext httpContext,
         PettyCashBulkApproveConflictException exception)
+    {
+        var problemDetails = BuildProblemDetails(
+            httpContext,
+            StatusCodes.Status409Conflict,
+            "Conflict",
+            exception.PublicDetail);
+
+        problemDetails.Extensions["failedIds"] = exception.Failures
+            .Select(pair => new { id = pair.Key, reason = pair.Value })
+            .ToArray();
+
+        return problemDetails;
+    }
+
+    /// <summary>Same shape as <see cref="BuildBulkApproveConflictProblemDetails"/>, for the
+    /// خزانه‌داری bulk-approve endpoint's own exception type.</summary>
+    private static ProblemDetails BuildPaymentRequestBulkApproveConflictProblemDetails(
+        HttpContext httpContext,
+        PaymentRequestBulkApproveConflictException exception)
     {
         var problemDetails = BuildProblemDetails(
             httpContext,

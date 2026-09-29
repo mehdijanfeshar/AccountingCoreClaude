@@ -321,3 +321,53 @@ POST api/petty-cash/funds/{fundId}/tafsilis               { tafsilis: [{tafsiliI
 `count` بدون محدودیت نقش (§۹ فقط برای `finalize` نقش تعیین کرده). `finalize` فقط `SeniorAccountant`، SoD (کاربر ≠ سازندهٔ هیچ سند منظورشده)، `acknowledgeInFlightTransfer` اگر سند در جریان هست، `countedBalance` باید ثبت و برابر مانده محاسبه‌شده باشد.
 
 **قفل:** `DeletePettyCashRefundCommandHandler` اکنون حذف استرداد را وقتی `REFUND_DATE` داخل بازهٔ یک دورهٔ Final باشد مسدود می‌کند (`PettyCashRefundLockedBySettledPeriodException`، ۴۰۹) — TODO بخش ۳-الف بسته شد. صورت‌هزینهٔ `Settled` از قبل غیرقابل‌ویرایش/حذف/پیوست است (وضعیت پایانی در state machine بخش ۱/۲).
+
+## ۱۰. خزانه‌داری (۲۰۲۶-۰۹-۲۸/۲۰۲۶-۰۹-۲۹) — نقشهٔ بخش‌های ۴-الف..۴-د
+
+نقشهٔ راه: **۴-الف** درخواست پرداخت + کارتابل تأیید (این بخش، پیاده شد) · **۴-ب** اجرای پرداخت (ص ۱۷ پاورپوینت؛ پر کردن Legacy `TB_PAYRECIVHEAD/DETAIL` + دو سند GL «شناسایی بدهی» و «پرداخت»، ص ۲۰؛ و جایگزینی احتمالی `record-payment` ترمیم تنخواه) · **۴-ج** دریافت و انتقال وجه (ص ۱۸–۱۹) · **۴-د** مغایرت‌گیری (ص ۲۱) + داشبورد خزانه (ص ۱۴). هیچ‌کدام از ۴-ب/۴-ج/۴-د هنوز طراحی/پیاده نشده‌اند.
+
+### بخش ۴-الف — طراحی و پیاده‌سازی: درخواست پرداخت + کارتابل تأیید
+
+جدول‌های جدید (DDL: `backend/db/051_treasury_payment_request.sql`، اجرا نشده): `TB_TR_SETTING` (تنظیمات واحد، بدون مقدار پیش‌فرض)، `TB_TR_ROLE` (نقش خزانه، جدا از `TB_PC_REVIEWER`)، `TB_TR_PAYMENT_REQUEST` (درخواست پرداخت، `PAY-xxxxxx`)، `TB_TR_PAYMENT_REQUEST_EVENT` (گردش عملیات، insert-only). پیشوند `TB_TR_` («Treasury») عمداً متفاوت از `TB_PC_` — این جدول‌ها خاص تنخواه نیستند.
+
+**سه تصمیم صاحب پروژه (۲۰۲۶-۰۹-۲۸):**
+1. آستانهٔ تأیید مدیرعامل (`CEO_APPROVAL_THRESHOLD`) و سقف تأیید گروهی (`BULK_APPROVE_LIMIT`) در `TB_TR_SETTING` — بدون هیچ hardcode یا پیش‌فرض در کد/DDL؛ تا وقتی مدیر مالی واحد آن‌ها را تعریف نکند، Submit با ۴۰۹ رد می‌شود.
+2. نقش‌های خزانه (`TB_TR_ROLE`) فهرستی کاملاً جدا از `TB_PC_REVIEWER` است — یک واحد می‌تواند FinanceManager متفاوتی برای تنخواه و خزانه داشته باشد.
+3. تأیید فاکتور تیکی دستی ثبت‌کننده است (`INVOICE_APPROVED`) — ماژول فاکتور مستقلی وجود ندارد.
+
+**محاسبهٔ VAT/کسور بیمه (تصمیم این پیاده‌سازی، مستندشده در `PaymentRequestAmountCalculator`):** اگر درصد وارد شود، سرور مبلغ را از روی آن حساب می‌کند (مبلغ ورودی نادیده گرفته می‌شود). اگر درصد خالی باشد، مبلغ ورودی مستقیماً استفاده می‌شود (برای کسور مقطوع بدون درصد مشخص). `NET_PAYABLE_AMOUNT` همیشه = `AMOUNT_BEFORE_TAX + VAT_AMOUNT − INSURANCE_DEDUCTION_AMOUNT`، هرگز ورودی مستقیم.
+
+**گردش (`PaymentRequestState`):** `Draft=1 → PendingUnitManager=2 → PendingFinanceManager=3 → (فقط اگر NET_PAYABLE_AMOUNT > آستانه) PendingCeo=4 → ReadyForExecution=5`؛ از هر Pending: `Returned=6` (دلیل اجباری، دوباره Submit از مدیر واحد شروع می‌شود) یا `Rejected=7` (پایانی). نقش لازم هر مرحله: `PaymentRequestStageRoleMap` (مشترک بین `PaymentRequestApprovalService` و کارتابل).
+
+**SoD (`PaymentRequestApprovalService`):** تأییدکننده/برگشت‌دهنده/ردکننده ≠ ثبت‌کننده (۴۰۹، `PaymentRequestApproverConflictException`)؛ تأییدکنندهٔ یک مرحله ≠ تأییدکنندهٔ مرحلهٔ بلافصل قبل — با خواندن آخرین رویداد `Approve` همان درخواست (۴۰۹، `PaymentRequestConsecutiveApproverConflictException`). این قاعدهٔ دوم فقط روی `Approve` چک می‌شود، نه `Return`/`Reject` (آن‌ها گذار در زنجیرهٔ تأیید نیستند).
+
+**قواعد Submit (`IPaymentRequestSubmitRuleChecker`، مشترک بین Create+submit و Submit جدا):** تنظیمات واحد باید وجود داشته باشد (۴۰۹) · `DUE_DATE` نباید گذشته باشد (۴۰۰) · `INVOICE_REF` پر بدون `INVOICE_APPROVED` (۴۰۰) · تکراری بودن (شناسهٔ ملی + شمارهٔ فاکتور، هر دو غیرخالی) بین درخواست‌های زندهٔ غیر-Rejected (۴۰۹). `PAYMENT_ACCOUNT_ID`/`EXPENSE_ACCOUNT_ID` همیشه (نه فقط Submit) در برابر `TB_ACCOUNT`/`TB_ACCOUNTCODE` چک می‌شوند (۴۰۴) — این دو ستون FK واقعی در EF ندارند (ریسک #۹/#۱۴ تکرارشده، نه استثنای جدید).
+
+**تأیید گروهی:** فقط درخواست‌های `NET_PAYABLE_AMOUNT ≤ BULK_APPROVE_LIMIT` در مرحلهٔ نقش کاربر؛ all-or-nothing با `failedIds` (همان الگوی `bulk-approve` تنخواه).
+
+**نقش‌ها — bootstrap:** ایجاد/حذف نقش و تنظیمات فقط `FinanceManager` همان واحد، **به‌جز**: اگر واحد هیچ `FinanceManager` فعالی ندارد، هر کاربر احرازشدهٔ واحد می‌تواند یک نقش ثبت کند (`CreateTreasuryRoleCommandHandler`، `ITreasuryRoleRepository.HasActiveFinanceManagerAsync`) — تنها راه خروج از بن‌بست «هیچ‌کس نمی‌تواند اولین FinanceManager را بسازد».
+
+**کارتابل تأیید (`GetApprovalCartableQueryHandler`):** دو منبع مستقل، merge در C# (هرگز join سراسری روی جدول‌های دو ماژول): (۱) درخواست‌های پرداخت Pending* این واحد، (۲) ترمیم‌های تنخواه `PendingTreasurer` از `IPettyCashReplenishmentReadRepository` موجود (فقط نمایشی — این ماژول چیزی به تنخواه اضافه/تغییر نمی‌دهد؛ `pendingForMe` از نقش `Treasurer` در `TB_PC_REVIEWER` همان تنخواه، با یک کوئری per-fund). مرتب بر اساس عمر (قدیمی‌ترین اول)، صفحه‌بندی در حافظه.
+
+### Endpointها (`api/treasury/...`، همه `IVahedScoped`، فقط `GET`/`POST`)
+
+```
+GET/POST api/treasury/settings                                    { ceoApprovalThreshold, bulkApproveLimit }
+GET      api/treasury/roles
+POST     api/treasury/roles                                       { userId, userName?, role }
+POST     api/treasury/roles/{id}/delete
+
+GET  api/treasury/payment-requests?state=&search=&pageNumber=&pageSize=   → { page, stateCounts }
+GET  api/treasury/payment-requests/{id}                            → + events
+POST api/treasury/payment-requests          body کامل + submit      → 201 { id }
+POST api/treasury/payment-requests/{id}/update
+POST api/treasury/payment-requests/{id}/delete
+POST api/treasury/payment-requests/{id}/submit
+POST api/treasury/payment-requests/{id}/approve          { note? }
+POST api/treasury/payment-requests/{id}/return           { reason }
+POST api/treasury/payment-requests/{id}/reject           { reason }
+POST api/treasury/payment-requests/bulk-approve          { ids: [] }
+GET  api/treasury/approval-cartable?pageNumber=&pageSize=
+```
+
+فایل‌ها: `Accounting.Application/Treasury/**`، `Accounting.Infrastructure/Repositories/{PaymentRequest,TreasurySetting,TreasuryRole}*.cs`، `Accounting.Api/Controllers/TreasuryController.cs`.

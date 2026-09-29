@@ -93,6 +93,15 @@ public static class DependencyInjection
         services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashSettlementVoucherBuilder,
             Accounting.Application.PettyCash.Commands.Common.PettyCashSettlementVoucherBuilder>();
 
+        // خزانه‌داری، بخش ۴-الف (۲۰۲۶-۰۹-۲۸) — درخواست پرداخت + کارتابل تأیید
+        // (docs/tankhah-khazaneh-module.md §۱۰).
+        services.AddScoped<Accounting.Application.Treasury.Commands.Common.ITreasuryRoleAuthorizer,
+            Accounting.Application.Treasury.Commands.Common.TreasuryRoleAuthorizer>();
+        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestSubmitRuleChecker,
+            Accounting.Application.Treasury.Commands.Common.PaymentRequestSubmitRuleChecker>();
+        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestApprovalService,
+            Accounting.Application.Treasury.Commands.Common.PaymentRequestApprovalService>();
+
         return services;
     }
 }
