@@ -34,6 +34,20 @@ public interface IFsBalanceReadRepository
         int pageSize,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// کنترل V-09 (بخش ۴۵-ه): اسناد سال <paramref name="year"/> در همان دامنه و فیلترهای اجرا (جز سند افتتاحیه)
+    /// که تاریخشان خالی است یا مال سال دیگری است. <see cref="GetBalancesAsync"/> اولی‌ها را کنار می‌گذارد و
+    /// دومی‌ها را بسته به تاریخ در «ابتدا» یا بیرون از دوره می‌گذارد — بی‌صدا؛ این کنترل آشکارشان می‌کند.
+    /// </summary>
+    Task<FsOutOfPeriodVouchers> GetOutOfPeriodVouchersAsync(
+        string year,
+        IReadOnlyCollection<string> vahedCodes,
+        int minDocLife,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>بخش ۴۵-و — همهٔ معین‌های حذف‌نشدهٔ کدینگ با کل و گروه والد، به ترتیب کد (نمای «نگاشت حساب‌ها»).</summary>
+    Task<IReadOnlyList<FinancialStatements.Queries.AccountMapping.FsChartMoein>> GetChartMoeinsAsync(CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<FsAccountBalance>> GetBalancesAsync(
         string year,
         string fromDate,

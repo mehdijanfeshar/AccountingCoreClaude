@@ -149,6 +149,113 @@ public sealed class FsBalanceReadRepository : IFsBalanceReadRepository
             first?.SumCreditor ?? 0);
     }
 
+    public async Task<FsOutOfPeriodVouchers> GetOutOfPeriodVouchersAsync(
+        string year,
+        IReadOnlyCollection<string> vahedCodes,
+        int minDocLife,
+        CancellationToken cancellationToken = default)
+    {
+        if (vahedCodes.Count == 0)
+        {
+            return new FsOutOfPeriodVouchers(0, 0, Array.Empty<string>());
+        }
+
+        var parameters = new List<OracleParameter>
+        {
+            new() { ParameterName = "year", OracleDbType = OracleDbType.Char, Value = year },
+            new() { ParameterName = "minDocLife", OracleDbType = OracleDbType.Int32, Value = minDocLife },
+        };
+
+        var vahedSql = AppendVahedClause(parameters, vahedCodes);
+
+        // همان فیلترهای GetBalancesAsync روی سرِ سند (بدون افتتاحیه)، به‌علاوهٔ «تاریخ خالی یا سال دیگر».
+        var where = $"""
+              h.YEAR = :year
+              AND (h.ISDELETED IS NULL OR h.ISDELETED = 0)
+              AND (h.FLAG_STATE IS NULL OR h.FLAG_STATE <> 1)
+              AND h.DOCLIFE >= :minDocLife
+              AND oh.HID IS NULL
+              AND (h.DATE_DOC IS NULL OR SUBSTR(h.DATE_DOC, 1, 4) <> :year)
+              AND ({vahedSql})
+            """;
+
+        var countSql = $"""
+            {OpeningVoucherCte}
+            SELECT
+              NVL(SUM(CASE WHEN h.DATE_DOC IS NULL THEN 1 ELSE 0 END), 0) AS "NullDateCount",
+              NVL(SUM(CASE WHEN h.DATE_DOC IS NOT NULL THEN 1 ELSE 0 END), 0) AS "OtherYearCount"
+            FROM TB_VOUCHERSHEAD h
+            LEFT JOIN oh ON oh.HID = h.ID
+            WHERE {where}
+            """;
+
+        var counts = (await _dbContext.Database
+            .SqlQueryRaw<FsOutOfPeriodRow>(countSql, parameters.ToArray<object>())
+            .ToListAsync(cancellationToken)).FirstOrDefault();
+
+        if (counts is null || counts.NullDateCount + counts.OtherYearCount == 0)
+        {
+            return new FsOutOfPeriodVouchers(0, 0, Array.Empty<string>());
+        }
+
+        // پارامترها دوباره ساخته می‌شوند — یک OracleParameter را نمی‌شود به دو فرمان داد.
+        var sampleParameters = new List<OracleParameter>
+        {
+            new() { ParameterName = "year", OracleDbType = OracleDbType.Char, Value = year },
+            new() { ParameterName = "minDocLife", OracleDbType = OracleDbType.Int32, Value = minDocLife },
+        };
+        var sampleVahedSql = AppendVahedClause(sampleParameters, vahedCodes);
+        var sampleSql = $"""
+            {OpeningVoucherCte}
+            SELECT * FROM (
+              SELECT h.VAHEDCODE || '/' || NVL(h.DOC_NUM, '?') || ' (' || NVL(h.DATE_DOC, 'بدون تاریخ') || ')' AS "Value"
+              FROM TB_VOUCHERSHEAD h
+              LEFT JOIN oh ON oh.HID = h.ID
+              WHERE {where.Replace(vahedSql, sampleVahedSql, StringComparison.Ordinal)}
+              ORDER BY h.DATE_DOC NULLS FIRST, h.DOC_NUM
+            ) WHERE ROWNUM <= 10
+            """;
+
+        var samples = await _dbContext.Database
+            .SqlQueryRaw<string>(sampleSql, sampleParameters.ToArray<object>())
+            .ToListAsync(cancellationToken);
+
+        return new FsOutOfPeriodVouchers((int)counts.NullDateCount, (int)counts.OtherYearCount, samples);
+    }
+
+    public async Task<IReadOnlyList<Application.FinancialStatements.Queries.AccountMapping.FsChartMoein>> GetChartMoeinsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        // کدینگ کوچک است (چند هزار ردیف): یک‌جا خوانده و والدها در حافظه وصل می‌شوند.
+        var codes = await _dbContext.TB_ACCOUNTCODEs
+            .AsNoTracking()
+            .Where(a => a.ISDELETED != true)
+            .Select(a => new { a.ID, a.ACCCODE, a.ACCCODENAME, a.TYPECODE, a.PARENTID })
+            .ToListAsync(cancellationToken);
+
+        var byId = codes.ToDictionary(a => a.ID);
+
+        return codes
+            .Where(a => a.TYPECODE == Domain.ValueObjects.TypeCodes.Moin && !string.IsNullOrEmpty(a.ACCCODE))
+            .Select(a =>
+            {
+                var kol = a.PARENTID is { } k && byId.TryGetValue(k, out var kv) ? kv : null;
+                var group = kol?.PARENTID is { } g && byId.TryGetValue(g, out var gv) ? gv : null;
+                return new Application.FinancialStatements.Queries.AccountMapping.FsChartMoein(
+                    a.ACCCODE!, a.ACCCODENAME, kol?.ACCCODE, kol?.ACCCODENAME, group?.ACCCODE, group?.ACCCODENAME);
+            })
+            .OrderBy(m => m.AccCode, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    /// <summary>شکل خام شمارش V-09.</summary>
+    public sealed class FsOutOfPeriodRow
+    {
+        public long NullDateCount { get; set; }
+
+        public long OtherYearCount { get; set; }
+    }
+
     /// <summary>فهرست صریح واحدها (fail-closed)، در تکه‌های ≤۱۰۰۰ تایی <c>IN</c> (سقف اوراکل)، همه bind.</summary>
     private static string AppendVahedClause(List<OracleParameter> parameters, IReadOnlyCollection<string> vahedCodes)
     {

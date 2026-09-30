@@ -13,6 +13,7 @@ using Accounting.Application.FinancialStatements.Commands.UpdateFsTemplate;
 using Accounting.Application.FinancialStatements.Commands.UpdateFsTemplateRow;
 using Accounting.Application.FinancialStatements.Commands.UpdateFsTemplateVersion;
 using Accounting.Application.FinancialStatements.Queries;
+using Accounting.Application.FinancialStatements.Queries.AccountMapping;
 using Accounting.Application.FinancialStatements.Queries.GetFsTemplates;
 using Accounting.Application.FinancialStatements.Queries.GetFsTemplateVersion;
 using Accounting.Application.FinancialStatements.Queries.ValidateFsTemplateVersion;
@@ -43,6 +44,22 @@ public sealed class FsTemplatesController : ControllerBase
     {
         _mediator = mediator;
     }
+
+    /// <summary>
+    /// بخش ۴۵-و — «نگاشت حساب‌ها»: هر معین کدینگ به کدام ردیف قالب‌های این مجموعه رفته (همان قالب‌هایی که اجرا
+    /// برای واحد هدر برمی‌دارد).
+    /// </summary>
+    [HttpGet("account-mapping")]
+    [ProducesResponseType(typeof(IReadOnlyList<FsAccountMappingDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetAccountMapping(
+        [FromQuery] FsFramework framework,
+        [FromQuery] int year,
+        [FromQuery] bool useDrafts = false,
+        CancellationToken cancellationToken = default)
+        => Ok(await _mediator.Send(new GetFsAccountMappingQuery(framework, year, useDrafts), cancellationToken));
 
     /// <summary>قالب‌ها با نسخه‌هایشان (جدیدترین نسخه اول).</summary>
     [HttpGet("templates")]

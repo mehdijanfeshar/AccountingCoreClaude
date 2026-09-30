@@ -11,6 +11,11 @@ public sealed record FsCheckStatement(string TemplateCode, string TitleFa, bool 
 
 public sealed record FsCheckStatementRow(string Code, string? TitleFa, FsRowType RowType, string? Selector, FsValueType? ValueType, FsNormalBalance? NormalBalance);
 
+/// <summary>
+/// ورودی V-09: تعداد اسناد سال با تاریخ خالی و با تاریخ سال دیگر، و نمونهٔ شمارهٔ سندها (حداکثر ۱۰).
+/// </summary>
+public sealed record FsOutOfPeriodVouchers(int NullDateCount, int OtherYearCount, IReadOnlyList<string> SampleDocs);
+
 /// <summary>نتیجهٔ کنترل یادداشت V-08 که هنگام Snapshot حساب شد.</summary>
 public sealed record FsNoteCheckInput(string NoteCode, string? NoteNo, string TitleFa, string? ParentRef, decimal? DiffCur, decimal? DiffPrv);
 
@@ -31,6 +36,7 @@ public sealed record FsCheckResult(
 /// <item><b>V-05</b> معین دارای مانده که در هیچ ردیف صورتی نیامده، یا در یک صورت در دو ردیف آمده — هشدار.</item>
 /// <item><b>V-06</b> ماندهٔ معکوس: ردیف مانده‌پایانِ بدهکار با مبلغ بستانکار یا برعکس — هشدار.</item>
 /// <item><b>V-08</b> جمع یادداشت = ردیف صورت (از Snapshot) — مسدودکننده.</item>
+/// <item><b>V-09</b> سند سال با تاریخ خالی یا سال دیگر در دامنه (جز افتتاحیه) — هشدار.</item>
 /// </list>
 /// </summary>
 public static class FsRunChecks
@@ -42,9 +48,32 @@ public static class FsRunChecks
         IReadOnlyDictionary<(string Stmt, string Row), IReadOnlyDictionary<string, FsRowValue>> values,
         IReadOnlyList<FsAccountBalance> currentBalances,
         IReadOnlyList<FsCheckRuleInput> rules,
-        IReadOnlyList<FsNoteCheckInput> notes)
+        IReadOnlyList<FsNoteCheckInput> notes,
+        FsOutOfPeriodVouchers? outOfPeriod = null)
     {
         var results = new List<FsCheckResult>();
+
+        // V-09 — اسناد سال با تاریخ خالی یا سال دیگر.
+        if (outOfPeriod is not null)
+        {
+            var total = outOfPeriod.NullDateCount + outOfPeriod.OtherYearCount;
+            var parts = new List<string>();
+
+            if (outOfPeriod.NullDateCount > 0)
+            {
+                parts.Add($"{outOfPeriod.NullDateCount} سند بدون تاریخ (در صورت‌ها حساب نشده‌اند)");
+            }
+
+            if (outOfPeriod.OtherYearCount > 0)
+            {
+                parts.Add($"{outOfPeriod.OtherYearCount} سند با تاریخ سال دیگر (پیش از سال ⇒ جزء ماندهٔ ابتدا، پس از سال ⇒ حساب نشده)");
+            }
+
+            results.Add(new FsCheckResult(
+                "V-09", "سند با تاریخ خارج از سال مالی در دامنه نیست", FsCheckSeverity.Warning, total == 0,
+                total == 0 ? null : string.Join("؛ ", parts) + (outOfPeriod.SampleDocs.Count > 0 ? $". نمونه: {List(outOfPeriod.SampleDocs)}" : string.Empty),
+                null, null));
+        }
 
         // V-01
         var dr = currentBalances.Sum(b => b.OpeningDebtor + b.PeriodDebtor);

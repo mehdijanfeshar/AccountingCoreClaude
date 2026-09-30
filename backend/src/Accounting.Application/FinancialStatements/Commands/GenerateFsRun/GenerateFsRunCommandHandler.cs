@@ -231,7 +231,8 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
         }
 
         // بخش ۴۵-ه — کنترل‌ها، مقادیر دستی، اثر انگشت مانده‌ها، جایگزینی مبدأ.
-        await AddChecksAsync(run, versions, values, totals[FsColumns.Current], scope, request.Framework, cancellationToken);
+        var outOfPeriod = await _balanceReadRepository.GetOutOfPeriodVouchersAsync(request.Year, unitCodes, request.MinDocLife, cancellationToken);
+        await AddChecksAsync(run, versions, values, totals[FsColumns.Current], scope, request.Framework, outOfPeriod, cancellationToken);
         AddManualValues(run, request.ManualValues);
         run.BALANCE_HASH = FsBalanceHash.Compute(raw);
 
@@ -310,6 +311,7 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
         IReadOnlyList<FsAccountBalance> currentBalances,
         FsUnitScope scope,
         FsFramework framework,
+        FsOutOfPeriodVouchers outOfPeriod,
         CancellationToken cancellationToken)
     {
         var rules = (await _ruleRepository.GetAllAsync(framework, cancellationToken))
@@ -340,7 +342,7 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
                 s.CHECK_DIFF_PRV))
             .ToList();
 
-        foreach (var c in FsRunChecks.Evaluate(statements, values, currentBalances, rules, notes))
+        foreach (var c in FsRunChecks.Evaluate(statements, values, currentBalances, rules, notes, outOfPeriod))
         {
             run.TB_FS_RUN_CHECKs.Add(new TB_FS_RUN_CHECK
             {
