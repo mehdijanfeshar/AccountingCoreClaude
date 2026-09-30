@@ -64,6 +64,12 @@ public interface IUnitAccessReadRepository
     Task<UnitProfile?> GetUnitProfileAsync(string vahedCode, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// همهٔ واحدها با والد و پرچم ستاد (جدول کوچک، یک‌جا) — برای محاسبهٔ اجداد/زیرمجموعه در حافظه،
+    /// مثل ماژول صورت‌های مالی (فاز ۴۵).
+    /// </summary>
+    Task<IReadOnlyList<UnitNode>> GetAllUnitsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// True when <paramref name="ownVahedCode"/> may act as <paramref name="targetVahedCode"/> —
     /// the membership test behind <see cref="IUnitScopeResolver"/>, and the reference project's
     /// <c>BusinessUserAccess.HaveAccessToUnit</c>.
@@ -93,3 +99,5 @@ public interface IUnitAccessReadRepository
 /// <param name="VahedName">TB_VAHED_INFO.VAHEDNAME.</param>
 /// <param name="IsHeadquarters">True when this unit's type grants blanket access to every unit.</param>
 public sealed record UnitProfile(string VahedName, bool IsHeadquarters);
+
+public sealed record UnitNode(Guid Id, string VahedCode, string VahedName, Guid? ParentId, bool IsHeadquarters);

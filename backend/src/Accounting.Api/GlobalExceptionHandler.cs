@@ -546,6 +546,24 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
 
             // خزانه‌داری، بخش ۴-الف (۲۰۲۶-۰۹-۲۸) — درخواست پرداخت. Wrong REQUEST_STATE for the
             // requested action — same state-based-refusal shape as PettyCashReviewStateConflictException.
+            // صورت‌های مالی (۴۵) — قالب واحد دیگر یا قالب مشترک از غیرستاد.
+            FsAccessDeniedException fsAccessDeniedException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    fsAccessDeniedException.PublicDetail)),
+
+            // صورت‌های مالی (۴۵-الف) — ویرایش نسخهٔ غیرپیش‌نویس، دو پیش‌نویس، کد تکراری، حذف قالب فعال.
+            FsTemplateConflictException fsTemplateConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    fsTemplateConflictException.PublicDetail)),
+
             PaymentRequestStateConflictException paymentRequestStateConflictException => (
                 StatusCodes.Status409Conflict,
                 BuildProblemDetails(

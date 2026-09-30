@@ -20,6 +20,13 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        var schema = configuration["Database:Schema"];
+
+        if (!string.IsNullOrWhiteSpace(schema))
+        {
+            LegacyDbContext.DefaultSchema = schema.Trim().ToUpperInvariant();
+        }
+
         services.AddDbContext<LegacyDbContext>(options =>
             options.UseOracle(configuration.GetConnectionString("DefaultConnection")));
 
@@ -199,6 +206,14 @@ public static class DependencyInjection
         // کاملاً جدید، همان استثنای صریح صاحب پروژه (docs/tankhah-khazaneh-module.md §۱۰).
         services.AddScoped<ITreasurySettingRepository, TreasurySettingRepository>();
         services.AddScoped<ITreasurySettingReadRepository, TreasurySettingReadRepository>();
+
+        // صورت‌های مالی، بخش ۴۵-الف — قالب/نسخه/ردیف (docs/fs-module.md).
+        services.AddScoped<IFsTemplateRepository, FsTemplateRepository>();
+        services.AddScoped<IFsTemplateReadRepository, FsTemplateReadRepository>();
+
+        // صورت‌های مالی، بخش ۴۵-ب — مانده از اسناد + اجرا/Snapshot.
+        services.AddScoped<IFsBalanceReadRepository, FsBalanceReadRepository>();
+        services.AddScoped<IFsRunRepository, FsRunRepository>();
         services.AddScoped<ITreasuryRoleRepository, TreasuryRoleRepository>();
         services.AddScoped<ITreasuryRoleReadRepository, TreasuryRoleReadRepository>();
         services.AddScoped<IPaymentRequestRepository, PaymentRequestRepository>();

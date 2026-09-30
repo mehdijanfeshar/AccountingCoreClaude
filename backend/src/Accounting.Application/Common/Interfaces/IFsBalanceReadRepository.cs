@@ -1,0 +1,27 @@
+using Accounting.Application.FinancialStatements.Engine;
+
+namespace Accounting.Application.Common.Interfaces;
+
+/// <summary>
+/// ماندهٔ معین‌ها برای موتور صورت‌های مالی — فاز ۴۵-ب (<c>docs/fs-module.md</c> §۷). مستقیم از
+/// <c>TB_VOUCHERSDETAIL</c>/<c>TB_VOUCHERSHEAD</c> (تصمیم صاحب پروژه؛ جدول مانده نداریم) با یک کوئری
+/// تجمیعی به‌ازای هر ستون.
+/// </summary>
+public interface IFsBalanceReadRepository
+{
+    /// <summary>
+    /// مانده به‌ازای هر (معین، واحد سند) — <see cref="FsAccountBalance.VahedCode"/> پُر است؛ جمع واحدها با
+    /// فراخوان. فقط معین‌هایی که حداقل یک ردیف سند دارند. فقط اسناد سال <paramref name="year"/>، واحدهای
+    /// <paramref name="vahedCodes"/>، <c>DOCLIFE &gt;= minDocLife</c>، حذف‌نشده، و <b>بدون سند اختتامیه</b>
+    /// (<c>FLAG_STATE = 1</c>). «ابتدا» = سند افتتاحیه (سندی با ردیفی روی حساب رابط افتتاحیه،
+    /// <c>TB_ACCOUNTCODE_INTERFACE.TYPE = 1</c>) + اسناد پیش از <paramref name="fromDate"/>؛ «دوره» =
+    /// بقیهٔ اسناد تا <paramref name="toDate"/> (شامل).
+    /// </summary>
+    Task<IReadOnlyList<FsAccountBalance>> GetBalancesAsync(
+        string year,
+        string fromDate,
+        string toDate,
+        IReadOnlyCollection<string> vahedCodes,
+        int minDocLife,
+        CancellationToken cancellationToken = default);
+}

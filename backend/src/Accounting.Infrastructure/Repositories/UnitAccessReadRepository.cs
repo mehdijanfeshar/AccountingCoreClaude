@@ -80,6 +80,25 @@ public sealed class UnitAccessReadRepository : IUnitAccessReadRepository
             .ToList();
     }
 
+    public async Task<IReadOnlyList<UnitNode>> GetAllUnitsAsync(CancellationToken cancellationToken = default)
+    {
+        // TYPECODE projected raw and compared in memory — never project a boolean against Oracle
+        // (see CanActAsAsync).
+        var units = await _dbContext.TB_VAHED_INFOs
+            .AsNoTracking()
+            .Select(v => new UnitRow(v.ID, v.VAHEDCODE, v.VAHEDNAME, v.PARENT_ID, v.VAHEDTYPE.TYPECODE))
+            .ToListAsync(cancellationToken);
+
+        return units
+            .Select(u => new UnitNode(
+                u.Id,
+                u.VahedCode,
+                u.VahedName,
+                u.ParentId,
+                string.Equals(u.VahedTypeCode, HeadquartersVahedTypeCode, StringComparison.Ordinal)))
+            .ToList();
+    }
+
     public async Task<UnitProfile?> GetUnitProfileAsync(
         string vahedCode,
         CancellationToken cancellationToken = default)
