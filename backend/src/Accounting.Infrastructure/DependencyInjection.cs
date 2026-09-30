@@ -220,6 +220,17 @@ public static class DependencyInjection
         services.AddScoped<ITreasuryTransferEventRepository, TreasuryTransferEventRepository>();
         services.AddScoped<ITreasuryBankAccountBalanceReadRepository, TreasuryBankAccountBalanceReadRepository>();
 
+        // خزانه‌داری، بخش ۴-د (۲۰۲۶-۰۹-۲۹) — مغایرت‌گیری بانکی + داشبورد خزانه.
+        services.AddScoped<ITreasuryBankStatementRepository, TreasuryBankStatementRepository>();
+        services.AddScoped<ITreasuryBankStatementReadRepository, TreasuryBankStatementReadRepository>();
+        services.AddScoped<ITreasuryBankStatementLineRepository, TreasuryBankStatementLineRepository>();
+        services.AddScoped<IBankStatementBookCandidateReadRepository, BankStatementBookCandidateReadRepository>();
+        services.AddScoped<ITreasuryDashboardReadRepository, TreasuryDashboardReadRepository>();
+        // IBankStatementFileParser — عمداً هیچ پیاده‌سازی‌ای اینجا ثبت نشده (صاحب پروژه، ۲۰۲۶-۰۹-۲۹):
+        // قالب فایل دیسکت بانک هنوز تعریف نشده. ImportBankStatementCommandHandler آن را از
+        // IServiceProvider (نه constructor injection) می‌خواند تا نبودش DI را در startup نشکند —
+        // رجوع IBankStatementFileParser XML doc برای نحوهٔ افزودن یک پیاده‌سازی واقعی بعداً.
+
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 
         return services;

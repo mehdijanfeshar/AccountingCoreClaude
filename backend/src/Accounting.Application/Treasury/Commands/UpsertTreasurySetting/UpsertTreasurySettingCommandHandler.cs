@@ -61,6 +61,8 @@ public sealed class UpsertTreasurySettingCommandHandler : IRequestHandler<Upsert
             "InsurancePayableAccount", request.InsurancePayableAccountId, cancellationToken);
         var (receivablesCode, receivablesName) = await EnsureAccountCodeExistsAsync(
             "ReceivablesAccount", request.ReceivablesAccountId, cancellationToken);
+        var (bankFeeCode, bankFeeName) = await EnsureAccountCodeExistsAsync(
+            "BankFeeAccount", request.BankFeeAccountId, cancellationToken);
 
         string? customerGroupCode = null;
         string? customerGroupName = null;
@@ -98,6 +100,7 @@ public sealed class UpsertTreasurySettingCommandHandler : IRequestHandler<Upsert
                 RECEIVABLES_ACCOUNT_ID = request.ReceivablesAccountId,
                 CUSTOMER_TAFSIL_GROUP_ID = request.CustomerTafsilGroupId,
                 DAILY_TRANSFER_LIMIT = request.DailyTransferLimit,
+                BANK_FEE_ACCOUNT_ID = request.BankFeeAccountId,
                 ADDUSERID = userId,
                 CREATEDDATE = now,
                 ISDELETED = false,
@@ -116,6 +119,7 @@ public sealed class UpsertTreasurySettingCommandHandler : IRequestHandler<Upsert
             setting.RECEIVABLES_ACCOUNT_ID = request.ReceivablesAccountId;
             setting.CUSTOMER_TAFSIL_GROUP_ID = request.CustomerTafsilGroupId;
             setting.DAILY_TRANSFER_LIMIT = request.DailyTransferLimit;
+            setting.BANK_FEE_ACCOUNT_ID = request.BankFeeAccountId;
             setting.CHANGEUSERID = userId;
             setting.UPDATEDDATE = now;
         }
@@ -144,7 +148,10 @@ public sealed class UpsertTreasurySettingCommandHandler : IRequestHandler<Upsert
             setting.CUSTOMER_TAFSIL_GROUP_ID,
             customerGroupCode,
             customerGroupName,
-            setting.DAILY_TRANSFER_LIMIT);
+            setting.DAILY_TRANSFER_LIMIT,
+            setting.BANK_FEE_ACCOUNT_ID,
+            bankFeeCode,
+            bankFeeName);
     }
 
     private async Task<(string? Code, string? Name)> EnsureAccountCodeExistsAsync(

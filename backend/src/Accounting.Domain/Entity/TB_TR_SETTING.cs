@@ -70,6 +70,14 @@ public partial class TB_TR_SETTING
     /// </summary>
     public decimal? DAILY_TRANSFER_LIMIT { get; set; }
 
+    /// <summary>
+    /// بخش ۴-د (۲۰۲۶-۰۹-۲۹) — حساب معین «کارمزد بانکی» — ردیف بدهکار سند خودکار «کارمزد بانکی»
+    /// که هنگام حل‌کردن یک ردیف نامنطبق برداشتی صورت‌حساب (<c>RESOLUTION_TYPE = BankFeeVoucher</c>)
+    /// صادر می‌شود. FK به <c>TB_ACCOUNTCODE</c>، بدون FK واقعی در EF (همان الگوی ریسک #۹/#۱۴).
+    /// <see langword="null"/> یعنی هنوز تعریف نشده — آن نوع حل با ۴۰۹ رد می‌شود.
+    /// </summary>
+    public Guid? BANK_FEE_ACCOUNT_ID { get; set; }
+
     public DateTime CREATEDDATE { get; set; }
 
     public DateTime? UPDATEDDATE { get; set; }

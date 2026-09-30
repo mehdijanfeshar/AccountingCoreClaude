@@ -34,7 +34,7 @@ public sealed class GetBankAccountBalanceQueryHandler : IRequestHandler<GetBankA
 
         var tafsiliIds = bankAccount.TafsiliLinks.Select(l => l.TafsiliId).ToList();
         var balance = await _balanceReadRepository.GetBalanceAsync(
-            accountCodeId, tafsiliIds, request.VahedCode, year, cancellationToken);
+            accountCodeId, tafsiliIds, request.VahedCode, year, cancellationToken: cancellationToken);
 
         return new BankAccountBalanceDto(request.Id, balance);
     }

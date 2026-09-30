@@ -830,6 +830,57 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Conflict",
                     treasuryTransferDailyLimitExceededException.PublicDetail)),
 
+            // خزانه‌داری، بخش ۴-د (۲۰۲۶-۰۹-۲۹) — مغایرت‌گیری بانکی + داشبورد خزانه.
+            TreasuryBankStatementStateConflictException treasuryBankStatementStateConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    treasuryBankStatementStateConflictException.PublicDetail)),
+
+            TreasuryBankStatementLineStateConflictException treasuryBankStatementLineStateConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    treasuryBankStatementLineStateConflictException.PublicDetail)),
+
+            // Input mismatch (direction/amount) on manual match — ۴۰۰، نه تعارض وضعیت.
+            TreasuryBankStatementMatchMismatchException treasuryBankStatementMatchMismatchException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    treasuryBankStatementMatchMismatchException.PublicDetail)),
+
+            TreasuryBankStatementResolutionInvalidException treasuryBankStatementResolutionInvalidException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    treasuryBankStatementResolutionInvalidException.PublicDetail)),
+
+            TreasuryBankStatementUnresolveNotAllowedException treasuryBankStatementUnresolveNotAllowedException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    treasuryBankStatementUnresolveNotAllowedException.PublicDetail)),
+
+            // قالب فایل دیسکت بانک هنوز تعریف نشده — IBankStatementFileParser بدون پیاده‌سازی ثبت‌شده.
+            TreasuryBankStatementParserNotConfiguredException treasuryBankStatementParserNotConfiguredException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    treasuryBankStatementParserNotConfiguredException.PublicDetail)),
+
             _ => (
                 StatusCodes.Status500InternalServerError,
                 BuildProblemDetails(

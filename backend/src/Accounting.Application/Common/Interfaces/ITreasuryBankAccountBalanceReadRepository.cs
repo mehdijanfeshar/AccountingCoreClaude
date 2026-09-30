@@ -23,10 +23,19 @@ public interface ITreasuryBankAccountBalanceReadRepository
     /// <see cref="IBankAccountReadRepository"/>. Returns <c>0</c> (never throws) when the معین has
     /// no voucher lines yet for the given year.
     /// </summary>
+    /// <param name="asOfDate">
+    /// بخش ۴-د (۲۰۲۶-۰۹-۲۹) — optional شمسی <c>YYYYMMDD</c> cut-off: when supplied, only lines
+    /// whose <c>TB_VOUCHERSHEAD.DATE_DOC</c> is <c>&lt;= asOfDate</c> are summed (string comparison
+    /// — <c>DATE_DOC</c> is a zero-padded <c>YYYYMMDD</c> string, same ordering trick used
+    /// throughout this project, e.g. <c>VoucherHeadReadRepository</c>). <see langword="null"/>
+    /// (the default) preserves the original whole-year behaviour every existing caller relies on.
+    /// Used by مغایرت‌گیری بانکی's «موجودی دفتری تا تاریخ صورت‌حساب».
+    /// </param>
     Task<decimal> GetBalanceAsync(
         Guid accountCodeId,
         IReadOnlyCollection<Guid> bankTafsiliIds,
         string vahedCode,
         string year,
+        string? asOfDate = null,
         CancellationToken cancellationToken = default);
 }

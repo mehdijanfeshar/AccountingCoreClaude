@@ -31,6 +31,7 @@ public sealed class TreasurySettingReadRepository : ITreasurySettingReadReposito
                 s.RECEIVABLES_ACCOUNT_ID,
                 s.CUSTOMER_TAFSIL_GROUP_ID,
                 s.DAILY_TRANSFER_LIMIT,
+                s.BANK_FEE_ACCOUNT_ID,
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -58,6 +59,7 @@ public sealed class TreasurySettingReadRepository : ITreasurySettingReadReposito
         var (vatCode, vatName) = await GetAccountCodeLabelAsync(setting.VAT_CREDIT_ACCOUNT_ID, cancellationToken);
         var (insuranceCode, insuranceName) = await GetAccountCodeLabelAsync(setting.INSURANCE_PAYABLE_ACCOUNT_ID, cancellationToken);
         var (receivablesCode, receivablesName) = await GetAccountCodeLabelAsync(setting.RECEIVABLES_ACCOUNT_ID, cancellationToken);
+        var (bankFeeCode, bankFeeName) = await GetAccountCodeLabelAsync(setting.BANK_FEE_ACCOUNT_ID, cancellationToken);
 
         string? customerGroupCode = null;
         string? customerGroupName = null;
@@ -96,7 +98,10 @@ public sealed class TreasurySettingReadRepository : ITreasurySettingReadReposito
             setting.CUSTOMER_TAFSIL_GROUP_ID,
             customerGroupCode,
             customerGroupName,
-            setting.DAILY_TRANSFER_LIMIT);
+            setting.DAILY_TRANSFER_LIMIT,
+            setting.BANK_FEE_ACCOUNT_ID,
+            bankFeeCode,
+            bankFeeName);
     }
 
     private async Task<(string? Code, string? Name)> GetAccountCodeLabelAsync(Guid? accountCodeId, CancellationToken cancellationToken)

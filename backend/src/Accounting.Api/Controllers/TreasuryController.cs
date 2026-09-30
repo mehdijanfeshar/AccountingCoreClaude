@@ -1,28 +1,42 @@
 using Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems;
 using Accounting.Application.Common;
+using Accounting.Application.Treasury.Commands.AddBankStatementLine;
 using Accounting.Application.Treasury.Commands.ApprovePaymentRequest;
 using Accounting.Application.Treasury.Commands.ApproveTransfer;
+using Accounting.Application.Treasury.Commands.AutoMatchBankStatement;
 using Accounting.Application.Treasury.Commands.BulkApprovePaymentRequests;
 using Accounting.Application.Treasury.Commands.CancelReceipt;
+using Accounting.Application.Treasury.Commands.CloseBankStatement;
 using Accounting.Application.Treasury.Commands.Common;
+using Accounting.Application.Treasury.Commands.CreateBankStatement;
 using Accounting.Application.Treasury.Commands.CreatePaymentRequest;
 using Accounting.Application.Treasury.Commands.CreateReceipt;
 using Accounting.Application.Treasury.Commands.CreateTransfer;
 using Accounting.Application.Treasury.Commands.CreateTreasuryRole;
+using Accounting.Application.Treasury.Commands.DeleteBankStatement;
+using Accounting.Application.Treasury.Commands.DeleteBankStatementLine;
 using Accounting.Application.Treasury.Commands.DeletePaymentRequest;
 using Accounting.Application.Treasury.Commands.DeleteReceipt;
 using Accounting.Application.Treasury.Commands.DeleteTransfer;
 using Accounting.Application.Treasury.Commands.DeleteTreasuryRole;
 using Accounting.Application.Treasury.Commands.ExecutePaymentRequest;
+using Accounting.Application.Treasury.Commands.ImportBankStatement;
+using Accounting.Application.Treasury.Commands.MatchBankStatementLine;
 using Accounting.Application.Treasury.Commands.RegisterReceipt;
 using Accounting.Application.Treasury.Commands.RejectPaymentRequest;
 using Accounting.Application.Treasury.Commands.RejectTransfer;
+using Accounting.Application.Treasury.Commands.ReopenBankStatement;
+using Accounting.Application.Treasury.Commands.ResolveBankStatementLine;
 using Accounting.Application.Treasury.Commands.ResumePaymentRequest;
 using Accounting.Application.Treasury.Commands.ReturnPaymentRequest;
 using Accounting.Application.Treasury.Commands.ReturnTransfer;
 using Accounting.Application.Treasury.Commands.SubmitPaymentRequest;
 using Accounting.Application.Treasury.Commands.SubmitTransfer;
 using Accounting.Application.Treasury.Commands.SuspendPaymentRequest;
+using Accounting.Application.Treasury.Commands.UnmatchBankStatementLine;
+using Accounting.Application.Treasury.Commands.UnresolveBankStatementLine;
+using Accounting.Application.Treasury.Commands.UpdateBankStatement;
+using Accounting.Application.Treasury.Commands.UpdateBankStatementLine;
 using Accounting.Application.Treasury.Commands.UpdatePaymentRequest;
 using Accounting.Application.Treasury.Commands.UpdateReceipt;
 using Accounting.Application.Treasury.Commands.UpdateTransfer;
@@ -30,6 +44,9 @@ using Accounting.Application.Treasury.Commands.UpsertTreasurySetting;
 using Accounting.Application.Treasury.Queries;
 using Accounting.Application.Treasury.Queries.GetApprovalCartable;
 using Accounting.Application.Treasury.Queries.GetBankAccountBalance;
+using Accounting.Application.Treasury.Queries.GetBankStatementBookCandidates;
+using Accounting.Application.Treasury.Queries.GetBankStatementById;
+using Accounting.Application.Treasury.Queries.GetBankStatements;
 using Accounting.Application.Treasury.Queries.GetBeneficiaryTafsilis;
 using Accounting.Application.Treasury.Queries.GetCustomerTafsilis;
 using Accounting.Application.Treasury.Queries.GetPaymentRequestAccounting;
@@ -41,6 +58,7 @@ using Accounting.Application.Treasury.Queries.GetReceipts;
 using Accounting.Application.Treasury.Queries.GetTransferAccounting;
 using Accounting.Application.Treasury.Queries.GetTransferById;
 using Accounting.Application.Treasury.Queries.GetTransfers;
+using Accounting.Application.Treasury.Queries.GetTreasuryDashboard;
 using Accounting.Application.Treasury.Queries.GetTreasuryRoles;
 using Accounting.Application.Treasury.Queries.GetTreasurySetting;
 using Accounting.Domain.ValueObjects;
@@ -110,7 +128,8 @@ public sealed class TreasuryController : ControllerBase
                 request.InsurancePayableAccountId,
                 request.ReceivablesAccountId,
                 request.CustomerTafsilGroupId,
-                request.DailyTransferLimit),
+                request.DailyTransferLimit,
+                request.BankFeeAccountId),
             cancellationToken);
 
         return Ok(result);
@@ -873,6 +892,280 @@ public sealed class TreasuryController : ControllerBase
 
         return Ok(result);
     }
+
+    // ==================== بخش ۴-د: صورت‌حساب بانک و مغایرت‌گیری ====================
+
+    /// <summary>صفحه‌ای از صورت‌حساب‌های بانکی واحد.</summary>
+    [HttpGet("statements")]
+    [ProducesResponseType(typeof(BankStatementListResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetBankStatements(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] Guid? bankAccountId = null,
+        [FromQuery] BankStatementState? state = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(
+            new GetBankStatementsQuery(pageNumber, pageSize, bankAccountId, state), cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>یک صورت‌حساب با ردیف‌ها، خلاصهٔ مغایرت و اقلام «فقط در دفتر»، یا 404.</summary>
+    [HttpGet("statements/{id:guid}")]
+    [ProducesResponseType(typeof(BankStatementDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetBankStatementById(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetBankStatementByIdQuery(id), cancellationToken);
+
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>ایجاد صورت‌حساب (ورود دستی ردیف‌ها بعداً با <c>statements/{id}/lines</c>).</summary>
+    [HttpPost("statements")]
+    [ProducesResponseType(typeof(BankStatementIdResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CreateBankStatement(
+        [FromBody] CreateBankStatementRequest request, CancellationToken cancellationToken)
+    {
+        var id = await _mediator.Send(
+            new CreateBankStatementCommand(
+                request.BankAccountId, request.FromDate, request.ToDate,
+                request.ClosingBalance, request.Description, request.Year),
+            cancellationToken);
+
+        return CreatedAtAction(nameof(GetBankStatementById), new { id }, new BankStatementIdResponse(id));
+    }
+
+    /// <summary>ویرایش سرِ صورت‌حساب. فقط باز.</summary>
+    [HttpPost("statements/{id:guid}/update")]
+    [ProducesResponseType(typeof(BankStatementIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UpdateBankStatement(
+        Guid id, [FromBody] UpdateBankStatementRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(
+            new UpdateBankStatementCommand(
+                id, request.BankAccountId, request.FromDate, request.ToDate,
+                request.ClosingBalance, request.Description),
+            cancellationToken);
+
+        return Ok(new BankStatementIdResponse(id));
+    }
+
+    /// <summary>حذف نرم. فقط باز.</summary>
+    [HttpPost("statements/{id:guid}/delete")]
+    [ProducesResponseType(typeof(BankStatementIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeleteBankStatement(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeleteBankStatementCommand(id), cancellationToken);
+
+        return Ok(new BankStatementIdResponse(id));
+    }
+
+    /// <summary>بستن صورت‌حساب.</summary>
+    [HttpPost("statements/{id:guid}/close")]
+    [ProducesResponseType(typeof(BankStatementIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> CloseBankStatement(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new CloseBankStatementCommand(id), cancellationToken);
+
+        return Ok(new BankStatementIdResponse(id));
+    }
+
+    /// <summary>بازگشایی صورت‌حساب بسته.</summary>
+    [HttpPost("statements/{id:guid}/reopen")]
+    [ProducesResponseType(typeof(BankStatementIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ReopenBankStatement(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new ReopenBankStatementCommand(id), cancellationToken);
+
+        return Ok(new BankStatementIdResponse(id));
+    }
+
+    /// <summary>تطبیق خودکار ردیف‌های تطبیق‌نیافته با ردیف‌های دفتر.</summary>
+    [HttpPost("statements/{id:guid}/auto-match")]
+    [ProducesResponseType(typeof(BankStatementAutoMatchResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AutoMatchBankStatement(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new AutoMatchBankStatementCommand(id), cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// بارگذاری فایل «دیسکت» بانک. تا وقتی قالب فایل تعریف و parser آن ثبت نشده، 409 برمی‌گرداند.
+    /// </summary>
+    [HttpPost("statements/{id:guid}/import")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(ImportBankStatementResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ImportBankStatement(
+        Guid id, [FromForm] ImportBankStatementRequest request, CancellationToken cancellationToken)
+    {
+        if (request.File is null || request.File.Length == 0)
+        {
+            ModelState.AddModelError(nameof(request.File), "فایل صورت‌حساب الزامی است.");
+
+            return ValidationProblem(ModelState);
+        }
+
+        await using var stream = new MemoryStream();
+        await request.File.CopyToAsync(stream, cancellationToken);
+
+        var count = await _mediator.Send(new ImportBankStatementCommand(id, stream.ToArray()), cancellationToken);
+
+        return Ok(new ImportBankStatementResponse(id, count));
+    }
+
+    /// <summary>افزودن دستی یک ردیف صورت‌حساب. فقط باز.</summary>
+    [HttpPost("statements/{id:guid}/lines")]
+    [ProducesResponseType(typeof(BankStatementLineIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AddBankStatementLine(
+        Guid id, [FromBody] BankStatementLineRequest request, CancellationToken cancellationToken)
+    {
+        var lineId = await _mediator.Send(
+            new AddBankStatementLineCommand(
+                id, request.LineDate, request.BankReference, request.Description,
+                request.Withdrawal, request.Deposit, request.Balance),
+            cancellationToken);
+
+        return Ok(new BankStatementLineIdResponse(id, lineId));
+    }
+
+    /// <summary>ویرایش یک ردیف صورت‌حساب. فقط باز.</summary>
+    [HttpPost("statements/{id:guid}/lines/{lineId:guid}/update")]
+    [ProducesResponseType(typeof(BankStatementLineIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UpdateBankStatementLine(
+        Guid id, Guid lineId, [FromBody] BankStatementLineRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(
+            new UpdateBankStatementLineCommand(
+                id, lineId, request.LineDate, request.BankReference, request.Description,
+                request.Withdrawal, request.Deposit, request.Balance),
+            cancellationToken);
+
+        return Ok(new BankStatementLineIdResponse(id, lineId));
+    }
+
+    /// <summary>حذف نرم یک ردیف صورت‌حساب. فقط باز.</summary>
+    [HttpPost("statements/{id:guid}/lines/{lineId:guid}/delete")]
+    [ProducesResponseType(typeof(BankStatementLineIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeleteBankStatementLine(Guid id, Guid lineId, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeleteBankStatementLineCommand(id, lineId), cancellationToken);
+
+        return Ok(new BankStatementLineIdResponse(id, lineId));
+    }
+
+    /// <summary>تطبیق دستی یک ردیف صورت‌حساب با یک ردیف سند.</summary>
+    [HttpPost("statements/{id:guid}/lines/{lineId:guid}/match")]
+    [ProducesResponseType(typeof(BankStatementLineIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> MatchBankStatementLine(
+        Guid id, Guid lineId, [FromBody] MatchBankStatementLineRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new MatchBankStatementLineCommand(id, lineId, request.VoucherDetailId), cancellationToken);
+
+        return Ok(new BankStatementLineIdResponse(id, lineId));
+    }
+
+    /// <summary>لغو تطبیق یک ردیف.</summary>
+    [HttpPost("statements/{id:guid}/lines/{lineId:guid}/unmatch")]
+    [ProducesResponseType(typeof(BankStatementLineIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UnmatchBankStatementLine(Guid id, Guid lineId, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new UnmatchBankStatementLineCommand(id, lineId), cancellationToken);
+
+        return Ok(new BankStatementLineIdResponse(id, lineId));
+    }
+
+    /// <summary>رفع یک ردیف تطبیق‌نیافته: سند کارمزد، اتصال به دریافت ثبت‌شده، یا نادیده‌گرفتن با یادداشت.</summary>
+    [HttpPost("statements/{id:guid}/lines/{lineId:guid}/resolve")]
+    [ProducesResponseType(typeof(BankStatementLineIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ResolveBankStatementLine(
+        Guid id, Guid lineId, [FromBody] ResolveBankStatementLineRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(
+            new ResolveBankStatementLineCommand(id, lineId, request.Type, request.ReceiptId, request.Note),
+            cancellationToken);
+
+        return Ok(new BankStatementLineIdResponse(id, lineId));
+    }
+
+    /// <summary>برگرداندن رفع یک ردیف.</summary>
+    [HttpPost("statements/{id:guid}/lines/{lineId:guid}/unresolve")]
+    [ProducesResponseType(typeof(BankStatementLineIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UnresolveBankStatementLine(Guid id, Guid lineId, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new UnresolveBankStatementLineCommand(id, lineId), cancellationToken);
+
+        return Ok(new BankStatementLineIdResponse(id, lineId));
+    }
+
+    /// <summary>ردیف‌های دفتری تطبیق‌نیافتهٔ کاندید برای تطبیق دستی یک ردیف صورت‌حساب.</summary>
+    [HttpGet("statements/{id:guid}/book-candidates")]
+    [ProducesResponseType(typeof(IReadOnlyList<BankStatementBookLineDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetBankStatementBookCandidates(
+        Guid id, [FromQuery] Guid lineId, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetBankStatementBookCandidatesQuery(id, lineId), cancellationToken);
+
+        return Ok(result);
+    }
+
+    // ==================== بخش ۴-د: داشبورد خزانه ====================
+
+    /// <summary>داشبورد خزانه (ص ۱۴ پاورپوینت): موجودی بانک‌ها، تعهدات، در انتظار تأیید، گردش امروز، اقلام باز.</summary>
+    [HttpGet("dashboard")]
+    [ProducesResponseType(typeof(TreasuryDashboardDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetDashboard(CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetTreasuryDashboardQuery(), cancellationToken);
+
+        return Ok(result);
+    }
 }
 
 // ==================== تنظیمات: request/response DTOs ====================
@@ -887,7 +1180,8 @@ public sealed record UpsertTreasurySettingRequest(
     Guid? InsurancePayableAccountId,
     Guid? ReceivablesAccountId,
     Guid? CustomerTafsilGroupId,
-    decimal? DailyTransferLimit);
+    decimal? DailyTransferLimit,
+    Guid? BankFeeAccountId);
 
 // ==================== نقش‌ها: request/response DTOs ====================
 
@@ -1089,3 +1383,55 @@ public sealed record RejectTransferRequest(string Reason);
 
 /// <summary>Response body for a successful <see cref="TreasuryController.RejectTransfer"/> call.</summary>
 public sealed record RejectTransferResponse(Guid Id);
+
+// ==================== بخش ۴-د: صورت‌حساب بانک: request/response DTOs ====================
+
+/// <summary>Request body for <see cref="TreasuryController.CreateBankStatement"/>.</summary>
+public sealed record CreateBankStatementRequest(
+    Guid BankAccountId,
+    string FromDate,
+    string ToDate,
+    decimal ClosingBalance,
+    string? Description,
+    string Year);
+
+/// <summary>Request body for <see cref="TreasuryController.UpdateBankStatement"/>.</summary>
+public sealed record UpdateBankStatementRequest(
+    Guid BankAccountId,
+    string FromDate,
+    string ToDate,
+    decimal ClosingBalance,
+    string? Description);
+
+/// <summary>Response body for statement-level write actions.</summary>
+public sealed record BankStatementIdResponse(Guid Id);
+
+/// <summary>Request body for adding/updating one statement line (one of Withdrawal/Deposit &gt; 0).</summary>
+public sealed record BankStatementLineRequest(
+    string LineDate,
+    string? BankReference,
+    string? Description,
+    decimal Withdrawal,
+    decimal Deposit,
+    decimal? Balance);
+
+/// <summary>Response body for line-level write actions.</summary>
+public sealed record BankStatementLineIdResponse(Guid StatementId, Guid LineId);
+
+/// <summary>Request body for <see cref="TreasuryController.MatchBankStatementLine"/>.</summary>
+public sealed record MatchBankStatementLineRequest(Guid VoucherDetailId);
+
+/// <summary>Request body for <see cref="TreasuryController.ResolveBankStatementLine"/>.</summary>
+public sealed record ResolveBankStatementLineRequest(
+    BankStatementLineResolutionType Type,
+    Guid? ReceiptId,
+    string? Note);
+
+/// <summary>Multipart request body for <see cref="TreasuryController.ImportBankStatement"/> — same class shape as <c>UploadPettyCashAttachmentRequest</c>.</summary>
+public sealed class ImportBankStatementRequest
+{
+    public IFormFile File { get; set; } = null!;
+}
+
+/// <summary>Response body for <see cref="TreasuryController.ImportBankStatement"/>: number of lines imported.</summary>
+public sealed record ImportBankStatementResponse(Guid Id, int ImportedCount);

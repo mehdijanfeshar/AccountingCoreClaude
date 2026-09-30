@@ -144,6 +144,11 @@ public partial class LegacyDbContext : DbContext
 
     public virtual DbSet<TB_TR_TRANSFER_EVENT> TB_TR_TRANSFER_EVENTs { get; set; }
 
+    // خزانه‌داری، بخش ۴-د (۲۰۲۶-۰۹-۲۹) — مغایرت‌گیری بانکی.
+    public virtual DbSet<TB_TR_BANK_STATEMENT> TB_TR_BANK_STATEMENTs { get; set; }
+
+    public virtual DbSet<TB_TR_BANK_STATEMENT_LINE> TB_TR_BANK_STATEMENT_LINEs { get; set; }
+
     public virtual DbSet<TB_PERSON_ACTION> TB_PERSON_ACTIONs { get; set; }
 
     public virtual DbSet<TB_PREDESCRIB> TB_PREDESCRIBs { get; set; }
@@ -1869,6 +1874,12 @@ public partial class LegacyDbContext : DbContext
                 .HasConversion(GuidToChar36Converter.Instance)
                 .IsFixedLength();
             entity.Property(e => e.DAILY_TRANSFER_LIMIT).HasColumnType("NUMBER(25)");
+            // بخش ۴-د (۲۰۲۶-۰۹-۲۹) — «کارمزد بانکی». بدون FK واقعی روی TB_ACCOUNTCODE (ریسک #۹/#۱۴).
+            entity.Property(e => e.BANK_FEE_ACCOUNT_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.ADDUSERID)
@@ -2359,6 +2370,137 @@ public partial class LegacyDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(d => d.TRANSFER_ID)
                 .HasConstraintName("FK_TR_TRANSFER_EVENT_TRANSFER");
+        });
+
+        // خزانه‌داری، بخش ۴-د — «صورت‌حساب بانکی» (BST-xxxxxx).
+        modelBuilder.Entity<TB_TR_BANK_STATEMENT>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_TR_BANK_STATEMENT");
+
+            entity.ToTable("TB_TR_BANK_STATEMENT");
+
+            entity.HasIndex(e => new { e.VAHEDCODE, e.YEAR, e.STATE }, "IDX_TR_BSTMT_STATE");
+            entity.HasIndex(e => new { e.VAHEDCODE, e.YEAR }, "IDX_TR_BSTMT_CODE");
+            entity.HasIndex(e => e.BANK_ACCOUNT_ID, "IDX_TR_BSTMT_BANKACC");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.CODE)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.BANK_ACCOUNT_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.FROM_DATE)
+                .HasMaxLength(8)
+                .IsUnicode(false);
+            entity.Property(e => e.TO_DATE)
+                .HasMaxLength(8)
+                .IsUnicode(false);
+            entity.Property(e => e.CLOSING_BALANCE).HasColumnType("NUMBER(25)");
+            entity.Property(e => e.SOURCE)
+                .HasConversion<int>();
+            entity.Property(e => e.STATE)
+                .HasConversion<int>();
+            entity.Property(e => e.DESCRIPTION)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+        });
+
+        // خزانه‌داری، بخش ۴-د — یک ردیف صورت‌حساب بانکی (برداشت/واریز).
+        modelBuilder.Entity<TB_TR_BANK_STATEMENT_LINE>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_TR_BSTMT_LINE");
+
+            entity.ToTable("TB_TR_BANK_STATEMENT_LINE");
+
+            entity.HasIndex(e => new { e.STATEMENT_ID, e.MATCH_STATE }, "IDX_TR_BSTMT_LINE_STMT");
+            entity.HasIndex(e => e.MATCHED_VOUCHERDETAIL_ID, "IDX_TR_BSTMT_LINE_VDETAIL");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.STATEMENT_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.LINE_DATE)
+                .HasMaxLength(8)
+                .IsUnicode(false);
+            entity.Property(e => e.BANK_REFERENCE)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+            entity.Property(e => e.DESCRIPTION)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.WITHDRAWAL).HasColumnType("NUMBER(25)");
+            entity.Property(e => e.DEPOSIT).HasColumnType("NUMBER(25)");
+            entity.Property(e => e.BALANCE).HasColumnType("NUMBER(25)");
+            entity.Property(e => e.MATCH_STATE)
+                .HasConversion<int>();
+            entity.Property(e => e.MATCHED_VOUCHERDETAIL_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.RESOLUTION_TYPE)
+                .HasConversion<int?>();
+            entity.Property(e => e.RESOLUTION_VOUCHER_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.RESOLUTION_RECEIPT_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.RESOLUTION_NOTE)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+
+            entity.HasOne(d => d.STATEMENT)
+                .WithMany()
+                .HasForeignKey(d => d.STATEMENT_ID)
+                .HasConstraintName("FK_TR_BSTMT_LINE_STMT");
         });
 
         modelBuilder.Entity<TB_CHECK>(entity =>

@@ -40,6 +40,13 @@ namespace Accounting.Application.Treasury.Queries;
 /// مبدأ در یک روز. <see langword="null"/> یعنی هنوز تعریف نشده — <c>approve</c> انتقال با ۴۰۹ رد
 /// می‌شود.
 /// </param>
+/// <param name="BankFeeAccountId">
+/// بخش ۴-د (۲۰۲۶-۰۹-۲۹) — <c>TB_TR_SETTING.BANK_FEE_ACCOUNT_ID</c> («کارمزد بانکی»).
+/// <see langword="null"/> یعنی هنوز تعریف نشده — حل ردیف نامنطبق با نوع «سند کارمزد بانکی» با ۴۰۹
+/// رد می‌شود.
+/// </param>
+/// <param name="BankFeeAccountCode">نمایشی، فقط وقتی <paramref name="BankFeeAccountId"/> مقدار دارد.</param>
+/// <param name="BankFeeAccountName">نمایشی، فقط وقتی <paramref name="BankFeeAccountId"/> مقدار دارد.</param>
 public sealed record TreasurySettingDto(
     Guid Id,
     decimal CeoApprovalThreshold,
@@ -62,4 +69,7 @@ public sealed record TreasurySettingDto(
     Guid? CustomerTafsilGroupId,
     string? CustomerTafsilGroupCode,
     string? CustomerTafsilGroupName,
-    decimal? DailyTransferLimit);
+    decimal? DailyTransferLimit,
+    Guid? BankFeeAccountId,
+    string? BankFeeAccountCode,
+    string? BankFeeAccountName);

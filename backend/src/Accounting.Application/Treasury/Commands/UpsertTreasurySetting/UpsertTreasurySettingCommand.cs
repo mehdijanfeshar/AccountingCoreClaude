@@ -30,6 +30,7 @@ namespace Accounting.Application.Treasury.Commands.UpsertTreasurySetting;
 /// <param name="ReceivablesAccountId">بخش ۴-ج (۲۰۲۶-۰۹-۲۹) — <c>TB_TR_SETTING.RECEIVABLES_ACCOUNT_ID</c> («حساب‌های دریافتنی»)، همان قاعدهٔ اعتبارسنجی بالا (۴۰۴ اگر وجود نداشته باشد).</param>
 /// <param name="CustomerTafsilGroupId">بخش ۴-ج — <c>TB_TR_SETTING.CUSTOMER_TAFSIL_GROUP_ID</c> — گروه تفصیلی مشتریان، همان قاعدهٔ <paramref name="BeneficiaryTafsilGroupId"/> (۴۰۴ اگر وجود نداشته باشد).</param>
 /// <param name="DailyTransferLimit">بخش ۴-ج — <c>TB_TR_SETTING.DAILY_TRANSFER_LIMIT</c>. <see langword="null"/> پاکش می‌کند (<c>approve</c> انتقال با ۴۰۹ رد می‌شود تا دوباره تعریف شود).</param>
+/// <param name="BankFeeAccountId">بخش ۴-د (۲۰۲۶-۰۹-۲۹) — <c>TB_TR_SETTING.BANK_FEE_ACCOUNT_ID</c> («کارمزد بانکی»)، همان قاعدهٔ اعتبارسنجی بالا (۴۰۴ اگر وجود نداشته باشد).</param>
 public sealed record UpsertTreasurySettingCommand(
     decimal CeoApprovalThreshold,
     decimal BulkApproveLimit,
@@ -39,7 +40,8 @@ public sealed record UpsertTreasurySettingCommand(
     Guid? InsurancePayableAccountId,
     Guid? ReceivablesAccountId,
     Guid? CustomerTafsilGroupId,
-    decimal? DailyTransferLimit) : IRequest<TreasurySettingDto>, IVahedScopedCommand
+    decimal? DailyTransferLimit,
+    Guid? BankFeeAccountId) : IRequest<TreasurySettingDto>, IVahedScopedCommand
 {
     [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;

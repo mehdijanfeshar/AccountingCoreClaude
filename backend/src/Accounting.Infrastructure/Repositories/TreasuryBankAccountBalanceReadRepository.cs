@@ -19,6 +19,7 @@ public sealed class TreasuryBankAccountBalanceReadRepository : ITreasuryBankAcco
         IReadOnlyCollection<Guid> bankTafsiliIds,
         string vahedCode,
         string year,
+        string? asOfDate = null,
         CancellationToken cancellationToken = default)
     {
         var tafsiliIds = bankTafsiliIds.Distinct().ToList();
@@ -32,6 +33,9 @@ public sealed class TreasuryBankAccountBalanceReadRepository : ITreasuryBankAcco
                   && detail.ACCOUNT_ID == accountCodeId
                   && detail.VAHEDCODE == vahedCode
                   && detail.YEAR == year
+                  // asOfDate — بخش ۴-د: null (پیش‌فرض) یعنی بدون فیلتر، رفتار قبلی هر فراخوان
+                  // موجود دست‌نخورده می‌ماند.
+                  && (asOfDate == null || (head.DATE_DOC != null && string.Compare(head.DATE_DOC, asOfDate) <= 0))
                   // temporary vouchers included on purpose — owner decision ۲۰۲۶-۰۹-۲۹، documented
                   // choice on ITreasuryBankAccountBalanceReadRepository.
             select detail;

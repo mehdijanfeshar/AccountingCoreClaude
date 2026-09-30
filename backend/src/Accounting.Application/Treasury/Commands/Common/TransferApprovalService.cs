@@ -63,7 +63,7 @@ public sealed class TransferApprovalService : ITransferApprovalService
         // اسناد غیرحذف‌شدهٔ سال (موقت هم شامل)، محدود به تفصیلی(های) همین حساب بانکی.
         var sourceTafsiliIds = sourceBankAccount.TafsiliLinks.Select(l => l.TafsiliId).ToList();
         var currentBalance = await _balanceReadRepository.GetBalanceAsync(
-            sourceAccountCodeId, sourceTafsiliIds, vahedCode, year, cancellationToken);
+            sourceAccountCodeId, sourceTafsiliIds, vahedCode, year, cancellationToken: cancellationToken);
 
         if (currentBalance < transfer.AMOUNT)
         {
