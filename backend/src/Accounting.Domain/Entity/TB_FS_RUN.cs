@@ -61,6 +61,18 @@ public partial class TB_FS_RUN
 
     public int? DURATION_MS { get; set; }
 
+    /// <summary>بخش ۴۵-ه — SHA-256 مانده‌های منبع در لحظهٔ اجرا؛ تفاوت با محاسبهٔ امروز = «کهنه».</summary>
+    public string? BALANCE_HASH { get; set; }
+
+    /// <summary>بخش ۴۵-ه — اجرایی که این یکی از رویش ساخته شد (مثلاً با ورود مقادیر دستی).</summary>
+    public Guid? SOURCE_RUN_ID { get; set; }
+
+    public virtual ICollection<TB_FS_RUN_CHECK> TB_FS_RUN_CHECKs { get; set; } = new List<TB_FS_RUN_CHECK>();
+
+    public virtual ICollection<TB_FS_RUN_ACTION> TB_FS_RUN_ACTIONs { get; set; } = new List<TB_FS_RUN_ACTION>();
+
+    public virtual ICollection<TB_FS_RUN_MANUAL> TB_FS_RUN_MANUALs { get; set; } = new List<TB_FS_RUN_MANUAL>();
+
     public DateTime CREATEDDATE { get; set; }
 
     public DateTime? UPDATEDDATE { get; set; }

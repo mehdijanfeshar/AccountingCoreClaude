@@ -1,4 +1,5 @@
 using Accounting.Application.FinancialStatements.Engine;
+using Accounting.Application.FinancialStatements.Queries;
 
 namespace Accounting.Application.Common.Interfaces;
 
@@ -17,6 +18,22 @@ public interface IFsBalanceReadRepository
     /// <c>TB_ACCOUNTCODE_INTERFACE.TYPE = 1</c>) + اسناد پیش از <paramref name="fromDate"/>؛ «دوره» =
     /// بقیهٔ اسناد تا <paramref name="toDate"/> (شامل).
     /// </summary>
+    /// <summary>
+    /// بخش ۴۵-د، سطح «سند» Drill-down: ردیف‌های سند معین <paramref name="accCode"/> با همان فیلترهای
+    /// <see cref="GetBalancesAsync"/>، محدود به <paramref name="window"/>، به ترتیب تاریخ، صفحه‌بندی‌شده.
+    /// </summary>
+    Task<FsDrillVoucherPageDto> GetVoucherLinesAsync(
+        string year,
+        string fromDate,
+        string toDate,
+        IReadOnlyCollection<string> vahedCodes,
+        int minDocLife,
+        string accCode,
+        FsDrillWindow window,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<FsAccountBalance>> GetBalancesAsync(
         string year,
         string fromDate,

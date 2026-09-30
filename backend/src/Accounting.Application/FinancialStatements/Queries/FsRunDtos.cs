@@ -75,4 +75,65 @@ public sealed record FsRunDetailDto(
     string ToDate,
     string? ContentHash,
     int NoteStartNo,
-    IReadOnlyList<FsRunStatementDto> Statements);
+    IReadOnlyList<FsRunStatementDto> Statements,
+    Guid? SourceRunId,
+    IReadOnlyList<FsRunCheckDto> Checks,
+    IReadOnlyList<FsRunActionDto> Actions,
+    IReadOnlyList<FsRunManualDto> ManualValues);
+
+/// <summary>نتیجهٔ یک کنترل در اجرا (بخش ۴۵-ه).</summary>
+public sealed record FsRunCheckDto(
+    string Code,
+    string TitleFa,
+    FsCheckSeverity Severity,
+    bool Passed,
+    string? Message,
+    decimal? Difference,
+    string? RowRef);
+
+/// <summary>یک قدم گردش تأیید.</summary>
+public sealed record FsRunActionDto(
+    FsRunAction Action,
+    FsRunState FromState,
+    FsRunState ToState,
+    string UserId,
+    string? Comments,
+    DateTime CreatedDate);
+
+/// <summary>مقدار دستی یک ردیف «مقدار دستی» — مبلغ به علامت نمایشی.</summary>
+public sealed record FsRunManualDto(
+    string TemplateCode,
+    string RowCode,
+    decimal? AmountCur,
+    decimal? AmountPrv,
+    string Reason,
+    string AddUserId,
+    DateTime CreatedDate);
+
+/// <summary><c>GET api/fs/runs/{a}/diff/{b}</c> — یک ردیف در مقایسهٔ دو اجرا (مبالغ به علامت حسابداری).</summary>
+public sealed record FsRunDiffRowDto(
+    string TemplateCode,
+    string StatementTitle,
+    bool IsNote,
+    string RowCode,
+    string? TitleFa,
+    FsNormalBalance? NormalBalance,
+    decimal? AmountA,
+    decimal? AmountB);
+
+/// <summary><c>GET api/fs/runs/{id}/staleness</c> — آیا مانده‌های منبع پس از اجرا عوض شده‌اند.</summary>
+public sealed record FsRunStalenessDto(bool IsStale, bool Unknown);
+
+/// <summary><c>GET api/fs/check-rules</c> — قاعدهٔ کنترل تساوی بین صورت‌ها.</summary>
+public sealed record FsCheckRuleDto(
+    Guid Id,
+    string? OwnerVahedCode,
+    bool CanEdit,
+    FsFramework Framework,
+    string Code,
+    string TitleFa,
+    string LeftExpr,
+    string RightExpr,
+    decimal Tolerance,
+    FsCheckSeverity Severity,
+    bool IsActive);

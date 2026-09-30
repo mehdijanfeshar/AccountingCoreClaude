@@ -56,7 +56,7 @@ public sealed class FsEngineException : Exception
 /// <c>[D]</c>/<c>[C]</c> معین را فقط وقتی مقدارش مثبت/منفی است حساب می‌کند.</item>
 /// <item><b>فرمول:</b> ارزیابی تنبل با حافظه؛ <c>STMT</c> صورت دیگر همین اجرا را می‌خواند؛ دور بین
 /// صورت‌ها ⇒ <see cref="FsEngineException"/>. تقسیم بر صفر = صفر.</item>
-/// <item><b>مقدار دستی:</b> فعلاً صفر (ورود مقدار در بخش ۴۵-د).</item>
+/// <item><b>مقدار دستی:</b> از <c>external</c> (مقادیر دستی اجرا، بخش ۴۵-ه، به علامت حسابداری)؛ نبودش = صفر.</item>
 /// </list>
 /// محاسبه بی‌گرد است؛ گرد کردن فقط در نمایش.
 /// </summary>
@@ -66,11 +66,14 @@ public sealed class FsStatementEngine
     private readonly IReadOnlyDictionary<string, IReadOnlyList<FsAccountBalance>> _balances;
     private readonly Dictionary<(string Stmt, string Row, string Col), FsRowValue> _memo = new();
     private readonly HashSet<(string Stmt, string Row, string Col)> _visiting = new();
+    private readonly IReadOnlyDictionary<(string Stmt, string Row, string Col), decimal> _external;
 
     private FsStatementEngine(
         IEnumerable<FsEngineStatement> statements,
-        IReadOnlyDictionary<string, IReadOnlyList<FsAccountBalance>> balances)
+        IReadOnlyDictionary<string, IReadOnlyList<FsAccountBalance>> balances,
+        IReadOnlyDictionary<(string Stmt, string Row, string Col), decimal>? external)
     {
+        _external = external ?? new Dictionary<(string, string, string), decimal>();
         _statements = statements.ToDictionary(s => s.TemplateCode, s => new Statement(s), StringComparer.Ordinal);
         _balances = balances;
     }
@@ -82,9 +85,10 @@ public sealed class FsStatementEngine
     /// <exception cref="FsEngineException">دور بین صورت‌ها یا ارجاع به صورتی که در اجرا نیست.</exception>
     public static IReadOnlyDictionary<(string Stmt, string Row), IReadOnlyDictionary<string, FsRowValue>> Compute(
         IReadOnlyList<FsEngineStatement> statements,
-        IReadOnlyDictionary<string, IReadOnlyList<FsAccountBalance>> balances)
+        IReadOnlyDictionary<string, IReadOnlyList<FsAccountBalance>> balances,
+        IReadOnlyDictionary<(string Stmt, string Row, string Col), decimal>? external = null)
     {
-        var engine = new FsStatementEngine(statements, balances);
+        var engine = new FsStatementEngine(statements, balances, external);
         var result = new Dictionary<(string, string), IReadOnlyDictionary<string, FsRowValue>>();
 
         foreach (var s in statements)
@@ -145,7 +149,7 @@ public sealed class FsStatementEngine
         {
             FsRowType.Account => EvaluateAccount(row, col),
             FsRowType.Formula => new FsRowValue(EvaluateExpr(stmt, row.Formula!.Root, col), null),
-            FsRowType.External => new FsRowValue(0m, null),
+            FsRowType.External => new FsRowValue(_external.GetValueOrDefault((stmtCode, rowCode, col)), null),
             _ => new FsRowValue(null, null),
         };
 

@@ -26,6 +26,7 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
     private readonly IFsUnitScopeProvider _scopes;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IFsCheckRuleRepository _ruleRepository;
 
     public GenerateFsRunCommandHandler(
         IFsTemplateReadRepository templateReadRepository,
@@ -33,7 +34,8 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
         IFsRunRepository runRepository,
         IFsUnitScopeProvider scopes,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IFsCheckRuleRepository ruleRepository)
     {
         _templateReadRepository = templateReadRepository;
         _balanceReadRepository = balanceReadRepository;
@@ -41,6 +43,7 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
         _scopes = scopes;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _ruleRepository = ruleRepository;
     }
 
     public async Task<Guid> Handle(GenerateFsRunCommand request, CancellationToken cancellationToken)
@@ -58,6 +61,22 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
                 ? "این مجموعه برای این واحد هیچ قالبی (فعال یا پیش‌نویس) ندارد."
                 : $"این مجموعه برای سال {request.Year} هیچ قالب فعالی ندارد. قالب‌ها را فعال کنید یا گزینهٔ «استفاده از پیش‌نویس‌ها» را بزنید.");
         }
+
+        // بخش ۴۵-ه — اجرای مبدأ (جایگزینی) و مقادیر دستی.
+        TB_FS_RUN? sourceRun = null;
+
+        if (request.SourceRunId is { } sourceId)
+        {
+            sourceRun = await _runRepository.GetForUpdateAsync(sourceId, request.VahedCode, cancellationToken)
+                ?? throw new NotFoundException("FsRun", sourceId);
+
+            if (sourceRun.STATE != FsRunState.Draft)
+            {
+                throw new FsTemplateConflictException("فقط اجرای پیش‌نویس با اجرای تازه جایگزین می‌شود؛ اجرای ارسال‌شده یا تأییدشده را اول برگردانید.");
+            }
+        }
+
+        var external = BuildExternalValues(versions, request.ManualValues ?? Array.Empty<FsManualValueInput>());
 
         var unitCodes = request.IncludeSubUnits ? scope.Accessible.ToList() : new List<string> { request.VahedCode };
 
@@ -120,7 +139,8 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
                     v.TemplateCode,
                     v.Rows.Select(r => new FsEngineRow(r.Code, r.OrderNo, r.RowType, r.Selector, r.ValueType, r.Formula)).ToList()))
                     .ToList(),
-                totals);
+                totals,
+                external);
         }
         catch (Exception ex) when (ex is FsEngineException or FsExpressionException or KeyNotFoundException)
         {
@@ -210,6 +230,31 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
             run.TB_FS_RUN_STATEMENTs.Add(statement);
         }
 
+        // بخش ۴۵-ه — کنترل‌ها، مقادیر دستی، اثر انگشت مانده‌ها، جایگزینی مبدأ.
+        await AddChecksAsync(run, versions, values, totals[FsColumns.Current], scope, request.Framework, cancellationToken);
+        AddManualValues(run, request.ManualValues);
+        run.BALANCE_HASH = FsBalanceHash.Compute(raw);
+
+        if (sourceRun is not null)
+        {
+            run.SOURCE_RUN_ID = sourceRun.ID;
+            sourceRun.STATE = FsRunState.Superseded;
+            sourceRun.CHANGEUSERID = _currentUser.UserId;
+            sourceRun.UPDATEDDATE = now;
+            await _runRepository.AddActionAsync(new TB_FS_RUN_ACTION
+            {
+                ID = Guid.NewGuid(),
+                RUN_ID = sourceRun.ID,
+                VAHEDCODE = sourceRun.VAHEDCODE,
+                ACTION = FsRunAction.Supersede,
+                FROM_STATE = FsRunState.Draft,
+                TO_STATE = FsRunState.Superseded,
+                USERID = _currentUser.UserId,
+                COMMENTS = $"جایگزین با اجرای شمارهٔ {run.RUN_NO}",
+                CREATEDDATE = now,
+            }, cancellationToken);
+        }
+
         run.CONTENT_HASH = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(hash.ToString()))).ToLowerInvariant();
         run.DURATION_MS = (int)Math.Min(stopwatch.ElapsedMilliseconds, int.MaxValue);
 
@@ -218,6 +263,122 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
 
         return run.ID;
     }
+
+    /// <summary>
+    /// مقادیر دستی (علامت نمایشی) ⇒ علامت حسابداری برای موتور. هر مقدار باید مال ردیف «مقدار دستی»‌ای در
+    /// یکی از نسخه‌های انتخاب‌شده باشد، وگرنه ۴۰۰.
+    /// </summary>
+    private static Dictionary<(string Stmt, string Row, string Col), decimal> BuildExternalValues(
+        IReadOnlyList<FsTemplateVersionDetailDto> versions, IReadOnlyList<FsManualValueInput> manualValues)
+    {
+        var result = new Dictionary<(string, string, string), decimal>();
+
+        foreach (var m in manualValues)
+        {
+            var row = versions.FirstOrDefault(v => v.TemplateCode == m.TemplateCode)?.Rows.FirstOrDefault(r => r.Code == m.RowCode);
+
+            if (row is null || row.RowType != FsRowType.External)
+            {
+                throw Commands.Common.FsTemplateRules.Invalid(
+                    "ManualValues", $"«{m.TemplateCode} / {m.RowCode}» ردیف «مقدار دستی» این اجرا نیست.");
+            }
+
+            var sign = row.NormalBalance == FsNormalBalance.Credit ? -1m : 1m;
+
+            if (m.AmountCur is { } c)
+            {
+                result[(m.TemplateCode, m.RowCode, FsColumns.Current)] = sign * c;
+            }
+
+            if (m.AmountPrv is { } p)
+            {
+                result[(m.TemplateCode, m.RowCode, FsColumns.Prior)] = sign * p;
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// کنترل‌های اجرا (<see cref="FsRunChecks"/>): قواعد داده‌ای فعالِ این مجموعه که برای واحد دیدنی‌اند —
+    /// به‌ازای هر کد، قاعدهٔ نزدیک‌ترین مالک (مثل قالب‌ها) — به‌علاوهٔ V-01/V-05/V-06/V-08.
+    /// </summary>
+    private async Task AddChecksAsync(
+        TB_FS_RUN run,
+        IReadOnlyList<FsTemplateVersionDetailDto> versions,
+        IReadOnlyDictionary<(string Stmt, string Row), IReadOnlyDictionary<string, FsRowValue>> values,
+        IReadOnlyList<FsAccountBalance> currentBalances,
+        FsUnitScope scope,
+        FsFramework framework,
+        CancellationToken cancellationToken)
+    {
+        var rules = (await _ruleRepository.GetAllAsync(framework, cancellationToken))
+            .Where(r => r.IS_ACTIVE)
+            .Select(r => (Rule: r, Priority: scope.PriorityOf(r.VAHEDCODE)))
+            .Where(x => x.Priority is not null)
+            .GroupBy(x => x.Rule.CODE, StringComparer.Ordinal)
+            .Select(g => g.OrderBy(x => x.Priority).First().Rule)
+            .Select(r => new FsCheckRuleInput(r.CODE, r.TITLE_FA, r.LEFT_EXPR, r.RIGHT_EXPR, r.TOLERANCE, r.SEVERITY))
+            .ToList();
+
+        var statements = versions
+            .Select(v => new FsCheckStatement(
+                v.TemplateCode,
+                v.TemplateTitleFa,
+                v.StatementType == FsStatementType.Note,
+                v.Rows.Select(r => new FsCheckStatementRow(r.Code, r.TitleFa, r.RowType, r.Selector, r.ValueType, r.NormalBalance)).ToList()))
+            .ToList();
+
+        var notes = run.TB_FS_RUN_STATEMENTs
+            .Where(s => s.IS_NOTE)
+            .Select(s => new FsNoteCheckInput(
+                s.TEMPLATE_CODE,
+                s.NOTE_NO,
+                s.TITLE_FA,
+                s.PARENT_TEMPLATE_CODE is null ? null : $"{s.PARENT_TEMPLATE_CODE}/{s.PARENT_ROW_CODE}",
+                s.CHECK_DIFF_CUR,
+                s.CHECK_DIFF_PRV))
+            .ToList();
+
+        foreach (var c in FsRunChecks.Evaluate(statements, values, currentBalances, rules, notes))
+        {
+            run.TB_FS_RUN_CHECKs.Add(new TB_FS_RUN_CHECK
+            {
+                ID = Guid.NewGuid(),
+                RUN_ID = run.ID,
+                VAHEDCODE = run.VAHEDCODE,
+                CODE = c.Code,
+                TITLE_FA = Truncate(c.TitleFa, 500)!,
+                SEVERITY = c.Severity,
+                PASSED = c.Passed,
+                MESSAGE = Truncate(c.Message, 1000),
+                DIFFERENCE = c.Difference is { } d ? decimal.Round(d) : null,
+                ROW_REF = Truncate(c.RowRef, 80),
+            });
+        }
+    }
+
+    private void AddManualValues(TB_FS_RUN run, IReadOnlyList<FsManualValueInput>? manualValues)
+    {
+        foreach (var m in manualValues ?? Array.Empty<FsManualValueInput>())
+        {
+            run.TB_FS_RUN_MANUALs.Add(new TB_FS_RUN_MANUAL
+            {
+                ID = Guid.NewGuid(),
+                RUN_ID = run.ID,
+                VAHEDCODE = run.VAHEDCODE,
+                TEMPLATE_CODE = m.TemplateCode,
+                ROW_CODE = m.RowCode,
+                AMOUNT_CUR = m.AmountCur,
+                AMOUNT_PRV = m.AmountPrv,
+                REASON = m.Reason.Trim(),
+                ADDUSERID = _currentUser.UserId,
+                CREATEDDATE = run.CREATEDDATE,
+            });
+        }
+    }
+
+    private static string? Truncate(string? s, int max) => s is null || s.Length <= max ? s : s[..max];
 
     /// <summary>ابتدای سال تا آخر ماه؛ «31» برای همهٔ ماه‌ها درست است چون مقایسه رشته‌ای و شامل است.</summary>
     private static (string From, string To) Period(int year, int toMonth)

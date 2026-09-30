@@ -14,6 +14,8 @@ namespace Accounting.Application.FinancialStatements.Commands.GenerateFsRun;
 /// <param name="MinDocLife">کمینهٔ وضعیت سند (۱ یادداشت … ۴ تأیید دائم)؛ پیش‌فرض فرانت ۴.</param>
 /// <param name="IncludePrior">ستون همان دوره در سال قبل هم محاسبه شود.</param>
 /// <param name="UseDraftVersions">پیش‌نویس باز هر قالب بر نسخهٔ فعال مقدم باشد (اجرای «آزمایشی»).</param>
+/// <param name="SourceRunId">بخش ۴۵-ه — اجرای پیش‌نویسی که این اجرا جایگزینش می‌شود (مثلاً پس از ورود مقادیر دستی)؛ آن اجرا «جایگزین‌شده» می‌شود.</param>
+/// <param name="ManualValues">بخش ۴۵-ه — مقدار ردیف‌های «مقدار دستی»، به علامت نمایشی، هرکدام با دلیل.</param>
 public sealed record GenerateFsRunCommand(
     FsFramework Framework,
     string Year,
@@ -23,8 +25,13 @@ public sealed record GenerateFsRunCommand(
     bool IncludePrior,
     bool UseDraftVersions,
     string? Description,
-    int NoteStartNo = 1) : IRequest<Guid>, IVahedScopedCommand
+    int NoteStartNo = 1,
+    Guid? SourceRunId = null,
+    IReadOnlyList<FsManualValueInput>? ManualValues = null) : IRequest<Guid>, IVahedScopedCommand
 {
     [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
+
+/// <summary>مقدار دستی یک ردیف «مقدار دستی» (External) — مبلغ به علامت نمایشی، با دلیل (بخش ۴۵-ه).</summary>
+public sealed record FsManualValueInput(string TemplateCode, string RowCode, decimal? AmountCur, decimal? AmountPrv, string Reason);

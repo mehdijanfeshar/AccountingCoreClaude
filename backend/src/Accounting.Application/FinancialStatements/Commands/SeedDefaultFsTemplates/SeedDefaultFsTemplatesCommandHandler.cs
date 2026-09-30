@@ -13,9 +13,11 @@ public sealed class SeedDefaultFsTemplatesCommandHandler : IRequestHandler<SeedD
     private readonly IFsUnitScopeProvider _scopes;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IFsCheckRuleRepository _ruleRepository;
 
-    public SeedDefaultFsTemplatesCommandHandler(IFsTemplateRepository repository, IFsUnitScopeProvider scopes, IUnitOfWork unitOfWork, ICurrentUser currentUser)
+    public SeedDefaultFsTemplatesCommandHandler(IFsTemplateRepository repository, IFsUnitScopeProvider scopes, IUnitOfWork unitOfWork, ICurrentUser currentUser, IFsCheckRuleRepository ruleRepository)
     {
+        _ruleRepository = ruleRepository;
         _repository = repository;
         _scopes = scopes;
         _unitOfWork = unitOfWork;
@@ -68,6 +70,32 @@ public sealed class SeedDefaultFsTemplatesCommandHandler : IRequestHandler<SeedD
             await _repository.AddVersionAsync(version, cancellationToken);
             await _repository.AddRowsAsync(FsTemplateRules.BuildRows(version.ID, def.Rows, userId, now), cancellationToken);
             created.Add(def.Code);
+        }
+
+        // بخش ۴۵-ه — قواعد کنترل پیش‌فرض (مشترک)؛ کد موجود نادیده گرفته می‌شود.
+        foreach (var rule in FsDefaultTemplates.Rules)
+        {
+            if (await _ruleRepository.CodeExistsAsync(null, rule.Framework, rule.Code, cancellationToken))
+            {
+                continue;
+            }
+
+            await _ruleRepository.AddAsync(new TB_FS_CHECK_RULE
+            {
+                ID = Guid.NewGuid(),
+                VAHEDCODE = null,
+                FRAMEWORK = rule.Framework,
+                CODE = rule.Code,
+                TITLE_FA = rule.TitleFa,
+                LEFT_EXPR = rule.LeftExpr,
+                RIGHT_EXPR = rule.RightExpr,
+                TOLERANCE = 0,
+                SEVERITY = FsCheckSeverity.Blocking,
+                IS_ACTIVE = true,
+                CREATEDDATE = now,
+                ADDUSERID = userId,
+            }, cancellationToken);
+            created.Add($"{rule.Framework}:{rule.Code}");
         }
 
         if (created.Count > 0)

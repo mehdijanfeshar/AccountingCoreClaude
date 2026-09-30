@@ -15,6 +15,9 @@ public sealed record FsDefaultTemplate(
     string? NoteParentRowCode = null,
     string? NoteTotalRowCode = null);
 
+/// <summary>قاعدهٔ کنترل پیش‌فرض (مشترک، مسدودکننده، اختلاف مجاز صفر).</summary>
+public sealed record FsDefaultRule(FsFramework Framework, string Code, string TitleFa, string LeftExpr, string RightExpr);
+
 /// <summary>
 /// قالب‌های پیش‌فرض دو مجموعهٔ طرح بیمه‌ای (استاندارد ۲۷) و واحد تجاری (استاندارد ۱) — فاز ۴۵-الف.
 ///
@@ -48,6 +51,23 @@ public static class FsDefaultTemplates
         PensionNoteReceivables(),
         PensionNotePremium(),
         CommercialNoteCash(),
+    };
+
+    /// <summary>
+    /// قواعد کنترل پیش‌فرض (بخش ۴۵-ه، سند منبع §۱۰) — همه مسدودکننده. مبالغ داخلی با علامت حسابداری‌اند،
+    /// پس «دارایی = بدهی + حقوق مالکانه» به‌صورت <c>A99 + E99 = 0</c> نوشته می‌شود (سمت چپ بستانکار-منفی).
+    /// V-03 تا پیش از ورود مقادیر دستی جریان نقد ناموفق می‌ماند — عمداً، تا ورودشان فراموش نشود.
+    /// </summary>
+    public static IReadOnlyList<FsDefaultRule> Rules { get; } = new[]
+    {
+        new FsDefaultRule(FsFramework.Pension, "V-03", "موجودی نقد پایان سال در صورت جریان نقدی = موجودی نقد صورت خالص دارایی‌ها",
+            "STMT(PENSION.CASH_FLOW, F99)", "STMT(PENSION.NET_ASSETS, A01)"),
+        new FsDefaultRule(FsFramework.Pension, "V-04", "خالص دارایی‌های پایان سال در گردش ارزش ویژه = صورت خالص دارایی‌ها",
+            "STMT(PENSION.EQUITY_MOVEMENT, Q99)", "STMT(PENSION.NET_ASSETS, N99)"),
+        new FsDefaultRule(FsFramework.Commercial, "V-02", "جمع دارایی‌ها = جمع بدهی‌ها و حقوق مالکانه",
+            "STMT(COMMERCIAL.FINANCIAL_POSITION, A99) + STMT(COMMERCIAL.FINANCIAL_POSITION, E99)", "0"),
+        new FsDefaultRule(FsFramework.Commercial, "V-03", "موجودی نقد پایان سال در صورت جریان نقدی = موجودی نقد صورت وضعیت مالی",
+            "STMT(COMMERCIAL.CASH_FLOW, F99)", "STMT(COMMERCIAL.FINANCIAL_POSITION, A54)"),
     };
 
     // ---- یادداشت‌های نمونه (بخش ۴۵-ج) — «عنوان»ها زیر‌یادداشت‌اند (5-1، 5-2). ----

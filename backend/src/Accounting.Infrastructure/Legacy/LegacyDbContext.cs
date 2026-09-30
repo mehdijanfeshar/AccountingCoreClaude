@@ -161,6 +161,15 @@ public partial class LegacyDbContext : DbContext
 
     public virtual DbSet<TB_FS_RUN_ACCOUNT> TB_FS_RUN_ACCOUNTs { get; set; }
 
+    // صورت‌های مالی، بخش ۴۵-ه (DDL 060) — کنترل‌ها، گردش تأیید، مقادیر دستی.
+    public virtual DbSet<TB_FS_CHECK_RULE> TB_FS_CHECK_RULEs { get; set; }
+
+    public virtual DbSet<TB_FS_RUN_CHECK> TB_FS_RUN_CHECKs { get; set; }
+
+    public virtual DbSet<TB_FS_RUN_ACTION> TB_FS_RUN_ACTIONs { get; set; }
+
+    public virtual DbSet<TB_FS_RUN_MANUAL> TB_FS_RUN_MANUALs { get; set; }
+
     // خزانه‌داری، بخش ۴-ج (۲۰۲۶-۰۹-۲۹) — دریافت وجه + انتقال وجه.
     public virtual DbSet<TB_TR_RECEIPT> TB_TR_RECEIPTs { get; set; }
 
@@ -2047,6 +2056,15 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.HAS_PRIOR).HasColumnType("NUMBER(1)");
             entity.Property(e => e.NOTE_START_NO).HasColumnType("NUMBER(4)");
+            // بخش ۴۵-ه (DDL 060).
+            entity.Property(e => e.BALANCE_HASH)
+                .HasMaxLength(64)
+                .IsUnicode(false);
+            entity.Property(e => e.SOURCE_RUN_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
             entity.Property(e => e.USES_DRAFT).HasColumnType("NUMBER(1)");
             entity.Property(e => e.STATE).HasConversion<int>();
             entity.Property(e => e.DESCRIPTION)
@@ -2239,6 +2257,177 @@ public partial class LegacyDbContext : DbContext
                 .HasForeignKey(d => d.RUN_ROW_ID)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_FS_RUN_ACCOUNT_ROW");
+        });
+
+        // صورت‌های مالی، بخش ۴۵-ه — DDL در backend/db/060_fs_controls_workflow.sql.
+        modelBuilder.Entity<TB_FS_CHECK_RULE>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_CHECK_RULE");
+
+            entity.ToTable("TB_FS_CHECK_RULE");
+
+            entity.HasIndex(e => new { e.VAHEDCODE, e.FRAMEWORK, e.CODE }, "UK_FS_CHECK_RULE").IsUnique();
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.FRAMEWORK).HasConversion<int>();
+            entity.Property(e => e.CODE)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.TITLE_FA)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.LEFT_EXPR)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.RIGHT_EXPR)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.TOLERANCE).HasColumnType("NUMBER(28)");
+            entity.Property(e => e.SEVERITY).HasConversion<int>();
+            entity.Property(e => e.IS_ACTIVE).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+        });
+
+        modelBuilder.Entity<TB_FS_RUN_CHECK>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_RUN_CHECK");
+
+            entity.ToTable("TB_FS_RUN_CHECK");
+
+            entity.HasIndex(e => new { e.RUN_ID, e.VAHEDCODE }, "IDX_FS_RUN_CHECK_RUN");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.RUN_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.CODE)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.TITLE_FA)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.SEVERITY).HasConversion<int>();
+            entity.Property(e => e.PASSED).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.MESSAGE)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.DIFFERENCE).HasColumnType("NUMBER(28)");
+            entity.Property(e => e.ROW_REF)
+                .HasMaxLength(80)
+                .IsUnicode(false);
+
+            entity.HasOne(d => d.RUN)
+                .WithMany(p => p.TB_FS_RUN_CHECKs)
+                .HasForeignKey(d => d.RUN_ID)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FS_RUN_CHECK_RUN");
+        });
+
+        modelBuilder.Entity<TB_FS_RUN_ACTION>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_RUN_ACTION");
+
+            entity.ToTable("TB_FS_RUN_ACTION");
+
+            entity.HasIndex(e => new { e.RUN_ID, e.VAHEDCODE }, "IDX_FS_RUN_ACTION_RUN");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.RUN_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.ACTION).HasConversion<int>();
+            entity.Property(e => e.FROM_STATE).HasConversion<int>();
+            entity.Property(e => e.TO_STATE).HasConversion<int>();
+            entity.Property(e => e.USERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.COMMENTS)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+
+            entity.HasOne(d => d.RUN)
+                .WithMany(p => p.TB_FS_RUN_ACTIONs)
+                .HasForeignKey(d => d.RUN_ID)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FS_RUN_ACTION_RUN");
+        });
+
+        modelBuilder.Entity<TB_FS_RUN_MANUAL>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_RUN_MANUAL");
+
+            entity.ToTable("TB_FS_RUN_MANUAL");
+
+            entity.HasIndex(e => new { e.RUN_ID, e.VAHEDCODE }, "IDX_FS_RUN_MANUAL_RUN");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.RUN_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.TEMPLATE_CODE)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.ROW_CODE)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.AMOUNT_CUR).HasColumnType("NUMBER(28)");
+            entity.Property(e => e.AMOUNT_PRV).HasColumnType("NUMBER(28)");
+            entity.Property(e => e.REASON)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+
+            entity.HasOne(d => d.RUN)
+                .WithMany(p => p.TB_FS_RUN_MANUALs)
+                .HasForeignKey(d => d.RUN_ID)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FS_RUN_MANUAL_RUN");
         });
 
         // خزانه‌داری، بخش ۴-الف (۲۰۲۶-۰۹-۲۸) — تنظیمات واحد. یک ردیف به‌ازای VAHEDCODE، بدون مقدار
