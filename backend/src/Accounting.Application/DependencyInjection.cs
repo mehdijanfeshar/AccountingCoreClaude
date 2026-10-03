@@ -56,6 +56,7 @@ public static class DependencyInjection
         // صورت‌های مالی (فاز ۴۵) — قواعد تفکیک واحد (دیدن/تغییر قالب، اولویت قالب در اجرا، گروه سهم واحدها).
         services.AddScoped<Accounting.Application.FinancialStatements.IFsUnitScopeProvider,
             Accounting.Application.FinancialStatements.FsUnitScopeProvider>();
+        services.AddScoped<Accounting.Application.FinancialStatements.Queries.Drill.FsDrillVoucherReader>();
 
         // Scoped, not transient, on purpose: it memoises the per-معین level lookup for the
         // lifetime of one request, which is what keeps a composite create with many lines from

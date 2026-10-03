@@ -64,3 +64,25 @@ public sealed class GetFsRunRowVouchersQueryValidator : AbstractValidator<GetFsR
         RuleFor(x => x.PageSize).InclusiveBetween(1, 200);
     }
 }
+
+/// <summary>
+/// <c>GET api/fs/runs/{runId}/rows/{rowId}/drill-excel?acc=&amp;unit=&amp;column=</c> — خروجی Excel یک ردیف
+/// Drill-down: معین‌ها، واحدها (کل ردیف یا معین <paramref name="AccCode"/>)، و اگر معین داده شود همهٔ ردیف‌های
+/// سند آن (حداکثر ۵۰٬۰۰۰) با همان قفل‌های سطح سند. ردیف/معین/واحد نامعتبر = ۴۰۴.
+/// </summary>
+public sealed record GetFsRunRowDrillExcelQuery(Guid RunId, Guid RowId, string? AccCode, string? Unit, string Column)
+    : IRequest<FsFileDto?>, IVahedScopedQuery
+{
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}
+
+public sealed class GetFsRunRowDrillExcelQueryValidator : AbstractValidator<GetFsRunRowDrillExcelQuery>
+{
+    public GetFsRunRowDrillExcelQueryValidator()
+    {
+        RuleFor(x => x.AccCode).MaximumLength(50);
+        RuleFor(x => x.Unit).MaximumLength(4);
+        RuleFor(x => x.Column).Must(c => c is FsColumns.Current or FsColumns.Prior).WithMessage("ستون باید CUR یا PRV باشد.");
+    }
+}

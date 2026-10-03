@@ -54,6 +54,104 @@ public sealed class FsExcelExporter : IFsExcelExporter
         return stream.ToArray();
     }
 
+    public byte[] ExportDrill(
+        FsDrillTarget target,
+        FsNormalBalance? normalBalance,
+        IReadOnlyList<FsDrillAccountDto> accounts,
+        IReadOnlyList<FsDrillUnitDto> units,
+        string? accCode,
+        FsDrillVoucherPageDto? vouchers)
+    {
+        using var workbook = new XLWorkbook { RightToLeft = true };
+        var sign = normalBalance == FsNormalBalance.Credit ? -1m : 1m;
+        decimal? Display(decimal? v) => v is { } x ? sign * x : null;
+        var title = $"ردیف {target.RowCode} — {target.TitleFa} — سال {target.Year} (مبالغ به ریال)";
+
+        var ws = workbook.Worksheets.Add("معین‌ها");
+        WriteTable(ws, title, new[] { "کد معین", "نام", "جاری", "سال قبل" },
+            accounts.Select(a => new object?[] { a.AccCode, a.AccName, Display(a.AmountCur), Display(a.AmountPrv) }), new[] { 3, 4 });
+
+        ws = workbook.Worksheets.Add("واحدها");
+        WriteTable(ws, title + (accCode is null ? " — کل ردیف" : $" — معین {accCode}"), new[] { "کد واحد", "واحد", "جاری", "سال قبل" },
+            units.Select(u => new object?[] { u.VahedCode, u.VahedName, Display(u.AmountCur), Display(u.AmountPrv) }), new[] { 3, 4 });
+
+        if (vouchers is not null)
+        {
+            ws = workbook.Worksheets.Add("اسناد");
+            WriteTable(ws, $"{title} — اسناد معین {accCode} (زنده از اسناد؛ {vouchers.TotalCount} ردیف)",
+                new[] { "تاریخ", "شمارهٔ سند", "واحد", "شرح", "بدهکار", "بستانکار", "افتتاحیه" },
+                vouchers.Items.Select(v => new object?[]
+                {
+                    v.DateDoc is { Length: 8 } d ? $"{d[..4]}/{d[4..6]}/{d[6..]}" : v.DateDoc,
+                    v.DocNum,
+                    v.VahedCode,
+                    v.LineDesc ?? v.HeadDesc,
+                    v.Debtor,
+                    v.Creditor,
+                    v.IsOpening ? "بله" : null,
+                }),
+                new[] { 5, 6 });
+        }
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return stream.ToArray();
+    }
+
+    /// <summary>جدول ساده: عنوان در ردیف ۱، سرستون در ردیف ۳، داده از ردیف ۴، جمع ستون‌های عددی با فرمول SUM.</summary>
+    private static void WriteTable(IXLWorksheet ws, string title, string[] headers, IEnumerable<object?[]> rows, int[] sumColumns)
+    {
+        ws.RightToLeft = true;
+        ws.Cell(1, 1).Value = title;
+        ws.Cell(1, 1).Style.Font.Bold = true;
+
+        for (var c = 0; c < headers.Length; c++)
+        {
+            ws.Cell(3, c + 1).Value = headers[c];
+        }
+
+        ws.Range(3, 1, 3, headers.Length).Style.Font.Bold = true;
+        ws.Range(3, 1, 3, headers.Length).Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+
+        var r = 4;
+
+        foreach (var row in rows)
+        {
+            for (var c = 0; c < row.Length; c++)
+            {
+                ws.Cell(r, c + 1).Value = row[c] switch
+                {
+                    null => Blank.Value,
+                    decimal d => d,
+                    string s => s,
+                    var o => o.ToString(),
+                };
+            }
+
+            r++;
+        }
+
+        if (r > 4)
+        {
+            ws.Cell(r, 1).Value = "جمع";
+            ws.Range(r, 1, r, headers.Length).Style.Font.Bold = true;
+            ws.Range(r, 1, r, headers.Length).Style.Border.TopBorder = XLBorderStyleValues.Thin;
+
+            foreach (var c in sumColumns)
+            {
+                ws.Cell(r, c).FormulaA1 = $"SUM({ws.Cell(4, c).Address.ToStringRelative()}:{ws.Cell(r - 1, c).Address.ToStringRelative()})";
+            }
+        }
+
+        foreach (var c in sumColumns)
+        {
+            ws.Column(c).Style.NumberFormat.Format = NumberFormat;
+        }
+
+        ws.Columns(1, headers.Length).AdjustToContents(3, Math.Min(r, 500));
+        ws.SheetView.FreezeRows(3);
+    }
+
     private static void WriteSheet(
         IXLWorksheet ws,
         FsRunDetailDto run,

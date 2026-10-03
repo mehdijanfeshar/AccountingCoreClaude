@@ -115,6 +115,31 @@ public sealed class FsRunsController : ControllerBase
         return result is null ? NotFound() : Ok(result);
     }
 
+    /// <summary>
+    /// Excel یک ردیف Drill-down (بخش ۴۵-د): معین‌ها، واحدها، و اگر <c>acc</c> داده شود همهٔ ردیف‌های سند آن
+    /// (حداکثر ۵۰٬۰۰۰، با همان قفل‌های سطح سند).
+    /// </summary>
+    [HttpGet("{id:guid}/rows/{rowId:guid}/drill-excel")]
+    [Produces("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetDrillExcel(
+        Guid id,
+        Guid rowId,
+        [FromQuery] string? acc,
+        [FromQuery] string? unit,
+        [FromQuery] string column = "CUR",
+        CancellationToken cancellationToken = default)
+    {
+        var file = await _mediator.Send(
+            new GetFsRunRowDrillExcelQuery(id, rowId, string.IsNullOrWhiteSpace(acc) ? null : acc.Trim(), string.IsNullOrWhiteSpace(unit) ? null : unit.Trim(), column),
+            cancellationToken);
+        return file is null ? NotFound() : File(file.Content, file.ContentType, file.FileName);
+    }
+
     /// <summary>فایل Excel اجرا (بخش ۴۵-د): هر صورت/یادداشت یک برگه، جمع‌ها فرمول.</summary>
     [HttpGet("{id:guid}/excel")]
     [Produces("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]

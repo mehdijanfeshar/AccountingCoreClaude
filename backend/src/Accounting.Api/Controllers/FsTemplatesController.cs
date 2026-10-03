@@ -14,6 +14,7 @@ using Accounting.Application.FinancialStatements.Commands.UpdateFsTemplateRow;
 using Accounting.Application.FinancialStatements.Commands.UpdateFsTemplateVersion;
 using Accounting.Application.FinancialStatements.Queries;
 using Accounting.Application.FinancialStatements.Queries.AccountMapping;
+using Accounting.Application.FinancialStatements.Queries.Preview;
 using Accounting.Application.FinancialStatements.Queries.GetFsTemplates;
 using Accounting.Application.FinancialStatements.Queries.GetFsTemplateVersion;
 using Accounting.Application.FinancialStatements.Queries.ValidateFsTemplateVersion;
@@ -157,6 +158,28 @@ public sealed class FsTemplatesController : ControllerBase
     {
         await _mediator.Send(new DeleteFsTemplateVersionCommand(versionId), cancellationToken);
         return Ok(new FsIdResponse(versionId));
+    }
+
+    /// <summary>
+    /// بخش ۴۵-و — پیش‌نمایش زندهٔ همین نسخه (حتی پیش‌نویس) روی اسناد واقعی واحد هدر، بدون ذخیرهٔ اجرا.
+    /// خطای محاسبه (ارجاع/دور) در <c>error</c> پاسخ برمی‌گردد، نه ۴۰۹.
+    /// </summary>
+    [HttpGet("template-versions/{versionId:guid}/preview")]
+    [ProducesResponseType(typeof(FsTemplatePreviewDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> PreviewVersion(
+        Guid versionId,
+        [FromQuery] string year,
+        [FromQuery] int toMonth = 12,
+        [FromQuery] int minDocLife = 1,
+        [FromQuery] bool includeSubUnits = true,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(new PreviewFsTemplateVersionQuery(versionId, year, toMonth, minDocLife, includeSubUnits), cancellationToken);
+        return result is null ? NotFound() : Ok(result);
     }
 
     /// <summary>اعتبارسنجی کامل نسخه بدون تغییر چیزی (خطا + هشدار).</summary>
