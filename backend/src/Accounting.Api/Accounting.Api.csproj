@@ -12,6 +12,9 @@
          and this project does not otherwise track/enforce full public-API doc coverage. -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- خروجی `dotnet publish -o ./publish` داخل پوشهٔ پروژه است؛ بدون این خط، publish بعدی آن را جزو
+         پروژه می‌شمارد و هر بار یک publish/publish تودرتو می‌سازد (و build با MSB3030 می‌شکند). -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);publish/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

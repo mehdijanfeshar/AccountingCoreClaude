@@ -169,6 +169,7 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
             TO_DATE = toDate,
             MIN_DOCLIFE = request.MinDocLife,
             HAS_PRIOR = request.IncludePrior,
+            PRIOR_RESTATED = request.IncludePrior && request.PriorRestated,
             USES_DRAFT = versions.Any(v => v.State == FsTemplateVersionState.Draft),
             STATE = FsRunState.Draft,
             DESCRIPTION = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),

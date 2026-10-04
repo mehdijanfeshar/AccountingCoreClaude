@@ -46,6 +46,9 @@ public partial class TB_FS_RUN
     /// <summary>ستون سال قبل (همان ماه) محاسبه شده است.</summary>
     public bool HAS_PRIOR { get; set; }
 
+    /// <summary>برچسب «تجدید ارائه‌شده» روی ستون سال قبل (فقط برچسب؛ تعدیلات سنواتی محاسبه نمی‌شود). DDL 061.</summary>
+    public bool PRIOR_RESTATED { get; set; }
+
     /// <summary>شمارهٔ اولین یادداشت عددی (یادداشت‌های پیش از آن معمولاً متنی‌اند: تاریخچه، مبنا، رویه‌ها).</summary>
     public int NOTE_START_NO { get; set; }
 
@@ -66,6 +69,9 @@ public partial class TB_FS_RUN
 
     /// <summary>بخش ۴۵-ه — اجرایی که این یکی از رویش ساخته شد (مثلاً با ورود مقادیر دستی).</summary>
     public Guid? SOURCE_RUN_ID { get; set; }
+
+    /// <summary>ح-۴ — تعداد مراحل تأییدشده در دور جاری بازبینی (۰ پس از ارسال یا برگشت). DDL 061.</summary>
+    public int APPROVAL_STEP { get; set; }
 
     public virtual ICollection<TB_FS_RUN_CHECK> TB_FS_RUN_CHECKs { get; set; } = new List<TB_FS_RUN_CHECK>();
 

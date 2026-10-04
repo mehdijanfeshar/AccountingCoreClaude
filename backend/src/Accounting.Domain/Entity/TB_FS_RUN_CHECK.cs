@@ -28,5 +28,17 @@ public partial class TB_FS_RUN_CHECK
     /// <summary>«کد قالب/کد ردیف» مرتبط، اگر کنترل به یک ردیف برمی‌گردد.</summary>
     public string? ROW_REF { get; set; }
 
+    /// <summary>ح-۳ — کد کاربری مسئول رفع این کنترل ناموفق (DDL 061).</summary>
+    public string? ASSIGNEE_USERID { get; set; }
+
+    public string? ASSIGNEE_NAME { get; set; }
+
+    /// <summary>مهلت رفع، تاریخ شمسی YYYYMMDD.</summary>
+    public string? DUE_DATE { get; set; }
+
+    public FsCheckAssignState? ASSIGN_STATE { get; set; }
+
+    public string? ASSIGNED_BY { get; set; }
+
     public virtual TB_FS_RUN RUN { get; set; } = null!;
 }

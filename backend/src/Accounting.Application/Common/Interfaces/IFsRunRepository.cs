@@ -26,6 +26,23 @@ public interface IFsRunRepository
     /// <summary>بخش ۴۵-ه — ثبت یک قدم گردش تأیید (فقط درج).</summary>
     Task AddActionAsync(TB_FS_RUN_ACTION action, CancellationToken cancellationToken = default);
 
+    /// <summary>ح-۵ — آخرین اجرای حذف‌نشده و جایگزین‌نشدهٔ هر واحد در یک سال (برای صفحهٔ بستن دوره).</summary>
+    Task<IReadOnlyList<FsUnitRunStatusDto>> GetLatestRunsAsync(IReadOnlyCollection<string> vahedCodes, string year, CancellationToken cancellationToken = default);
+
+    /// <summary>ح-۹ — کنترل‌های ناموفقِ ارجاع‌شدهٔ باز به یک کاربر، در اجراهای حذف‌نشدهٔ یک واحد.</summary>
+    Task<IReadOnlyList<FsAssignedCheckDto>> GetOpenAssignmentsAsync(string vahedCode, string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>ح-۳ — درج «نظر».</summary>
+    Task AddCommentAsync(TB_FS_RUN_COMMENT comment, CancellationToken cancellationToken = default);
+
+    /// <summary>ح-۳ — نظرهای حذف‌نشدهٔ اجرا، قدیمی‌ترین اول.</summary>
+    Task<IReadOnlyList<TB_FS_RUN_COMMENT>> GetCommentsAsync(Guid runId, string vahedCode, CancellationToken cancellationToken = default);
+
+    Task<TB_FS_RUN_COMMENT?> GetCommentForUpdateAsync(Guid runId, Guid commentId, string vahedCode, CancellationToken cancellationToken = default);
+
+    /// <summary>ح-۳ — یک کنترل اجرا برای ارجاع / رفع.</summary>
+    Task<TB_FS_RUN_CHECK?> GetCheckForUpdateAsync(Guid runId, Guid checkId, string vahedCode, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// بخش ۴۵-ه — اجراهای منتشرشدهٔ همان «دوره»ٔ واحد (مجموعه، سال، ماه پایان، ترکیبی/جداگانه) برای جایگزینی
     /// هنگام انتشار نسخهٔ تازه؛ change-tracked.

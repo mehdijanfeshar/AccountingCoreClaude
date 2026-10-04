@@ -1,3 +1,4 @@
+using Accounting.Application.FinancialStatements.Collaboration;
 using Accounting.Application.FinancialStatements.Commands.DeleteFsRun;
 using Accounting.Application.FinancialStatements.Commands.GenerateFsRun;
 using Accounting.Application.FinancialStatements.Commands.TransitionFsRun;
@@ -204,7 +205,69 @@ public sealed class FsRunsController : ControllerBase
         await _mediator.Send(new DeleteFsRunCommand(id), cancellationToken);
         return Ok(new FsIdResponse(id));
     }
+
+    /// <summary>ح-۳ — «نظر»های اجرا (ردیف، کنترل، کل اجرا)، قدیمی‌ترین اول.</summary>
+    [HttpGet("{id:guid}/comments")]
+    [ProducesResponseType(typeof(IReadOnlyList<FsRunCommentDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetComments(Guid id, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(new GetFsRunCommentsQuery(id), cancellationToken));
+
+    /// <summary>ح-۳ — افزودن نظر؛ <c>rowId</c>/<c>checkId</c> خالی = کل اجرا.</summary>
+    [HttpPost("{id:guid}/comments")]
+    [ProducesResponseType(typeof(FsIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddComment(Guid id, [FromBody] FsRunCommentRequest request, CancellationToken cancellationToken)
+        => Ok(new FsIdResponse(await _mediator.Send(new AddFsRunCommentCommand(id, request.RowId, request.CheckId, request.Body), cancellationToken)));
+
+    /// <summary>ح-۳ — حذف نظر (فقط نویسنده؛ دیگری = ۴۰۳).</summary>
+    [HttpPost("{id:guid}/comments/{commentId:guid}/delete")]
+    [ProducesResponseType(typeof(FsIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteComment(Guid id, Guid commentId, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeleteFsRunCommentCommand(id, commentId), cancellationToken);
+        return Ok(new FsIdResponse(commentId));
+    }
+
+    /// <summary>ح-۳ — ارجاع کنترل ناموفق به مسئول با مهلت (شمسی YYYYMMDD). کنترل موفق = ۴۰۹.</summary>
+    [HttpPost("{id:guid}/checks/{checkId:guid}/assign")]
+    [ProducesResponseType(typeof(FsIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AssignCheck(Guid id, Guid checkId, [FromBody] FsCheckAssignRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(
+            new AssignFsRunCheckCommand(id, checkId, request.AssigneeUserId, request.AssigneeName, request.DueDate, request.Note),
+            cancellationToken);
+        return Ok(new FsIdResponse(checkId));
+    }
+
+    /// <summary>ح-۳ — علامت «رفع‌شده» برای ارجاع باز.</summary>
+    [HttpPost("{id:guid}/checks/{checkId:guid}/resolve")]
+    [ProducesResponseType(typeof(FsIdResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ResolveCheck(Guid id, Guid checkId, [FromBody] FsCheckResolveRequest request, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new ResolveFsRunCheckCommand(id, checkId, request.Note), cancellationToken);
+        return Ok(new FsIdResponse(checkId));
+    }
 }
+
+public sealed record FsRunCommentRequest(Guid? RowId, Guid? CheckId, string Body);
+
+public sealed record FsCheckAssignRequest(string AssigneeUserId, string? AssigneeName, string? DueDate, string? Note);
+
+public sealed record FsCheckResolveRequest(string? Note);
 
 public sealed record FsRunTransitionRequest(FsRunAction Action, string? Comments);
 

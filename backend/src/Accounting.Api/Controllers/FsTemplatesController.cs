@@ -1,4 +1,5 @@
 using Accounting.Application.FinancialStatements.Commands.ActivateFsTemplateVersion;
+using Accounting.Application.FinancialStatements.Commands.ApplyFsAccountMapping;
 using Accounting.Application.FinancialStatements.Commands.AddFsTemplateRow;
 using Accounting.Application.FinancialStatements.Commands.Common;
 using Accounting.Application.FinancialStatements.Commands.CreateFsTemplate;
@@ -61,6 +62,20 @@ public sealed class FsTemplatesController : ControllerBase
         [FromQuery] bool useDrafts = false,
         CancellationToken cancellationToken = default)
         => Ok(await _mediator.Send(new GetFsAccountMappingQuery(framework, year, useDrafts), cancellationToken));
+
+    /// <summary>
+    /// اعمال نگاشت معین ← ردیف روی پیش‌نویس قالب‌های این واحد (ورود از Excel / پیشنهاد خودکار).
+    /// سطر خطادار رد و بقیه اعمال می‌شوند؛ <c>dryRun</c> = فقط نتیجه.
+    /// </summary>
+    [HttpPost("account-mapping/apply")]
+    [ProducesResponseType(typeof(FsMappingApplyResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ApplyAccountMapping([FromBody] ApplyFsAccountMappingRequest request, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(
+            new ApplyFsAccountMappingCommand(request.Framework, request.Year, request.Items, request.DryRun),
+            cancellationToken));
 
     /// <summary>قالب‌ها با نسخه‌هایشان (جدیدترین نسخه اول).</summary>
     [HttpGet("templates")]
@@ -241,7 +256,7 @@ public sealed class FsTemplatesController : ControllerBase
         return Ok(new FsIdResponse(rowId));
     }
 
-    /// <summary>ترتیب کامل ردیف‌ها (همهٔ شناسه‌ها به ترتیب جدید).</summary>
+    /// <summary>ترتیب کامل ردیف‌ها (همهٔ شناسه‌ها به ترتیب جدید) و در صورت نیاز تغییر والد (طراح درختی).</summary>
     [HttpPost("template-versions/{versionId:guid}/rows/reorder")]
     [ProducesResponseType(typeof(FsIdResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -250,7 +265,7 @@ public sealed class FsTemplatesController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> ReorderRows(Guid versionId, [FromBody] ReorderFsTemplateRowsRequest request, CancellationToken cancellationToken)
     {
-        await _mediator.Send(new ReorderFsTemplateRowsCommand(versionId, request.RowIds), cancellationToken);
+        await _mediator.Send(new ReorderFsTemplateRowsCommand(versionId, request.RowIds, request.ParentChanges), cancellationToken);
         return Ok(new FsIdResponse(versionId));
     }
 
@@ -286,6 +301,8 @@ public sealed record UpdateFsTemplateVersionRequest(string? Description);
 
 public sealed record ActivateFsTemplateVersionRequest(int EffectiveFromYear);
 
-public sealed record ReorderFsTemplateRowsRequest(IReadOnlyList<Guid> RowIds);
+public sealed record ReorderFsTemplateRowsRequest(IReadOnlyList<Guid> RowIds, IReadOnlyList<FsRowParentChange>? ParentChanges = null);
 
 public sealed record ImportFsTemplateRowsRequest(IReadOnlyList<FsTemplateRowInput> Rows);
+
+public sealed record ApplyFsAccountMappingRequest(FsFramework Framework, int Year, IReadOnlyList<FsMappingAssignment> Items, bool DryRun = false);

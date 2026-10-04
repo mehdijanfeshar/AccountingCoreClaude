@@ -33,7 +33,21 @@ public sealed record FsAccountMappingDto(
     string? GroupName,
     int StatementMatchCount,
     bool DoubleCounted,
-    IReadOnlyList<FsMappingMatchDto> Matches);
+    IReadOnlyList<FsMappingMatchDto> Matches,
+    FsMappingSuggestionDto? Suggestion = null);
+
+/// <summary>
+/// پیشنهاد خودکار برای معین «بدون نگاشت»: پرتکرارترین ردیف صورت اصلی (بدون [D]/[C]) بین معین‌های هم‌کل؛
+/// اگر هم‌کلِ نگاشت‌شده نبود، هم‌گروه. <paramref name="Basis"/> = <c>kol</c> یا <c>group</c>؛
+/// <paramref name="SiblingCount"/> = چند معینِ هم‌خانواده همین ردیف را دارند.
+/// </summary>
+public sealed record FsMappingSuggestionDto(
+    string TemplateCode,
+    string TemplateTitle,
+    string RowCode,
+    string? RowTitle,
+    string Basis,
+    int SiblingCount);
 
 /// <summary>
 /// <c>GET api/fs/account-mapping?framework=&amp;year=&amp;useDrafts=</c> — بخش ۴۵-و، «نگاشت حساب‌ها» (سند منبع
@@ -86,7 +100,7 @@ public sealed class GetFsAccountMappingQueryHandler : IRequestHandler<GetFsAccou
             .Where(x => x.Selector is not null)
             .ToList();
 
-        return moeins
+        var result = moeins
             .Select(m =>
             {
                 var matches = selectors
@@ -118,6 +132,34 @@ public sealed class GetFsAccountMappingQueryHandler : IRequestHandler<GetFsAccou
                             _ => null,
                         })).ToList());
             })
+            .ToList();
+
+        return Suggest(result);
+    }
+
+    private static IReadOnlyList<FsAccountMappingDto> Suggest(List<FsAccountMappingDto> rows)
+    {
+        FsMappingSuggestionDto? Best(IEnumerable<FsAccountMappingDto> siblings, string basis) => siblings
+            .SelectMany(s => s.Matches.Where(x => !x.IsNote && x.Side is null))
+            .GroupBy(x => (x.TemplateCode, x.RowCode))
+            .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key.TemplateCode, StringComparer.Ordinal)
+            .ThenBy(g => g.Key.RowCode, StringComparer.Ordinal)
+            .Select(g => new FsMappingSuggestionDto(g.Key.TemplateCode, g.First().TemplateTitle, g.Key.RowCode, g.First().RowTitle, basis, g.Count()))
+            .FirstOrDefault();
+
+        var mapped = rows.Where(r => r.StatementMatchCount > 0).ToList();
+        var byKol = mapped.Where(r => r.KolCode is not null).ToLookup(r => r.KolCode!);
+        var byGroup = mapped.Where(r => r.GroupCode is not null).ToLookup(r => r.GroupCode!);
+
+        return rows
+            .Select(r => r.StatementMatchCount > 0
+                ? r
+                : r with
+                {
+                    Suggestion = (r.KolCode is null ? null : Best(byKol[r.KolCode], "kol"))
+                        ?? (r.GroupCode is null ? null : Best(byGroup[r.GroupCode], "group")),
+                })
             .ToList();
     }
 }

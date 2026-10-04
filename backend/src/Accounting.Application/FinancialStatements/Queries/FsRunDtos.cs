@@ -21,7 +21,8 @@ public sealed record FsRunSummaryDto(
     int StatementCount,
     int? DurationMs,
     string AddUserId,
-    DateTime CreatedDate);
+    DateTime CreatedDate,
+    bool PriorRestated = false);
 
 /// <summary>
 /// یک ردیف صورت در Snapshot. <paramref name="AmountCur"/>/<paramref name="AmountPrv"/> با علامت حسابداری
@@ -79,7 +80,9 @@ public sealed record FsRunDetailDto(
     Guid? SourceRunId,
     IReadOnlyList<FsRunCheckDto> Checks,
     IReadOnlyList<FsRunActionDto> Actions,
-    IReadOnlyList<FsRunManualDto> ManualValues);
+    IReadOnlyList<FsRunManualDto> ManualValues,
+    IReadOnlyList<Approvals.FsRunApprovalStepDto>? ApprovalSteps = null,
+    IReadOnlyList<string>? UnlockedUnits = null);
 
 /// <summary>نتیجهٔ یک کنترل در اجرا (بخش ۴۵-ه).</summary>
 public sealed record FsRunCheckDto(
@@ -89,7 +92,16 @@ public sealed record FsRunCheckDto(
     bool Passed,
     string? Message,
     decimal? Difference,
-    string? RowRef);
+    string? RowRef,
+    Guid? Id = null,
+    string? AssigneeUserId = null,
+    string? AssigneeName = null,
+    string? DueDate = null,
+    FsCheckAssignState? AssignState = null,
+    string? AssignedBy = null);
+
+/// <summary>ح-۳ — یک «نظر» روی ردیف، کنترل یا کل اجرا. <paramref name="IsMine"/> = کاربر جاری نوشته (قابل حذف).</summary>
+public sealed record FsRunCommentDto(Guid Id, Guid? RowId, Guid? CheckId, string Body, string UserId, DateTime CreatedDate, bool IsMine);
 
 /// <summary>یک قدم گردش تأیید.</summary>
 public sealed record FsRunActionDto(
@@ -98,7 +110,8 @@ public sealed record FsRunActionDto(
     FsRunState ToState,
     string UserId,
     string? Comments,
-    DateTime CreatedDate);
+    DateTime CreatedDate,
+    int? StepNo = null);
 
 /// <summary>مقدار دستی یک ردیف «مقدار دستی» — مبلغ به علامت نمایشی.</summary>
 public sealed record FsRunManualDto(
@@ -137,3 +150,16 @@ public sealed record FsCheckRuleDto(
     decimal Tolerance,
     FsCheckSeverity Severity,
     bool IsActive);
+
+/// <summary>ح-۵ — آخرین اجرای یک واحد در یک سال: وضعیت و تعداد کنترل مسدودکنندهٔ ناموفق.</summary>
+public sealed record FsUnitRunStatusDto(
+    string VahedCode,
+    Guid RunId,
+    int RunNo,
+    FsFramework Framework,
+    FsRunState State,
+    DateTime CreatedDate,
+    int BlockingFailed);
+
+/// <summary>ح-۹ — یک کنترل ارجاع‌شدهٔ باز (برای «کارهای من»).</summary>
+public sealed record FsAssignedCheckDto(Guid RunId, int RunNo, Guid CheckId, string Code, string TitleFa, string? DueDate, string? AssignedBy);

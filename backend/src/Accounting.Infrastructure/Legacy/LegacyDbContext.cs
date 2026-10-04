@@ -168,6 +168,22 @@ public partial class LegacyDbContext : DbContext
 
     public virtual DbSet<TB_FS_RUN_ACTION> TB_FS_RUN_ACTIONs { get; set; }
 
+    public virtual DbSet<TB_FS_RUN_COMMENT> TB_FS_RUN_COMMENTs { get; set; }
+
+    public virtual DbSet<TB_FS_APPROVAL_STEP> TB_FS_APPROVAL_STEPs { get; set; }
+
+    public virtual DbSet<TB_FS_PERIOD> TB_FS_PERIODs { get; set; }
+
+    public virtual DbSet<TB_FS_NARRATIVE> TB_FS_NARRATIVEs { get; set; }
+
+    public virtual DbSet<TB_FS_RATIO> TB_FS_RATIOs { get; set; }
+
+    public virtual DbSet<TB_FS_NARRATIVE_VERSION> TB_FS_NARRATIVE_VERSIONs { get; set; }
+
+    public virtual DbSet<TB_FS_RUN_NARRATIVE> TB_FS_RUN_NARRATIVEs { get; set; }
+
+    public virtual DbSet<TB_FS_PERIOD_LOG> TB_FS_PERIOD_LOGs { get; set; }
+
     public virtual DbSet<TB_FS_RUN_MANUAL> TB_FS_RUN_MANUALs { get; set; }
 
     // خزانه‌داری، بخش ۴-ج (۲۰۲۶-۰۹-۲۹) — دریافت وجه + انتقال وجه.
@@ -2055,6 +2071,7 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(8)
                 .IsUnicode(false);
             entity.Property(e => e.HAS_PRIOR).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.PRIOR_RESTATED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.NOTE_START_NO).HasColumnType("NUMBER(4)");
             // بخش ۴۵-ه (DDL 060).
             entity.Property(e => e.BALANCE_HASH)
@@ -2303,6 +2320,263 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
         });
 
+        modelBuilder.Entity<TB_FS_RATIO>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_RATIO");
+
+            entity.ToTable("TB_FS_RATIO");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.FRAMEWORK).HasConversion<int>();
+            entity.Property(e => e.CODE)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.TITLE_FA)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.NUMERATOR_EXPR)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.DENOMINATOR_EXPR)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.FORMAT).HasConversion<int>();
+            entity.Property(e => e.IS_ACTIVE).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+        });
+
+        modelBuilder.Entity<TB_FS_NARRATIVE>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_NARRATIVE");
+
+            entity.ToTable("TB_FS_NARRATIVE");
+
+            entity.HasIndex(e => new { e.VAHEDCODE, e.FRAMEWORK, e.YEAR }, "IDX_FS_NARRATIVE_SET");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.FRAMEWORK).HasConversion<int>();
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false)
+                .IsFixedLength();
+            entity.Property(e => e.TITLE_FA)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.LINKED_TEMPLATE_CODE)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.CONTENT_JSON).HasColumnType("CLOB");
+            entity.Property(e => e.STATE).HasConversion<int>();
+            entity.Property(e => e.RESPONSIBLE_USERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.REVIEW_COMMENT)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+        });
+
+        modelBuilder.Entity<TB_FS_NARRATIVE_VERSION>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_NARRATIVE_VERSION");
+
+            entity.ToTable("TB_FS_NARRATIVE_VERSION");
+
+            entity.HasIndex(e => e.NARRATIVE_ID, "IDX_FS_NARRATIVE_VER");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.NARRATIVE_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.TITLE_FA)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.CONTENT_JSON).HasColumnType("CLOB");
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+        });
+
+        modelBuilder.Entity<TB_FS_RUN_NARRATIVE>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_RUN_NARRATIVE");
+
+            entity.ToTable("TB_FS_RUN_NARRATIVE");
+
+            entity.HasIndex(e => new { e.RUN_ID, e.VAHEDCODE }, "IDX_FS_RUN_NARRATIVE_RUN");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.RUN_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.NARRATIVE_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.TITLE_FA)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.LINKED_TEMPLATE_CODE)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.CONTENT_JSON).HasColumnType("CLOB");
+        });
+
+        modelBuilder.Entity<TB_FS_PERIOD>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_PERIOD");
+
+            entity.ToTable("TB_FS_PERIOD");
+
+            entity.HasIndex(e => new { e.VAHEDCODE, e.YEAR }, "UK_FS_PERIOD").IsUnique();
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false)
+                .IsFixedLength();
+            entity.Property(e => e.STATE).HasConversion<int>();
+            entity.Property(e => e.REOPEN_REASON)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.REOPEN_REQUESTED_BY)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.REOPEN_REQUESTED_DATE).HasPrecision(6);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<TB_FS_PERIOD_LOG>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_PERIOD_LOG");
+
+            entity.ToTable("TB_FS_PERIOD_LOG");
+
+            entity.HasIndex(e => new { e.VAHEDCODE, e.YEAR }, "IDX_FS_PERIOD_LOG_UNIT");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.PERIOD_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false)
+                .IsFixedLength();
+            entity.Property(e => e.ACTION).HasConversion<int>();
+            entity.Property(e => e.FROM_STATE).HasConversion<int>();
+            entity.Property(e => e.TO_STATE).HasConversion<int>();
+            entity.Property(e => e.USERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.REASON)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+        });
+
+        modelBuilder.Entity<TB_FS_APPROVAL_STEP>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_APPROVAL_STEP");
+
+            entity.ToTable("TB_FS_APPROVAL_STEP");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.FRAMEWORK).HasConversion<int>();
+            entity.Property(e => e.TITLE_FA)
+                .HasMaxLength(200)
+                .IsUnicode(false);
+            entity.Property(e => e.APPROVER_USERIDS)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.IS_ACTIVE).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+        });
+
         modelBuilder.Entity<TB_FS_RUN_CHECK>(entity =>
         {
             entity.HasKey(e => e.ID).HasName("PK_FS_RUN_CHECK");
@@ -2339,12 +2613,73 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.ROW_REF)
                 .HasMaxLength(80)
                 .IsUnicode(false);
+            entity.Property(e => e.ASSIGNEE_USERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.ASSIGNEE_NAME)
+                .HasMaxLength(200)
+                .IsUnicode(false);
+            entity.Property(e => e.DUE_DATE)
+                .HasMaxLength(8)
+                .IsUnicode(false)
+                .IsFixedLength();
+            entity.Property(e => e.ASSIGN_STATE).HasConversion<int?>();
+            entity.Property(e => e.ASSIGNED_BY)
+                .HasMaxLength(10)
+                .IsUnicode(false);
 
             entity.HasOne(d => d.RUN)
                 .WithMany(p => p.TB_FS_RUN_CHECKs)
                 .HasForeignKey(d => d.RUN_ID)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_FS_RUN_CHECK_RUN");
+        });
+
+        modelBuilder.Entity<TB_FS_RUN_COMMENT>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_RUN_COMMENT");
+
+            entity.ToTable("TB_FS_RUN_COMMENT");
+
+            entity.HasIndex(e => new { e.RUN_ID, e.VAHEDCODE }, "IDX_FS_RUN_COMMENT_RUN");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.RUN_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.ROW_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.CHECK_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.BODY)
+                .HasMaxLength(2000)
+                .IsUnicode(false);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+
+            entity.HasOne<TB_FS_RUN>()
+                .WithMany()
+                .HasForeignKey(d => d.RUN_ID)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FS_RUN_COMMENT_RUN");
         });
 
         modelBuilder.Entity<TB_FS_RUN_ACTION>(entity =>

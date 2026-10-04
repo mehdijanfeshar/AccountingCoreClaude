@@ -22,6 +22,9 @@ public partial class TB_FS_RUN_ACTION
 
     public string? COMMENTS { get; set; }
 
+    /// <summary>ح-۴ — شمارهٔ مرحلهٔ گردش برای اقدام «تأیید» (DDL 061).</summary>
+    public int? STEP_NO { get; set; }
+
     public DateTime CREATEDDATE { get; set; }
 
     public virtual TB_FS_RUN RUN { get; set; } = null!;

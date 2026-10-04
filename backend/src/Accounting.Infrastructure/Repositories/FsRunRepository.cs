@@ -136,15 +136,85 @@ public sealed class FsRunRepository : IFsRunRepository
                 .OrderByDescending(c => c.SEVERITY)
                 .ThenBy(c => c.PASSED)
                 .ThenBy(c => c.CODE)
-                .Select(c => new FsRunCheckDto(c.CODE, c.TITLE_FA, c.SEVERITY, c.PASSED, c.MESSAGE, c.DIFFERENCE, c.ROW_REF))
+                .Select(c => new FsRunCheckDto(
+                    c.CODE, c.TITLE_FA, c.SEVERITY, c.PASSED, c.MESSAGE, c.DIFFERENCE, c.ROW_REF,
+                    c.ID, c.ASSIGNEE_USERID, c.ASSIGNEE_NAME, c.DUE_DATE, c.ASSIGN_STATE, c.ASSIGNED_BY))
                 .ToList(),
-            actions.Select(a => new FsRunActionDto(a.ACTION, a.FROM_STATE, a.TO_STATE, a.USERID, a.COMMENTS, a.CREATEDDATE)).ToList(),
+            actions.Select(a => new FsRunActionDto(a.ACTION, a.FROM_STATE, a.TO_STATE, a.USERID, a.COMMENTS, a.CREATEDDATE, a.STEP_NO)).ToList(),
             manuals.Select(m => new FsRunManualDto(m.TEMPLATE_CODE, m.ROW_CODE, m.AMOUNT_CUR, m.AMOUNT_PRV, m.REASON, m.ADDUSERID, m.CREATEDDATE)).ToList());
     }
 
     public async Task AddActionAsync(TB_FS_RUN_ACTION action, CancellationToken cancellationToken = default)
     {
         await _dbContext.TB_FS_RUN_ACTIONs.AddAsync(action, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<FsUnitRunStatusDto>> GetLatestRunsAsync(
+        IReadOnlyCollection<string> vahedCodes, string year, CancellationToken cancellationToken = default)
+    {
+        if (vahedCodes.Count == 0)
+        {
+            return [];
+        }
+
+        var runs = await _dbContext.TB_FS_RUNs
+            .AsNoTracking()
+            .Where(r => vahedCodes.Contains(r.VAHEDCODE) && r.YEAR == year && !r.ISDELETED && r.STATE != FsRunState.Superseded)
+            .Select(r => new { r.ID, r.VAHEDCODE, r.RUN_NO, r.FRAMEWORK, r.STATE, r.CREATEDDATE })
+            .ToListAsync(cancellationToken);
+
+        var latest = runs.GroupBy(r => r.VAHEDCODE).Select(g => g.OrderByDescending(r => r.CREATEDDATE).First()).ToList();
+        var ids = latest.Select(r => r.ID).ToList();
+
+        // PASSED در حافظه — عبارت بولی در کوئری اوراکل نساز (ORA-00904).
+        var checks = await _dbContext.TB_FS_RUN_CHECKs
+            .AsNoTracking()
+            .Where(c => ids.Contains(c.RUN_ID) && c.SEVERITY == FsCheckSeverity.Blocking)
+            .Select(c => new { c.RUN_ID, c.PASSED })
+            .ToListAsync(cancellationToken);
+        var failed = checks.Where(c => !c.PASSED).GroupBy(c => c.RUN_ID).ToDictionary(g => g.Key, g => g.Count());
+
+        return latest
+            .Select(r => new FsUnitRunStatusDto(r.VAHEDCODE, r.ID, r.RUN_NO, r.FRAMEWORK, r.STATE, r.CREATEDDATE, failed.GetValueOrDefault(r.ID)))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<FsAssignedCheckDto>> GetOpenAssignmentsAsync(string vahedCode, string userId, CancellationToken cancellationToken = default)
+    {
+        var rows = await (
+                from c in _dbContext.TB_FS_RUN_CHECKs.AsNoTracking()
+                join r in _dbContext.TB_FS_RUNs.AsNoTracking() on c.RUN_ID equals r.ID
+                where c.VAHEDCODE == vahedCode && c.ASSIGNEE_USERID == userId && c.ASSIGN_STATE == FsCheckAssignState.Open && !r.ISDELETED
+                select new { r.ID, r.RUN_NO, CheckId = c.ID, c.CODE, c.TITLE_FA, c.DUE_DATE, c.ASSIGNED_BY })
+            .ToListAsync(cancellationToken);
+
+        return rows.Select(x => new FsAssignedCheckDto(x.ID, x.RUN_NO, x.CheckId, x.CODE, x.TITLE_FA, x.DUE_DATE, x.ASSIGNED_BY)).ToList();
+    }
+
+    public async Task AddCommentAsync(TB_FS_RUN_COMMENT comment, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.TB_FS_RUN_COMMENTs.AddAsync(comment, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TB_FS_RUN_COMMENT>> GetCommentsAsync(Guid runId, string vahedCode, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.TB_FS_RUN_COMMENTs
+            .AsNoTracking()
+            .Where(c => c.RUN_ID == runId && c.VAHEDCODE == vahedCode && !c.ISDELETED)
+            .OrderBy(c => c.CREATEDDATE)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<TB_FS_RUN_COMMENT?> GetCommentForUpdateAsync(Guid runId, Guid commentId, string vahedCode, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.TB_FS_RUN_COMMENTs
+            .FirstOrDefaultAsync(c => c.ID == commentId && c.RUN_ID == runId && c.VAHEDCODE == vahedCode && !c.ISDELETED, cancellationToken);
+    }
+
+    public Task<TB_FS_RUN_CHECK?> GetCheckForUpdateAsync(Guid runId, Guid checkId, string vahedCode, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.TB_FS_RUN_CHECKs
+            .FirstOrDefaultAsync(c => c.ID == checkId && c.RUN_ID == runId && c.VAHEDCODE == vahedCode, cancellationToken);
     }
 
     public async Task<IReadOnlyList<TB_FS_RUN>> GetPublishedForUpdateAsync(
@@ -260,5 +330,6 @@ public sealed class FsRunRepository : IFsRunRepository
         statementCount,
         r.DURATION_MS,
         r.ADDUSERID,
-        r.CREATEDDATE);
+        r.CREATEDDATE,
+        r.PRIOR_RESTATED);
 }

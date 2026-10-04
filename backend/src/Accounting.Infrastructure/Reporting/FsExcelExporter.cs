@@ -174,7 +174,7 @@ public sealed class FsExcelExporter : IFsExcelExporter
         ws.Cell(6, 2).Value = "شرح";
         ws.Cell(6, 3).Value = "یادداشت";
         ws.Cell(6, 4).Value = r.Year;
-        ws.Cell(6, 5).Value = r.HasPrior ? (int.Parse(r.Year, CultureInfo.InvariantCulture) - 1).ToString(CultureInfo.InvariantCulture) : string.Empty;
+        ws.Cell(6, 5).Value = r.HasPrior ? (int.Parse(r.Year, CultureInfo.InvariantCulture) - 1).ToString(CultureInfo.InvariantCulture) + (r.PriorRestated ? " (تجدید ارائه‌شده)" : string.Empty) : string.Empty;
         ws.Cell(6, 6).Value = "داخلی جاری";
         ws.Cell(6, 7).Value = "داخلی قبل";
         ws.Range(6, 1, 6, 7).Style.Font.Bold = true;

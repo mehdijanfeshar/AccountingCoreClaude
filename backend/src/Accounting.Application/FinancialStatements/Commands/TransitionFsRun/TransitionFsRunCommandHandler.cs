@@ -1,5 +1,7 @@
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Application.FinancialStatements.Approvals;
+using Accounting.Application.FinancialStatements.Queries;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using MediatR;
@@ -9,14 +11,37 @@ namespace Accounting.Application.FinancialStatements.Commands.TransitionFsRun;
 public sealed class TransitionFsRunCommandHandler : IRequestHandler<TransitionFsRunCommand, FsRunState>
 {
     private readonly IFsRunRepository _runRepository;
+    private readonly IFsApprovalStepRepository _stepRepository;
+    private readonly IFsUnitScopeProvider _scopes;
+    private readonly Periods.FsPeriodGuard _periodGuard;
+    private readonly IFsNarrativeRepository _narratives;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
-    public TransitionFsRunCommandHandler(IFsRunRepository runRepository, IUnitOfWork unitOfWork, ICurrentUser currentUser)
+    public TransitionFsRunCommandHandler(
+        IFsRunRepository runRepository,
+        IFsApprovalStepRepository stepRepository,
+        IFsUnitScopeProvider scopes,
+        Periods.FsPeriodGuard periodGuard,
+        IFsNarrativeRepository narratives,
+        IUnitOfWork unitOfWork,
+        ICurrentUser currentUser)
     {
         _runRepository = runRepository;
+        _stepRepository = stepRepository;
+        _scopes = scopes;
+        _periodGuard = periodGuard;
+        _narratives = narratives;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+    }
+
+    /// <summary>ح-۴ — اقدام‌های «تأیید» دور جاری بازبینی (پس از آخرین ارسال).</summary>
+    internal static IReadOnlyList<FsRunActionDto> CurrentCycleApprovals(IReadOnlyList<FsRunActionDto> actions)
+    {
+        var ordered = actions.OrderBy(a => a.CreatedDate).ToList();
+        var lastSubmit = ordered.FindLastIndex(a => a.Action == FsRunAction.Submit);
+        return ordered.Skip(lastSubmit + 1).Where(a => a.Action == FsRunAction.Approve).ToList();
     }
 
     public async Task<FsRunState> Handle(TransitionFsRunCommand request, CancellationToken cancellationToken)
@@ -29,6 +54,7 @@ public sealed class TransitionFsRunCommandHandler : IRequestHandler<TransitionFs
         var user = _currentUser.UserId;
         var now = DateTime.UtcNow;
         var from = run.STATE;
+        int? stepNo = null;
 
         FsRunState to;
 
@@ -51,18 +77,34 @@ public sealed class TransitionFsRunCommandHandler : IRequestHandler<TransitionFs
                 }
 
                 to = FsRunState.InReview;
+                run.APPROVAL_STEP = 0;
                 break;
 
             case FsRunAction.Approve:
                 Require(from, FsRunState.InReview);
-                var submitter = detail.Actions.LastOrDefault(a => a.Action == FsRunAction.Submit)?.UserId;
+                var submitter = detail.Actions.OrderBy(a => a.CreatedDate).LastOrDefault(a => a.Action == FsRunAction.Submit)?.UserId;
 
-                if (user == run.ADDUSERID || user == submitter)
+                // ح-۴ — زنجیرهٔ مراحل؛ بدون مرحله = تأیید تک‌مرحله‌ای ۴۵-ه.
+                var chain = FsApprovalChain.Resolve(
+                    await _stepRepository.GetAllAsync(run.FRAMEWORK, cancellationToken),
+                    await _scopes.GetAsync(request.VahedCode, cancellationToken),
+                    run.FRAMEWORK);
+                var step = run.APPROVAL_STEP < chain.Count ? chain[run.APPROVAL_STEP] : null;
+                var reason = FsApprovalChain.CannotApprove(
+                    step, user, run.ADDUSERID, submitter, CurrentCycleApprovals(detail.Actions).Select(a => a.UserId));
+
+                if (reason is not null)
                 {
-                    throw new FsAccessDeniedException("تهیه‌کننده یا ارسال‌کنندهٔ صورت‌ها نمی‌تواند همان اجرا را تأیید کند (تفکیک وظایف).");
+                    throw new FsAccessDeniedException(reason);
                 }
 
-                to = FsRunState.Approved;
+                if (step is not null)
+                {
+                    stepNo = run.APPROVAL_STEP + 1;
+                    run.APPROVAL_STEP = stepNo.Value;
+                }
+
+                to = step is null || run.APPROVAL_STEP >= chain.Count ? FsRunState.Approved : FsRunState.InReview;
                 break;
 
             case FsRunAction.Return:
@@ -72,6 +114,7 @@ public sealed class TransitionFsRunCommandHandler : IRequestHandler<TransitionFs
                 }
 
                 to = FsRunState.Draft;
+                run.APPROVAL_STEP = 0;
                 break;
 
             case FsRunAction.Publish:
@@ -80,6 +123,16 @@ public sealed class TransitionFsRunCommandHandler : IRequestHandler<TransitionFs
                 if (user == run.ADDUSERID)
                 {
                     throw new FsAccessDeniedException("تهیه‌کنندهٔ صورت‌ها نمی‌تواند همان اجرا را منتشر کند (تفکیک وظایف).");
+                }
+
+                // ح-۵ — V-11: همهٔ واحدهای دامنه باید دورهٔ قفل‌شده داشته باشند.
+                var unlocked = await _periodGuard.GetUnlockedAsync(run.VAHEDCODE, run.INCLUDE_SUBUNITS, run.YEAR, cancellationToken);
+
+                if (unlocked.Count > 0)
+                {
+                    throw new FsTemplateConflictException(
+                        $"V-11: دورهٔ {unlocked.Count} واحد در دامنهٔ این صورت‌ها قفل نیست ({string.Join("، ", unlocked.Take(5))}{(unlocked.Count > 5 ? "، …" : string.Empty)}); "
+                        + "از صفحهٔ «بستن دوره» دوره را ببندید و قفل کنید.");
                 }
 
                 foreach (var old in await _runRepository.GetPublishedForUpdateAsync(
@@ -96,6 +149,24 @@ public sealed class TransitionFsRunCommandHandler : IRequestHandler<TransitionFs
                     await _runRepository.AddActionAsync(NewAction(old, FsRunAction.Supersede, FsRunState.Published, FsRunState.Superseded, user, $"جایگزین با انتشار اجرای شمارهٔ {run.RUN_NO}", now), cancellationToken);
                 }
 
+                // ح-۶ — متن یادداشت‌های توضیحی هنگام انتشار ثابت می‌شود.
+                if ((await _narratives.GetRunNarrativesAsync(run.ID, run.VAHEDCODE, cancellationToken)).Count == 0)
+                {
+                    var live = await _narratives.GetSetAsync(run.VAHEDCODE, run.FRAMEWORK, run.YEAR, false, cancellationToken);
+                    await _narratives.AddRunNarrativesAsync(live.Select(n => new TB_FS_RUN_NARRATIVE
+                    {
+                        ID = Guid.NewGuid(),
+                        RUN_ID = run.ID,
+                        VAHEDCODE = run.VAHEDCODE,
+                        NARRATIVE_ID = n.ID,
+                        ORDER_NO = n.ORDER_NO,
+                        TITLE_FA = n.TITLE_FA,
+                        LINKED_TEMPLATE_CODE = n.LINKED_TEMPLATE_CODE,
+                        CONTENT_JSON = n.CONTENT_JSON,
+                        VERSION_NO = n.VERSION_NO,
+                    }), cancellationToken);
+                }
+
                 to = FsRunState.Published;
                 break;
 
@@ -106,14 +177,16 @@ public sealed class TransitionFsRunCommandHandler : IRequestHandler<TransitionFs
         run.STATE = to;
         run.CHANGEUSERID = user;
         run.UPDATEDDATE = now;
-        await _runRepository.AddActionAsync(NewAction(run, request.Action, from, to, user, request.Comments?.Trim(), now), cancellationToken);
+        await _runRepository.AddActionAsync(NewAction(run, request.Action, from, to, user, request.Comments?.Trim(), now, stepNo), cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return to;
     }
 
-    private static TB_FS_RUN_ACTION NewAction(TB_FS_RUN run, FsRunAction action, FsRunState from, FsRunState to, string user, string? comments, DateTime now) => new()
+    private static TB_FS_RUN_ACTION NewAction(
+        TB_FS_RUN run, FsRunAction action, FsRunState from, FsRunState to, string user, string? comments, DateTime now, int? stepNo = null) => new()
     {
+        STEP_NO = stepNo,
         ID = Guid.NewGuid(),
         RUN_ID = run.ID,
         VAHEDCODE = run.VAHEDCODE,

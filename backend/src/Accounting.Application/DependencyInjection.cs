@@ -57,6 +57,7 @@ public static class DependencyInjection
         services.AddScoped<Accounting.Application.FinancialStatements.IFsUnitScopeProvider,
             Accounting.Application.FinancialStatements.FsUnitScopeProvider>();
         services.AddScoped<Accounting.Application.FinancialStatements.Queries.Drill.FsDrillVoucherReader>();
+        services.AddScoped<Accounting.Application.FinancialStatements.Periods.FsPeriodGuard>();
 
         // Scoped, not transient, on purpose: it memoises the per-معین level lookup for the
         // lifetime of one request, which is what keeps a composite create with many lines from

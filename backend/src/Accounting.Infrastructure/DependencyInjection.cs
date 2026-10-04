@@ -215,9 +215,14 @@ public static class DependencyInjection
         services.AddScoped<IFsBalanceReadRepository, FsBalanceReadRepository>();
         services.AddScoped<IFsRunRepository, FsRunRepository>();
         services.AddScoped<IFsCheckRuleRepository, FsCheckRuleRepository>();
+        services.AddScoped<IFsApprovalStepRepository, FsApprovalStepRepository>();
+        services.AddScoped<IFsPeriodRepository, FsPeriodRepository>();
+        services.AddScoped<IFsNarrativeRepository, FsNarrativeRepository>();
+        services.AddScoped<IFsRatioRepository, FsRatioRepository>();
 
         // صورت‌های مالی، بخش ۴۵-د — خروجی Excel (ClosedXML)، بی‌حالت.
         services.AddSingleton<IFsExcelExporter, Accounting.Infrastructure.Reporting.FsExcelExporter>();
+        services.AddSingleton<IFsDocxExporter, Accounting.Infrastructure.Reporting.FsDocxExporter>();
         services.AddScoped<ITreasuryRoleRepository, TreasuryRoleRepository>();
         services.AddScoped<ITreasuryRoleReadRepository, TreasuryRoleReadRepository>();
         services.AddScoped<IPaymentRequestRepository, PaymentRequestRepository>();

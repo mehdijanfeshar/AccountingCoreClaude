@@ -59,6 +59,9 @@ public sealed class AccountSelector
 
     public IEnumerable<SelectorTerm> Excludes => Terms.Where(t => t.Exclude);
 
+    /// <summary>انتخاب‌گر از اجزای آماده (برای بازنویسی خودکار، مثل اعمال نگاشت ۴۵-و).</summary>
+    public static AccountSelector FromTerms(IEnumerable<SelectorTerm> terms) => new(terms.ToList());
+
     public static bool TryParse(string? text, out AccountSelector? selector, out string? error)
     {
         try

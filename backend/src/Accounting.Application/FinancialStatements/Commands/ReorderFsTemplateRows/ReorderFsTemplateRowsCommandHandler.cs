@@ -53,6 +53,20 @@ public sealed class ReorderFsTemplateRowsCommandHandler : IRequestHandler<Reorde
             }
         }
 
+        foreach (var change in request.ParentChanges ?? [])
+        {
+            var row = byId.GetValueOrDefault(change.RowId)
+                ?? throw FsTemplateRules.Invalid("ParentChanges", "ردیف تغییر والد در این نسخه نیست.");
+            var parentId = FsTemplateRules.ResolveParent(change.ParentCode, row, rows);
+
+            if (row.PARENT_ID != parentId)
+            {
+                row.PARENT_ID = parentId;
+                row.CHANGEUSERID = _currentUser.UserId;
+                row.UPDATEDDATE = now;
+            }
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }
