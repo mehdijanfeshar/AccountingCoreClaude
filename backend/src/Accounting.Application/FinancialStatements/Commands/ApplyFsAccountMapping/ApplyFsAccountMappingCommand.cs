@@ -1,3 +1,4 @@
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using Accounting.Domain.ValueObjects;
@@ -21,6 +22,7 @@ public sealed record FsMappingApplyResultDto(int AppliedCount, int ErrorCount, b
 /// دقیق حذف، وگرنه <c>!کد</c> افزوده. سطر خطادار رد می‌شود و بقیه اعمال می‌شوند؛ <paramref name="DryRun"/> =
 /// فقط نتیجه، بدون ذخیره.
 /// </summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record ApplyFsAccountMappingCommand(
     FsFramework Framework,
     int Year,

@@ -178,6 +178,26 @@ public partial class LegacyDbContext : DbContext
 
     public virtual DbSet<TB_FS_RATIO> TB_FS_RATIOs { get; set; }
 
+    public virtual DbSet<TB_FS_PERMISSION> TB_FS_PERMISSIONs { get; set; }
+
+    public virtual DbSet<TB_FS_SETTING> TB_FS_SETTINGs { get; set; }
+
+    public virtual DbSet<TB_FS_RUN_UNIT> TB_FS_RUN_UNITs { get; set; }
+
+    public virtual DbSet<TB_FS_RUN_ROW_GROUP> TB_FS_RUN_ROW_GROUPs { get; set; }
+
+    public virtual DbSet<TB_FS_ELIM_RULE> TB_FS_ELIM_RULEs { get; set; }
+
+    public virtual DbSet<TB_FS_RUN_ELIM> TB_FS_RUN_ELIMs { get; set; }
+
+    public virtual DbSet<TB_FS_ENTITY> TB_FS_ENTITYs { get; set; }
+
+    public virtual DbSet<TB_FS_ENTITY_TB> TB_FS_ENTITY_TBs { get; set; }
+
+    public virtual DbSet<TB_FS_ENTITY_RATE> TB_FS_ENTITY_RATEs { get; set; }
+
+    public virtual DbSet<TB_FS_XBRL_MAP> TB_FS_XBRL_MAPs { get; set; }
+
     public virtual DbSet<TB_FS_NARRATIVE_VERSION> TB_FS_NARRATIVE_VERSIONs { get; set; }
 
     public virtual DbSet<TB_FS_RUN_NARRATIVE> TB_FS_RUN_NARRATIVEs { get; set; }
@@ -2072,6 +2092,7 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.HAS_PRIOR).HasColumnType("NUMBER(1)");
             entity.Property(e => e.PRIOR_RESTATED).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.INCLUDE_ENTITIES).HasColumnType("NUMBER(1)");
             entity.Property(e => e.NOTE_START_NO).HasColumnType("NUMBER(4)");
             // بخش ۴۵-ه (DDL 060).
             entity.Property(e => e.BALANCE_HASH)
@@ -2309,6 +2330,377 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.TOLERANCE).HasColumnType("NUMBER(28)");
             entity.Property(e => e.SEVERITY).HasConversion<int>();
             entity.Property(e => e.IS_ACTIVE).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+        });
+
+        modelBuilder.Entity<TB_FS_SETTING>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_SETTING");
+
+            entity.ToTable("TB_FS_SETTING");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.FRAMEWORK).HasConversion<int>();
+            entity.Property(e => e.SETTING_KEY)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.SETTING_VALUE)
+                .HasMaxLength(2000)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<TB_FS_RUN_UNIT>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_RUN_UNIT");
+
+            entity.ToTable("TB_FS_RUN_UNIT");
+
+            entity.HasIndex(e => new { e.RUN_ID, e.VAHEDCODE }, "IDX_FS_RUN_UNIT_RUN");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.RUN_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.UNIT_CODE)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.UNIT_NAME)
+                .HasMaxLength(200)
+                .IsUnicode(false);
+            entity.Property(e => e.PARENT_CODE)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.GROUP_CODE)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+
+            entity.HasOne<TB_FS_RUN>()
+                .WithMany()
+                .HasForeignKey(d => d.RUN_ID)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FS_RUN_UNIT_RUN");
+        });
+
+        modelBuilder.Entity<TB_FS_RUN_ROW_GROUP>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_RUN_ROW_GROUP");
+
+            entity.ToTable("TB_FS_RUN_ROW_GROUP");
+
+            entity.HasIndex(e => new { e.RUN_ID, e.VAHEDCODE }, "IDX_FS_RUN_ROW_GROUP_RUN");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.RUN_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.RUN_ROW_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.GROUP_CODE)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.AMOUNT_CUR).HasColumnType("NUMBER(28)");
+            entity.Property(e => e.AMOUNT_PRV).HasColumnType("NUMBER(28)");
+
+            entity.HasOne<TB_FS_RUN>()
+                .WithMany()
+                .HasForeignKey(d => d.RUN_ID)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FS_RUN_ROW_GROUP_RUN");
+        });
+
+        modelBuilder.Entity<TB_FS_ELIM_RULE>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_ELIM_RULE");
+
+            entity.ToTable("TB_FS_ELIM_RULE");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.FRAMEWORK).HasConversion<int>();
+            entity.Property(e => e.CODE)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.TITLE_FA)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.LEFT_SELECTOR)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.RIGHT_SELECTOR)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.TOLERANCE).HasColumnType("NUMBER(28)");
+            entity.Property(e => e.IS_ACTIVE).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+        });
+
+        modelBuilder.Entity<TB_FS_RUN_ELIM>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_RUN_ELIM");
+
+            entity.ToTable("TB_FS_RUN_ELIM");
+
+            entity.HasIndex(e => new { e.RUN_ID, e.VAHEDCODE }, "IDX_FS_RUN_ELIM_RUN");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.RUN_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.RULE_CODE)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.TITLE_FA)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.LEFT_AMOUNT).HasColumnType("NUMBER(28)");
+            entity.Property(e => e.RIGHT_AMOUNT).HasColumnType("NUMBER(28)");
+            entity.Property(e => e.DIFFERENCE).HasColumnType("NUMBER(28)");
+
+            entity.HasOne<TB_FS_RUN>()
+                .WithMany()
+                .HasForeignKey(d => d.RUN_ID)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FS_RUN_ELIM_RUN");
+        });
+
+        modelBuilder.Entity<TB_FS_ENTITY>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_ENTITY");
+
+            entity.ToTable("TB_FS_ENTITY");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.CODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.TITLE_FA)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.CURRENCY)
+                .HasMaxLength(3)
+                .IsUnicode(false);
+            entity.Property(e => e.OWNERSHIP).HasColumnType("NUMBER(7,4)");
+            entity.Property(e => e.IS_ACTIVE).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+        });
+
+        modelBuilder.Entity<TB_FS_ENTITY_TB>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_ENTITY_TB");
+
+            entity.ToTable("TB_FS_ENTITY_TB");
+
+            entity.HasIndex(e => new { e.ENTITY_ID, e.YEAR }, "IDX_FS_ENTITY_TB_PERIOD");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.ENTITY_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false)
+                .IsFixedLength();
+            entity.Property(e => e.ACCCODE)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.SOURCE_ACCCODE)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.SOURCE_ACCNAME)
+                .HasMaxLength(500)
+                .IsUnicode(false);
+            entity.Property(e => e.OPENING_DEBTOR).HasColumnType("NUMBER(28,2)");
+            entity.Property(e => e.OPENING_CREDITOR).HasColumnType("NUMBER(28,2)");
+            entity.Property(e => e.PERIOD_DEBTOR).HasColumnType("NUMBER(28,2)");
+            entity.Property(e => e.PERIOD_CREDITOR).HasColumnType("NUMBER(28,2)");
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+
+            entity.HasOne<TB_FS_ENTITY>()
+                .WithMany()
+                .HasForeignKey(d => d.ENTITY_ID)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FS_ENTITY_TB_ENTITY");
+        });
+
+        modelBuilder.Entity<TB_FS_ENTITY_RATE>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_ENTITY_RATE");
+
+            entity.ToTable("TB_FS_ENTITY_RATE");
+
+            entity.HasIndex(e => new { e.ENTITY_ID, e.YEAR }, "IDX_FS_ENTITY_RATE_PERIOD");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.ENTITY_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false)
+                .IsFixedLength();
+            entity.Property(e => e.OPENING_RATE).HasColumnType("NUMBER(18,6)");
+            entity.Property(e => e.CLOSING_RATE).HasColumnType("NUMBER(18,6)");
+            entity.Property(e => e.AVERAGE_RATE).HasColumnType("NUMBER(18,6)");
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+
+            entity.HasOne<TB_FS_ENTITY>()
+                .WithMany()
+                .HasForeignKey(d => d.ENTITY_ID)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_FS_ENTITY_RATE_ENTITY");
+        });
+
+        modelBuilder.Entity<TB_FS_XBRL_MAP>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_XBRL_MAP");
+
+            entity.ToTable("TB_FS_XBRL_MAP");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.TEMPLATE_CODE)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.ROW_CODE)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.ELEMENT)
+                .HasMaxLength(200)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<TB_FS_PERMISSION>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_FS_PERMISSION");
+
+            entity.ToTable("TB_FS_PERMISSION");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.USERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.USERNAME)
+                .HasMaxLength(200)
+                .IsUnicode(false);
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.INCLUDE_SUB).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.OPERATIONS).HasConversion<int>();
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.ADDUSERID)

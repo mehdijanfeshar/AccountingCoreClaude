@@ -1,3 +1,4 @@
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
@@ -154,6 +155,7 @@ public sealed record GetFsPeriodLogQuery(string UnitCode, string Year) : IReques
 /// <item>درخواست بازگشایی (قفل، با دلیل)؛ تأیید آن (فقط ستاد، نه خود درخواست‌کننده) ⇒ بستهٔ موقت؛ رد (فقط ستاد).</item>
 /// </list>
 /// </summary>
+[FsRequires(FsOperation.ClosePeriod)]
 public sealed record TransitionFsPeriodCommand(string UnitCode, string Year, FsPeriodAction Action, string? Reason)
     : IRequest<FsPeriodState>, IVahedScopedCommand
 {

@@ -15,6 +15,7 @@ public sealed class TransitionFsRunCommandHandler : IRequestHandler<TransitionFs
     private readonly IFsUnitScopeProvider _scopes;
     private readonly Periods.FsPeriodGuard _periodGuard;
     private readonly IFsNarrativeRepository _narratives;
+    private readonly Access.FsAccessService _access;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
@@ -24,6 +25,7 @@ public sealed class TransitionFsRunCommandHandler : IRequestHandler<TransitionFs
         IFsUnitScopeProvider scopes,
         Periods.FsPeriodGuard periodGuard,
         IFsNarrativeRepository narratives,
+        Access.FsAccessService access,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser)
     {
@@ -32,6 +34,7 @@ public sealed class TransitionFsRunCommandHandler : IRequestHandler<TransitionFs
         _scopes = scopes;
         _periodGuard = periodGuard;
         _narratives = narratives;
+        _access = access;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
     }
@@ -50,6 +53,17 @@ public sealed class TransitionFsRunCommandHandler : IRequestHandler<TransitionFs
             ?? throw new NotFoundException("FsRun", request.Id);
         var detail = await _runRepository.GetDetailAsync(request.Id, request.VahedCode, cancellationToken)
             ?? throw new NotFoundException("FsRun", request.Id);
+
+        // ط-۲ — عملیات لازم بسته به اقدام.
+        await _access.EnsureAsync(
+            request.Action switch
+            {
+                FsRunAction.Submit => FsOperation.Prepare,
+                FsRunAction.Publish => FsOperation.Publish,
+                _ => FsOperation.Approve,
+            },
+            request.VahedCode,
+            cancellationToken);
 
         var user = _currentUser.UserId;
         var now = DateTime.UtcNow;

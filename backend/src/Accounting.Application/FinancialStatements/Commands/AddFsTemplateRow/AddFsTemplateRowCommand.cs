@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using Accounting.Application.FinancialStatements.Commands.Common;
@@ -10,6 +12,7 @@ namespace Accounting.Application.FinancialStatements.Commands.AddFsTemplateRow;
 /// نسخه = ۴۰۹. فقط نحو انتخاب‌گر/فرمول اینجا بررسی می‌شود؛ ارجاع و دور در validate/activate.
 /// پاسخ = شناسهٔ ردیف.
 /// </summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record AddFsTemplateRowCommand(Guid VersionId, FsTemplateRowInput Row) : IRequest<Guid>, IVahedScopedCommand
 {
     [JsonIgnore]

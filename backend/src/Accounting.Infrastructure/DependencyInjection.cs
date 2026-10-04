@@ -219,6 +219,8 @@ public static class DependencyInjection
         services.AddScoped<IFsPeriodRepository, FsPeriodRepository>();
         services.AddScoped<IFsNarrativeRepository, FsNarrativeRepository>();
         services.AddScoped<IFsRatioRepository, FsRatioRepository>();
+        services.AddScoped<IFsPermissionRepository, FsPermissionRepository>();
+        services.AddScoped<IFsConsolidationRepository, FsConsolidationRepository>();
 
         // صورت‌های مالی، بخش ۴۵-د — خروجی Excel (ClosedXML)، بی‌حالت.
         services.AddSingleton<IFsExcelExporter, Accounting.Infrastructure.Reporting.FsExcelExporter>();

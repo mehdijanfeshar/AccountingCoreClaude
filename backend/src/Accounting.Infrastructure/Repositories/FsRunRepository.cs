@@ -331,5 +331,6 @@ public sealed class FsRunRepository : IFsRunRepository
         r.DURATION_MS,
         r.ADDUSERID,
         r.CREATEDDATE,
-        r.PRIOR_RESTATED);
+        r.PRIOR_RESTATED,
+        r.INCLUDE_ENTITIES);
 }

@@ -146,7 +146,7 @@ public sealed class FsDrillVoucherReader
         var window = target.ValueType switch
         {
             FsValueType.Opening => FsDrillWindow.Opening,
-            FsValueType.Movement or FsValueType.Debit or FsValueType.Credit => FsDrillWindow.Period,
+            FsValueType.Movement or FsValueType.Debit or FsValueType.Credit or FsValueType.CashFlow => FsDrillWindow.Period,
             _ => FsDrillWindow.All,
         };
 

@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using Accounting.Application.FinancialStatements.Commands.Common;
@@ -10,6 +12,7 @@ namespace Accounting.Application.FinancialStatements.Commands.UpdateFsTemplateRo
 /// (فقط پیش‌نویس). <c>OrderNo</c> خالی = ترتیب فعلی حفظ شود. ردیف «عنوان»ی که فرزند دارد نمی‌تواند
 /// نوعش را عوض کند (۴۰۹).
 /// </summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record UpdateFsTemplateRowCommand(Guid VersionId, Guid RowId, FsTemplateRowInput Row) : IRequest, IVahedScopedCommand
 {
     [JsonIgnore]

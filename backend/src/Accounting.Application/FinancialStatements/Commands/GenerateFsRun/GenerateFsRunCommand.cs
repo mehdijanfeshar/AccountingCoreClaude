@@ -1,3 +1,4 @@
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using Accounting.Domain.ValueObjects;
@@ -16,7 +17,9 @@ namespace Accounting.Application.FinancialStatements.Commands.GenerateFsRun;
 /// <param name="UseDraftVersions">پیش‌نویس باز هر قالب بر نسخهٔ فعال مقدم باشد (اجرای «آزمایشی»).</param>
 /// <param name="SourceRunId">بخش ۴۵-ه — اجرای پیش‌نویسی که این اجرا جایگزینش می‌شود (مثلاً پس از ورود مقادیر دستی)؛ آن اجرا «جایگزین‌شده» می‌شود.</param>
 /// <param name="ManualValues">بخش ۴۵-ه — مقدار ردیف‌های «مقدار دستی»، به علامت نمایشی، هرکدام با دلیل.</param>
+/// <param name="IncludeEntities">ط-۵ — تلفیق با شرکت‌های تابعهٔ فعالِ واحد (تراز واردشده از Excel).</param>
 /// <param name="PriorRestated">ستون سال قبل با برچسب «تجدید ارائه‌شده» (ح-۲؛ فقط برچسب).</param>
+[FsRequires(FsOperation.Prepare)]
 public sealed record GenerateFsRunCommand(
     FsFramework Framework,
     string Year,
@@ -29,7 +32,8 @@ public sealed record GenerateFsRunCommand(
     int NoteStartNo = 1,
     Guid? SourceRunId = null,
     IReadOnlyList<FsManualValueInput>? ManualValues = null,
-    bool PriorRestated = false) : IRequest<Guid>, IVahedScopedCommand
+    bool PriorRestated = false,
+    bool IncludeEntities = false) : IRequest<Guid>, IVahedScopedCommand
 {
     [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;

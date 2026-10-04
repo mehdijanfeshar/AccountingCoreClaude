@@ -1,3 +1,4 @@
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
@@ -22,6 +23,7 @@ public sealed record GetFsRunCommentsQuery(Guid RunId) : IRequest<IReadOnlyList<
 }
 
 /// <summary><c>POST api/fs/runs/{id}/comments</c> — <paramref name="RowId"/> و <paramref name="CheckId"/> هر دو خالی = نظر روی کل اجرا.</summary>
+[FsRequires(FsOperation.Prepare)]
 public sealed record AddFsRunCommentCommand(Guid RunId, Guid? RowId, Guid? CheckId, string Body) : IRequest<Guid>, IVahedScopedCommand
 {
     [JsonIgnore]
@@ -29,6 +31,7 @@ public sealed record AddFsRunCommentCommand(Guid RunId, Guid? RowId, Guid? Check
 }
 
 /// <summary><c>POST api/fs/runs/{id}/comments/{commentId}/delete</c> — فقط نویسنده.</summary>
+[FsRequires(FsOperation.Prepare)]
 public sealed record DeleteFsRunCommentCommand(Guid RunId, Guid CommentId) : IRequest, IVahedScopedCommand
 {
     [JsonIgnore]
@@ -39,6 +42,7 @@ public sealed record DeleteFsRunCommentCommand(Guid RunId, Guid CommentId) : IRe
 /// <c>POST api/fs/runs/{id}/checks/{checkId}/assign</c> — ارجاع کنترل <b>ناموفق</b> به کد کاربری مسئول با مهلت
 /// (شمسی YYYYMMDD، اختیاری). ارجاع دوباره مسئول را عوض و وضعیت را «باز» می‌کند؛ هر ارجاع یک «نظر» هم ثبت می‌کند.
 /// </summary>
+[FsRequires(FsOperation.Prepare)]
 public sealed record AssignFsRunCheckCommand(Guid RunId, Guid CheckId, string AssigneeUserId, string? AssigneeName, string? DueDate, string? Note)
     : IRequest, IVahedScopedCommand
 {
@@ -47,6 +51,7 @@ public sealed record AssignFsRunCheckCommand(Guid RunId, Guid CheckId, string As
 }
 
 /// <summary><c>POST api/fs/runs/{id}/checks/{checkId}/resolve</c> — ارجاع «رفع‌شده»؛ رفع واقعی با تهیهٔ دوبارهٔ صورت‌هاست.</summary>
+[FsRequires(FsOperation.Prepare)]
 public sealed record ResolveFsRunCheckCommand(Guid RunId, Guid CheckId, string? Note) : IRequest, IVahedScopedCommand
 {
     [JsonIgnore]

@@ -41,6 +41,19 @@ public sealed class ActivateFsTemplateVersionCommandHandler : IRequestHandler<Ac
         FsTemplateRules.EnsureDraft(version);
 
         var rows = await _repository.GetRowsForUpdateAsync(version.ID, cancellationToken);
+
+        // ط-۱ (سند منبع §۱۴: «تغییر قالب ≠ فعال‌سازی قالب») — سازنده یا ویرایشگر این پیش‌نویس فعالش نمی‌کند.
+        var editors = rows.SelectMany(r => new[] { r.ADDUSERID, r.CHANGEUSERID })
+            .Append(version.ADDUSERID)
+            .Append(version.CHANGEUSERID)
+            .Where(u => !string.IsNullOrEmpty(u))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (editors.Contains(_currentUser.UserId))
+        {
+            throw new FsAccessDeniedException("شما این پیش‌نویس را ساخته یا تغییر داده‌اید؛ فعال‌سازی با کاربر دیگری است (تفکیک وظایف).");
+        }
+
         var templateCodes = await _readRepository.GetTemplateCodesAsync(cancellationToken);
 
         var errors = FsTemplateChecker

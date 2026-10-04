@@ -1,3 +1,4 @@
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
@@ -25,6 +26,7 @@ public sealed record GetFsCheckRulesQuery(FsFramework? Framework) : IRequest<IRe
 /// <c>POST api/fs/check-rules</c> — قاعدهٔ تازه: <c>LeftExpr = RightExpr</c> با <c>STMT(قالب, ردیف)</c> و اختلاف
 /// مجاز. <paramref name="Shared"/> = مشترک (فقط ستاد، ۴۰۳)؛ وگرنه اختصاصی واحد هدر (بر مشترکِ هم‌کد مقدم).
 /// </summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record CreateFsCheckRuleCommand(
     FsFramework Framework,
     string Code,
@@ -41,6 +43,7 @@ public sealed record CreateFsCheckRuleCommand(
 }
 
 /// <summary><c>POST api/fs/check-rules/{id}/update</c> — همه‌چیز جز کد، مجموعه و مالک.</summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record UpdateFsCheckRuleCommand(
     Guid Id,
     string TitleFa,
@@ -55,6 +58,7 @@ public sealed record UpdateFsCheckRuleCommand(
 }
 
 /// <summary><c>POST api/fs/check-rules/{id}/delete</c> — حذف نرم.</summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record DeleteFsCheckRuleCommand(Guid Id) : IRequest, IVahedScopedCommand
 {
     [JsonIgnore]

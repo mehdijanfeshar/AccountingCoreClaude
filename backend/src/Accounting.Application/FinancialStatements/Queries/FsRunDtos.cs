@@ -22,7 +22,8 @@ public sealed record FsRunSummaryDto(
     int? DurationMs,
     string AddUserId,
     DateTime CreatedDate,
-    bool PriorRestated = false);
+    bool PriorRestated = false,
+    bool IncludeEntities = false);
 
 /// <summary>
 /// یک ردیف صورت در Snapshot. <paramref name="AmountCur"/>/<paramref name="AmountPrv"/> با علامت حسابداری

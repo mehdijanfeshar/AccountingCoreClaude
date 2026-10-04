@@ -16,4 +16,7 @@ public enum FsValueType
     Debit = 4,
     /// <summary>فقط گردش بستانکار دوره.</summary>
     Credit = 5,
+
+    /// <summary>ط-۶ — اثر نقدی سهم این حساب در اسناد نقدی دوره (روش طرف مقابل سند؛ ورود وجه مثبت).</summary>
+    CashFlow = 6,
 }

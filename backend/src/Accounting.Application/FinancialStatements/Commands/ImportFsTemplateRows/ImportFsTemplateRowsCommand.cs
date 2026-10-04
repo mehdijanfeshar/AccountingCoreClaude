@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using Accounting.Application.FinancialStatements.Commands.Common;
@@ -10,6 +12,7 @@ namespace Accounting.Application.FinancialStatements.Commands.ImportFsTemplateRo
 /// نسخهٔ پیش‌نویس با فهرست داده‌شده (هم‌شکل پیوست الف سند منبع). اتمیک: یا همه یا هیچ.
 /// پاسخ = تعداد ردیف‌ها.
 /// </summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record ImportFsTemplateRowsCommand(Guid VersionId, IReadOnlyList<FsTemplateRowInput> Rows) : IRequest<int>, IVahedScopedCommand
 {
     [JsonIgnore]

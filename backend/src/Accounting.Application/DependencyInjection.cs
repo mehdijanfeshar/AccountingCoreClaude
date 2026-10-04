@@ -46,6 +46,8 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(applicationAssembly);
 
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(VahedScopeBehavior<,>));
+        // ط-۲ — دسترسی سه‌بُعدی صورت‌های مالی؛ پس از تعیین واحد (VahedCode) و پیش از اعتبارسنجی.
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(Accounting.Application.FinancialStatements.Access.FsPermissionBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
         // Not a pipeline behavior and not a repository: a piece of write-side domain logic shared
@@ -58,6 +60,7 @@ public static class DependencyInjection
             Accounting.Application.FinancialStatements.FsUnitScopeProvider>();
         services.AddScoped<Accounting.Application.FinancialStatements.Queries.Drill.FsDrillVoucherReader>();
         services.AddScoped<Accounting.Application.FinancialStatements.Periods.FsPeriodGuard>();
+        services.AddScoped<Accounting.Application.FinancialStatements.Access.FsAccessService>();
 
         // Scoped, not transient, on purpose: it memoises the per-معین level lookup for the
         // lifetime of one request, which is what keeps a composite create with many lines from

@@ -1,3 +1,4 @@
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
@@ -101,6 +102,7 @@ public sealed record GetFsApprovalStepsQuery(FsFramework? Framework) : IRequest<
 }
 
 /// <summary><c>POST api/fs/approval-steps</c> — <paramref name="Shared"/> = مشترک (فقط ستاد)، وگرنه اختصاصی واحد هدر.</summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record CreateFsApprovalStepCommand(
     FsFramework Framework,
     bool Shared,
@@ -114,6 +116,7 @@ public sealed record CreateFsApprovalStepCommand(
 }
 
 /// <summary><c>POST api/fs/approval-steps/{id}/update</c></summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record UpdateFsApprovalStepCommand(Guid Id, int StepNo, string TitleFa, string? ApproverUserIds, bool IsActive)
     : IRequest, IVahedScopedCommand
 {
@@ -122,6 +125,7 @@ public sealed record UpdateFsApprovalStepCommand(Guid Id, int StepNo, string Tit
 }
 
 /// <summary><c>POST api/fs/approval-steps/{id}/delete</c> — حذف نرم.</summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record DeleteFsApprovalStepCommand(Guid Id) : IRequest, IVahedScopedCommand
 {
     [JsonIgnore]

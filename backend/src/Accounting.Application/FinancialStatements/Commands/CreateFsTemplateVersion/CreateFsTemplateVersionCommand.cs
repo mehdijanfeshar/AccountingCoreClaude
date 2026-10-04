@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using MediatR;
@@ -9,6 +11,7 @@ namespace Accounting.Application.FinancialStatements.Commands.CreateFsTemplateVe
 /// <paramref name="SourceVersionId"/> (یا آخرین نسخهٔ قالب اگر خالی باشد). هر قالب حداکثر یک
 /// پیش‌نویس باز دارد (۴۰۹). پاسخ = شناسهٔ نسخهٔ جدید.
 /// </summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record CreateFsTemplateVersionCommand(Guid TemplateId, Guid? SourceVersionId, string? Description) : IRequest<Guid>, IVahedScopedCommand
 {
     [JsonIgnore]

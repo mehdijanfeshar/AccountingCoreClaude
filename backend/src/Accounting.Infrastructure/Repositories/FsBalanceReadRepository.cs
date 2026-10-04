@@ -366,6 +366,97 @@ public sealed class FsBalanceReadRepository : IFsBalanceReadRepository
             .ToList();
     }
 
+    public async Task<IReadOnlyList<FsTouchLine>> GetTouchingVoucherLinesAsync(
+        string year,
+        string fromDate,
+        string toDate,
+        IReadOnlyCollection<string> vahedCodes,
+        int minDocLife,
+        IReadOnlyCollection<string> touchAccCodes,
+        CancellationToken cancellationToken = default)
+    {
+        if (vahedCodes.Count == 0 || touchAccCodes.Count == 0)
+        {
+            return Array.Empty<FsTouchLine>();
+        }
+
+        var parameters = new List<OracleParameter>
+        {
+            new() { ParameterName = "year", OracleDbType = OracleDbType.Char, Value = year },
+            new() { ParameterName = "fromDate", OracleDbType = OracleDbType.Varchar2, Value = fromDate },
+            new() { ParameterName = "toDate", OracleDbType = OracleDbType.Varchar2, Value = toDate },
+            new() { ParameterName = "minDocLife", OracleDbType = OracleDbType.Int32, Value = minDocLife },
+        };
+
+        var vahedSql = AppendVahedClause(parameters, vahedCodes);
+        var accSql = AppendInClause(parameters, "a3.ACCCODE", touchAccCodes, "c");
+
+        var sql = $"""
+            {OpeningVoucherCte},
+            tv AS (
+              SELECT DISTINCT d3.VOUCHERSHEAD_ID AS HID
+              FROM TB_VOUCHERSDETAIL d3
+              JOIN TB_ACCOUNTCODE a3 ON a3.ID = d3.ACCOUNT_ID
+              WHERE (d3.ISDELETED IS NULL OR d3.ISDELETED = 0)
+                AND ({accSql})
+            )
+            SELECT
+              a.ACCCODE          AS "AccCode",
+              h.VAHEDCODE        AS "VahedCode",
+              MAX(a.ACCCODENAME) AS "AccName",
+              0                  AS "OpeningDebtor",
+              0                  AS "OpeningCreditor",
+              NVL(SUM(d.DEBTOR), 0)   AS "PeriodDebtor",
+              NVL(SUM(d.CREDITOR), 0) AS "PeriodCreditor"
+            FROM TB_VOUCHERSDETAIL d
+            JOIN TB_VOUCHERSHEAD h ON h.ID = d.VOUCHERSHEAD_ID
+            JOIN TB_ACCOUNTCODE  a ON a.ID = d.ACCOUNT_ID
+            JOIN tv ON tv.HID = h.ID
+            LEFT JOIN oh ON oh.HID = h.ID
+            WHERE {CommonWhere}
+              AND {isPeriod}
+              AND ({vahedSql})
+            GROUP BY a.ACCCODE, h.VAHEDCODE
+            """;
+
+        var rows = await _dbContext.Database
+            .SqlQueryRaw<FsBalanceRow>(sql, parameters.ToArray<object>())
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .Where(r => !string.IsNullOrEmpty(r.AccCode))
+            .Select(r => new FsTouchLine(r.AccCode, r.AccName, r.VahedCode, r.PeriodDebtor, r.PeriodCreditor))
+            .ToList();
+    }
+
+    /// <summary>فهرست <c>IN</c> پارامتری با تکه‌های ۱۰۰۰تایی (سقف اوراکل) — مثل <see cref="AppendVahedClause"/>.</summary>
+    private static string AppendInClause(List<OracleParameter> parameters, string column, IReadOnlyCollection<string> values, string prefix)
+    {
+        var sql = new StringBuilder();
+        var list = values.ToList();
+
+        for (var chunk = 0; chunk * InListChunk < list.Count; chunk++)
+        {
+            if (chunk > 0)
+            {
+                sql.Append(" OR ");
+            }
+
+            var names = new List<string>();
+
+            foreach (var value in list.Skip(chunk * InListChunk).Take(InListChunk))
+            {
+                var name = $"{prefix}{parameters.Count}";
+                names.Add(":" + name);
+                parameters.Add(new OracleParameter { ParameterName = name, OracleDbType = OracleDbType.Varchar2, Value = value });
+            }
+
+            sql.Append(column).Append(" IN (").Append(string.Join(", ", names)).Append(')');
+        }
+
+        return sql.ToString();
+    }
+
     /// <summary>شکل خام ردیف کوئری — ستون‌ها با alias هم‌نام پراپرتی‌ها.</summary>
     public sealed class FsBalanceRow
     {

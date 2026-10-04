@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using MediatR;
@@ -10,6 +12,7 @@ namespace Accounting.Application.FinancialStatements.Commands.ReorderFsTemplateR
 /// <c>ORDER_NO</c> به ۱۰، ۲۰، ۳۰، … بازنویسی می‌شود. <paramref name="ParentChanges"/> (اختیاری، طراح درختی ۴۵-و)
 /// والد ردیف‌های جابه‌جاشده را در همان تراکنش عوض می‌کند — کد والد <c>null</c> = ریشه.
 /// </summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record ReorderFsTemplateRowsCommand(
     Guid VersionId,
     IReadOnlyList<Guid> RowIds,

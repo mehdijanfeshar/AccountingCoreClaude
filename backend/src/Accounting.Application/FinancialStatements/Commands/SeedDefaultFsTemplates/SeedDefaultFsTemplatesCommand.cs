@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using MediatR;
@@ -9,6 +11,7 @@ namespace Accounting.Application.FinancialStatements.Commands.SeedDefaultFsTempl
 /// می‌سازد، هرکدام با نسخهٔ پیش‌نویس ۱. قالبی که کدش از قبل وجود دارد (حتی حذف‌شده) نادیده گرفته
 /// می‌شود، پس تکرار فراخوانی بی‌خطر است. پاسخ = کد قالب‌های ساخته‌شده.
 /// </summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record SeedDefaultFsTemplatesCommand : IRequest<IReadOnlyList<string>>, IVahedScopedCommand
 {
     [JsonIgnore]

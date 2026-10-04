@@ -1,3 +1,4 @@
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
@@ -169,6 +170,7 @@ public sealed record GetFsRatioTrendQuery(FsFramework Framework, string ToYear, 
     public string VahedCode { get; set; } = string.Empty;
 }
 
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record CreateFsRatioCommand(
     FsFramework Framework,
     bool Shared,
@@ -184,6 +186,7 @@ public sealed record CreateFsRatioCommand(
     public string VahedCode { get; set; } = string.Empty;
 }
 
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record UpdateFsRatioCommand(Guid Id, string TitleFa, string NumeratorExpr, string? DenominatorExpr, FsRatioFormat Format, int OrderNo, bool IsActive)
     : IRequest, IVahedScopedCommand
 {
@@ -191,6 +194,7 @@ public sealed record UpdateFsRatioCommand(Guid Id, string TitleFa, string Numera
     public string VahedCode { get; set; } = string.Empty;
 }
 
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record DeleteFsRatioCommand(Guid Id) : IRequest, IVahedScopedCommand
 {
     [JsonIgnore]
@@ -198,6 +202,7 @@ public sealed record DeleteFsRatioCommand(Guid Id) : IRequest, IVahedScopedComma
 }
 
 /// <summary><c>POST api/fs/ratios/seed-defaults</c> — نسبت‌های پیش‌فرض مشترک (فقط ستاد، تکرارپذیر). پاسخ = کدهای ساخته‌شده.</summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record SeedDefaultFsRatiosCommand : IRequest<IReadOnlyList<string>>, IVahedScopedCommand
 {
     [JsonIgnore]

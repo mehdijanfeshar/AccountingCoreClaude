@@ -1,3 +1,5 @@
+using Accounting.Domain.ValueObjects;
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using MediatR;
@@ -11,6 +13,7 @@ namespace Accounting.Application.FinancialStatements.Commands.ActivateFsTemplate
 /// بازنشسته می‌شود؛ نسخه‌های فعال سال‌های دیگر دست نمی‌خورند.
 /// ⚠️ تفکیک وظایف «تغییر قالب ≠ فعال‌سازی» (سند منبع §۱۴) با RBAC ماژول در بخش ۴۵-د می‌آید.
 /// </summary>
+[FsRequires(FsOperation.ActivateTemplate)]
 public sealed record ActivateFsTemplateVersionCommand(Guid Id, int EffectiveFromYear) : IRequest, IVahedScopedCommand
 {
     [JsonIgnore]

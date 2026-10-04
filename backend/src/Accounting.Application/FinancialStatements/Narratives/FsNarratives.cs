@@ -1,3 +1,4 @@
+using Accounting.Application.FinancialStatements.Access;
 using System.Globalization;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Exceptions;
@@ -54,6 +55,7 @@ public sealed record GetFsRunNarrativesQuery(Guid RunId) : IRequest<IReadOnlyLis
 }
 
 /// <summary><c>POST api/fs/narratives</c> — یادداشت تازه در انتهای فهرست.</summary>
+[FsRequires(FsOperation.Prepare)]
 public sealed record CreateFsNarrativeCommand(FsFramework Framework, string Year, string TitleFa, string? LinkedTemplateCode, string? ResponsibleUserId)
     : IRequest<Guid>, IVahedScopedCommand
 {
@@ -65,6 +67,7 @@ public sealed record CreateFsNarrativeCommand(FsFramework Framework, string Year
 /// <c>POST api/fs/narratives/{id}/update</c> — ذخیرهٔ متن و مشخصات؛ هر ذخیره یک نسخهٔ تازه. فقط در «پیش‌نویس» یا
 /// «نیازمند اصلاح» (در بازبینی/تأییدشده = ۴۰۹؛ اول برگشت دهید).
 /// </summary>
+[FsRequires(FsOperation.Prepare)]
 public sealed record SaveFsNarrativeCommand(Guid Id, string TitleFa, string? LinkedTemplateCode, string? ResponsibleUserId, string? ContentJson)
     : IRequest<int>, IVahedScopedCommand
 {
@@ -73,6 +76,7 @@ public sealed record SaveFsNarrativeCommand(Guid Id, string TitleFa, string? Lin
 }
 
 /// <summary><c>POST api/fs/narratives/{id}/delete</c> — حذف نرم (نه در بازبینی/تأییدشده).</summary>
+[FsRequires(FsOperation.Prepare)]
 public sealed record DeleteFsNarrativeCommand(Guid Id) : IRequest, IVahedScopedCommand
 {
     [JsonIgnore]
@@ -80,6 +84,7 @@ public sealed record DeleteFsNarrativeCommand(Guid Id) : IRequest, IVahedScopedC
 }
 
 /// <summary><c>POST api/fs/narratives/reorder</c> — <paramref name="Ids"/> = همهٔ یادداشت‌های مجموعه به ترتیب تازه.</summary>
+[FsRequires(FsOperation.Prepare)]
 public sealed record ReorderFsNarrativesCommand(FsFramework Framework, string Year, IReadOnlyList<Guid> Ids) : IRequest, IVahedScopedCommand
 {
     [JsonIgnore]
@@ -97,6 +102,7 @@ public enum FsNarrativeAction
 /// <c>POST api/fs/narratives/{id}/transitions</c> — ارسال (پیش‌نویس/نیازمند اصلاح ⇒ در بازبینی)، تأیید (در بازبینی ⇒
 /// تأییدشده؛ آخرین ویرایشگر نمی‌تواند)، برگشت با دلیل (در بازبینی/تأییدشده ⇒ نیازمند اصلاح).
 /// </summary>
+[FsRequires(FsOperation.Prepare)]
 public sealed record TransitionFsNarrativeCommand(Guid Id, FsNarrativeAction Action, string? Comment) : IRequest<FsNarrativeState>, IVahedScopedCommand
 {
     [JsonIgnore]
@@ -107,6 +113,7 @@ public sealed record TransitionFsNarrativeCommand(Guid Id, FsNarrativeAction Act
 /// <c>POST api/fs/narratives/roll-forward</c> — کپی یادداشت‌های سال قبل همین واحد و مجموعه به سال <paramref name="Year"/>
 /// (پیش‌نویس، نسخهٔ ۱). اگر سال مقصد یادداشت دارد ۴۰۹. پاسخ = تعداد.
 /// </summary>
+[FsRequires(FsOperation.Prepare)]
 public sealed record RollForwardFsNarrativesCommand(FsFramework Framework, string Year) : IRequest<int>, IVahedScopedCommand
 {
     [JsonIgnore]

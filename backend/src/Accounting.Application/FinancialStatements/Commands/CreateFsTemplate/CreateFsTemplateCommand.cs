@@ -1,3 +1,4 @@
+using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
 using Accounting.Domain.ValueObjects;
@@ -13,6 +14,7 @@ namespace Accounting.Application.FinancialStatements.Commands.CreateFsTemplate;
 /// سه فیلد <c>Note*</c> فقط برای <see cref="FsStatementType.Note"/> (بخش ۴۵-ج): صورت و ردیفی که یادداشت
 /// به آن وصل است، و ردیف جمع یادداشت؛ برای بقیه نادیده گرفته می‌شوند.
 /// </summary>
+[FsRequires(FsOperation.EditTemplate)]
 public sealed record CreateFsTemplateCommand(
     FsFramework Framework,
     string Code,

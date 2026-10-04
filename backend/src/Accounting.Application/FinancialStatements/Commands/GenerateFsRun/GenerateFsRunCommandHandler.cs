@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Application.FinancialStatements.Consolidation;
 using Accounting.Application.FinancialStatements.Engine;
 using Accounting.Application.FinancialStatements.Queries;
 using Accounting.Domain.Entity;
@@ -27,6 +28,8 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
     private readonly IFsCheckRuleRepository _ruleRepository;
+    private readonly IFsConsolidationRepository _consolidation;
+    private readonly IUnitAccessReadRepository _unitAccess;
 
     public GenerateFsRunCommandHandler(
         IFsTemplateReadRepository templateReadRepository,
@@ -35,7 +38,9 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
         IFsUnitScopeProvider scopes,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
-        IFsCheckRuleRepository ruleRepository)
+        IFsCheckRuleRepository ruleRepository,
+        IFsConsolidationRepository consolidation,
+        IUnitAccessReadRepository unitAccess)
     {
         _templateReadRepository = templateReadRepository;
         _balanceReadRepository = balanceReadRepository;
@@ -44,6 +49,8 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _ruleRepository = ruleRepository;
+        _consolidation = consolidation;
+        _unitAccess = unitAccess;
     }
 
     public async Task<Guid> Handle(GenerateFsRunCommand request, CancellationToken cancellationToken)
@@ -95,38 +102,46 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
                 (year - 1).ToString(CultureInfo.InvariantCulture), priorFrom, priorTo, unitCodes, request.MinDocLife, cancellationToken);
         }
 
-        // جمع واحدها برای موتور، و سهم هر زیرواحد سطح اول برای Drill-down.
-        var totals = raw.ToDictionary(
+        // ط-۴..ط-۷ — افزوده‌ها روی مانده‌های اسناد. «raw» دست‌نخورده می‌ماند (اثر انگشت کهنگی فقط اسناد را می‌سنجد).
+        var all = raw.ToDictionary(kv => kv.Key, kv => kv.Value.ToList(), StringComparer.Ordinal);
+        var extra = await ApplyAdditionsAsync(request, scope, year, fromDate, toDate, unitCodes, all, cancellationToken);
+
+        string GroupOf(string? unit) =>
+            unit is not null && (unit == FsSyntheticAccounts.EliminationGroup || extra.EntityNames.ContainsKey(unit))
+                ? unit
+                : request.IncludeSubUnits ? scope.GroupOf(unit ?? request.VahedCode) : request.VahedCode;
+
+        static FsAccountBalance Sum(string code, IEnumerable<FsAccountBalance> items, string? unit = null)
+        {
+            var list = items.ToList();
+            return new FsAccountBalance(
+                code,
+                list.Select(b => b.AccName).FirstOrDefault(n => n is not null),
+                list.Sum(b => b.OpeningDebtor),
+                list.Sum(b => b.OpeningCreditor),
+                list.Sum(b => b.PeriodDebtor),
+                list.Sum(b => b.PeriodCreditor),
+                unit,
+                list.Sum(b => b.CashFlow));
+        }
+
+        // جمع واحدها برای موتور، و سهم هر گروه (زیرواحد سطح اول، شرکت تابعه، حذفیات) برای Drill-down و کاربرگ.
+        var totals = all.ToDictionary(
             kv => kv.Key,
             kv => (IReadOnlyList<FsAccountBalance>)kv.Value
                 .GroupBy(b => b.AccCode, StringComparer.Ordinal)
-                .Select(g => new FsAccountBalance(
-                    g.Key,
-                    g.First().AccName,
-                    g.Sum(b => b.OpeningDebtor),
-                    g.Sum(b => b.OpeningCreditor),
-                    g.Sum(b => b.PeriodDebtor),
-                    g.Sum(b => b.PeriodCreditor)))
+                .Select(g => Sum(g.Key, g))
                 .ToList(),
             StringComparer.Ordinal);
 
-        var byGroup = raw.ToDictionary(
+        var byGroup = all.ToDictionary(
             kv => kv.Key,
             kv => kv.Value
                 .GroupBy(b => b.AccCode, StringComparer.Ordinal)
                 .ToDictionary(
                     g => g.Key,
-                    g => g.GroupBy(b => request.IncludeSubUnits ? scope.GroupOf(b.VahedCode ?? request.VahedCode) : request.VahedCode, StringComparer.Ordinal)
-                        .ToDictionary(
-                            u => u.Key,
-                            u => new FsAccountBalance(
-                                g.Key,
-                                null,
-                                u.Sum(b => b.OpeningDebtor),
-                                u.Sum(b => b.OpeningCreditor),
-                                u.Sum(b => b.PeriodDebtor),
-                                u.Sum(b => b.PeriodCreditor)),
-                            StringComparer.Ordinal),
+                    g => g.GroupBy(b => GroupOf(b.VahedCode), StringComparer.Ordinal)
+                        .ToDictionary(u => u.Key, u => Sum(g.Key, u), StringComparer.Ordinal),
                     StringComparer.Ordinal),
             StringComparer.Ordinal);
 
@@ -170,6 +185,7 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
             MIN_DOCLIFE = request.MinDocLife,
             HAS_PRIOR = request.IncludePrior,
             PRIOR_RESTATED = request.IncludePrior && request.PriorRestated,
+            INCLUDE_ENTITIES = request.IncludeEntities,
             USES_DRAFT = versions.Any(v => v.State == FsTemplateVersionState.Draft),
             STATE = FsRunState.Draft,
             DESCRIPTION = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
@@ -233,9 +249,19 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
 
         // بخش ۴۵-ه — کنترل‌ها، مقادیر دستی، اثر انگشت مانده‌ها، جایگزینی مبدأ.
         var outOfPeriod = await _balanceReadRepository.GetOutOfPeriodVouchersAsync(request.Year, unitCodes, request.MinDocLife, cancellationToken);
-        await AddChecksAsync(run, versions, values, totals[FsColumns.Current], scope, request.Framework, outOfPeriod, cancellationToken);
+        // V-01/V-05/V-06 روی مانده‌های پیش از حذفیات (حذف نامتوازن را V-07 می‌گیرد، نه تراز آزمایشی).
+        var checkBalances = all[FsColumns.Current]
+            .Where(b => b.VahedCode != FsSyntheticAccounts.EliminationGroup)
+            .GroupBy(b => b.AccCode, StringComparer.Ordinal)
+            .Select(g => Sum(g.Key, g))
+            .ToList();
+        await AddChecksAsync(run, versions, values, checkBalances, scope, request.Framework, outOfPeriod, cancellationToken);
+        AddExtraChecks(run, extra);
         AddManualValues(run, request.ManualValues);
         run.BALANCE_HASH = FsBalanceHash.Compute(raw);
+
+        // ط-۳ — درخت واحد در لحظهٔ اجرا، کاربرگ به تفکیک گروه، و نتیجهٔ حذف‌ها.
+        await AddRunExtrasAsync(run, versions, byGroup, unitCodes, extra, GroupOf, cancellationToken);
 
         if (sourceRun is not null)
         {
@@ -379,6 +405,331 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
                 CREATEDDATE = run.CREATEDDATE,
             });
         }
+    }
+
+    private sealed record FsCheckNote(string Code, string TitleFa, FsCheckSeverity Severity, bool Passed, string? Message, decimal? Difference);
+
+    private sealed record FsAdditions(
+        IReadOnlyDictionary<string, string> EntityNames,
+        IReadOnlyList<FsElimResult> Eliminations,
+        IReadOnlyList<FsCheckNote> Notes);
+
+    /// <summary>
+    /// ط-۶ جریان نقد (طرف مقابل سند)، ط-۷ تجدید ارائه (تعدیلات سنواتی به ستون قبل)، ط-۵ شرکت‌های تابعه
+    /// (تراز تسعیرشده)، ط-۴ حذف فی‌مابین — همه به‌صورت ماندهٔ افزوده در <paramref name="all"/>.
+    /// </summary>
+    private async Task<FsAdditions> ApplyAdditionsAsync(
+        GenerateFsRunCommand request,
+        FsUnitScope scope,
+        int year,
+        string fromDate,
+        string toDate,
+        IReadOnlyCollection<string> unitCodes,
+        Dictionary<string, List<FsAccountBalance>> all,
+        CancellationToken cancellationToken)
+    {
+        var notes = new List<FsCheckNote>();
+        var settings = await _consolidation.GetSettingsAsync(request.Framework, cancellationToken);
+        IReadOnlyList<Queries.AccountMapping.FsChartMoein>? chart = null;
+        var priorYear = (year - 1).ToString(CultureInfo.InvariantCulture);
+        var (priorFrom, priorTo) = Period(year - 1, request.ToMonth);
+
+        async Task<HashSet<string>> CodesOf(string key, string selectorText)
+        {
+            chart ??= await _balanceReadRepository.GetChartMoeinsAsync(cancellationToken);
+
+            if (!AccountSelector.TryParse(selectorText, out var selector, out var error))
+            {
+                throw new FsTemplateConflictException($"انتخاب‌گر «{key}» در تنظیمات مجموعه نامعتبر است: {error}");
+            }
+
+            return chart.Where(m => selector!.Match(m.AccCode) is not null).Select(m => m.AccCode).ToHashSet(StringComparer.Ordinal);
+        }
+
+        // ط-۶ — اثر نقدی: در هر سند دارای ردیف نقد، قرینهٔ ردیف‌های غیرنقد (ورود وجه مثبت).
+        if (FsConsolidationEngine.Setting(settings, scope, request.Framework, "CASH_SELECTOR") is { } cashSelector)
+        {
+            var cashCodes = await CodesOf("CASH_SELECTOR", cashSelector);
+
+            foreach (var col in all.Keys.ToList())
+            {
+                var current = col == FsColumns.Current;
+                var lines = await _balanceReadRepository.GetTouchingVoucherLinesAsync(
+                    current ? request.Year : priorYear, current ? fromDate : priorFrom, current ? toDate : priorTo,
+                    unitCodes, request.MinDocLife, cashCodes, cancellationToken);
+                all[col].AddRange(lines
+                    .Where(l => !cashCodes.Contains(l.AccCode))
+                    .Select(l => new FsAccountBalance(l.AccCode, l.AccName, 0, 0, 0, 0, l.VahedCode, -(l.Debtor - l.Creditor))));
+            }
+        }
+
+        // ط-۷ — تجدید ارائه: اسناد سال جاری که به حساب تعدیلات سنواتی خورده‌اند، کامل به گردش ستون سال قبل.
+        if (request.IncludePrior && request.PriorRestated && all.ContainsKey(FsColumns.Prior)
+            && FsConsolidationEngine.Setting(settings, scope, request.Framework, "RESTATEMENT_SELECTOR") is { } restSelector)
+        {
+            var restCodes = await CodesOf("RESTATEMENT_SELECTOR", restSelector);
+            var lines = await _balanceReadRepository.GetTouchingVoucherLinesAsync(
+                request.Year, fromDate, toDate, unitCodes, request.MinDocLife, restCodes, cancellationToken);
+            all[FsColumns.Prior].AddRange(lines.Select(l => new FsAccountBalance(l.AccCode, l.AccName, 0, 0, l.Debtor, l.Creditor, l.VahedCode)));
+            notes.Add(new FsCheckNote(
+                "RST", "تجدید ارائه: تعدیلات سنواتی سال جاری در ستون سال قبل", FsCheckSeverity.Info, true,
+                $"{lines.Count} ردیف (معین/واحد) از اسناد تعدیلات سنواتی به ستون سال قبل افزوده شد.", null));
+        }
+
+        // ط-۵ — شرکت‌های تابعهٔ واحد اجرا (تراز Excel، تسعیر، سهم غیرکنترلی).
+        var entityNames = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        if (request.IncludeEntities)
+        {
+            var entities = (await _consolidation.GetEntitiesAsync(cancellationToken))
+                .Where(e => e.IS_ACTIVE && e.VAHEDCODE == request.VahedCode)
+                .ToList();
+
+            if (entities.Count == 0)
+            {
+                throw new FsTemplateConflictException("برای این واحد شرکت تابعهٔ فعالی تعریف نشده است؛ گزینهٔ «تلفیق با شرکت‌های تابعه» را بردارید.");
+            }
+
+            if (entities.FirstOrDefault(e => scope.Names.ContainsKey(e.CODE)) is { } clash)
+            {
+                throw new FsTemplateConflictException($"کد شرکت تابعهٔ «{clash.TITLE_FA}» ({clash.CODE}) با کد یک واحد سازمان یکی است؛ کد شرکت را عوض کنید.");
+            }
+
+            var ids = entities.Select(e => e.ID).ToList();
+
+            foreach (var col in all.Keys.ToList())
+            {
+                var colYear = col == FsColumns.Current ? request.Year : priorYear;
+                var tbs = await _consolidation.GetEntityTbAsync(ids, colYear, request.ToMonth, cancellationToken);
+                var rates = await _consolidation.GetRatesAsync(ids, colYear, request.ToMonth, cancellationToken);
+
+                foreach (var e in entities)
+                {
+                    var rows = tbs.Where(t => t.ENTITY_ID == e.ID).ToList();
+
+                    if (rows.Count == 0)
+                    {
+                        if (col == FsColumns.Current)
+                        {
+                            throw new FsTemplateConflictException($"تراز شرکت «{e.TITLE_FA}» برای سال {colYear} تا ماه {request.ToMonth} وارد نشده است.");
+                        }
+
+                        notes.Add(new FsCheckNote("ENT", $"تراز سال قبل شرکت «{e.TITLE_FA}»", FsCheckSeverity.Warning, false,
+                            $"تراز سال {colYear} وارد نشده؛ ستون سال قبل بدون این شرکت است.", null));
+                        continue;
+                    }
+
+                    try
+                    {
+                        all[col].AddRange(FsConsolidationEngine.Translate(new FsEntityInput(e, rows, rates.FirstOrDefault(r => r.ENTITY_ID == e.ID))));
+                    }
+                    catch (FsEngineException ex)
+                    {
+                        throw new FsTemplateConflictException(ex.Message);
+                    }
+
+                    entityNames[e.CODE] = e.TITLE_FA;
+                }
+            }
+        }
+
+        // ط-۴ — حذف فی‌مابین در صورت ترکیبی یا تلفیقی؛ برای هر کد، قاعدهٔ نزدیک‌ترین مالک.
+        IReadOnlyList<FsElimResult> eliminations = [];
+
+        if (request.IncludeSubUnits || request.IncludeEntities)
+        {
+            var rules = (await _consolidation.GetElimRulesAsync(request.Framework, cancellationToken))
+                .Where(r => r.IS_ACTIVE)
+                .Select(r => (Rule: r, Priority: scope.PriorityOf(r.VAHEDCODE)))
+                .Where(x => x.Priority is not null)
+                .GroupBy(x => x.Rule.CODE, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.OrderBy(x => x.Priority).First().Rule)
+                .OrderBy(r => r.CODE, StringComparer.Ordinal)
+                .ToList();
+
+            foreach (var col in all.Keys.ToList())
+            {
+                if (rules.Count == 0)
+                {
+                    break;
+                }
+
+                var (adjustments, results) = FsConsolidationEngine.Eliminate(all[col], rules);
+                all[col].AddRange(adjustments);
+
+                if (col == FsColumns.Current)
+                {
+                    eliminations = results;
+                }
+            }
+        }
+
+        return new FsAdditions(entityNames, eliminations, notes);
+    }
+
+    /// <summary>V-07 برای هر قاعدهٔ حذف (مسدودکننده) و یادداشت‌های افزوده (تجدید ارائه، تراز شرکت‌ها).</summary>
+    private static void AddExtraChecks(TB_FS_RUN run, FsAdditions extra)
+    {
+        static string StatusText(int s) => s switch
+        {
+            1 => "تطبیق کامل",
+            2 => "در آستانهٔ مجاز",
+            4 => "طرف مقابل ندارد",
+            _ => "عدم تطبیق",
+        };
+
+        var checks = extra.Eliminations
+            .Select(e => new FsCheckNote(
+                "V-07",
+                $"حذف فی‌مابین {e.Code}: {e.TitleFa}",
+                FsCheckSeverity.Blocking,
+                e.Status is 1 or 2,
+                $"{StatusText(e.Status)} — سوی اول {e.Left:#,0}، سوی دوم {e.Right:#,0}، اختلاف {e.Difference:#,0} ریال.",
+                e.Difference))
+            .Concat(extra.Notes);
+
+        foreach (var c in checks)
+        {
+            run.TB_FS_RUN_CHECKs.Add(new TB_FS_RUN_CHECK
+            {
+                ID = Guid.NewGuid(),
+                RUN_ID = run.ID,
+                VAHEDCODE = run.VAHEDCODE,
+                CODE = c.Code,
+                TITLE_FA = Truncate(c.TitleFa, 500)!,
+                SEVERITY = c.Severity,
+                PASSED = c.Passed,
+                MESSAGE = Truncate(c.Message, 1000),
+                DIFFERENCE = c.Difference,
+            });
+        }
+    }
+
+    /// <summary>
+    /// ط-۳ — (۱) درخت واحدها و شرکت‌های دامنه در لحظهٔ اجرا؛ (۲) کاربرگ: موتور برای هر گروه جداگانه (بدون مقادیر
+    /// دستی) و مبلغ هر ردیف مقداری؛ (۳) نتیجهٔ حذف‌ها. کاربرگ فقط وقتی بیش از یک گروه هست.
+    /// </summary>
+    private async Task AddRunExtrasAsync(
+        TB_FS_RUN run,
+        IReadOnlyList<FsTemplateVersionDetailDto> versions,
+        IReadOnlyDictionary<string, Dictionary<string, Dictionary<string, FsAccountBalance>>> byGroup,
+        IReadOnlyCollection<string> unitCodes,
+        FsAdditions extra,
+        Func<string?, string> groupOf,
+        CancellationToken cancellationToken)
+    {
+        var allUnits = await _unitAccess.GetAllUnitsAsync(cancellationToken);
+        var byId = allUnits.ToDictionary(u => u.Id);
+        var units = allUnits
+            .Where(u => unitCodes.Contains(u.VahedCode))
+            .Select(u => new TB_FS_RUN_UNIT
+            {
+                ID = Guid.NewGuid(),
+                RUN_ID = run.ID,
+                VAHEDCODE = run.VAHEDCODE,
+                UNIT_CODE = u.VahedCode,
+                UNIT_NAME = Truncate(u.VahedName, 200),
+                PARENT_CODE = u.ParentId is { } pid && byId.TryGetValue(pid, out var p) ? p.VahedCode : null,
+                GROUP_CODE = groupOf(u.VahedCode),
+                KIND = 1,
+            })
+            .Concat(extra.EntityNames.Select(e => new TB_FS_RUN_UNIT
+            {
+                ID = Guid.NewGuid(),
+                RUN_ID = run.ID,
+                VAHEDCODE = run.VAHEDCODE,
+                UNIT_CODE = e.Key,
+                UNIT_NAME = Truncate(e.Value, 200),
+                PARENT_CODE = run.VAHEDCODE,
+                GROUP_CODE = e.Key,
+                KIND = 2,
+            }))
+            .ToList();
+
+        var groups = byGroup.Values
+            .SelectMany(accs => accs.Values.SelectMany(g => g.Keys))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(g => g, StringComparer.Ordinal)
+            .ToList();
+
+        var rowGroups = new List<TB_FS_RUN_ROW_GROUP>();
+
+        if (groups.Count > 1)
+        {
+            var engineStatements = versions
+                .Select(v => new FsEngineStatement(
+                    v.TemplateCode,
+                    v.Rows.Select(r => new FsEngineRow(r.Code, r.OrderNo, r.RowType, r.Selector, r.ValueType, r.Formula)).ToList()))
+                .ToList();
+            var rowIds = run.TB_FS_RUN_STATEMENTs
+                .SelectMany(s => s.TB_FS_RUN_ROWs.Select(r => (s.TEMPLATE_CODE, r.ROW_CODE, r.ID, r.ROW_TYPE)))
+                .Where(x => x.ROW_TYPE is FsRowType.Account or FsRowType.Formula or FsRowType.External)
+                .ToList();
+
+            foreach (var g in groups)
+            {
+                var balances = byGroup.ToDictionary(
+                    kv => kv.Key,
+                    kv => (IReadOnlyList<FsAccountBalance>)kv.Value
+                        .Where(acc => acc.Value.ContainsKey(g))
+                        .Select(acc => acc.Value[g])
+                        .ToList(),
+                    StringComparer.Ordinal);
+
+                IReadOnlyDictionary<(string Stmt, string Row), IReadOnlyDictionary<string, FsRowValue>> values;
+
+                try
+                {
+                    values = FsStatementEngine.Compute(engineStatements, balances);
+                }
+                catch (Exception ex) when (ex is FsEngineException or FsExpressionException or KeyNotFoundException)
+                {
+                    continue;
+                }
+
+                foreach (var (stmt, rowCode, rowId, _) in rowIds)
+                {
+                    if (!values.TryGetValue((stmt, rowCode), out var byCol))
+                    {
+                        continue;
+                    }
+
+                    decimal? cur = byCol.GetValueOrDefault(FsColumns.Current)?.Amount is { } c ? decimal.Round(c) : null;
+                    decimal? prv = run.HAS_PRIOR && byCol.GetValueOrDefault(FsColumns.Prior)?.Amount is { } pr ? decimal.Round(pr) : null;
+
+                    if ((cur ?? 0) == 0 && (prv ?? 0) == 0)
+                    {
+                        continue;
+                    }
+
+                    rowGroups.Add(new TB_FS_RUN_ROW_GROUP
+                    {
+                        ID = Guid.NewGuid(),
+                        RUN_ID = run.ID,
+                        VAHEDCODE = run.VAHEDCODE,
+                        RUN_ROW_ID = rowId,
+                        GROUP_CODE = g,
+                        AMOUNT_CUR = cur,
+                        AMOUNT_PRV = prv,
+                    });
+                }
+            }
+        }
+
+        var elims = extra.Eliminations.Select(e => new TB_FS_RUN_ELIM
+        {
+            ID = Guid.NewGuid(),
+            RUN_ID = run.ID,
+            VAHEDCODE = run.VAHEDCODE,
+            RULE_CODE = e.Code,
+            TITLE_FA = Truncate(e.TitleFa, 500)!,
+            LEFT_AMOUNT = e.Left,
+            RIGHT_AMOUNT = e.Right,
+            DIFFERENCE = e.Difference,
+            STATUS = e.Status,
+        });
+
+        await _consolidation.AddRunExtrasAsync(units, rowGroups, elims, cancellationToken);
     }
 
     private static string? Truncate(string? s, int max) => s is null || s.Length <= max ? s : s[..max];

@@ -23,7 +23,8 @@ public sealed record FsAccountBalance(
     decimal OpeningCreditor,
     decimal PeriodDebtor,
     decimal PeriodCreditor,
-    string? VahedCode = null);
+    string? VahedCode = null,
+    decimal CashFlow = 0);
 
 public sealed record FsEngineRow(
     string Code,
@@ -116,6 +117,7 @@ public sealed class FsStatementEngine
         FsValueType.Movement => b.PeriodDebtor - b.PeriodCreditor,
         FsValueType.Debit => b.PeriodDebtor,
         FsValueType.Credit => -b.PeriodCreditor,
+        FsValueType.CashFlow => b.CashFlow,
         _ => b.OpeningDebtor + b.PeriodDebtor - b.OpeningCreditor - b.PeriodCreditor,
     };
 

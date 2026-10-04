@@ -55,4 +55,20 @@ public interface IFsBalanceReadRepository
         IReadOnlyCollection<string> vahedCodes,
         int minDocLife,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// ط-۶/ط-۷ — همهٔ ردیف‌های اسناد دورهٔ (بدون افتتاحیه) با همان فیلترهای <see cref="GetBalancesAsync"/> که حداقل
+    /// یک ردیف روی <paramref name="touchAccCodes"/> دارند، جمع‌شده به تفکیک (معین، واحد). برای جریان نقد (حساب‌های
+    /// نقد) و تجدید ارائه (حساب تعدیلات سنواتی).
+    /// </summary>
+    Task<IReadOnlyList<FsTouchLine>> GetTouchingVoucherLinesAsync(
+        string year,
+        string fromDate,
+        string toDate,
+        IReadOnlyCollection<string> vahedCodes,
+        int minDocLife,
+        IReadOnlyCollection<string> touchAccCodes,
+        CancellationToken cancellationToken = default);
 }
+
+public sealed record FsTouchLine(string AccCode, string? AccName, string? VahedCode, decimal Debtor, decimal Creditor);

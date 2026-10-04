@@ -49,6 +49,9 @@ public partial class TB_FS_RUN
     /// <summary>برچسب «تجدید ارائه‌شده» روی ستون سال قبل (فقط برچسب؛ تعدیلات سنواتی محاسبه نمی‌شود). DDL 061.</summary>
     public bool PRIOR_RESTATED { get; set; }
 
+    /// <summary>ط-۵ — تلفیق با شرکت‌های تابعهٔ واحد اجرا (تراز واردشده از Excel). DDL 062.</summary>
+    public bool INCLUDE_ENTITIES { get; set; }
+
     /// <summary>شمارهٔ اولین یادداشت عددی (یادداشت‌های پیش از آن معمولاً متنی‌اند: تاریخچه، مبنا، رویه‌ها).</summary>
     public int NOTE_START_NO { get; set; }
 
