@@ -19,4 +19,16 @@ public interface ICheckBookRepository
     /// still returned here (the caller decides how to treat <c>ISDELETED</c>).
     /// </summary>
     Task<TB_CHECKBOOK?> GetForUpdateAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
+
+    /// <summary>اوراق دسته‌چک (tracked) — جزء همان Aggregate. پیش‌فرض فقط فعال‌ها.</summary>
+    Task<IReadOnlyList<TB_CHECK>> GetLeavesForUpdateAsync(Guid checkBookId, CancellationToken cancellationToken = default, bool includeDeleted = false);
+
+    /// <summary>شمار اوراق این دسته‌چک که در ردیف سند فعال به کار رفته‌اند.</summary>
+    Task<int> CountLeavesInVouchersAsync(Guid checkBookId, CancellationToken cancellationToken = default);
+
+    /// <summary>بزرگ‌ترین شمارهٔ برگ این دسته‌چک، حتی حذف‌شده (<c>UK_CHECK</c> حذف‌شده‌ها را هم می‌شمارد)؛ null = بی‌برگ.</summary>
+    Task<string?> GetMaxChequeNoAsync(Guid checkBookId, CancellationToken cancellationToken = default);
+
+    /// <summary>دسته‌چک هم‌کلید <c>UK_CHECKBOOK</c> (حساب + اولین + آخرین + واحد)، حتی حذف‌شده — tracked.</summary>
+    Task<TB_CHECKBOOK?> FindSameRangeForUpdateAsync(Guid accountId, string from, string to, string vahedCode, CancellationToken cancellationToken = default);
 }

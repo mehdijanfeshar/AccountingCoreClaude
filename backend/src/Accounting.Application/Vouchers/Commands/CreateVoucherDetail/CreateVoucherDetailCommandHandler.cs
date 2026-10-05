@@ -55,14 +55,17 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
     private readonly IVoucherTafsiliLevelGuard _tafsiliLevelGuard;
+    private readonly IVoucherChequeService? _chequeService;
 
     public CreateVoucherDetailCommandHandler(
         IVoucherHeadRepository voucherHeadRepository,
         IVoucherDetailRepository voucherDetailRepository,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
-        IVoucherTafsiliLevelGuard tafsiliLevelGuard)
+        IVoucherTafsiliLevelGuard tafsiliLevelGuard,
+        IVoucherChequeService? chequeService = null)
     {
+        _chequeService = chequeService;
         _voucherHeadRepository = voucherHeadRepository;
         _voucherDetailRepository = voucherDetailRepository;
         _unitOfWork = unitOfWork;
@@ -121,6 +124,13 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
         };
 
         await _voucherDetailRepository.AddAsync(entity, cancellationToken);
+
+        // دفتر چک — چک ردیف: اعتبارسنجی (ابطال‌نشده، تکراری‌نبودن) و «در وجه»/تاریخ/شرح روی TB_CHECK.
+        if (_chequeService is not null)
+        {
+            entity.CHECK_ID = await _chequeService.ApplyAsync(
+                request.CheckId, entity.ID, checkChanged: true, request.Cheque, request.VahedCode, cancellationToken);
+        }
 
         if (request.TafsiliLinks is { Count: > 0 } tafsiliLinks)
         {

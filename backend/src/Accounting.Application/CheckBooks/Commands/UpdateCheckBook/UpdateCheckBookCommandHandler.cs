@@ -41,11 +41,32 @@ public sealed class UpdateCheckBookCommandHandler : IRequestHandler<UpdateCheckB
             throw new NotFoundException("CheckBook", request.Id);
         }
 
+        // صوری ↔ واقعی پس از ثبت عوض نمی‌شود (یکی بی‌برگ است و دیگری برگ‌دار).
+        if (CheckBookLeaves.IsSori(entity.CHECKBOOK_TYPE) != CheckBookLeaves.IsSori(request.CheckBookType))
+            throw new ChequeConflictException("نوع دسته‌چک (صوری/واقعی) پس از ثبت قابل تغییر نیست؛ دسته‌چک را حذف و دوباره تعریف کنید.");
+
+        var sori = CheckBookLeaves.IsSori(entity.CHECKBOOK_TYPE);
+
+        // عین مرجع: پس از ساخت اوراق، بازهٔ شماره تغییر نمی‌کند. بازهٔ دسته‌چک صوری را سرور ساخته و دست‌نخورده می‌ماند.
+        if (!sori && (entity.FROMCHECKNUMBER != request.FromCheckNumber || entity.TOCHECKNUMBER != request.ToCheckNumber))
+        {
+            var leaves = await _checkBookRepository.GetLeavesForUpdateAsync(entity.ID, cancellationToken);
+            if (leaves.Count > 0)
+            {
+                throw new ChequeConflictException(leaves.Any(CheckBookLeaves.IsUsed)
+                    ? "اوراق دسته‌چک انتخابی استفاده شده است و امکان اصلاح از شماره چک و تا شماره چک وجود ندارد."
+                    : "برای این دسته‌چک اوراق چک ساخته شده است؛ برای اصلاح بازهٔ شماره، دسته‌چک را حذف و دوباره با شماره‌های درست تعریف کنید.");
+            }
+        }
+
         entity.ACCOUNT_ID = request.AccountId;
         entity.CHECKBOOK_TITLE = request.CheckBookTitle;
         entity.CHECKBOOK_DATE = request.CheckBookDate;
-        entity.FROMCHECKNUMBER = request.FromCheckNumber;
-        entity.TOCHECKNUMBER = request.ToCheckNumber;
+        if (!sori)
+        {
+            entity.FROMCHECKNUMBER = request.FromCheckNumber;
+            entity.TOCHECKNUMBER = request.ToCheckNumber;
+        }
         entity.CHECKTYPE_ID = request.CheckTypeId;
         entity.VAHEDCODE = request.VahedCode;
         entity.CHECKBOOK_TYPE = request.CheckBookType;

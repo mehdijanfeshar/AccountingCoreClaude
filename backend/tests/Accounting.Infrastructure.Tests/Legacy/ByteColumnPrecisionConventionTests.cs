@@ -74,8 +74,6 @@ public sealed class ByteColumnPrecisionConventionTests
         "TB_CHECK_TYPE.CHEQUE_BREAKLINE_LEFT",
         "TB_CHECK_TYPE.CHEQUE_BREAKLINE_TOP",
         "TB_CHECK_TYPE.CHEQUE_BREAKLINE_WIDTH",
-        "TB_CHECK_TYPE.PRINTER_MARGINE_LEFT",
-        "TB_CHECK_TYPE.PRINTER_MARGINE_TOP",
     };
 
     private static LegacyDbContext CreateContext()

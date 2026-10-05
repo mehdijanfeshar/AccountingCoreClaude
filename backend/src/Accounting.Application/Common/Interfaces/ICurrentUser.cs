@@ -46,4 +46,10 @@ public interface ICurrentUser
     /// Returns false (never throws) when there is no authenticated user.
     /// </summary>
     bool IsInRole(string role);
+
+    /// <summary>نقش‌های سامانهٔ مالی کاربر (زیرمجموعهٔ <see cref="Security.AppRoles.All"/>).</summary>
+    IReadOnlyList<string> FinancialRoles => Security.AppRoles.All.Where(IsInRole).ToList();
+
+    /// <summary>عیب‌یابی نقش در <c>/api/me</c>: نام claimهای توکن و مقدارهای شبیه نقش.</summary>
+    IReadOnlyList<string> TokenDiagnostics => Array.Empty<string>();
 }

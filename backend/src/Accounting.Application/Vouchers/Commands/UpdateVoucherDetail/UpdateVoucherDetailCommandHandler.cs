@@ -63,14 +63,17 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
     private readonly IVoucherTafsiliLevelGuard _tafsiliLevelGuard;
+    private readonly IVoucherChequeService? _chequeService;
 
     public UpdateVoucherDetailCommandHandler(
         IVoucherDetailRepository voucherDetailRepository,
         IVoucherHeadRepository voucherHeadRepository,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
-        IVoucherTafsiliLevelGuard tafsiliLevelGuard)
+        IVoucherTafsiliLevelGuard tafsiliLevelGuard,
+        IVoucherChequeService? chequeService = null)
     {
+        _chequeService = chequeService;
         _voucherDetailRepository = voucherDetailRepository;
         _voucherHeadRepository = voucherHeadRepository;
         _unitOfWork = unitOfWork;
@@ -105,6 +108,8 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
 
         await EnsureTafsiliLevelsSatisfiedAsync(entity, request, cancellationToken);
 
+        var previousCheckId = entity.CHECK_ID;
+
         entity.ACCOUNT_ID = request.AccountId;
         entity.RECEIP_ID = request.ReceiptId;
         entity.CHECK_ID = request.CheckId;
@@ -125,6 +130,14 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
         if (request.TafsiliLinks is not null)
         {
             await ReconcileTafsiliLinksAsync(entity, request.TafsiliLinks, now, cancellationToken);
+        }
+
+        // دفتر چک — چک ردیف و «در وجه»/تاریخ/شرح آن.
+        if (_chequeService is not null)
+        {
+            entity.CHECK_ID = await _chequeService.ApplyAsync(
+                request.CheckId, entity.ID, checkChanged: previousCheckId != request.CheckId, request.Cheque,
+                request.VahedCode, cancellationToken);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

@@ -97,8 +97,8 @@ public sealed record CreateChequeTypeCommand(
     byte? ChequeBreaklineLeft,
     byte? ChequeBreaklineTop,
     byte? ChequeBreaklineWidth,
-    byte? PrinterMargineTop,
-    byte? PrinterMargineLeft,
+    short? PrinterMargineTop,
+    short? PrinterMargineLeft,
     string? PrinterType,
     string Year) : IRequest<Guid>, IVahedScopedCommand
 {

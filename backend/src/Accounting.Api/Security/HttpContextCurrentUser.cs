@@ -102,6 +102,43 @@ public sealed class HttpContextCurrentUser : ICurrentUser
         }
     }
 
-    public bool IsInRole(string role) =>
-        _httpContextAccessor.HttpContext?.User?.IsInRole(role) ?? false;
+    /// <summary>
+    /// نقش از claim استاندارد role (<see cref="ClaimsPrincipal.IsInRole"/>)، و برای سازگاری با توکن سامانهٔ ورود سازمان
+    /// از هر claim که نامش به «role/roles/groups» ختم شود (توکن تأمین: <c>groups</c>)؛ مقدار ممکن است چندتایی با «,» یا آرایهٔ JSON باشد.
+    /// </summary>
+    public bool IsInRole(string role)
+    {
+        var user = _httpContextAccessor.HttpContext?.User;
+        if (user is null)
+            return false;
+        if (user.IsInRole(role))
+            return true;
+        return RoleLikeValues(user).Contains(role, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>عیب‌یابی نقش: نام همهٔ claimهای توکن و مقدار claimهای شبیه نقش (فقط برای خود کاربر در <c>/api/me</c>).</summary>
+    public IReadOnlyList<string> TokenDiagnostics
+    {
+        get
+        {
+            var user = _httpContextAccessor.HttpContext?.User;
+            if (user is null)
+                return Array.Empty<string>();
+            var types = user.Claims.Select(c => c.Type).Distinct().Select(t => "claim: " + t);
+            var roles = RoleLikeValues(user).Select(v => "role: " + v);
+            return types.Concat(roles).ToList();
+        }
+    }
+
+    private static IEnumerable<string> RoleLikeValues(ClaimsPrincipal user)
+        => user.Claims
+            .Where(c => c.Type == ClaimTypes.Role
+                || c.Type.EndsWith("role", StringComparison.OrdinalIgnoreCase)
+                || c.Type.EndsWith("roles", StringComparison.OrdinalIgnoreCase)
+                // توکن سامانهٔ ورود سازمان نقش‌ها را در «groups» و «urn:tamin:jwt:claim:groups» می‌فرستد (بررسی ۲۰۲۶-۱۰-۰۵).
+                || c.Type.EndsWith("groups", StringComparison.OrdinalIgnoreCase))
+            .SelectMany(c => c.Value.Trim().TrimStart('[').TrimEnd(']').Split(','))
+            .Select(v => v.Trim().Trim('"').Trim())
+            .Where(v => v.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
 }

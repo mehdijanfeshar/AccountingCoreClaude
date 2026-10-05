@@ -100,4 +100,4 @@ public interface IUnitAccessReadRepository
 /// <param name="IsHeadquarters">True when this unit's type grants blanket access to every unit.</param>
 public sealed record UnitProfile(string VahedName, bool IsHeadquarters);
 
-public sealed record UnitNode(Guid Id, string VahedCode, string VahedName, Guid? ParentId, bool IsHeadquarters);
+public sealed record UnitNode(Guid Id, string VahedCode, string VahedName, Guid? ParentId, bool IsHeadquarters, string? TypeCode = null);

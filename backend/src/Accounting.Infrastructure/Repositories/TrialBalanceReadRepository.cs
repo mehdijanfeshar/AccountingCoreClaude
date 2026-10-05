@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Security;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Common.Search;
 using Accounting.Application.Reports.TrialBalance;
@@ -154,9 +155,12 @@ public sealed class TrialBalanceReadRepository : ITrialBalanceReadRepository
 
     private readonly LegacyDbContext _dbContext;
 
-    public TrialBalanceReadRepository(LegacyDbContext dbContext)
+    private readonly IReportUnitScope? _unitScope;
+
+    public TrialBalanceReadRepository(LegacyDbContext dbContext, IReportUnitScope? unitScope = null)
     {
         _dbContext = dbContext;
+        _unitScope = unitScope;
     }
 
     public async Task<IReadOnlyList<TrialBalanceAggregateRow>> GetAggregatesAsync(
@@ -188,6 +192,12 @@ public sealed class TrialBalanceReadRepository : ITrialBalanceReadRepository
 
         var (searchSql, searchParameters) = BuildSearchClauses(filters, fieldMap);
 
+        // دامنهٔ چندواحدی (ReportUnitScopeBehavior)؛ وگرنه فقط واحد جاری، مثل قبل.
+        var scopeCodes = _unitScope?.VahedCodes;
+        var (vahedSql, vahedParameters) = scopeCodes is { Count: > 0 }
+            ? ReportUnitScopeSql.InClause("h.VAHEDCODE", scopeCodes, "vc")
+            : ("h.VAHEDCODE = :vahedCode", (IReadOnlyList<OracleParameter>)[new OracleParameter { ParameterName = "vahedCode", OracleDbType = OracleDbType.Varchar2, Value = vahedCode }]);
+
         var sql = $"""
             SELECT
               {codeExpr}      AS "Code",
@@ -207,7 +217,7 @@ public sealed class TrialBalanceReadRepository : ITrialBalanceReadRepository
               AND h.YEAR = :year
               AND (h.ISDELETED IS NULL OR h.ISDELETED = 0)
               AND (d.ISDELETED IS NULL OR d.ISDELETED = 0)
-              AND h.VAHEDCODE = :vahedCode
+              AND {vahedSql}
               AND (:docLife   IS NULL OR h.DOCLIFE  >= :docLife){searchSql}
             GROUP BY {codeExpr}
             ORDER BY {codeExpr}
@@ -216,11 +226,12 @@ public sealed class TrialBalanceReadRepository : ITrialBalanceReadRepository
         var parameters = new OracleParameter[]
         {
             new() { ParameterName = "year", OracleDbType = OracleDbType.Char, Value = year },
-            new() { ParameterName = "vahedCode", OracleDbType = OracleDbType.Varchar2, Value = vahedCode },
             new() { ParameterName = "docLife", OracleDbType = OracleDbType.Int32, Value = (object?)docLife ?? DBNull.Value },
             new() { ParameterName = "fromDate", OracleDbType = OracleDbType.Varchar2, Value = (object?)fromDate ?? DBNull.Value },
             new() { ParameterName = "toDate", OracleDbType = OracleDbType.Varchar2, Value = (object?)toDate ?? DBNull.Value },
         };
+
+        parameters = [.. parameters, .. vahedParameters];
 
         if (searchParameters.Count > 0)
         {

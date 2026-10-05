@@ -79,9 +79,9 @@ public partial class TB_CHECK_TYPE
 
     public byte? CHEQUE_BREAKLINE_WIDTH { get; set; }
 
-    public byte? PRINTER_MARGINE_TOP { get; set; }
+    public short? PRINTER_MARGINE_TOP { get; set; }
 
-    public byte? PRINTER_MARGINE_LEFT { get; set; }
+    public short? PRINTER_MARGINE_LEFT { get; set; }
 
     public string? PRINTER_TYPE { get; set; }
 

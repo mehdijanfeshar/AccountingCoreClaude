@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Search;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Security;
@@ -40,8 +41,14 @@ public sealed record GetTrialBalance4Query(
     string? ToDate,
     TrialBalanceLevel Level,
     int? DocLife,
-    IReadOnlyList<SearchParam>? Filters = null) : IRequest<IReadOnlyList<TrialBalance4RowDto>>, IVahedScopedQuery
+    IReadOnlyList<SearchParam>? Filters = null) : IRequest<IReadOnlyList<TrialBalance4RowDto>>, IMultiUnitReportQuery
 {
+    /// <summary>دامنهٔ واحد: واحد جاری (پیش‌فرض)، با زیرمجموعه، یا همهٔ واحدها (نقش مدیریتی سطح کشور).</summary>
+    public ReportUnitScopeMode UnitScope { get; init; }
+
+    /// <summary>فقط واحدهای یک گروه (بیمه‌ای/درمانی/ستادی).</summary>
+    public UnitCategory? UnitCategory { get; init; }
+
     /// <summary>
     /// Organizational unit code to filter by. Server-assigned by <c>VahedScopeBehavior</c> from
     /// the authenticated caller's own <c>VahedCode</c> — never bound from client input (the

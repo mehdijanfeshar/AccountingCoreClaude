@@ -39,4 +39,25 @@ public sealed class CheckBookRepository : ICheckBookRepository
 
         return entity;
     }
+
+    public async Task<IReadOnlyList<TB_CHECK>> GetLeavesForUpdateAsync(
+        Guid checkBookId, CancellationToken cancellationToken = default, bool includeDeleted = false)
+        => await _dbContext.TB_CHECKs.Where(c => c.CHECKBOOK_ID == checkBookId && (includeDeleted || !c.ISDELETED))
+            .ToListAsync(cancellationToken);
+
+    public Task<int> CountLeavesInVouchersAsync(Guid checkBookId, CancellationToken cancellationToken = default)
+        => (from d in _dbContext.TB_VOUCHERSDETAILs
+            join c in _dbContext.TB_CHECKs on d.CHECK_ID equals c.ID
+            where c.CHECKBOOK_ID == checkBookId && d.ISDELETED != true && d.VOUCHERSHEAD!.ISDELETED != true
+            select d.ID).CountAsync(cancellationToken);
+
+    public async Task<string?> GetMaxChequeNoAsync(Guid checkBookId, CancellationToken cancellationToken = default)
+        => await _dbContext.TB_CHECKs.Where(c => c.CHECKBOOK_ID == checkBookId)
+            .MaxAsync(c => (string?)c.CHEQ_NO, cancellationToken);
+
+    public Task<TB_CHECKBOOK?> FindSameRangeForUpdateAsync(
+        Guid accountId, string from, string to, string vahedCode, CancellationToken cancellationToken = default)
+        => _dbContext.TB_CHECKBOOKs.FirstOrDefaultAsync(
+            b => b.ACCOUNT_ID == accountId && b.FROMCHECKNUMBER == from && b.TOCHECKNUMBER == to && b.VAHEDCODE == vahedCode,
+            cancellationToken);
 }

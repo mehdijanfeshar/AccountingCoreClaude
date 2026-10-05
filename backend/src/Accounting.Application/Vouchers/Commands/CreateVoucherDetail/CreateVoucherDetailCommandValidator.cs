@@ -23,6 +23,7 @@ public sealed class CreateVoucherDetailCommandValidator : AbstractValidator<Crea
 {
     public CreateVoucherDetailCommandValidator()
     {
+        RuleFor(x => x.Cheque!).SetValidator(new VoucherChequeInfoInputValidator()).When(x => x.Cheque is not null);
         RuleFor(x => x.VoucherHeadId)
             .NotEmpty();
 

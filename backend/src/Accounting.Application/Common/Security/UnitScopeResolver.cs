@@ -19,6 +19,9 @@ public sealed class UnitScopeResolver : IUnitScopeResolver
     }
 
     public async Task<string> ResolveEffectiveVahedCodeAsync(CancellationToken cancellationToken = default)
+        => (await ResolveAsync(cancellationToken)).VahedCode;
+
+    public async Task<UnitScopeResolution> ResolveAsync(CancellationToken cancellationToken = default)
     {
         var own = _currentUser.VahedCode;
 
@@ -35,7 +38,7 @@ public sealed class UnitScopeResolver : IUnitScopeResolver
         // every server-to-server caller, lands here.
         if (string.IsNullOrWhiteSpace(requested))
         {
-            return own;
+            return new UnitScopeResolution(own, ViewOnly: false);
         }
 
         // Length-check the untrusted value before it reaches a query. Same 4-char Legacy ceiling
@@ -47,14 +50,22 @@ public sealed class UnitScopeResolver : IUnitScopeResolver
 
         if (string.Equals(requested, own, StringComparison.Ordinal))
         {
-            return own;
+            return new UnitScopeResolution(own, ViewOnly: false);
         }
 
-        if (!await _unitAccess.CanActAsAsync(own, requested, cancellationToken))
+        if (await _unitAccess.CanActAsAsync(own, requested, cancellationToken))
         {
-            throw new UnitActAsDeniedException(requested, own);
+            return new UnitScopeResolution(requested, ViewOnly: false);
         }
 
-        return requested;
+        // نقش مدیریتی سطح کشور (تصمیم صاحب پروژه ۲۰۲۶-۱۰-۰۵): هر واحد موجود، ولی فقط مشاهده —
+        // VahedScopeBehavior فرمان‌ها را در این حالت رد می‌کند.
+        if (_currentUser.IsInRole(AppRoles.National)
+            && await _unitAccess.GetUnitProfileAsync(requested, cancellationToken) is not null)
+        {
+            return new UnitScopeResolution(requested, ViewOnly: true);
+        }
+
+        throw new UnitActAsDeniedException(requested, own);
     }
 }

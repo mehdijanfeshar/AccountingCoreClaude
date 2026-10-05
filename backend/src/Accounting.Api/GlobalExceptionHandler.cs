@@ -566,6 +566,24 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
 
             // اعلامیه — گذار وضعیت نامجاز، ویرایش اعلامیهٔ دارای سند، حساب رابط تعریف‌نشده.
             // کارت حساب جاری — ردیف مغایرت‌گیری‌شده، ماه دیسکت و …
+            // دفتر چک — چک ابطال‌شده/تکراری، گذار نامجاز کارتابل، چاپ چک تأییدنشده.
+            // نقش سامانهٔ مالی ندارد / نقش فقط‌مشاهده — پیام فارسی قابل نمایش.
+            RoleAccessDeniedException roleAccessDeniedException => (
+                StatusCodes.Status403Forbidden,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status403Forbidden,
+                    "Forbidden",
+                    roleAccessDeniedException.PublicDetail)),
+
+            ChequeConflictException chequeConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    chequeConflictException.PublicDetail)),
+
             BankCardConflictException bankCardConflictException => (
                 StatusCodes.Status409Conflict,
                 BuildProblemDetails(

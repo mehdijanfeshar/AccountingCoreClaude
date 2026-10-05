@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Security;
 using System.Linq.Expressions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Reports.MatrixReport;
@@ -37,9 +38,12 @@ public sealed class MatrixReportReadRepository : IMatrixReportReadRepository
 {
     private readonly LegacyDbContext _dbContext;
 
-    public MatrixReportReadRepository(LegacyDbContext dbContext)
+    private readonly IReportUnitScope? _unitScope;
+
+    public MatrixReportReadRepository(LegacyDbContext dbContext, IReportUnitScope? unitScope = null)
     {
         _dbContext = dbContext;
+        _unitScope = unitScope;
     }
 
     /// <summary>
@@ -171,7 +175,8 @@ public sealed class MatrixReportReadRepository : IMatrixReportReadRepository
             // which Oracle rejects with ORA-00904.
             .Where(v => v.ISDELETED == null || v.ISDELETED != 1)
             .Where(v => v.YEAR == query.Year)
-            .Where(v => v.VAHEDCODE == query.VahedCode);
+            // دامنهٔ چندواحدی (همهٔ واحدها / زیرمجموعه / گروه) — ReportUnitScopeBehavior؛ وگرنه فقط واحد جاری.
+            .WhereVahed(v => v.VAHEDCODE, query.VahedCode, _unitScope?.VahedCodes);
 
         // VOUCHERDATE is fixed-width YYYYMMDD text in this schema, so an ordinal comparison is
         // chronological with no conversion needed.

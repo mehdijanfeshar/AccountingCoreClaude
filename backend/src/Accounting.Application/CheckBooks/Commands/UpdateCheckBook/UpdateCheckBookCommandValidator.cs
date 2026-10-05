@@ -20,6 +20,16 @@ public sealed class UpdateCheckBookCommandValidator : AbstractValidator<UpdateCh
 {
     public UpdateCheckBookCommandValidator()
     {
+        // چک صوری: بازه را سرور می‌سازد (سال + کد واحد + ۰۰۰۱..۱۰۰۰)؛ قواعد بازه فقط برای چک واقعی.
+        When(x => !CheckBookLeaves.IsSori(x.CheckBookType), () =>
+        {
+            CheckBookLeaves.RangeRules(this, x => x.FromCheckNumber, x => x.ToCheckNumber);
+            RuleFor(x => x.FromCheckNumber).NotEmpty();
+            RuleFor(x => x.ToCheckNumber).NotEmpty();
+        });
+        RuleFor(x => x.CheckBookDate).Matches("^[0-9]{8}$")
+            .WithMessage("تاریخ صدور دسته‌چک صوری الزامی است (سال آن در شمارهٔ چک می‌آید).")
+            .When(x => CheckBookLeaves.IsSori(x.CheckBookType));
         RuleFor(x => x.Id)
             .NotEmpty();
 
@@ -34,11 +44,9 @@ public sealed class UpdateCheckBookCommandValidator : AbstractValidator<UpdateCh
             .MaximumLength(8);
 
         RuleFor(x => x.FromCheckNumber)
-            .NotEmpty()
             .MaximumLength(14);
 
         RuleFor(x => x.ToCheckNumber)
-            .NotEmpty()
             .MaximumLength(14);
 
         RuleFor(x => x.VahedCode)

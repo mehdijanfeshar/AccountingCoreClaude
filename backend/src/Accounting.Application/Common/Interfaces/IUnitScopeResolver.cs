@@ -37,4 +37,14 @@ public interface IUnitScopeResolver
     /// Never returns a code the caller is not entitled to.
     /// </summary>
     Task<string> ResolveEffectiveVahedCodeAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// مثل <see cref="ResolveEffectiveVahedCodeAsync"/>، به‌علاوهٔ اینکه آیا واحد فقط از راه نقش مدیریتی سطح کشور
+    /// (<c>FINANCIAL CORE NATIONAL</c>) در دسترس است — آنگاه فقط مشاهده.
+    /// </summary>
+    async Task<UnitScopeResolution> ResolveAsync(CancellationToken cancellationToken = default)
+        => new(await ResolveEffectiveVahedCodeAsync(cancellationToken), ViewOnly: false);
 }
+
+/// <summary>واحد مؤثر درخواست؛ <paramref name="ViewOnly"/> = فقط از راه نقش مدیریتی سطح کشور.</summary>
+public sealed record UnitScopeResolution(string VahedCode, bool ViewOnly);

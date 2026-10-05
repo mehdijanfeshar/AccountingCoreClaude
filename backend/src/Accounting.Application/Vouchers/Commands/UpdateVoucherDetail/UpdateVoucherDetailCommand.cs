@@ -80,7 +80,8 @@ public sealed record UpdateVoucherDetailCommand(
     decimal? Debtor,
     decimal? Creditor,
     string? Year,
-    IReadOnlyList<VoucherDetailTafsiliLinkInput>? TafsiliLinks = null) : IRequest, IVahedScopedCommand
+    IReadOnlyList<VoucherDetailTafsiliLinkInput>? TafsiliLinks = null,
+    VoucherChequeInfoInput? Cheque = null) : IRequest, IVahedScopedCommand
 {
     /// <summary>
     /// VAHEDCODE column (max 4 chars). Never bound from the request body —

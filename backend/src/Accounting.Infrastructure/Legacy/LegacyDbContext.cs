@@ -180,6 +180,10 @@ public partial class LegacyDbContext : DbContext
 
     public virtual DbSet<TB_FS_PERMISSION> TB_FS_PERMISSIONs { get; set; }
 
+    public virtual DbSet<TB_CHECK_APPROVAL> TB_CHECK_APPROVALs { get; set; }
+
+    public virtual DbSet<TB_CHECK_APPROVAL_EVENT> TB_CHECK_APPROVAL_EVENTs { get; set; }
+
     public virtual DbSet<TB_FS_SETTING> TB_FS_SETTINGs { get; set; }
 
     public virtual DbSet<TB_FS_RUN_UNIT> TB_FS_RUN_UNITs { get; set; }
@@ -2093,6 +2097,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.HAS_PRIOR).HasColumnType("NUMBER(1)");
             entity.Property(e => e.PRIOR_RESTATED).HasColumnType("NUMBER(1)");
             entity.Property(e => e.INCLUDE_ENTITIES).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.UNIT_CATEGORY).HasConversion<int?>();
             entity.Property(e => e.NOTE_START_NO).HasColumnType("NUMBER(4)");
             // بخش ۴۵-ه (DDL 060).
             entity.Property(e => e.BALANCE_HASH)
@@ -2710,6 +2715,86 @@ public partial class LegacyDbContext : DbContext
                 .HasMaxLength(10)
                 .IsUnicode(false);
             entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+        });
+
+        // دفتر چک — کارتابل تأیید چک (DDL 064).
+        modelBuilder.Entity<TB_CHECK_APPROVAL>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_CHECK_APPROVAL");
+
+            entity.ToTable("TB_CHECK_APPROVAL");
+
+            entity.HasIndex(e => e.CHECK_ID, "UK_CHECK_APPROVAL_CHECK").IsUnique();
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.CHECK_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.STATE).HasConversion<int>();
+            entity.Property(e => e.PREPARED_BY)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.PREPARED_DATE).HasPrecision(6);
+            entity.Property(e => e.ACCOUNTING_BY)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.ACCOUNTING_DATE).HasPrecision(6);
+            entity.Property(e => e.MANAGER_BY)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.MANAGER_DATE).HasPrecision(6);
+            entity.Property(e => e.NOTE).HasMaxLength(500);
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.ISDELETED).HasColumnType("NUMBER(1)");
+        });
+
+        modelBuilder.Entity<TB_CHECK_APPROVAL_EVENT>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_CHECK_APPROVAL_EVENT");
+
+            entity.ToTable("TB_CHECK_APPROVAL_EVENT");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.APPROVAL_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.ACTION).HasConversion<int>();
+            entity.Property(e => e.FROM_STATE).HasConversion<int?>();
+            entity.Property(e => e.TO_STATE).HasConversion<int>();
+            entity.Property(e => e.USERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.NOTE).HasMaxLength(500);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+
+            entity.HasOne(d => d.APPROVAL).WithMany(p => p.TB_CHECK_APPROVAL_EVENTs)
+                .HasForeignKey(d => d.APPROVAL_ID)
+                .HasConstraintName("FK_CHECK_APPROVAL_EVENT");
         });
 
         modelBuilder.Entity<TB_FS_RATIO>(entity =>
@@ -3874,7 +3959,7 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false)
                 .HasComment("تاريخ ايجاد ");
             entity.Property(e => e.CHEQ_NO)
-                .HasMaxLength(10)
+                .HasMaxLength(14)
                 .IsUnicode(false)
                 .HasComment("شماره پرداخت ");
             entity.Property(e => e.CREATEDDATE)

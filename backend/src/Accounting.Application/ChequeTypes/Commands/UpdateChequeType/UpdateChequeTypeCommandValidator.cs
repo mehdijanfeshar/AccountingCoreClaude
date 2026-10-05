@@ -51,6 +51,11 @@ public sealed class UpdateChequeTypeCommandValidator : AbstractValidator<UpdateC
         RuleFor(x => x.ChequeBreaklineFont)
             .MaximumLength(200);
 
+        // حاشیهٔ چاپگر می‌تواند منفی باشد (عین سیستم قدیم)؛ سقف NUMBER(3).
+        RuleFor(x => x.PrinterMargineTop)
+            .InclusiveBetween((short)-999, (short)999).WithMessage("حاشیهٔ بالا باید بین ۹۹۹- و ۹۹۹ میلی‌متر باشد.");
+        RuleFor(x => x.PrinterMargineLeft)
+            .InclusiveBetween((short)-999, (short)999).WithMessage("حاشیهٔ چپ باید بین ۹۹۹- و ۹۹۹ میلی‌متر باشد.");
         RuleFor(x => x.PrinterType)
             .MaximumLength(100);
 

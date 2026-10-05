@@ -43,6 +43,7 @@ public static class DependencyInjection
         // repository shared by all three report Queries; no write repository, no Command, no
         // entity mutation — see TrialBalanceReadRepository XML doc.
         services.AddScoped<ITrialBalanceReadRepository, TrialBalanceReadRepository>();
+        services.AddScoped<Accounting.Application.Reports.GeneralLedger.IGeneralLedgerReadRepository, GeneralLedgerReadRepository>();
 
         // Phase 13 (batch 2) independent entities. Each follows the exact same write/read
         // repository split as the entities above: the write repository only stages changes and
@@ -106,6 +107,7 @@ public static class DependencyInjection
         services.AddScoped<IElamWorkflowRepository, ElamWorkflowRepository>();
         services.AddScoped<IElamWorkflowReadRepository, ElamWorkflowReadRepository>();
         services.AddScoped<IBankCardRepository, BankCardRepository>();
+        services.AddScoped<IChequeBookRepository, ChequeBookRepository>();
         // اعلامیهٔ درآمد — وب‌سرویس SOAP سامانهٔ سبا (درآمد) (آدرس: ElamDrmd:Url).
         services.AddScoped<Accounting.Application.Elams.IRevenueElamSender, Accounting.Infrastructure.Services.ElamDrmdWebService>();
         services.AddScoped<IAccountJournalReadRepository, AccountJournalReadRepository>();
@@ -263,6 +265,11 @@ public static class DependencyInjection
         services.AddScoped<IBankStatementFileParser, Accounting.Infrastructure.Services.RefahBankStatementFileParser>();
 
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
+
+        // نقش‌های کاربر از پورتال سامانهٔ ورود (عین CurrentUserRepository سیستم قدیم).
+        services.AddMemoryCache();
+        services.AddHttpClient(nameof(Accounting.Infrastructure.Idp.IdpPortalUserRoleProvider), c => c.Timeout = TimeSpan.FromSeconds(15));
+        services.AddSingleton<IUserRoleProvider, Accounting.Infrastructure.Idp.IdpPortalUserRoleProvider>();
 
         return services;
     }

@@ -256,7 +256,7 @@ public sealed record UpdateChequeTypeRequest(
     byte? ChequeBreaklineLeft,
     byte? ChequeBreaklineTop,
     byte? ChequeBreaklineWidth,
-    byte? PrinterMargineTop,
-    byte? PrinterMargineLeft,
+    short? PrinterMargineTop,
+    short? PrinterMargineLeft,
     string? PrinterType,
     string Year);

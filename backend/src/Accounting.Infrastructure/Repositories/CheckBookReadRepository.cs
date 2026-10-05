@@ -37,7 +37,11 @@ public sealed class CheckBookReadRepository : ICheckBookReadRepository
         c.UPDATEDDATE,
         c.ADDUSERID,
         c.CHANGEUSERID,
-        c.ISDELETED);
+        c.ISDELETED,
+        // شمارهٔ حساب از خود دسته‌چک — حتی اگر حساب بانکی حذف نرم شده باشد (ریسک ۲-الف: حذف حساب با دسته‌چک فعال).
+        c.ACCOUNT.ACCOUNTNUMBER,
+        c.ACCOUNT.ACCOUNTHOLDER,
+        c.ACCOUNT.ISDELETED);
 
     private readonly LegacyDbContext _dbContext;
 

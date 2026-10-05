@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Security;
 using System.Linq.Expressions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Reports.AccountReview;
@@ -38,9 +39,12 @@ public sealed class AccountReviewReadRepository : IAccountReviewReadRepository
 {
     private readonly LegacyDbContext _dbContext;
 
-    public AccountReviewReadRepository(LegacyDbContext dbContext)
+    private readonly IReportUnitScope? _unitScope;
+
+    public AccountReviewReadRepository(LegacyDbContext dbContext, IReportUnitScope? unitScope = null)
     {
         _dbContext = dbContext;
+        _unitScope = unitScope;
     }
 
     /// <summary>
@@ -237,7 +241,8 @@ public sealed class AccountReviewReadRepository : IAccountReviewReadRepository
             // `!= true` on a bool? renders `<> True`, which Oracle rejects with ORA-00904.
             .Where(v => v.ISDELETED == null || v.ISDELETED != 1)
             .Where(v => v.YEAR == query.Year)
-            .Where(v => v.VAHEDCODE == query.VahedCode);
+            // دامنهٔ چندواحدی (همهٔ واحدها / زیرمجموعه / گروه) — ReportUnitScopeBehavior؛ وگرنه فقط واحد جاری.
+            .WhereVahed(v => v.VAHEDCODE, query.VahedCode, _unitScope?.VahedCodes);
 
         // The drill-down path. Each step is one equality on the level's own column, which the view
         // has already flattened onto every line — so depth costs no joins.

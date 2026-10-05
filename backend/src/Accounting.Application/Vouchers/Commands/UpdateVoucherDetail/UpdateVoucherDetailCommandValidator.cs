@@ -22,6 +22,7 @@ public sealed class UpdateVoucherDetailCommandValidator : AbstractValidator<Upda
 {
     public UpdateVoucherDetailCommandValidator()
     {
+        RuleFor(x => x.Cheque!).SetValidator(new VoucherChequeInfoInputValidator()).When(x => x.Cheque is not null);
         RuleFor(x => x.Id)
             .NotEmpty();
 

@@ -1,4 +1,5 @@
 using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Common.Security;
 using Accounting.Application.UnitAccess.Queries;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;
@@ -32,11 +33,27 @@ public sealed class UnitAccessReadRepository : IUnitAccessReadRepository
     public const string HeadquartersVahedTypeCode = "17";
 
     private readonly LegacyDbContext _dbContext;
+    private readonly ICurrentUser? _currentUser;
 
-    public UnitAccessReadRepository(LegacyDbContext dbContext)
+    public UnitAccessReadRepository(LegacyDbContext dbContext, ICurrentUser? currentUser = null)
     {
         _dbContext = dbContext;
+        _currentUser = currentUser;
     }
+
+    /// <summary>
+    /// دسترسی همه‌واحدی (تصمیم صاحب پروژه ۲۰۲۶-۱۰-۰۵): با نقش مدیریتی سطح کشور، نه با نوع واحد «ستاد مرکزی».
+    /// کاربر عادی ستاد مثل هر واحد دیگر فقط خود و زیرمجموعه‌اش را دارد.
+    /// </summary>
+    private bool HasNationalAccess => _currentUser?.IsInRole(AppRoles.National) ?? false;
+
+    /// <summary>
+    /// مدیر ستاد (تصمیم صاحب پروژه ۲۰۲۶-۱۰-۰۵، عین سیستم قدیم): کاربرِ واحد «ستاد مرکزی» با نقش SETAD ADMIN به همهٔ
+    /// واحدها دسترسی کامل (خواندن و نوشتن) دارد. کاربر عادی ستاد بدون این نقش فقط واحد خودش.
+    /// </summary>
+    private bool IsSetadAdminAt(string? ownTypeCode)
+        => string.Equals(ownTypeCode, HeadquartersVahedTypeCode, StringComparison.Ordinal)
+           && (_currentUser?.IsInRole(AppRoles.SetadAdmin) ?? false);
 
     public async Task<IReadOnlyList<AccessibleUnitDto>> GetAccessibleUnitsAsync(
         string vahedCode,
@@ -65,7 +82,7 @@ public sealed class UnitAccessReadRepository : IUnitAccessReadRepository
             return Array.Empty<AccessibleUnitDto>();
         }
 
-        var reachable = string.Equals(self.VahedTypeCode, HeadquartersVahedTypeCode, StringComparison.Ordinal)
+        var reachable = HasNationalAccess || IsSetadAdminAt(self.VahedTypeCode)
             ? units
             : CollectSubtree(units, self);
 
@@ -95,7 +112,8 @@ public sealed class UnitAccessReadRepository : IUnitAccessReadRepository
                 u.VahedCode,
                 u.VahedName,
                 u.ParentId,
-                string.Equals(u.VahedTypeCode, HeadquartersVahedTypeCode, StringComparison.Ordinal)))
+                string.Equals(u.VahedTypeCode, HeadquartersVahedTypeCode, StringComparison.Ordinal),
+                u.VahedTypeCode))
             .ToList();
     }
 
@@ -166,7 +184,6 @@ public sealed class UnitAccessReadRepository : IUnitAccessReadRepository
             return false;
         }
 
-        var ownIsHeadquarters = string.Equals(own.TypeCode, HeadquartersVahedTypeCode, StringComparison.Ordinal);
 
         var target = await _dbContext.TB_VAHED_INFOs
             .AsNoTracking()
@@ -182,7 +199,9 @@ public sealed class UnitAccessReadRepository : IUnitAccessReadRepository
             return false;
         }
 
-        if (ownIsHeadquarters)
+        // نوع واحد «ستاد مرکزی» به‌تنهایی همهٔ واحدها را باز نمی‌کند؛ فقط همراه با نقش مدیر ستاد (دسترسی کامل).
+        // نقش مدیریتی سطح کشور در UnitScopeResolver (فقط مشاهده) جداگانه است.
+        if (IsSetadAdminAt(own.TypeCode))
         {
             return true;
         }

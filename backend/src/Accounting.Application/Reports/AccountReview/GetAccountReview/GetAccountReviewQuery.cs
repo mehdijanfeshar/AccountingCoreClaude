@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Security;
 using MediatR;
 using System.Text.Json.Serialization;
@@ -42,8 +43,14 @@ public sealed record GetAccountReviewQuery(
     string? FromVoucherNo,
     string? ToVoucherNo,
     int? DocLife,
-    Guid? SystemTypeId) : IRequest<AccountReviewResultDto>, IVahedScopedQuery
+    Guid? SystemTypeId) : IRequest<AccountReviewResultDto>, IMultiUnitReportQuery
 {
+    /// <summary>دامنهٔ واحد: واحد جاری (پیش‌فرض)، با زیرمجموعه، یا همهٔ واحدها (نقش مدیریتی سطح کشور).</summary>
+    public ReportUnitScopeMode UnitScope { get; init; }
+
+    /// <summary>فقط واحدهای یک گروه (بیمه‌ای/درمانی/ستادی).</summary>
+    public UnitCategory? UnitCategory { get; init; }
+
     /// <summary>
     /// Server-assigned by <c>VahedScopeBehavior</c> from the caller's effective unit — never bound
     /// from client input. The view carries <c>VAHEDCODE</c>, so without this the report would

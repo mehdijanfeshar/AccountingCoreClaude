@@ -45,7 +45,12 @@ public static class DependencyInjection
 
         services.AddValidatorsFromAssembly(applicationAssembly);
 
+        // نقش‌های سامانهٔ مالی (۲۰۲۶-۱۰-۰۵) — پیش از همه، حتی پیش از تعیین واحد.
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RoleAuthorizationBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(VahedScopeBehavior<,>));
+        // دامنهٔ چندواحدی گزارش‌ها (همهٔ واحدها / زیرمجموعه / گروه درمانی-بیمه‌ای-ستادی) — پس از تعیین واحد.
+        services.AddScoped<Accounting.Application.Common.Security.IReportUnitScope, Accounting.Application.Common.Security.ReportUnitScope>();
+        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(Accounting.Application.Common.Security.ReportUnitScopeBehavior<,>));
         // ط-۲ — دسترسی سه‌بُعدی صورت‌های مالی؛ پس از تعیین واحد (VahedCode) و پیش از اعتبارسنجی.
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(Accounting.Application.FinancialStatements.Access.FsPermissionBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
@@ -152,6 +157,9 @@ public static class DependencyInjection
 
         // اعلامیه — گردش صادره/رسیده/درآمد.
         services.AddScoped<Accounting.Application.Elams.ElamWorkflowService>();
+        // دفتر چک — چک ردیف سند.
+        services.AddScoped<Accounting.Application.Vouchers.Commands.Common.IVoucherChequeService,
+            Accounting.Application.Vouchers.Commands.Common.VoucherChequeService>();
         services.AddScoped<Accounting.Application.Treasury.Commands.Common.IBankStatementAutoMatchService,
             Accounting.Application.Treasury.Commands.Common.BankStatementAutoMatchService>();
         services.AddScoped<Accounting.Application.Treasury.Commands.Common.IBankStatementManualMatchService,

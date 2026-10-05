@@ -30,4 +30,6 @@ public sealed record CurrentUserDto(
     string UserId,
     string? VahedCode,
     string? VahedName,
-    bool IsHeadquarters);
+    bool IsHeadquarters,
+    IReadOnlyList<string>? Roles = null,
+    IReadOnlyList<string>? TokenDiagnostics = null);

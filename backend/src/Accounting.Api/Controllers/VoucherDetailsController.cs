@@ -189,7 +189,8 @@ public sealed class VoucherDetailsController : ControllerBase
             request.Debtor,
             request.Creditor,
             request.Year,
-            request.TafsiliLinks);
+            request.TafsiliLinks,
+            request.Cheque);
 
         await _mediator.Send(command, cancellationToken);
 
@@ -261,4 +262,5 @@ public sealed record UpdateVoucherDetailRequest(
     decimal? Debtor,
     decimal? Creditor,
     string? Year,
-    IReadOnlyList<VoucherDetailTafsiliLinkInput>? TafsiliLinks = null);
+    IReadOnlyList<VoucherDetailTafsiliLinkInput>? TafsiliLinks = null,
+    VoucherChequeInfoInput? Cheque = null);

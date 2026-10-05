@@ -33,7 +33,8 @@ public sealed record GenerateFsRunCommand(
     Guid? SourceRunId = null,
     IReadOnlyList<FsManualValueInput>? ManualValues = null,
     bool PriorRestated = false,
-    bool IncludeEntities = false) : IRequest<Guid>, IVahedScopedCommand
+    bool IncludeEntities = false,
+    UnitCategory? UnitCategory = null) : IRequest<Guid>, IVahedScopedCommand
 {
     [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;

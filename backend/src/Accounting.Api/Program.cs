@@ -165,6 +165,8 @@ app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
+// نقش‌های کاربر از پورتال سامانهٔ ورود (توکن نقش ندارد) — پیش از Authorization و MediatR.
+app.UseMiddleware<Accounting.Api.Security.PortalRoleClaimsMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

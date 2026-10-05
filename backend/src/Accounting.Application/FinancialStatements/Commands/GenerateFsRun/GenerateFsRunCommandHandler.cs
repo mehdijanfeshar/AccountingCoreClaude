@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Security;
 using System.Diagnostics;
 using System.Globalization;
 using System.Security.Cryptography;
@@ -86,6 +87,18 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
         var external = BuildExternalValues(versions, request.ManualValues ?? Array.Empty<FsManualValueInput>());
 
         var unitCodes = request.IncludeSubUnits ? scope.Accessible.ToList() : new List<string> { request.VahedCode };
+
+        // فقط واحدهای یک گروه (بیمه‌ای/درمانی/ستادی) در اجرای ترکیبی — تصمیم صاحب پروژه ۲۰۲۶-۱۰-۰۵.
+        if (request.IncludeSubUnits && request.UnitCategory is { } category)
+        {
+            unitCodes = unitCodes
+                .Where(c => UnitCategories.Of(scope.TypeCodes.GetValueOrDefault(c)) == category)
+                .ToList();
+            if (unitCodes.Count == 0)
+            {
+                throw new FsTemplateConflictException($"در دامنهٔ این واحد، واحد {UnitCategories.Label(category)} نیست.");
+            }
+        }
 
         // ماندهٔ خام به تفکیک (معین، واحد) برای هر ستون.
         var (fromDate, toDate) = Period(year, request.ToMonth);
@@ -186,6 +199,7 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
             HAS_PRIOR = request.IncludePrior,
             PRIOR_RESTATED = request.IncludePrior && request.PriorRestated,
             INCLUDE_ENTITIES = request.IncludeEntities,
+            UNIT_CATEGORY = request.IncludeSubUnits ? request.UnitCategory : null,
             USES_DRAFT = versions.Any(v => v.State == FsTemplateVersionState.Draft),
             STATE = FsRunState.Draft,
             DESCRIPTION = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),

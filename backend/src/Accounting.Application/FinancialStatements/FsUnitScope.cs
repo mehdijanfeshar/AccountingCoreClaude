@@ -24,8 +24,10 @@ public sealed class FsUnitScope
         IReadOnlyList<string> ancestorsOrSelf,
         IReadOnlySet<string> accessible,
         Dictionary<string, string> groupByUnit,
-        IReadOnlyDictionary<string, string> names)
+        IReadOnlyDictionary<string, string> names,
+        IReadOnlyDictionary<string, string?>? typeCodes = null)
     {
+        TypeCodes = typeCodes ?? new Dictionary<string, string?>();
         VahedCode = vahedCode;
         IsHeadquarters = isHeadquarters;
         AncestorsOrSelf = ancestorsOrSelf;
@@ -35,6 +37,9 @@ public sealed class FsUnitScope
     }
 
     public string VahedCode { get; }
+
+    /// <summary>نوع واحد (TYPECODE) هر واحد — برای فیلتر گروه درمانی/بیمه‌ای/ستادی.</summary>
+    public IReadOnlyDictionary<string, string?> TypeCodes { get; }
 
     public bool IsHeadquarters { get; }
 
@@ -125,7 +130,8 @@ public sealed class FsUnitScope
             ancestors,
             accessible,
             groups,
-            units.GroupBy(u => u.VahedCode).ToDictionary(g => g.Key, g => g.First().VahedName, StringComparer.Ordinal));
+            units.GroupBy(u => u.VahedCode).ToDictionary(g => g.Key, g => g.First().VahedName, StringComparer.Ordinal),
+            units.GroupBy(u => u.VahedCode).ToDictionary(g => g.Key, g => g.First().TypeCode, StringComparer.Ordinal));
     }
 }
 

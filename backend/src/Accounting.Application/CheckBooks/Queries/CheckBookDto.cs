@@ -40,4 +40,7 @@ public sealed record CheckBookDto(
     DateTime? UpdatedDate,
     string AddUserId,
     string? ChangeUserId,
-    bool IsDeleted);
+    bool IsDeleted,
+    string? AccountNumber = null,
+    string? AccountHolder = null,
+    bool? AccountDeleted = null);

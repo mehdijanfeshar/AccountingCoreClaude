@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using MediatR;
@@ -35,24 +36,67 @@ public sealed class CreateCheckBookCommandHandler : IRequestHandler<CreateCheckB
 
     public async Task<Guid> Handle(CreateCheckBookCommand request, CancellationToken cancellationToken)
     {
-        var entity = new TB_CHECKBOOK
-        {
-            ID = Guid.NewGuid(),
-            ACCOUNT_ID = request.AccountId,
-            CHECKBOOK_TITLE = request.CheckBookTitle,
-            CHECKBOOK_DATE = request.CheckBookDate,
-            FROMCHECKNUMBER = request.FromCheckNumber,
-            TOCHECKNUMBER = request.ToCheckNumber,
-            CHECKTYPE_ID = request.CheckTypeId,
-            VAHEDCODE = request.VahedCode,
-            CHECKBOOK_TYPE = request.CheckBookType,
-            SERIAL = request.Serial,
-            ADDUSERID = _currentUser.UserId,
-            CREATEDDATE = DateTime.UtcNow,
-            ISDELETED = false,
-        };
+        var now = DateTime.UtcNow;
+        var sori = CheckBookLeaves.IsSori(request.CheckBookType);
+        var year = request.CheckBookDate[..Math.Min(4, request.CheckBookDate.Length)];
 
-        await _checkBookRepository.AddAsync(entity, cancellationToken);
+        // چک صوری: بازهٔ سال + کد واحد را سرور می‌سازد؛ بی‌برگ — برگ هنگام استفاده در سند ساخته می‌شود.
+        var (from, to) = sori
+            ? CheckBookLeaves.SoriRange(year, request.VahedCode)
+            : (request.FromCheckNumber, request.ToCheckNumber);
+
+        // UK_CHECKBOOK (حساب + اولین + آخرین + واحد) ردیف‌های حذف‌نرم‌شده را هم می‌شمارد: دسته‌چک فعال هم‌کلید ⇒ ۴۰۹ با
+        // پیام روشن؛ دسته‌چک حذف‌شدهٔ هم‌کلید ⇒ همان ردیف با مشخصات تازه بازگردانده می‌شود (درج تکراری ORA-00001 می‌داد).
+        var existing = await _checkBookRepository.FindSameRangeForUpdateAsync(
+            request.AccountId, from, to, request.VahedCode, cancellationToken);
+        if (existing is { ISDELETED: false })
+        {
+            throw new ChequeConflictException(sori
+                ? $"برای این حساب بانکی در سال {year} دسته‌چک صوری تعریف شده است."
+                : $"دسته‌چک {from} تا {to} برای این حساب بانکی قبلاً ثبت شده است.");
+        }
+
+        var entity = existing ?? new TB_CHECKBOOK { ID = Guid.NewGuid() };
+        entity.ACCOUNT_ID = request.AccountId;
+        entity.CHECKBOOK_TITLE = request.CheckBookTitle;
+        entity.CHECKBOOK_DATE = request.CheckBookDate;
+        entity.FROMCHECKNUMBER = from;
+        entity.TOCHECKNUMBER = to;
+        entity.CHECKTYPE_ID = request.CheckTypeId;
+        entity.VAHEDCODE = request.VahedCode;
+        entity.CHECKBOOK_TYPE = request.CheckBookType;
+        entity.SERIAL = request.Serial;
+        entity.ISDELETED = false;
+
+        if (existing is null)
+        {
+            entity.ADDUSERID = _currentUser.UserId;
+            entity.CREATEDDATE = now;
+            if (!sori)
+            {
+                // اوراق چک (ریسک ۲-ج) — عین AddCheckPapers مرجع، در همان Aggregate و همان تراکنش.
+                CheckBookLeaves.Generate(entity, Array.Empty<string>(), _currentUser.UserId, now);
+            }
+
+            await _checkBookRepository.AddAsync(entity, cancellationToken);
+        }
+        else
+        {
+            entity.CHANGEUSERID = _currentUser.UserId;
+            entity.UPDATEDDATE = now;
+
+            // اوراق قبلی همان دسته‌چک برمی‌گردند (حذف فقط وقتی مجاز بود که برگی استفاده نشده باشد)؛ برگ جاافتاده ساخته می‌شود.
+            var leaves = await _checkBookRepository.GetLeavesForUpdateAsync(entity.ID, cancellationToken, includeDeleted: true);
+            foreach (var leaf in leaves.Where(l => l.ISDELETED))
+            {
+                leaf.ISDELETED = false;
+                leaf.UPDATEDDATE = now;
+            }
+
+            if (!sori)
+                CheckBookLeaves.Generate(entity, leaves.Select(l => l.CHEQ_NO).ToList(), _currentUser.UserId, now);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return entity.ID;

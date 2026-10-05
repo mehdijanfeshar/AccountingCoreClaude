@@ -1,3 +1,6 @@
+using Accounting.Application.Reports.GeneralLedger;
+using Accounting.Domain.ValueObjects;
+using Accounting.Application.Common.Security;
 using Accounting.Application.Common.Search;
 using Accounting.Application.Reports.MatrixReport;
 using Accounting.Application.Reports.MatrixReport.GetMatrixReport;
@@ -83,10 +86,12 @@ public sealed class TrialBalanceReportsController : ControllerBase
         [FromQuery] TrialBalanceLevel level = default,
         [FromQuery] int? docLife = null,
         [FromQuery] List<SearchParam>? filters = null,
+        [FromQuery] ReportUnitScopeMode unitScope = ReportUnitScopeMode.Self,
+        [FromQuery] UnitCategory? unitCategory = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetTrialBalance4Query(year, fromDate, toDate, level, docLife, filters),
+            new GetTrialBalance4Query(year, fromDate, toDate, level, docLife, filters) { UnitScope = unitScope, UnitCategory = unitCategory },
             cancellationToken);
 
         return Ok(result);
@@ -120,10 +125,12 @@ public sealed class TrialBalanceReportsController : ControllerBase
         [FromQuery] TrialBalanceLevel level = default,
         [FromQuery] int? docLife = null,
         [FromQuery] List<SearchParam>? filters = null,
+        [FromQuery] ReportUnitScopeMode unitScope = ReportUnitScopeMode.Self,
+        [FromQuery] UnitCategory? unitCategory = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetTrialBalance6Query(year, fromDate, toDate, level, docLife, filters),
+            new GetTrialBalance6Query(year, fromDate, toDate, level, docLife, filters) { UnitScope = unitScope, UnitCategory = unitCategory },
             cancellationToken);
 
         return Ok(result);
@@ -158,10 +165,12 @@ public sealed class TrialBalanceReportsController : ControllerBase
         [FromQuery] TrialBalanceLevel level = default,
         [FromQuery] int? docLife = null,
         [FromQuery] List<SearchParam>? filters = null,
+        [FromQuery] ReportUnitScopeMode unitScope = ReportUnitScopeMode.Self,
+        [FromQuery] UnitCategory? unitCategory = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetTrialBalance8Query(year, fromDate, toDate, level, docLife, filters),
+            new GetTrialBalance8Query(year, fromDate, toDate, level, docLife, filters) { UnitScope = unitScope, UnitCategory = unitCategory },
             cancellationToken);
 
         return Ok(result);
@@ -207,6 +216,8 @@ public sealed class TrialBalanceReportsController : ControllerBase
         [FromQuery] int? docLife = null,
         [FromQuery] Guid? systemTypeId = null,
         [FromQuery] List<AccountReviewScopeItem>? scope = null,
+        [FromQuery] ReportUnitScopeMode unitScope = ReportUnitScopeMode.Self,
+        [FromQuery] UnitCategory? unitCategory = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
@@ -219,7 +230,7 @@ public sealed class TrialBalanceReportsController : ControllerBase
                 fromVoucherNo,
                 toVoucherNo,
                 docLife,
-                systemTypeId),
+                systemTypeId) { UnitScope = unitScope, UnitCategory = unitCategory },
             cancellationToken);
 
         return Ok(result);
@@ -263,6 +274,8 @@ public sealed class TrialBalanceReportsController : ControllerBase
         [FromQuery] Guid? systemTypeId = null,
         [FromQuery] string? rowCodeFilter = null,
         [FromQuery] string? columnCodeFilter = null,
+        [FromQuery] ReportUnitScopeMode unitScope = ReportUnitScopeMode.Self,
+        [FromQuery] UnitCategory? unitCategory = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
@@ -275,9 +288,35 @@ public sealed class TrialBalanceReportsController : ControllerBase
                 docLife,
                 systemTypeId,
                 rowCodeFilter,
-                columnCodeFilter),
+                columnCodeFilter) { UnitScope = unitScope, UnitCategory = unitCategory },
             cancellationToken);
 
         return Ok(result);
     }
+
+    /// <summary>
+    /// دفتر کل — برای هر حساب کل: ماندهٔ ابتدای دوره، سطر هر سند با ماندهٔ جاری، جمع دوره. صفحه‌بندی روی سطرها؛
+    /// <c>Accounts</c> جمع همهٔ کل‌ها (نه فقط صفحه). دامنهٔ چندواحدی مثل تراز آزمایشی.
+    /// </summary>
+    [HttpGet("general-ledger")]
+    [ProducesResponseType(typeof(GeneralLedgerResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetGeneralLedger(
+        [FromQuery] string year = "",
+        [FromQuery] string? fromDate = null,
+        [FromQuery] string? toDate = null,
+        [FromQuery] string? fromKol = null,
+        [FromQuery] string? toKol = null,
+        [FromQuery] int? docLife = null,
+        [FromQuery] string? fromVoucherNo = null,
+        [FromQuery] string? toVoucherNo = null,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 100,
+        [FromQuery] ReportUnitScopeMode unitScope = ReportUnitScopeMode.Self,
+        [FromQuery] UnitCategory? unitCategory = null,
+        CancellationToken cancellationToken = default)
+        => Ok(await _mediator.Send(
+            new GetGeneralLedgerQuery(year, fromDate, toDate, fromKol, toKol, docLife, fromVoucherNo, toVoucherNo, pageNumber, pageSize)
+            { UnitScope = unitScope, UnitCategory = unitCategory },
+            cancellationToken));
 }

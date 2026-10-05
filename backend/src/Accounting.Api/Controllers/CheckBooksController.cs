@@ -177,6 +177,20 @@ public sealed class CheckBooksController : ControllerBase
 
         return Ok(new DeleteCheckBookResponse(id));
     }
+
+
+    /// <summary>اوراق چک دسته‌چک — هر برگ با در وجه، بابت، تاریخ، سند و وضعیت.</summary>
+    [HttpGet("{id:guid}/leaves")]
+    [ProducesResponseType(typeof(IReadOnlyList<Accounting.Application.ChequeBook.ChequeLeafDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetLeaves(Guid id, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(new Accounting.Application.CheckBooks.GetCheckBookLeavesQuery(id), cancellationToken));
+
+    /// <summary>ساخت اوراق جاافتاده (دسته‌چک‌هایی که پیش از این قابلیت بی‌برگ ساخته شدند). تعداد برگ تازه.</summary>
+    [HttpPost("{id:guid}/generate-leaves")]
+    [ProducesResponseType(typeof(int), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GenerateLeaves(Guid id, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(new Accounting.Application.CheckBooks.GenerateCheckBookLeavesCommand(id), cancellationToken));
+
 }
 
 /// <summary>

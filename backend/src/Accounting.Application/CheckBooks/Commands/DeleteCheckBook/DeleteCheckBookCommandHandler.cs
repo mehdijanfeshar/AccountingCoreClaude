@@ -47,6 +47,21 @@ public sealed class DeleteCheckBookCommandHandler : IRequestHandler<DeleteCheckB
             return;
         }
 
+        // عین مرجع: دسته‌چکی که برگی از آن استفاده شده حذف نمی‌شود؛ وگرنه اوراق هم حذف نرم می‌شوند.
+        var leaves = await _checkBookRepository.GetLeavesForUpdateAsync(entity.ID, cancellationToken);
+        if (leaves.Any(CheckBookLeaves.IsUsed)
+            || await _checkBookRepository.CountLeavesInVouchersAsync(entity.ID, cancellationToken) > 0)
+        {
+            throw new ChequeConflictException("اوراق دسته‌چک انتخابی استفاده شده و قابل حذف نیست.");
+        }
+
+        foreach (var leaf in leaves)
+        {
+            leaf.ISDELETED = true;
+            leaf.CHANGEUSERID = _currentUser.UserId;
+            leaf.UPDATEDDATE = DateTime.UtcNow;
+        }
+
         entity.ISDELETED = true;
         entity.CHANGEUSERID = _currentUser.UserId;
         entity.UPDATEDDATE = DateTime.UtcNow;

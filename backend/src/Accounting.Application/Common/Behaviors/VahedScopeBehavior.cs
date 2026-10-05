@@ -98,7 +98,15 @@ public sealed class VahedScopeBehavior<TRequest, TResponse> : IPipelineBehavior<
         // put on the request — what changed is only HOW the server decides it. The resolver
         // returns the caller's own unit unless they explicitly asked for another one AND are
         // entitled to it; it throws rather than ever returning an unentitled code.
-        var vahedCode = await _unitScopeResolver.ResolveEffectiveVahedCodeAsync(cancellationToken);
+        var resolution = await _unitScopeResolver.ResolveAsync(cancellationToken);
+        var vahedCode = resolution.VahedCode;
+
+        // نقش مدیریتی سطح کشور در واحدی خارج از زیرمجموعهٔ خود فقط مشاهده می‌کند.
+        if (resolution.ViewOnly && scoped is IVahedScopedCommand)
+        {
+            throw new RoleAccessDeniedException(
+                "نقش مدیریتی سطح کشور در واحدهای دیگر فقط مشاهده است؛ ثبت و تغییر فقط در واحد خودتان ممکن است.");
+        }
 
         // Unconditional: whatever the caller supplied is discarded, not merely defaulted.
         scoped.VahedCode = vahedCode;
