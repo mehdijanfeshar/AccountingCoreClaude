@@ -564,6 +564,24 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Conflict",
                     fsTemplateConflictException.PublicDetail)),
 
+            // اعلامیه — گذار وضعیت نامجاز، ویرایش اعلامیهٔ دارای سند، حساب رابط تعریف‌نشده.
+            // کارت حساب جاری — ردیف مغایرت‌گیری‌شده، ماه دیسکت و …
+            BankCardConflictException bankCardConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    bankCardConflictException.PublicDetail)),
+
+            ElamConflictException elamConflictException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    elamConflictException.PublicDetail)),
+
             PaymentRequestStateConflictException paymentRequestStateConflictException => (
                 StatusCodes.Status409Conflict,
                 BuildProblemDetails(
@@ -891,6 +909,15 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     treasuryBankStatementUnresolveNotAllowedException.PublicDetail)),
 
             // قالب فایل دیسکت بانک هنوز تعریف نشده — IBankStatementFileParser بدون پیاده‌سازی ثبت‌شده.
+            // دیسکت بانک نامعتبر — پیام فارسی قابل نمایش.
+            TreasuryBankStatementFileInvalidException treasuryBankStatementFileInvalidException => (
+                StatusCodes.Status400BadRequest,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status400BadRequest,
+                    "Bad Request",
+                    treasuryBankStatementFileInvalidException.PublicDetail)),
+
             TreasuryBankStatementParserNotConfiguredException treasuryBankStatementParserNotConfiguredException => (
                 StatusCodes.Status409Conflict,
                 BuildProblemDetails(

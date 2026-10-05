@@ -36,6 +36,30 @@ public sealed class TreasuryBankStatementLineRepository : ITreasuryBankStatement
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyCollection<Guid>> GetResolutionVoucherHeadIdsAsync(
+        string vahedCode, CancellationToken cancellationToken = default)
+    {
+        var live =
+            from line in _dbContext.TB_TR_BANK_STATEMENT_LINEs.AsNoTracking()
+            join statement in _dbContext.TB_TR_BANK_STATEMENTs.AsNoTracking() on line.STATEMENT_ID equals statement.ID
+            where !line.ISDELETED && !statement.ISDELETED && statement.VAHEDCODE == vahedCode
+            select line;
+
+        var feeVouchers = await live
+            .Where(l => l.RESOLUTION_VOUCHER_ID != null)
+            .Select(l => l.RESOLUTION_VOUCHER_ID!.Value)
+            .ToListAsync(cancellationToken);
+
+        var receiptVouchers = await (
+            from l in live
+            join r in _dbContext.TB_TR_RECEIPTs.AsNoTracking() on l.RESOLUTION_RECEIPT_ID equals r.ID
+            where r.VOUCHER_ID != null
+            select r.VOUCHER_ID!.Value)
+            .ToListAsync(cancellationToken);
+
+        return feeVouchers.Concat(receiptVouchers).Distinct().ToList();
+    }
+
     public async Task<IReadOnlyCollection<Guid>> GetMatchedVoucherDetailIdsAsync(
         string vahedCode, CancellationToken cancellationToken = default)
     {

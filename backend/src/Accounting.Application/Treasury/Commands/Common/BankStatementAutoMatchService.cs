@@ -72,7 +72,46 @@ public sealed class BankStatementAutoMatchService : IBankStatementAutoMatchServi
         var userId = _currentUser.UserId;
         var matchedCount = 0;
 
-        foreach (var line in unmatchedLines)
+        // گام ۱ — تطبیق با شمارهٔ چک/فیش (کلید سیستم قدیم)، بدون پنجرهٔ ±۳ روز: چک صادره ممکن است
+        // هفته‌ها بعد وصول شود. استخر = ردیف‌های معین بانک از ابتدای سال تا ۳ روز پس از پایان صورت‌حساب.
+        var numbered = unmatchedLines.Where(l => NormalizeDocNo(l.BANK_REFERENCE) is not null).ToList();
+        if (numbered.Count > 0)
+        {
+            var yearStart = (statement.YEAR ?? statement.FROM_DATE[..4]) + "0101";
+            var poolTo = PettyCashSettlementPeriodCalculator.ToJalaliString(
+                PettyCashSettlementPeriodCalculator.ParseJalali(statement.TO_DATE).AddDays(ToleranceDays));
+            var debitPool = await _candidateReadRepository.GetCandidatesAsync(
+                accountCodeId, tafsiliIds, debitSide: true, yearStart, poolTo, vahedCode, claimed, cancellationToken);
+            var creditPool = await _candidateReadRepository.GetCandidatesAsync(
+                accountCodeId, tafsiliIds, debitSide: false, yearStart, poolTo, vahedCode, claimed, cancellationToken);
+
+            foreach (var line in numbered)
+            {
+                var isDeposit = line.DEPOSIT > 0;
+                var lineAmount = isDeposit ? line.DEPOSIT : line.WITHDRAWAL;
+                var docNo = NormalizeDocNo(line.BANK_REFERENCE);
+                var pool = isDeposit ? debitPool : creditPool;
+                var byNumber = pool
+                    .Where(c => !claimed.Contains(c.VoucherDetailId)
+                        && (isDeposit ? c.Debit : c.Credit) == lineAmount
+                        && (NormalizeDocNo(c.DocumentNumber) == docNo || NormalizeDocNo(c.SourceBankReference) == docNo))
+                    .ToList();
+                if (byNumber.Count != 1)
+                {
+                    continue;
+                }
+
+                line.MATCH_STATE = BankStatementLineMatchState.AutoMatched;
+                line.MATCHED_VOUCHERDETAIL_ID = byNumber[0].VoucherDetailId;
+                line.CHANGEUSERID = userId;
+                line.UPDATEDDATE = now;
+                claimed.Add(byNumber[0].VoucherDetailId);
+                matchedCount++;
+            }
+        }
+
+        // گام ۲ — مبلغ و تاریخ (±۳ روز) برای باقی‌مانده.
+        foreach (var line in unmatchedLines.Where(l => l.MATCH_STATE == BankStatementLineMatchState.Unmatched))
         {
             var isDeposit = line.DEPOSIT > 0;
             var lineAmount = isDeposit ? line.DEPOSIT : line.WITHDRAWAL;
@@ -101,6 +140,19 @@ public sealed class BankStatementAutoMatchService : IBankStatementAutoMatchServi
         }
 
         return new BankStatementAutoMatchResult(matchedCount, unmatchedLines.Count - matchedCount);
+    }
+
+    /// <summary>فقط شمارهٔ عددی چک/فیش (بی صفر پیشرو)؛ مرجع غیرعددی مثل «اعلا-01» ⇒ null.</summary>
+    private static string? NormalizeDocNo(string? value)
+    {
+        var v = value?.Trim();
+        if (string.IsNullOrEmpty(v) || !v.All(char.IsAsciiDigit))
+        {
+            return null;
+        }
+
+        var trimmed = v.TrimStart('0');
+        return trimmed.Length == 0 ? null : trimmed;
     }
 
     private static BankStatementBookLineDto? TryMatch(

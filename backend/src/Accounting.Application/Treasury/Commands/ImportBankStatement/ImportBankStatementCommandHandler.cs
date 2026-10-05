@@ -62,7 +62,25 @@ public sealed class ImportBankStatementCommandHandler : IRequestHandler<ImportBa
 
         await using var stream = new MemoryStream(request.Content);
 
-        var parsedLines = await parser.ParseAsync(stream, statement.BANK_ACCOUNT_ID, cancellationToken);
+        var parsedLines = await parser.ParseAsync(stream, statement.BANK_ACCOUNT_ID, request.FileName, cancellationToken);
+
+        // ردیف بیرون از بازهٔ صورت‌حساب ⇒ دیسکت مال دورهٔ دیگری است (معادل «دیسکت مربوط به ماه انتخابی نیست» مرجع).
+        var outOfRange = parsedLines.FirstOrDefault(l =>
+            string.CompareOrdinal(l.LineDate, statement.FROM_DATE) < 0 || string.CompareOrdinal(l.LineDate, statement.TO_DATE) > 0);
+        if (outOfRange is not null)
+        {
+            throw new TreasuryBankStatementFileInvalidException(
+                $"تاریخ ردیف {outOfRange.LineDate} دیسکت در بازهٔ این صورت‌حساب ({statement.FROM_DATE} تا {statement.TO_DATE}) نیست.");
+        }
+
+        // ورود دوبارهٔ همان دیسکت: ردیف هم‌تاریخ، هم‌مرجع و هم‌مبلغ موجود رد می‌شود.
+        var existing = await _lineRepository.GetActiveByStatementAsync(statement.ID, cancellationToken);
+        var existingKeys = existing
+            .Select(l => (l.LINE_DATE, l.BANK_REFERENCE ?? string.Empty, l.WITHDRAWAL, l.DEPOSIT))
+            .ToHashSet();
+        parsedLines = parsedLines
+            .Where(p => !existingKeys.Contains((p.LineDate, p.BankReference ?? string.Empty, p.Withdrawal, p.Deposit)))
+            .ToList();
 
         var now = DateTime.UtcNow;
         var userId = _currentUser.UserId;

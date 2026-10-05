@@ -16,7 +16,7 @@ namespace Accounting.Application.Treasury.Commands.ImportBankStatement;
 /// <c>UploadPettyCashAttachmentCommand</c>.
 /// </summary>
 public sealed record ImportBankStatementCommand(
-    Guid StatementId, byte[] Content) : IRequest<int>, IVahedScopedCommand
+    Guid StatementId, byte[] Content, string? FileName = null) : IRequest<int>, IVahedScopedCommand
 {
     [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;

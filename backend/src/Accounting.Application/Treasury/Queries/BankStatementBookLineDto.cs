@@ -21,4 +21,5 @@ public sealed record BankStatementBookLineDto(
     decimal Debit,
     decimal Credit,
     string? Description,
-    string? SourceBankReference);
+    string? SourceBankReference,
+    string? DocumentNumber = null);

@@ -145,10 +145,13 @@ public static class DependencyInjection
         services.AddScoped<Accounting.Application.Treasury.Commands.Common.ITransferApprovalService,
             Accounting.Application.Treasury.Commands.Common.TransferApprovalService>();
 
-        // خزانه‌داری، بخش ۴-د — مغایرت‌گیری بانکی. IBankStatementFileParser عمداً ثبت نشده (قالب
-        // دیسکت بانک هنوز نیامده)؛ ImportBankStatementCommandHandler آن را اختیاری resolve می‌کند.
+        // خزانه‌داری، بخش ۴-د — مغایرت‌گیری بانکی. IBankStatementFileParser در Infrastructure ثبت می‌شود
+        // (دیسکت بانک رفاه)؛ ImportBankStatementCommandHandler آن را اختیاری resolve می‌کند.
         services.AddScoped<Accounting.Application.Treasury.Commands.Common.IBankFeeVoucherBuilder,
             Accounting.Application.Treasury.Commands.Common.BankFeeVoucherBuilder>();
+
+        // اعلامیه — گردش صادره/رسیده/درآمد.
+        services.AddScoped<Accounting.Application.Elams.ElamWorkflowService>();
         services.AddScoped<Accounting.Application.Treasury.Commands.Common.IBankStatementAutoMatchService,
             Accounting.Application.Treasury.Commands.Common.BankStatementAutoMatchService>();
         services.AddScoped<Accounting.Application.Treasury.Commands.Common.IBankStatementManualMatchService,

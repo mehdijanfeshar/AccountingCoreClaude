@@ -21,13 +21,16 @@ public sealed class GetBankStatementByIdQueryHandler : IRequestHandler<GetBankSt
     private readonly IBankAccountReadRepository _bankAccountReadRepository;
     private readonly ITreasuryBankAccountBalanceReadRepository _balanceReadRepository;
     private readonly IBankStatementBookCandidateReadRepository _candidateReadRepository;
+    private readonly ITreasuryBankStatementLineRepository _lineRepository;
 
     public GetBankStatementByIdQueryHandler(
         ITreasuryBankStatementReadRepository statementReadRepository,
         IBankAccountReadRepository bankAccountReadRepository,
         ITreasuryBankAccountBalanceReadRepository balanceReadRepository,
-        IBankStatementBookCandidateReadRepository candidateReadRepository)
+        IBankStatementBookCandidateReadRepository candidateReadRepository,
+        ITreasuryBankStatementLineRepository lineRepository)
     {
+        _lineRepository = lineRepository;
         _statementReadRepository = statementReadRepository;
         _bankAccountReadRepository = bankAccountReadRepository;
         _balanceReadRepository = balanceReadRepository;
@@ -61,15 +64,27 @@ public sealed class GetBankStatementByIdQueryHandler : IRequestHandler<GetBankSt
         var matchedIds = lines
             .Where(l => l.MatchedVoucherDetailId.HasValue)
             .Select(l => l.MatchedVoucherDetailId!.Value)
+            .Concat(await _lineRepository.GetMatchedVoucherDetailIdsAsync(request.VahedCode, cancellationToken))
+            .Distinct()
             .ToList();
 
+        // «فقط در دفتر» از ابتدای سال، نه فقط بازهٔ صورت‌حساب: چک صادرهٔ ماه‌های قبل که هنوز وصول نشده
+        // (در هیچ صورت‌حسابی تطبیق نخورده) قلم باز صورت مغایرت است. ردیف‌های تطبیق‌شده در هر صورت‌حساب کنار می‌روند.
+        var bookOnlyFrom = year + "0101";
+
         var bookOnlyDeposits = await _candidateReadRepository.GetCandidatesAsync(
-            accountCodeId, tafsiliIds, debitSide: true, header.FromDate, header.ToDate, request.VahedCode, matchedIds, cancellationToken);
+            accountCodeId, tafsiliIds, debitSide: true, bookOnlyFrom, header.ToDate, request.VahedCode, matchedIds, cancellationToken);
 
         var bookOnlyWithdrawals = await _candidateReadRepository.GetCandidatesAsync(
-            accountCodeId, tafsiliIds, debitSide: false, header.FromDate, header.ToDate, request.VahedCode, matchedIds, cancellationToken);
+            accountCodeId, tafsiliIds, debitSide: false, bookOnlyFrom, header.ToDate, request.VahedCode, matchedIds, cancellationToken);
+
+        // ردیف بانکیِ «رفع‌شده» با سند کارمزد یا اتصال به دریافت، قلم دفتری خودش را توضیح داده است —
+        // سطرهای آن سند نباید دوباره «فقط در دفتر» شمرده شوند.
+        var resolvedHeadIds = (await _lineRepository.GetResolutionVoucherHeadIdsAsync(request.VahedCode, cancellationToken))
+            .ToHashSet();
 
         var bookOnly = bookOnlyDeposits.Concat(bookOnlyWithdrawals)
+            .Where(x => !resolvedHeadIds.Contains(x.VoucherHeadId))
             .OrderBy(x => x.VoucherDate)
             .ThenBy(x => x.VoucherNumber)
             .ToList();

@@ -1033,7 +1033,7 @@ public sealed class TreasuryController : ControllerBase
         await using var stream = new MemoryStream();
         await request.File.CopyToAsync(stream, cancellationToken);
 
-        var count = await _mediator.Send(new ImportBankStatementCommand(id, stream.ToArray()), cancellationToken);
+        var count = await _mediator.Send(new ImportBankStatementCommand(id, stream.ToArray(), request.File.FileName), cancellationToken);
 
         return Ok(new ImportBankStatementResponse(id, count));
     }

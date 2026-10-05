@@ -102,6 +102,12 @@ public static class DependencyInjection
         // Reads the same verified view as the matrix report, crossed on two axes instead of one.
         services.AddScoped<IMatrixReportReadRepository, MatrixReportReadRepository>();
         services.AddScoped<IVoucherReviewReadRepository, VoucherReviewReadRepository>();
+        services.AddScoped<IAttributeAccountReconciliationReadRepository, AttributeAccountReconciliationReadRepository>();
+        services.AddScoped<IElamWorkflowRepository, ElamWorkflowRepository>();
+        services.AddScoped<IElamWorkflowReadRepository, ElamWorkflowReadRepository>();
+        services.AddScoped<IBankCardRepository, BankCardRepository>();
+        // اعلامیهٔ درآمد — وب‌سرویس SOAP سامانهٔ سبا (درآمد) (آدرس: ElamDrmd:Url).
+        services.AddScoped<Accounting.Application.Elams.IRevenueElamSender, Accounting.Infrastructure.Services.ElamDrmdWebService>();
         services.AddScoped<IAccountJournalReadRepository, AccountJournalReadRepository>();
         services.AddScoped<IWorkShopReadRepository, WorkShopReadRepository>();
 
@@ -252,10 +258,9 @@ public static class DependencyInjection
         services.AddScoped<ITreasuryBankStatementLineRepository, TreasuryBankStatementLineRepository>();
         services.AddScoped<IBankStatementBookCandidateReadRepository, BankStatementBookCandidateReadRepository>();
         services.AddScoped<ITreasuryDashboardReadRepository, TreasuryDashboardReadRepository>();
-        // IBankStatementFileParser — عمداً هیچ پیاده‌سازی‌ای اینجا ثبت نشده (صاحب پروژه، ۲۰۲۶-۰۹-۲۹):
-        // قالب فایل دیسکت بانک هنوز تعریف نشده. ImportBankStatementCommandHandler آن را از
-        // IServiceProvider (نه constructor injection) می‌خواند تا نبودش DI را در startup نشکند —
-        // رجوع IBankStatementFileParser XML doc برای نحوهٔ افزودن یک پیاده‌سازی واقعی بعداً.
+        // دیسکت حساب جاری بانک رفاه (STM001، ۱۳۹ کاراکتری) — قالب عین ImportDisketCommandHandler مرجع
+        // (۲۰۲۶-۱۰-۰۵). بانک دیگری که آمد، پیاده‌سازی جدا و انتخاب بر اساس بانکِ حساب.
+        services.AddScoped<IBankStatementFileParser, Accounting.Infrastructure.Services.RefahBankStatementFileParser>();
 
         services.AddTaminTokenManager(config => PopulateTokenManagerConfiguration(config, configuration));
 

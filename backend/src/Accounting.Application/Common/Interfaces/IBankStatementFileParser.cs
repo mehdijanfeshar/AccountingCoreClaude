@@ -36,6 +36,7 @@ public interface IBankStatementFileParser
     /// Parses <paramref name="content"/> into statement lines for <paramref name="bankAccountId"/>.
     /// Implementations own their own format-specific validation; this seam does not prescribe one.
     /// </summary>
+    /// <param name="fileName">نام فایل بارگذاری‌شده (برخی قالب‌ها نام ثابت دارند، مثل <c>STM001</c> بانک رفاه).</param>
     Task<IReadOnlyList<ParsedBankStatementLine>> ParseAsync(
-        Stream content, Guid bankAccountId, CancellationToken cancellationToken = default);
+        Stream content, Guid bankAccountId, string? fileName, CancellationToken cancellationToken = default);
 }

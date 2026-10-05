@@ -31,6 +31,13 @@ public interface ITreasuryBankStatementLineRepository
     /// Backs the auto-match/manual-match/book-candidates exclusion set on
     /// <see cref="IBankStatementBookCandidateReadRepository.GetCandidatesAsync"/>.
     /// </summary>
+    /// <summary>
+    /// سرسندهای اسنادی که در هر صورت‌حساب واحد یک ردیف بانکی را «رفع» کرده‌اند — سند کارمزد، یا سند دریافتِ
+    /// متصل‌شده. این‌ها در «فقط در دفتر» شمرده نمی‌شوند.
+    /// </summary>
+    Task<IReadOnlyCollection<Guid>> GetResolutionVoucherHeadIdsAsync(
+        string vahedCode, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyCollection<Guid>> GetMatchedVoucherDetailIdsAsync(
         string vahedCode, CancellationToken cancellationToken = default);
 

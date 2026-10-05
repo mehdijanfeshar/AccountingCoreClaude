@@ -72,6 +72,8 @@ public sealed class BankStatementBookCandidateReadRepository : IBankStatementBoo
                 Debit = x.detail.DEBTOR ?? 0m,
                 Credit = x.detail.CREDITOR ?? 0m,
                 x.detail.DESCRIPTION,
+                x.detail.CHECK_ID,
+                x.detail.RECEIP_ID,
             })
             .ToListAsync(cancellationToken);
 
@@ -119,6 +121,21 @@ public sealed class BankStatementBookCandidateReadRepository : IBankStatementBoo
             }
         }
 
+        // شمارهٔ چک/فیش خود ردیف سند (CHECK_ID/RECEIP_ID) — برای تطبیق با شمارهٔ چک/فیش دیسکت بانک،
+        // همان کلید تطبیق سیستم قدیم (ReconciliationCommandHandler).
+        var checkIds = rows.Where(r => r.CHECK_ID != null).Select(r => r.CHECK_ID!.Value).Distinct().ToList();
+        var receiptIds = rows.Where(r => r.RECEIP_ID != null).Select(r => r.RECEIP_ID!.Value).Distinct().ToList();
+        var chequeNoById = checkIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await _dbContext.TB_CHECKs.AsNoTracking()
+                .Where(c => checkIds.Contains(c.ID))
+                .ToDictionaryAsync(c => c.ID, c => c.CHEQ_NO, cancellationToken);
+        var receiptNoById = receiptIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await _dbContext.TB_RECEIPs.AsNoTracking()
+                .Where(c => receiptIds.Contains(c.ID))
+                .ToDictionaryAsync(c => c.ID, c => c.RECEIPT_NO, cancellationToken);
+
         return rows.Select(r => new BankStatementBookLineDto(
             r.ID,
             r.HeadId,
@@ -127,7 +144,9 @@ public sealed class BankStatementBookCandidateReadRepository : IBankStatementBoo
             r.Debit,
             r.Credit,
             r.DESCRIPTION,
-            bankRefByHeadId.TryGetValue(r.HeadId, out var bankRef) ? bankRef : null))
+            bankRefByHeadId.TryGetValue(r.HeadId, out var bankRef) ? bankRef : null,
+            r.CHECK_ID is { } cid && chequeNoById.TryGetValue(cid, out var cno) ? cno
+                : r.RECEIP_ID is { } rid && receiptNoById.TryGetValue(rid, out var rno) ? rno : null))
             .ToList();
     }
 }
