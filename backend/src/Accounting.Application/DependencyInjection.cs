@@ -160,6 +160,9 @@ public static class DependencyInjection
         // دفتر چک — چک ردیف سند.
         services.AddScoped<Accounting.Application.Vouchers.Commands.Common.IVoucherChequeService,
             Accounting.Application.Vouchers.Commands.Common.VoucherChequeService>();
+        // شناسه/ویژگی/فیش ردیف سند.
+        services.AddScoped<Accounting.Application.Vouchers.Commands.Common.IVoucherLineExtrasService,
+            Accounting.Application.Vouchers.Commands.Common.VoucherLineExtrasService>();
         services.AddScoped<Accounting.Application.Treasury.Commands.Common.IBankStatementAutoMatchService,
             Accounting.Application.Treasury.Commands.Common.BankStatementAutoMatchService>();
         services.AddScoped<Accounting.Application.Treasury.Commands.Common.IBankStatementManualMatchService,

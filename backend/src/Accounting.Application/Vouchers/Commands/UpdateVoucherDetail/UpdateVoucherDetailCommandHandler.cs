@@ -64,6 +64,7 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
     private readonly ICurrentUser _currentUser;
     private readonly IVoucherTafsiliLevelGuard _tafsiliLevelGuard;
     private readonly IVoucherChequeService? _chequeService;
+    private readonly IVoucherLineExtrasService? _extrasService;
 
     public UpdateVoucherDetailCommandHandler(
         IVoucherDetailRepository voucherDetailRepository,
@@ -71,9 +72,11 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
         IVoucherTafsiliLevelGuard tafsiliLevelGuard,
-        IVoucherChequeService? chequeService = null)
+        IVoucherChequeService? chequeService = null,
+        IVoucherLineExtrasService? extrasService = null)
     {
         _chequeService = chequeService;
+        _extrasService = extrasService;
         _voucherDetailRepository = voucherDetailRepository;
         _voucherHeadRepository = voucherHeadRepository;
         _unitOfWork = unitOfWork;
@@ -138,6 +141,18 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
             entity.CHECK_ID = await _chequeService.ApplyAsync(
                 request.CheckId, entity.ID, checkChanged: previousCheckId != request.CheckId, request.Cheque,
                 request.VahedCode, cancellationToken);
+        }
+
+        // شناسه/ویژگی/فیش — Extras=null یعنی «دست نزن»؛ وگرنه با مقادیر تازه جایگزین می‌شوند.
+        if (_extrasService is not null && request.Extras is not null)
+        {
+            var tafsiliIds = request.TafsiliLinks is not null
+                ? request.TafsiliLinks.Select(l => l.TafsiliId).ToList()
+                : (await _voucherDetailRepository.GetActiveTafsiliLinksAsync(entity.ID, cancellationToken))
+                    .Where(l => l.ISDELETED != true)
+                    .Select(l => l.TAFSILI_ID)
+                    .ToList();
+            await _extrasService.ApplyAsync(entity, tafsiliIds, request.Extras, replace: true, cancellationToken);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

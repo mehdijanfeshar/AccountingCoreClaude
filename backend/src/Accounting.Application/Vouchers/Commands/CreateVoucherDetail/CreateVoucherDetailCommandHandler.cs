@@ -56,6 +56,7 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
     private readonly ICurrentUser _currentUser;
     private readonly IVoucherTafsiliLevelGuard _tafsiliLevelGuard;
     private readonly IVoucherChequeService? _chequeService;
+    private readonly IVoucherLineExtrasService? _extrasService;
 
     public CreateVoucherDetailCommandHandler(
         IVoucherHeadRepository voucherHeadRepository,
@@ -63,9 +64,11 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
         IVoucherTafsiliLevelGuard tafsiliLevelGuard,
-        IVoucherChequeService? chequeService = null)
+        IVoucherChequeService? chequeService = null,
+        IVoucherLineExtrasService? extrasService = null)
     {
         _chequeService = chequeService;
+        _extrasService = extrasService;
         _voucherHeadRepository = voucherHeadRepository;
         _voucherDetailRepository = voucherDetailRepository;
         _unitOfWork = unitOfWork;
@@ -161,6 +164,13 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
 
                 await _voucherDetailRepository.AddTafsiliLinkAsync(linkEntity, cancellationToken);
             }
+        }
+
+        // شناسهٔ حساب شناسه‌دار، ویژگی تفصیلی/حساب و فیش بانک — الزامی‌ها همین‌جا هم کنترل می‌شوند (نه فقط UI).
+        if (_extrasService is not null)
+        {
+            var tafsiliIds = (request.TafsiliLinks ?? []).Select(l => l.TafsiliId).ToList();
+            await _extrasService.ApplyAsync(entity, tafsiliIds, request.Extras, replace: false, cancellationToken);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

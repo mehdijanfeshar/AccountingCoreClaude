@@ -576,6 +576,15 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Forbidden",
                     roleAccessDeniedException.PublicDetail)),
 
+            // شناسه/ویژگی/فیش ردیف سند ناقص یا نادرست.
+            Accounting.Application.Vouchers.Commands.Common.VoucherLineExtrasException voucherLineExtrasException => (
+                StatusCodes.Status422UnprocessableEntity,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status422UnprocessableEntity,
+                    "Unprocessable Entity",
+                    voucherLineExtrasException.PublicDetail)),
+
             ChequeConflictException chequeConflictException => (
                 StatusCodes.Status409Conflict,
                 BuildProblemDetails(

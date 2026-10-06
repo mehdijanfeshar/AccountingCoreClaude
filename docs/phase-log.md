@@ -16,6 +16,26 @@
 
 ---
 
+### فاز ۵۱ / حسابیار — تکمیل ثبت سند، هوش مصنوعی و گزارش‌ساز (۲۰۲۶-۱۰-۰۶، هر دو ریپو، برنچ `hesabyar`)
+
+جزئیات کامل: `docs/agent-ux.md`. ⚠️ DDL `068`–`072` فقط به دست صاحب پروژه (`070`/`071` لازم برای همهٔ `/api/operations`؛ `072` فقط گزارش‌های ذخیره‌شده). تست نوشته نشد (تصمیم فعلی صاحب پروژه).
+- **طراح الگو** (`/assistant/templates`): ویرایش/فعال‌سازی، نوع سند (`068`، «انبار» با DML `069`)، کلمات کلیدی (`070`)، نوع واحدهای مجاز (`071`)، «آزمایش الگو» بدون ذخیره، آمار استفاده. اصلاح: enum با `HasColumnType("NUMBER(1)")` روی Oracle bool خوانده می‌شد (حذف شد)؛ فرزندان جدید با کلید از‌پیش‌تعیین ⇒ `AddRange` صریح + `ValueGeneratedNever`.
+- **فهم جمله (بدون AI):** کلمات کلیدی، مبلغ/تاریخ/طرف حساب/شرح تمیز از جمله؛ شرح بی‌کلمهٔ تکراری (`RemoveRepeatedWords` در موتور)؛ تاریخ سند = اولین سؤال تاریخ الگو (`TemplateVoucherDate`)؛ سال مالی (`FiscalYearGuard`، `?year=`).
+- **شناسه/ویژگی/فیش ردیف سند** — سرویس مشترک `VoucherLineExtrasService` در ایجاد/ویرایش ردیف فرم سند معمولی و حسابیار: شناسهٔ حساب شناسه‌دار (معین یا کل) الزامی با نوع/طول/کنترل؛ ویژگی تفصیلی/حساب ⇒ شناسنامه + همهٔ فیلدهای متغیر؛ بانک بدهکار ⇒ فیش/حواله، بستانکار ⇒ چک/صوری. ۴۲۲ با `VoucherLineExtrasException`. ⚠️ از این پس فرم ثبت سند معمولی هم بدون شناسه/ویژگی الزامی رد می‌شود.
+- **حسابیار:** «عملیات‌های اخیر من» / «تکرار» / «مثل دفعهٔ قبل»، صفحهٔ «سندهای حسابیار» (`/assistant/history`)، قفل دوره (`FsPeriodGuard`) **فقط در حسابیار**، فیلتر الگو به نوع واحد (`AssistantUnitPolicy`)، دیالوگ تکمیل ردیف‌ها هنگام ثبت.
+- **هوش مصنوعی (فاز ۲):** `POST api/operations/interpret` — `IIntentInterpreter` با Claude/Ollama/خاموش (`Assistant:Llm`، پیش‌فرض خاموش)؛ فقط جمله + فهرست الگوها به مدل؛ خروجی دوباره اعتبارسنجی؛ هرگز Preview/Execute.
+- **گزارش‌ساز:** «گزارش با حسابیار» (`/assistant/reports`) چهار گزارش موجود را با پارامترهای برداشت‌شده از جمله با آدرس پارامتردار باز می‌کند (`reportUrlParams.ts`؛ صفحه‌های گزارش فقط مقدار اولیه از آدرس می‌گیرند)؛ «گزارش‌های ذخیره‌شده» (`072`، فقط تعریف، نه نتیجه).
+
+### فاز ۵۰ / Agent-UX ۱ — الگوی عملیات و موتور تولید سند (۲۰۲۶-۱۰-۰۶، هر دو ریپو)
+
+- افزودهٔ دوم: «سند کامل» (`compose/preview|execute`) با همهٔ فیلدهای فرم صدور سند، و فرانت ماژول جدای «حسابیار» (`/assistant`، `src/features/assistant`). جزئیات در `docs/agent-ux.md`.
+
+ماژول جدید و جدا (`OperationTemplates`)؛ هیچ کد موجودی تغییر نکرد جز یک خط `AddOperationTemplates()` در `Program.cs`. طرح و تصمیم‌های ادغام: `docs/agent-ux.md`.
+- Domain `Accounting.Domain/OperationTemplates`، Application `Accounting.Application/OperationTemplates` (موتور، Validator تعریف الگو، Preview/Execute/List/Create، `VoucherWriter`)، Infrastructure `Accounting.Infrastructure/OperationTemplates` (نگاشت از قلاب `OnModelCreatingPartial`، خواننده‌های معین/تفصیلی)، API `api/operations`.
+- شناسه‌ها Guid/`CHAR(36)`؛ واحد = `VahedCode` از `IVahedScoped`؛ هر سطح معین چند گروه تفصیلی دارد و دسترسی واحد = قاعدهٔ B روی `TB_TAFSIL_LINK_TAFSILGROUP`.
+- ثبت سند از مسیر سندهای خودکار خزانه (شمارهٔ بعدی، گارد تفصیلی الزامی، موقت، `ISAUTOMATIC`) و `TB_OP_EXECUTION` در **یک SaveChanges**؛ `UK_OP_EXEC_CLIENT_REQ` جلوی سند دوم را می‌گیرد.
+- ⚠️ DDL `067_operation_templates.sql` لازم است (فقط `/api/operations` بدون آن خطا می‌دهد). تست نوشته نشد (تصمیم فعلی صاحب پروژه)؛ `VoucherGenerationEngineTests` اصلی هنوز پورت نشده.
+
 ### فاز ۴۹-ب / اوراق چک (۲۰۲۶-۱۰-۰۵، هر دو ریپو)
 
 - **ریسک ۲-ج بسته شد** (عین `CheckBook.AddCheckPapers` مرجع): `CreateCheckBook` به‌ازای هر شماره از «اولین برگ» تا «آخرین برگ» یک ردیف `TB_CHECK` می‌سازد (هم‌طول با صفر پیشرو، ابطال‌نشده، چاپ‌نشده). منطق در `Application/CheckBooks/CheckBookLeaves.cs`.

@@ -4,6 +4,8 @@ using Accounting.Application;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Common.Security;
 using Accounting.Infrastructure;
+using Accounting.Infrastructure.OperationTemplates;
+using Accounting.Infrastructure.OperationTemplates.Agent;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -51,6 +53,9 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddOperationTemplates();
+// هوش مصنوعی حسابیار (Agent-UX فاز ۲) — پیش‌فرض خاموش؛ بخش Assistant:Llm در appsettings.
+builder.Services.AddAssistantLlm(builder.Configuration);
 
 // --- Authentication (Tamin org IDP, JWT Bearer) ------------------------------------------------
 //

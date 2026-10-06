@@ -72,7 +72,8 @@ public sealed record CreateVoucherDetailCommand(
     decimal? Creditor,
     string? Year,
     IReadOnlyList<VoucherDetailTafsiliLinkInput>? TafsiliLinks = null,
-    VoucherChequeInfoInput? Cheque = null) : IRequest<Guid>, IVahedScopedCommand
+    VoucherChequeInfoInput? Cheque = null,
+    VoucherLineExtrasInput? Extras = null) : IRequest<Guid>, IVahedScopedCommand
 {
     /// <summary>
     /// VAHEDCODE column (max 4 chars) — organizational unit for this line AND, per
