@@ -26,9 +26,14 @@ public static class TafsiliScopePolicy
         Owners? requestedOwner,
         VahedCategory? requestedVahedType,
         VahedCategory? requestedLinkVahedType,
-        CancellationToken ct)
+        CancellationToken ct,
+        IHeadquartersAccessService? hq = null)
     {
-        if (await HeadquartersAccess.IsHeadquartersAdminAsync(user, unitAccess, ct))
+        // فاز ۵۴: قابلیت «tafsili.scope» (پیش‌فرض: کاربر ستاد مرکزی).
+        var canSetScope = hq is null
+            ? await HeadquartersAccess.IsHeadquartersAdminAsync(user, unitAccess, ct)
+            : await hq.HasAbilityAsync(AbilityCatalog.TafsiliScope, ct);
+        if (canSetScope)
         {
             var linkType = requestedLinkVahedType;
             return new Scope(

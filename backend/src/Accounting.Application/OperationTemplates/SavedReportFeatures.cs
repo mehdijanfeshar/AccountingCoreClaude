@@ -124,12 +124,15 @@ public sealed class CreateSavedReportHandler : IRequestHandler<CreateSavedReport
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
-    public CreateSavedReportHandler(ISavedReportRepository repo, IUnitOfWork unitOfWork, ICurrentUser currentUser)
-    { _repo = repo; _unitOfWork = unitOfWork; _currentUser = currentUser; }
+    private readonly IHeadquartersAccessService? _hq;
+
+
+    public CreateSavedReportHandler(ISavedReportRepository repo, IUnitOfWork unitOfWork, ICurrentUser currentUser, IHeadquartersAccessService? hq = null)
+    { _repo = repo; _unitOfWork = unitOfWork; _currentUser = currentUser; _hq = hq; }
 
     public async Task<SavedReportWriteResult> Handle(CreateSavedReportCommand c, CancellationToken ct)
     {
-        TemplateMapping.EnsureSetad(_currentUser);
+        await TemplateMapping.EnsureAbilityAsync(_currentUser, _hq, AbilityCatalog.SavedReportsDefine, "گزارش ذخیره‌شده", ct);
         var code = c.Code?.Trim().ToUpperInvariant() ?? "";
         var vahedTypes = TemplateMapping.JoinVahedTypes(c.AllowedVahedTypes);
         var errors = SavedReportRules.Validate(code, c.Title?.Trim() ?? "", c.Description, c.Keywords, c.ReportKind ?? "", c.SettingsJson ?? "", vahedTypes);
@@ -178,12 +181,15 @@ public sealed class UpdateSavedReportHandler : IRequestHandler<UpdateSavedReport
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
-    public UpdateSavedReportHandler(ISavedReportRepository repo, IUnitOfWork unitOfWork, ICurrentUser currentUser)
-    { _repo = repo; _unitOfWork = unitOfWork; _currentUser = currentUser; }
+    private readonly IHeadquartersAccessService? _hq;
+
+
+    public UpdateSavedReportHandler(ISavedReportRepository repo, IUnitOfWork unitOfWork, ICurrentUser currentUser, IHeadquartersAccessService? hq = null)
+    { _repo = repo; _unitOfWork = unitOfWork; _currentUser = currentUser; _hq = hq; }
 
     public async Task<SavedReportWriteResult> Handle(UpdateSavedReportCommand c, CancellationToken ct)
     {
-        TemplateMapping.EnsureSetad(_currentUser);
+        await TemplateMapping.EnsureAbilityAsync(_currentUser, _hq, AbilityCatalog.SavedReportsDefine, "گزارش ذخیره‌شده", ct);
         var code = c.Code?.Trim().ToUpperInvariant() ?? "";
         var vahedTypes = TemplateMapping.JoinVahedTypes(c.AllowedVahedTypes);
         var errors = SavedReportRules.Validate(code, c.Title?.Trim() ?? "", c.Description, c.Keywords, c.ReportKind ?? "", c.SettingsJson ?? "", vahedTypes);
@@ -216,12 +222,15 @@ public sealed class SetSavedReportActiveHandler : IRequestHandler<SetSavedReport
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
-    public SetSavedReportActiveHandler(ISavedReportRepository repo, IUnitOfWork unitOfWork, ICurrentUser currentUser)
-    { _repo = repo; _unitOfWork = unitOfWork; _currentUser = currentUser; }
+    private readonly IHeadquartersAccessService? _hq;
+
+
+    public SetSavedReportActiveHandler(ISavedReportRepository repo, IUnitOfWork unitOfWork, ICurrentUser currentUser, IHeadquartersAccessService? hq = null)
+    { _repo = repo; _unitOfWork = unitOfWork; _currentUser = currentUser; _hq = hq; }
 
     public async Task<Unit> Handle(SetSavedReportActiveCommand c, CancellationToken ct)
     {
-        TemplateMapping.EnsureSetad(_currentUser);
+        await TemplateMapping.EnsureAbilityAsync(_currentUser, _hq, AbilityCatalog.SavedReportsDefine, "گزارش ذخیره‌شده", ct);
         var r = await _repo.GetForUpdateAsync(c.Id, ct) ?? throw new NotFoundException("SavedReport", c.Id);
         r.IsActive = c.IsActive;
         await _unitOfWork.SaveChangesAsync(ct);

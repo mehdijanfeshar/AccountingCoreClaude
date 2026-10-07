@@ -50,6 +50,11 @@ public interface ICurrentUser
     /// <summary>نقش‌های سامانهٔ مالی کاربر (زیرمجموعهٔ <see cref="Security.AppRoles.All"/>).</summary>
     IReadOnlyList<string> FinancialRoles => Security.AppRoles.All.Where(IsInRole).ToList();
 
+    /// <summary>
+    /// همهٔ نقش‌های توکن (نه فقط ۸ نقش ثابت) — برای نقش‌هایی که مدیر ستاد در «دسترسی نقش‌ها» تعریف می‌کند (فاز ۵۴).
+    /// </summary>
+    IReadOnlyList<string> AllRoles => FinancialRoles;
+
     /// <summary>عیب‌یابی نقش در <c>/api/me</c>: نام claimهای توکن و مقدارهای شبیه نقش.</summary>
     IReadOnlyList<string> TokenDiagnostics => Array.Empty<string>();
 }

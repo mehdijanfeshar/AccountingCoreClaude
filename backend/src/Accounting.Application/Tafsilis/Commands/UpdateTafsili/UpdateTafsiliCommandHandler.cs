@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Security;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
@@ -37,12 +38,17 @@ public sealed class UpdateTafsiliCommandHandler : IRequestHandler<UpdateTafsiliC
     private readonly ICurrentUser _currentUser;
     private readonly IUnitAccessReadRepository _unitAccess;
 
+    private readonly IHeadquartersAccessService? _hq;
+
+
     public UpdateTafsiliCommandHandler(
         ITafsiliRepository tafsiliRepository,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
-        IUnitAccessReadRepository unitAccess)
+        IUnitAccessReadRepository unitAccess,
+        IHeadquartersAccessService? hq = null)
     {
+        _hq = hq;
         _tafsiliRepository = tafsiliRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
@@ -59,7 +65,7 @@ public sealed class UpdateTafsiliCommandHandler : IRequestHandler<UpdateTafsiliC
         }
 
         var scope = await TafsiliScopePolicy.ResolveAsync(
-            _currentUser, _unitAccess, request.VahedCode, request.Owner, request.VahedType, request.TafsilGroupLinkVahedType, cancellationToken);
+            _currentUser, _unitAccess, request.VahedCode, request.Owner, request.VahedType, request.TafsilGroupLinkVahedType, cancellationToken, _hq);
 
         entity.TAFSILI_CODE = request.TafsiliCode;
         entity.TAFSILI_NAME = request.TafsiliName;

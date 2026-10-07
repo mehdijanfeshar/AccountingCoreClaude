@@ -212,6 +212,9 @@ public partial class LegacyDbContext : DbContext
 
     public virtual DbSet<TB_MONTH_CLOSE_LOG> TB_MONTH_CLOSE_LOGs { get; set; }
 
+    // DDL 075 — دسترسی نقش‌ها به منوها (فاز ۵۴).
+    public virtual DbSet<TB_ROLE_MENU_ACCESS> TB_ROLE_MENU_ACCESSes { get; set; }
+
     public virtual DbSet<TB_FS_RUN_MANUAL> TB_FS_RUN_MANUALs { get; set; }
 
     // خزانه‌داری، بخش ۴-ج (۲۰۲۶-۰۹-۲۹) — دریافت وجه + انتقال وجه.
@@ -3061,6 +3064,37 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.USEDDATE).HasPrecision(6);
             entity.Property(e => e.REVERTED_COUNT).HasColumnType("NUMBER(6)");
+        });
+
+        // DDL 075 — دسترسی نقش‌ها به منوها.
+        modelBuilder.Entity<TB_ROLE_MENU_ACCESS>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_ROLE_MENU_ACCESS");
+
+            entity.ToTable("TB_ROLE_MENU_ACCESS");
+
+            entity.HasIndex(e => new { e.ROLE_NAME, e.MENU_KEY }, "UK_ROLE_MENU_ACCESS").IsUnique();
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.ROLE_NAME)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+            entity.Property(e => e.MENU_KEY)
+                .HasMaxLength(100)
+                .IsUnicode(false);
+            entity.Property(e => e.ACCESS_LEVEL).HasColumnType("NUMBER(2)");
+            entity.Property(e => e.ADDUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+            entity.Property(e => e.CHANGEUSERID)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
         });
 
         // DDL 074 — لاگ صورتحساب ماه.

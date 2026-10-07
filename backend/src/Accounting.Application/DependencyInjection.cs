@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(VahedScopeBehavior<,>));
         // دامنهٔ چندواحدی گزارش‌ها (همهٔ واحدها / زیرمجموعه / گروه درمانی-بیمه‌ای-ستادی) — پس از تعیین واحد.
         services.AddScoped<Accounting.Application.Common.Security.IReportUnitScope, Accounting.Application.Common.Security.ReportUnitScope>();
+        services.AddScoped<Accounting.Application.Common.Security.IHeadquartersAccessService, Accounting.Application.Common.Security.HeadquartersAccessService>();
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(Accounting.Application.Common.Security.ReportUnitScopeBehavior<,>));
         // ط-۲ — دسترسی سه‌بُعدی صورت‌های مالی؛ پس از تعیین واحد (VahedCode) و پیش از اعتبارسنجی.
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(Accounting.Application.FinancialStatements.Access.FsPermissionBehavior<,>));

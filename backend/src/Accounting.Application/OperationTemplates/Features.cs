@@ -269,15 +269,17 @@ public sealed class CreateOperationTemplateHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
+    private readonly IHeadquartersAccessService? _hq;
+
+
     public CreateOperationTemplateHandler(IOperationTemplateRepository repo,
-        TemplateDefinitionValidator validator, IUnitOfWork unitOfWork, ICurrentUser currentUser)
-    { _repo = repo; _validator = validator; _unitOfWork = unitOfWork; _currentUser = currentUser; }
+        TemplateDefinitionValidator validator, IUnitOfWork unitOfWork, ICurrentUser currentUser, IHeadquartersAccessService? hq = null)
+    { _repo = repo; _validator = validator; _unitOfWork = unitOfWork; _currentUser = currentUser; _hq = hq; }
 
     public async Task<CreateTemplateResult> Handle(CreateOperationTemplateCommand c, CancellationToken ct)
     {
         // RoleAuthorizationBehavior فقط OperationWriters را گذرانده؛ الگو سراسری است ⇒ فقط مدیر ستاد.
-        if (!_currentUser.IsInRole(AppRoles.SetadAdmin))
-            throw new RoleAccessDeniedException("تعریف الگوی عملیات فقط با نقش «مدیر ستاد» ممکن است.");
+        await TemplateMapping.EnsureAbilityAsync(_currentUser, _hq, AbilityCatalog.TemplatesDefine, "الگوی عملیات", ct);
 
         var t = TemplateMapping.Build(Guid.NewGuid(), c.Code, c.Title, c.Description, c.VoucherDescriptionPattern,
             c.Parameters, c.Lines, c.SystemTypeId, c.Keywords, c.AllowedVahedTypes);

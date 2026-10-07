@@ -59,3 +59,9 @@ VITE_KEYCLOAK_CLIENT_ID=accounting-ui
 - روی آدرس http غیر از localhost مرورگر `crypto.subtle` نمی‌دهد ⇒ فرانت بدون PKCE وارد می‌شود (`disablePKCE`) و کلاینت توسعه PKCE را اجباری نکرده است. **محیط واقعی: HTTPS و PKCE اجباری (`pkce.code.challenge.method = S256`).**
 - فایروال ویندوز باید پورت 8180 را برای ورودی باز بگذارد.
 - IIS (`D:\AiProj\Publish\appsettings.Development.json`): `Auth:Provider = Keycloak` و `Keycloak:Authority = http://<IP>:8180/realms/accounting`، `RequireHttpsMetadata = false`. برگشت: `Provider = Tamin`.
+
+## نقش تازه و دسترسی منوها (فاز ۵۴)
+
+1. در Keycloak: Clients ← `accounting-api` ← Roles ← Create role (مثلاً `ACCOUNTING CLERK`) و در Users ← Role mapping به کاربر بدهید.
+2. در برنامه (مدیر ستاد): اطلاعات پایه ← «دسترسی نقش‌ها» ← «نقش تازه» با همان نام ← سطح هر منو ← ذخیره.
+3. بار اول (پس از DDL `075`) «پر کردن با پیش‌فرض فعلی» را بزنید تا هفت نقش ثابت با رفتار فعلی ذخیره شوند.

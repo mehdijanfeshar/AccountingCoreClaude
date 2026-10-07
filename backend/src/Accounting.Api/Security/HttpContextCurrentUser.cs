@@ -116,6 +116,20 @@ public sealed class HttpContextCurrentUser : ICurrentUser
         return RoleLikeValues(user).Contains(role, StringComparer.OrdinalIgnoreCase);
     }
 
+    public IReadOnlyList<string> AllRoles
+    {
+        get
+        {
+            var user = _httpContextAccessor.HttpContext?.User;
+            if (user is null)
+                return Array.Empty<string>();
+            return user.FindAll(ClaimTypes.Role).Select(c => c.Value)
+                .Concat(RoleLikeValues(user))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+    }
+
     /// <summary>عیب‌یابی نقش: نام همهٔ claimهای توکن و مقدار claimهای شبیه نقش (فقط برای خود کاربر در <c>/api/me</c>).</summary>
     public IReadOnlyList<string> TokenDiagnostics
     {

@@ -87,12 +87,15 @@ public sealed class ReportUnitScopeBehavior<TRequest, TResponse> : IPipelineBeha
     private readonly IUnitAccessReadRepository _unitAccess;
     private readonly IReportUnitScope _scope;
     private readonly ICurrentUser _currentUser;
+    private readonly IHeadquartersAccessService? _hq;
 
-    public ReportUnitScopeBehavior(IUnitAccessReadRepository unitAccess, IReportUnitScope scope, ICurrentUser currentUser)
+    public ReportUnitScopeBehavior(
+        IUnitAccessReadRepository unitAccess, IReportUnitScope scope, ICurrentUser currentUser, IHeadquartersAccessService? hq = null)
     {
         _unitAccess = unitAccess;
         _scope = scope;
         _currentUser = currentUser;
+        _hq = hq;
     }
 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
@@ -100,8 +103,11 @@ public sealed class ReportUnitScopeBehavior<TRequest, TResponse> : IPipelineBeha
         if (request is not IMultiUnitReportQuery q || (q.UnitScope == ReportUnitScopeMode.Self && q.UnitCategory is null))
             return await next(cancellationToken);
 
-        if (q.UnitScope == ReportUnitScopeMode.AllUnits && !await CanSeeAllUnitsAsync(cancellationToken))
-            throw new RoleAccessDeniedException("گزارش «همهٔ واحدها» فقط با نقش مدیریتی سطح کشور یا مدیر ستاد (کاربر واحد ستاد مرکزی) ممکن است.");
+        // فاز ۵۴: «همهٔ واحدها» و انتخاب گروه واحد (بیمه‌ای/درمانی/ستادی) = قابلیت reports.unit-category
+        // (پیش‌فرض: مدیر ستاد مرکزی یا نقش مدیریتی سطح کشور).
+        if ((q.UnitScope == ReportUnitScopeMode.AllUnits || q.UnitCategory is not null) && !await CanSeeAllUnitsAsync(cancellationToken))
+            throw new RoleAccessDeniedException(
+                "گزارش «همهٔ واحدها» و انتخاب گروه واحد (بیمه‌ای/درمانی/ستادی) فقط برای کاربر ستاد مرکزی، نقش مدیریتی سطح کشور یا نقشی که این قابلیت را دارد ممکن است.");
 
         var all = await _unitAccess.GetAllUnitsAsync(cancellationToken);
         IEnumerable<UnitNode> units = q.UnitScope switch
@@ -122,6 +128,8 @@ public sealed class ReportUnitScopeBehavior<TRequest, TResponse> : IPipelineBeha
 
     private async Task<bool> CanSeeAllUnitsAsync(CancellationToken cancellationToken)
     {
+        if (_hq is not null)
+            return await _hq.HasAbilityAsync(AbilityCatalog.ReportsUnitCategory, cancellationToken);
         if (_currentUser.IsInRole(AppRoles.National))
             return true;
         if (!_currentUser.IsInRole(AppRoles.SetadAdmin) || _currentUser.VahedCode is not { Length: > 0 } own)

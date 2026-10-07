@@ -184,12 +184,16 @@ public sealed class OperationTemplateUsageHandler : IRequestHandler<OperationTem
     private readonly IOperationTemplateRepository _repo;
     private readonly ICurrentUser _currentUser;
 
-    public OperationTemplateUsageHandler(IOperationTemplateRepository repo, ICurrentUser currentUser)
-    { _repo = repo; _currentUser = currentUser; }
+    private readonly IHeadquartersAccessService? _hq;
+
+
+    public OperationTemplateUsageHandler(IOperationTemplateRepository repo, ICurrentUser currentUser, IHeadquartersAccessService? hq = null)
+    { _repo = repo; _currentUser = currentUser; _hq = hq; }
 
     public async Task<IReadOnlyList<TemplateUsageDto>> Handle(OperationTemplateUsageQuery q, CancellationToken ct)
     {
-        var scope = _currentUser.IsInRole(AppRoles.SetadAdmin) ? null : q.VahedCode;
+        var allUnits = _hq is null ? _currentUser.IsInRole(AppRoles.SetadAdmin) : await _hq.CanSeeCountryAsync(ct);
+        var scope = allUnits ? null : q.VahedCode;
         return (await _repo.UsageAsync(scope, ct)).Select(r => new TemplateUsageDto(r.TemplateId, r.Count, r.LastUsedUtc)).ToList();
     }
 }

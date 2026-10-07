@@ -31,6 +31,7 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
     private readonly IFsCheckRuleRepository _ruleRepository;
     private readonly IFsConsolidationRepository _consolidation;
     private readonly IUnitAccessReadRepository _unitAccess;
+    private readonly IHeadquartersAccessService? _hq;
 
     public GenerateFsRunCommandHandler(
         IFsTemplateReadRepository templateReadRepository,
@@ -41,8 +42,10 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
         ICurrentUser currentUser,
         IFsCheckRuleRepository ruleRepository,
         IFsConsolidationRepository consolidation,
-        IUnitAccessReadRepository unitAccess)
+        IUnitAccessReadRepository unitAccess,
+        IHeadquartersAccessService? hq = null)
     {
+        _hq = hq;
         _templateReadRepository = templateReadRepository;
         _balanceReadRepository = balanceReadRepository;
         _runRepository = runRepository;
@@ -87,6 +90,14 @@ public sealed class GenerateFsRunCommandHandler : IRequestHandler<GenerateFsRunC
         var external = BuildExternalValues(versions, request.ManualValues ?? Array.Empty<FsManualValueInput>());
 
         var unitCodes = request.IncludeSubUnits ? scope.Accessible.ToList() : new List<string> { request.VahedCode };
+
+        // فاز ۵۴: انتخاب گروه واحد = قابلیت fs.unit-category (پیش‌فرض: ستاد مرکزی یا نقش مدیریتی سطح کشور).
+        if (request.IncludeSubUnits && request.UnitCategory is not null && _hq is not null
+            && !await _hq.HasAbilityAsync(AbilityCatalog.FsUnitCategory, cancellationToken))
+        {
+            throw new RoleAccessDeniedException(
+                "انتخاب گروه واحد (بیمه‌ای/درمانی/ستادی) در صورت ترکیبی فقط برای کاربر ستاد مرکزی، نقش مدیریتی سطح کشور یا نقشی که این قابلیت را دارد ممکن است.");
+        }
 
         // فقط واحدهای یک گروه (بیمه‌ای/درمانی/ستادی) در اجرای ترکیبی — تصمیم صاحب پروژه ۲۰۲۶-۱۰-۰۵.
         if (request.IncludeSubUnits && request.UnitCategory is { } category)

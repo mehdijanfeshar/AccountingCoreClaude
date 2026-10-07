@@ -26,10 +26,18 @@ namespace Accounting.Application.UnitAccess.Queries;
 /// True when the caller's unit type grants blanket access to every unit. The client uses this
 /// only to label the picker; it is never the client's decision.
 /// </param>
+/// <param name="MenuAccess">
+/// سطح دسترسی کاربر به هر منو (کلید = مسیر صفحه؛ ۰ بدون دسترسی، ۱ مشاهده، ۲ ثبت و تغییر) وقتی «دسترسی نقش‌ها»
+/// پیکربندی شده؛ null = رفتار ثابت قبلی (فرانت منو را با نقش‌های ثابت فیلتر می‌کند). مدیر ستاد همیشه همه را دارد.
+/// </param>
+/// </param>
+/// <param name="Abilities">قابلیت‌های زیرمنو که کاربر دارد (<c>AbilityCatalog</c>، مثل <c>tafsili.scope</c>) — همیشه پر.</param>
 public sealed record CurrentUserDto(
     string UserId,
     string? VahedCode,
     string? VahedName,
     bool IsHeadquarters,
     IReadOnlyList<string>? Roles = null,
-    IReadOnlyList<string>? TokenDiagnostics = null);
+    IReadOnlyList<string>? TokenDiagnostics = null,
+    IReadOnlyDictionary<string, int>? MenuAccess = null,
+    IReadOnlyList<string>? Abilities = null);

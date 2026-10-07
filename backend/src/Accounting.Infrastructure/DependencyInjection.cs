@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<ISystemVoucherInboxRepository, SystemVoucherInboxRepository>();
         services.AddScoped<Accounting.Application.Vouchers.Commands.Common.IAccountEntryPolicy, AccountEntryPolicy>();
         services.AddScoped<IMonthReopenRepository, MonthReopenRepository>();
+        services.AddScoped<Accounting.Application.Common.Security.IRoleMenuAccessStore, RoleMenuAccessStore>();
         services.AddSingleton<IMonthReopenCodeGenerator, MonthReopenCodeGenerator>();
         services.AddScoped<IMonthCloseRepository, MonthCloseRepository>();
         services.AddScoped<IVoucherHeadRepository, VoucherHeadRepository>();

@@ -69,6 +69,18 @@ internal static class TemplateMapping
         if (!user.IsInRole(AppRoles.SetadAdmin))
             throw new RoleAccessDeniedException("تعریف و تغییر الگوی عملیات فقط با نقش «مدیر ستاد» ممکن است.");
     }
+
+    /// <summary>
+    /// قابلیت سراسری (الگو / گزارش ذخیره‌شده) — فاز ۵۴: مدیر ستاد مرکزی یا نقشی که در «دسترسی نقش‌ها» این قابلیت را دارد.
+    /// بدون سرویس (تست‌های قدیمی) همان قاعدهٔ نقش مدیر ستاد.
+    /// </summary>
+    public static async Task EnsureAbilityAsync(
+        ICurrentUser user, IHeadquartersAccessService? hq, string ability, string subject, CancellationToken ct)
+    {
+        var allowed = hq is null ? user.IsInRole(AppRoles.SetadAdmin) : await hq.HasAbilityAsync(ability, ct);
+        if (!allowed)
+            throw new RoleAccessDeniedException($"تعریف و تغییر {subject} فقط برای کاربر ستاد مرکزی یا نقشی که این قابلیت را دارد ممکن است.");
+    }
 }
 
 // ─────────── فهرست همهٔ الگوها (فعال و غیرفعال) ───────────
@@ -188,13 +200,16 @@ public sealed class UpdateOperationTemplateHandler : IRequestHandler<UpdateOpera
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
+    private readonly IHeadquartersAccessService? _hq;
+
+
     public UpdateOperationTemplateHandler(IOperationTemplateRepository repo, TemplateDefinitionValidator validator,
-        IUnitOfWork unitOfWork, ICurrentUser currentUser)
-    { _repo = repo; _validator = validator; _unitOfWork = unitOfWork; _currentUser = currentUser; }
+        IUnitOfWork unitOfWork, ICurrentUser currentUser, IHeadquartersAccessService? hq = null)
+    { _repo = repo; _validator = validator; _unitOfWork = unitOfWork; _currentUser = currentUser; _hq = hq; }
 
     public async Task<CreateTemplateResult> Handle(UpdateOperationTemplateCommand c, CancellationToken ct)
     {
-        TemplateMapping.EnsureSetad(_currentUser);
+        await TemplateMapping.EnsureAbilityAsync(_currentUser, _hq, AbilityCatalog.TemplatesDefine, "الگوی عملیات", ct);
 
         var candidate = TemplateMapping.Build(c.Id, c.Code, c.Title, c.Description, c.VoucherDescriptionPattern, c.Parameters, c.Lines, c.SystemTypeId, c.Keywords, c.AllowedVahedTypes);
         var errors = (await _validator.ValidateAsync(candidate, ct)).ToList();
@@ -236,12 +251,15 @@ public sealed class SetOperationTemplateActiveHandler : IRequestHandler<SetOpera
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
-    public SetOperationTemplateActiveHandler(IOperationTemplateRepository repo, IUnitOfWork unitOfWork, ICurrentUser currentUser)
-    { _repo = repo; _unitOfWork = unitOfWork; _currentUser = currentUser; }
+    private readonly IHeadquartersAccessService? _hq;
+
+
+    public SetOperationTemplateActiveHandler(IOperationTemplateRepository repo, IUnitOfWork unitOfWork, ICurrentUser currentUser, IHeadquartersAccessService? hq = null)
+    { _repo = repo; _unitOfWork = unitOfWork; _currentUser = currentUser; _hq = hq; }
 
     public async Task<Unit> Handle(SetOperationTemplateActiveCommand c, CancellationToken ct)
     {
-        TemplateMapping.EnsureSetad(_currentUser);
+        await TemplateMapping.EnsureAbilityAsync(_currentUser, _hq, AbilityCatalog.TemplatesDefine, "الگوی عملیات", ct);
         var t = await _repo.GetForUpdateAsync(c.Id, ct) ?? throw new NotFoundException("OperationTemplate", c.Id);
         t.IsActive = c.IsActive;
         await _unitOfWork.SaveChangesAsync(ct);
