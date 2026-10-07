@@ -1,3 +1,4 @@
+using Accounting.Application.Accounts.Commands.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using MediatR;
@@ -29,6 +30,9 @@ public sealed class CreateAccountCodeCommandHandler : IRequestHandler<CreateAcco
 
     public async Task<Guid> Handle(CreateAccountCodeCommand request, CancellationToken cancellationToken)
     {
+        await AccountCodeHierarchyRule.EnsureAsync(
+            _accountCodeRepository, request.TypeCode, request.ParentId, request.AccCode, cancellationToken);
+
         var entity = new TB_ACCOUNTCODE
         {
             ID = Guid.NewGuid(),

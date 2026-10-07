@@ -99,6 +99,7 @@ public sealed class VoucherChequeService : IVoucherChequeService
         if (!CheckBookLeaves.IsSori(book.CHECKBOOK_TYPE))
             throw new ChequeConflictException("دسته‌چک انتخابی صوری نیست؛ برگ چک واقعی را از فهرست برگ‌ها انتخاب کنید.");
 
+        await _checkBooks.LockForNumberingAsync(book.ID, cancellationToken);
         var next = CheckBookLeaves.NextSoriNumber(book, await _checkBooks.GetMaxChequeNoAsync(book.ID, cancellationToken))
             ?? throw new ChequeConflictException(
                 $"شماره‌های دسته‌چک صوری {book.FROMCHECKNUMBER} تا {book.TOCHECKNUMBER} تمام شده است.");

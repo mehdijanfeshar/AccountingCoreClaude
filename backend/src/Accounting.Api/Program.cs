@@ -156,6 +156,22 @@ builder.Services.AddScoped<IClientInfoProvider, HttpContextClientInfoProvider>()
 // per-request state through ICurrentUser.
 builder.Services.AddScoped<IUnitScopeResolver, UnitScopeResolver>();
 
+// CORS (ریسک #۱۹): فقط مبدأهای صریح `Cors:AllowedOrigins`. خالی ⇒ هیچ هدر CORS (همان رفتار
+// same-origin پشت proxy/IIS). توکن در هدر Authorization است نه کوکی، پس AllowCredentials لازم نیست.
+var corsOrigins = (builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
+    .Where(o => !string.IsNullOrWhiteSpace(o))
+    .Select(o => o.Trim().TrimEnd('/'))
+    .ToArray();
+if (corsOrigins.Length > 0)
+{
+    builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
+        .WithOrigins(corsOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .WithExposedHeaders("Content-Disposition")
+        .SetPreflightMaxAge(TimeSpan.FromHours(1))));
+}
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -168,6 +184,12 @@ if (app.Environment.IsDevelopment())
 app.UseExceptionHandler();
 
 app.UseHttpsRedirection();
+
+// پیش از Authentication تا preflight (OPTIONS بدون توکن) به FallbackPolicy نخورد.
+if (corsOrigins.Length > 0)
+{
+    app.UseCors();
+}
 
 app.UseAuthentication();
 // نقش‌های کاربر از پورتال سامانهٔ ورود (توکن نقش ندارد) — پیش از Authorization و MediatR.

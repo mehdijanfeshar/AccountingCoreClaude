@@ -17,10 +17,12 @@ public sealed class UpdateCheckBookCommandHandlerTests
         AccountId: Guid.NewGuid(),
         CheckBookTitle: "دسته چک به‌روزشده",
         CheckBookDate: "13990202",
-        FromCheckNumber: "200000",
-        ToCheckNumber: "200050",
+        // همان نوع و بازهٔ دسته‌چک موجود: نوع صوری/واقعی پس از ثبت عوض نمی‌شود (فاز ۴۹) و تغییر بازه
+        // به وجود اوراق بستگی دارد — هر دو آزمون جدا دارند؛ این‌جا فقط نگاشت فیلدهای قابل‌نوشتن.
+        FromCheckNumber: "100000",
+        ToCheckNumber: "100050",
         CheckTypeId: Guid.NewGuid(),
-        CheckBookType: CheckType.Sori,
+        CheckBookType: CheckType.Real,
         Serial: "SER0002")
     {
         VahedCode = "0002",

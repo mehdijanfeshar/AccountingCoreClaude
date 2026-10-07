@@ -28,7 +28,8 @@ public sealed class ByteColumnPrecisionConventionTests
     private const int FirstUnsafePrecision = 3;
 
     /// <summary>
-    /// Pre-existing scaffold artefacts with the same shape as the <c>TB_YEAR</c> bug, left
+    /// ✅ Emptied 2026-10-07 (risk #24 closed: all were widened to <c>short</c>). Kept as history:
+    /// pre-existing scaffold artefacts with the same shape as the <c>TB_YEAR</c> bug, left
     /// unfixed on purpose and recorded in <c>docs/open-decisions.md</c> (phase 37).
     ///
     /// <para>
@@ -47,33 +48,6 @@ public sealed class ByteColumnPrecisionConventionTests
     /// </summary>
     private static readonly HashSet<string> KnownLatentOffenders = new(StringComparer.Ordinal)
     {
-        "TB_ATTACH.ATTACH_RADIF",
-        "TB_CHECK_TYPE.CHEQUE_WIDTH",
-        "TB_CHECK_TYPE.CHEQUE_HEIGHT",
-        "TB_CHECK_TYPE.CHEQUE_ADATE_LEFT",
-        "TB_CHECK_TYPE.CHEQUE_ADATE_TOP",
-        "TB_CHECK_TYPE.CHEQUE_ADATE_WIDTH",
-        "TB_CHECK_TYPE.CHEQUE_NDATE_LEFT",
-        "TB_CHECK_TYPE.CHEQUE_NDATE_TOP",
-        "TB_CHECK_TYPE.CHEQUE_NDATE_WIDTH",
-        "TB_CHECK_TYPE.CHEQUE_AAMOUNT_LEFT",
-        "TB_CHECK_TYPE.CHEQUE_AAMOUNT_TOP",
-        "TB_CHECK_TYPE.CHEQUE_AAMOUNT_WIDTH",
-        "TB_CHECK_TYPE.CHEQUE_LAMOUNT_LEFT",
-        "TB_CHECK_TYPE.CHEQUE_LAMOUNT_TOP",
-        "TB_CHECK_TYPE.CHEQUE_LAMOUNT_WIDTH",
-        "TB_CHECK_TYPE.CHEQUE_NAMOUNT_LEFT",
-        "TB_CHECK_TYPE.CHEQUE_NAMOUNT_TOP",
-        "TB_CHECK_TYPE.CHEQUE_NAMOUNT_WIDTH",
-        "TB_CHECK_TYPE.CHEQUE_DESCRIBE1_LEFT",
-        "TB_CHECK_TYPE.CHEQUE_DESCRIBE1_TOP",
-        "TB_CHECK_TYPE.CHEQUE_DESCRIBE1_WIDTH",
-        "TB_CHECK_TYPE.CHEQUE_DESCRIBE2_LEFT",
-        "TB_CHECK_TYPE.CHEQUE_DESCRIBE2_TOP",
-        "TB_CHECK_TYPE.CHEQUE_DESCRIBE2_WIDTH",
-        "TB_CHECK_TYPE.CHEQUE_BREAKLINE_LEFT",
-        "TB_CHECK_TYPE.CHEQUE_BREAKLINE_TOP",
-        "TB_CHECK_TYPE.CHEQUE_BREAKLINE_WIDTH",
     };
 
     private static LegacyDbContext CreateContext()

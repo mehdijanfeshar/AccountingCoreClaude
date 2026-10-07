@@ -41,6 +41,8 @@ public sealed class DeleteCheckBookCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<ICheckBookRepository>();
+        // دسته‌چک بی‌برگِ استفاده‌نشده ⇒ حذف مجاز (فاز ۴۹).
+        repository.Setup(r => r.GetLeavesForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>(), It.IsAny<bool>())).ReturnsAsync(Array.Empty<TB_CHECK>());
         repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter9");
@@ -70,6 +72,8 @@ public sealed class DeleteCheckBookCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<ICheckBookRepository>();
+        // دسته‌چک بی‌برگِ استفاده‌نشده ⇒ حذف مجاز (فاز ۴۹).
+        repository.Setup(r => r.GetLeavesForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>(), It.IsAny<bool>())).ReturnsAsync(Array.Empty<TB_CHECK>());
         repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
@@ -86,6 +90,8 @@ public sealed class DeleteCheckBookCommandHandlerTests
     {
         var id = Guid.NewGuid();
         var repository = new Mock<ICheckBookRepository>();
+        // دسته‌چک بی‌برگِ استفاده‌نشده ⇒ حذف مجاز (فاز ۴۹).
+        repository.Setup(r => r.GetLeavesForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>(), It.IsAny<bool>())).ReturnsAsync(Array.Empty<TB_CHECK>());
         repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((TB_CHECKBOOK?)null);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
@@ -108,6 +114,8 @@ public sealed class DeleteCheckBookCommandHandlerTests
         entity.UPDATEDDATE = updatedAt;
 
         var repository = new Mock<ICheckBookRepository>();
+        // دسته‌چک بی‌برگِ استفاده‌نشده ⇒ حذف مجاز (فاز ۴۹).
+        repository.Setup(r => r.GetLeavesForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>(), It.IsAny<bool>())).ReturnsAsync(Array.Empty<TB_CHECK>());
         repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(entity);
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("newDeleter");
@@ -130,6 +138,8 @@ public sealed class DeleteCheckBookCommandHandlerTests
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);
         var repository = new Mock<ICheckBookRepository>();
+        // دسته‌چک بی‌برگِ استفاده‌نشده ⇒ حذف مجاز (فاز ۴۹).
+        repository.Setup(r => r.GetLeavesForUpdateAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>(), It.IsAny<bool>())).ReturnsAsync(Array.Empty<TB_CHECK>());
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
         using var cts = new CancellationTokenSource();

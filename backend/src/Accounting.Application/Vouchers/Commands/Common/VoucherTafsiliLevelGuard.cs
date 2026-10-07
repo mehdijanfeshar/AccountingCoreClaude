@@ -111,6 +111,32 @@ public sealed class VoucherTafsiliLevelGuard : IVoucherTafsiliLevelGuard
         }
     }
 
+    public async Task EnsureTafsiliSelectableAsync(
+        Guid? accountCodeId,
+        IReadOnlyCollection<VoucherDetailTafsiliLinkInput> tafsiliLinks,
+        string vahedCode,
+        IReadOnlyCollection<Guid>? alreadyLinkedTafsiliIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (accountCodeId is null || tafsiliLinks.Count == 0)
+        {
+            return;
+        }
+
+        var skip = alreadyLinkedTafsiliIds?.ToHashSet() ?? [];
+        foreach (var byLevel in tafsiliLinks.Where(l => !skip.Contains(l.TafsiliId)).GroupBy(l => l.LevelId))
+        {
+            var ids = byLevel.Select(l => l.TafsiliId).Distinct().ToList();
+            var selectable = await _tafsiliLookupReadRepository.GetSelectableTafsiliIdsAsync(
+                accountCodeId.Value, byLevel.Key, ids, vahedCode, cancellationToken);
+            if (ids.Any(id => !selectable.Contains(id)))
+            {
+                throw new BusinessRuleException(
+                    "تفصیلی انتخاب‌شده برای این حساب و سطح مجاز نیست، حذف شده یا برای واحد شما تعریف نشده است.");
+            }
+        }
+    }
+
     private async Task<IReadOnlyList<TafsiliLevelDto>> GetActiveLevelsAsync(
         Guid accountCodeId,
         CancellationToken cancellationToken)

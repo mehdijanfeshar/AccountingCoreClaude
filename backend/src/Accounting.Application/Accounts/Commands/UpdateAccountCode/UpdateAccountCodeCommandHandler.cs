@@ -1,3 +1,4 @@
+using Accounting.Application.Accounts.Commands.Common;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using MediatR;
@@ -40,6 +41,15 @@ public sealed class UpdateAccountCodeCommandHandler : IRequestHandler<UpdateAcco
         if (entity is null || entity.ISDELETED == true)
         {
             throw new NotFoundException("AccountCode", request.Id);
+        }
+
+        // فقط وقتی جای حساب در درخت عوض شود — حساب‌های قدیمی ناسازگار با قاعده ویرایش‌پذیر می‌مانند.
+        if (entity.TYPECODE != request.TypeCode
+            || entity.PARENTID != request.ParentId
+            || !string.Equals(entity.ACCCODE?.Trim(), request.AccCode?.Trim(), StringComparison.Ordinal))
+        {
+            await AccountCodeHierarchyRule.EnsureAsync(
+                _accountCodeRepository, request.TypeCode, request.ParentId, request.AccCode, cancellationToken);
         }
 
         entity.TYPECODE = request.TypeCode;

@@ -13,7 +13,7 @@ public partial class TB_ATTACH
 
     public byte[]? ATTACH_FILE { get; set; }
 
-    public byte ATTACH_RADIF { get; set; }
+    public short ATTACH_RADIF { get; set; }
 
     public Guid? VOUCHERSHEAD_ID { get; set; }
 

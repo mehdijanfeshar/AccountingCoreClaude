@@ -9,75 +9,75 @@ public partial class TB_CHECK_TYPE
 
     public string? CHEQUE_TYPE_TITLE { get; set; }
 
-    public byte? CHEQUE_WIDTH { get; set; }
+    public short? CHEQUE_WIDTH { get; set; }
 
-    public byte? CHEQUE_HEIGHT { get; set; }
+    public short? CHEQUE_HEIGHT { get; set; }
 
     public byte[]? CHEQUE_IMAGE { get; set; }
 
     public string? CHEQUE_ADATE_FONT { get; set; }
 
-    public byte? CHEQUE_ADATE_LEFT { get; set; }
+    public short? CHEQUE_ADATE_LEFT { get; set; }
 
-    public byte? CHEQUE_ADATE_TOP { get; set; }
+    public short? CHEQUE_ADATE_TOP { get; set; }
 
-    public byte? CHEQUE_ADATE_WIDTH { get; set; }
+    public short? CHEQUE_ADATE_WIDTH { get; set; }
 
     public string? CHEQUE_NDATE_FONT { get; set; }
 
-    public byte? CHEQUE_NDATE_LEFT { get; set; }
+    public short? CHEQUE_NDATE_LEFT { get; set; }
 
-    public byte? CHEQUE_NDATE_TOP { get; set; }
+    public short? CHEQUE_NDATE_TOP { get; set; }
 
-    public byte? CHEQUE_NDATE_WIDTH { get; set; }
+    public short? CHEQUE_NDATE_WIDTH { get; set; }
 
     public string? CHEQUE_AAMOUNT_FONT { get; set; }
 
-    public byte? CHEQUE_AAMOUNT_LEFT { get; set; }
+    public short? CHEQUE_AAMOUNT_LEFT { get; set; }
 
-    public byte? CHEQUE_AAMOUNT_TOP { get; set; }
+    public short? CHEQUE_AAMOUNT_TOP { get; set; }
 
-    public byte? CHEQUE_AAMOUNT_WIDTH { get; set; }
+    public short? CHEQUE_AAMOUNT_WIDTH { get; set; }
 
     public string? CHEQUE_LAMOUNT_FONT { get; set; }
 
-    public byte? CHEQUE_LAMOUNT_LEFT { get; set; }
+    public short? CHEQUE_LAMOUNT_LEFT { get; set; }
 
-    public byte? CHEQUE_LAMOUNT_TOP { get; set; }
+    public short? CHEQUE_LAMOUNT_TOP { get; set; }
 
-    public byte? CHEQUE_LAMOUNT_WIDTH { get; set; }
+    public short? CHEQUE_LAMOUNT_WIDTH { get; set; }
 
     public string? CHEQUE_NAMOUNT_FONT { get; set; }
 
-    public byte? CHEQUE_NAMOUNT_LEFT { get; set; }
+    public short? CHEQUE_NAMOUNT_LEFT { get; set; }
 
-    public byte? CHEQUE_NAMOUNT_TOP { get; set; }
+    public short? CHEQUE_NAMOUNT_TOP { get; set; }
 
-    public byte? CHEQUE_NAMOUNT_WIDTH { get; set; }
+    public short? CHEQUE_NAMOUNT_WIDTH { get; set; }
 
     public string? CHEQUE_DESCRIBE1_FONT { get; set; }
 
-    public byte? CHEQUE_DESCRIBE1_LEFT { get; set; }
+    public short? CHEQUE_DESCRIBE1_LEFT { get; set; }
 
-    public byte? CHEQUE_DESCRIBE1_TOP { get; set; }
+    public short? CHEQUE_DESCRIBE1_TOP { get; set; }
 
-    public byte? CHEQUE_DESCRIBE1_WIDTH { get; set; }
+    public short? CHEQUE_DESCRIBE1_WIDTH { get; set; }
 
     public string? CHEQUE_DESCRIBE2_FONT { get; set; }
 
-    public byte? CHEQUE_DESCRIBE2_LEFT { get; set; }
+    public short? CHEQUE_DESCRIBE2_LEFT { get; set; }
 
-    public byte? CHEQUE_DESCRIBE2_TOP { get; set; }
+    public short? CHEQUE_DESCRIBE2_TOP { get; set; }
 
-    public byte? CHEQUE_DESCRIBE2_WIDTH { get; set; }
+    public short? CHEQUE_DESCRIBE2_WIDTH { get; set; }
 
     public string? CHEQUE_BREAKLINE_FONT { get; set; }
 
-    public byte? CHEQUE_BREAKLINE_LEFT { get; set; }
+    public short? CHEQUE_BREAKLINE_LEFT { get; set; }
 
-    public byte? CHEQUE_BREAKLINE_TOP { get; set; }
+    public short? CHEQUE_BREAKLINE_TOP { get; set; }
 
-    public byte? CHEQUE_BREAKLINE_WIDTH { get; set; }
+    public short? CHEQUE_BREAKLINE_WIDTH { get; set; }
 
     public short? PRINTER_MARGINE_TOP { get; set; }
 

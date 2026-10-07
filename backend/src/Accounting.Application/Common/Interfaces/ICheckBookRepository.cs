@@ -29,6 +29,13 @@ public interface ICheckBookRepository
     /// <summary>بزرگ‌ترین شمارهٔ برگ این دسته‌چک، حتی حذف‌شده (<c>UK_CHECK</c> حذف‌شده‌ها را هم می‌شمارد)؛ null = بی‌برگ.</summary>
     Task<string?> GetMaxChequeNoAsync(Guid checkBookId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// قفل ردیف دسته‌چک تا پایان تراکنش جاری، پیش از خواندن بزرگ‌ترین شماره — تا دو کاربر هم‌زمان یک
+    /// شمارهٔ صوری نگیرند (در غیر این صورت یکی با <c>UK_CHECK</c> رد می‌شد). بیرون از تراکنش اثری ندارد.
+    /// </summary>
+    Task LockForNumberingAsync(Guid checkBookId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
     /// <summary>دسته‌چک هم‌کلید <c>UK_CHECKBOOK</c> (حساب + اولین + آخرین + واحد)، حتی حذف‌شده — tracked.</summary>
     Task<TB_CHECKBOOK?> FindSameRangeForUpdateAsync(Guid accountId, string from, string to, string vahedCode, CancellationToken cancellationToken = default);
 }

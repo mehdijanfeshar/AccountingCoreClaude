@@ -11,7 +11,8 @@ public sealed class UpdateAccountCodeCommandHandlerTests
 {
     private static UpdateAccountCodeCommand ValidCommand(Guid id) => new(
         Id: id,
-        TypeCode: TypeCodes.Moin,
+        // «گروه» بی‌والد تا قاعدهٔ سلسله‌مراتب (AccountCodeHierarchyRuleTests) به نگاشت فیلدها کاری نداشته باشد.
+        TypeCode: TypeCodes.Group,
         ParentId: null,
         AccCode: "100200",
         AccCodeName: "بانک ملت",

@@ -100,7 +100,8 @@ public sealed class VoucherDetailsController : ControllerBase
         [FromBody] CreateVoucherDetailCommand command,
         CancellationToken cancellationToken)
     {
-        var id = await _mediator.Send(command, cancellationToken);
+        // شمارهٔ ردیف سمت سرور (ریسک ۲-ب): مقدار فراخوان نادیده؛ Handler آخرین + ۱ می‌گذارد.
+        var id = await _mediator.Send(command with { Radif = null }, cancellationToken);
 
         return CreatedAtAction(
             nameof(GetById),
@@ -185,7 +186,7 @@ public sealed class VoucherDetailsController : ControllerBase
             request.LowLevelCodeId,
             request.EtebarId,
             request.Description,
-            request.Radif,
+            null, // شمارهٔ ردیف از API عوض نمی‌شود؛ فقط ذخیرهٔ اتمیک سند ترتیب را تعیین می‌کند.
             request.Debtor,
             request.Creditor,
             request.Year,

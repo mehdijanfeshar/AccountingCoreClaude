@@ -62,7 +62,8 @@ public sealed class VoucherDetailsControllerTests
         Assert.NotNull(created.RouteValues);
         Assert.Equal(generatedId, created.RouteValues!["id"]);
 
-        Assert.Same(command, capturedRequest);
+        // شمارهٔ ردیف فراخوان نادیده گرفته می‌شود (سرور آخرین + ۱ می‌گذارد)؛ بقیهٔ فیلدها همان.
+        Assert.Equal(command with { Radif = null }, capturedRequest);
     }
 
     [Fact]

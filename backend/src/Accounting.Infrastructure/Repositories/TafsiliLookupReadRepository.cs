@@ -95,6 +95,45 @@ public sealed class TafsiliLookupReadRepository : ITafsiliLookupReadRepository
             .ToList();
     }
 
+    public async Task<IReadOnlySet<Guid>> GetSelectableTafsiliIdsAsync(
+        Guid accountCodeId,
+        Guid levelId,
+        IReadOnlyCollection<Guid> candidateIds,
+        string callerVahedCode,
+        CancellationToken cancellationToken = default)
+    {
+        if (candidateIds.Count == 0)
+        {
+            return new HashSet<Guid>();
+        }
+
+        var callerCategoryValue = (short)await DeriveCallerCategoryAsync(callerVahedCode, cancellationToken);
+        var allCategoryValue = (short)VahedCategory.All;
+        var ids = candidateIds.Distinct().ToList();
+
+        // همان Rule B ِ GetSelectableItemsAsync، محدود به شناسه‌های داده‌شده.
+        var visibleTafsilIds =
+            from accountLink in _dbContext.TB_ACCOUNT_LINK_TAFSILGROUPs.AsNoTracking()
+            where accountLink.ACCOUNT_ID == accountCodeId
+                && accountLink.LEVEL_ID == levelId
+                && accountLink.ISDELETED == false
+            join groupLink in _dbContext.TB_TAFSIL_LINK_TAFSILGROUPs.AsNoTracking()
+                on accountLink.TAFSILGROUP_ID equals groupLink.TAFSILGROUP_ID
+            where groupLink.ISDELETED == false
+                && (groupLink.VAHEDCODE == callerVahedCode
+                    || groupLink.VAHEDTYPE == allCategoryValue
+                    || groupLink.VAHEDTYPE == callerCategoryValue)
+            select groupLink.TAFSIL_ID;
+
+        var found = await _dbContext.TB_TAFSILIs
+            .AsNoTracking()
+            .Where(t => t.ISDELETED != true && ids.Contains(t.ID) && visibleTafsilIds.Contains(t.ID))
+            .Select(t => t.ID)
+            .ToListAsync(cancellationToken);
+
+        return found.ToHashSet();
+    }
+
     public async Task<PagedResult<TafsiliLookupItemDto>> GetSelectableItemsAsync(
         Guid accountCodeId,
         Guid levelId,

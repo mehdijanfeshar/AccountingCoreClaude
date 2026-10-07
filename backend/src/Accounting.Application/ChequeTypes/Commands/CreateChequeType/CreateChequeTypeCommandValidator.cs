@@ -4,9 +4,9 @@ namespace Accounting.Application.ChequeTypes.Commands.CreateChequeType;
 
 /// <summary>
 /// Surface-level (syntactic) validation only, matching the Fluent mapping constraints in
-/// <c>LegacyDbContext</c>. No range rule is applied to any <c>byte?</c> layout field beyond what
-/// the CLR type (0-255) already enforces — the Oracle precision (3 or 4 digits) is looser than
-/// <c>byte</c>'s range, so <c>byte</c> is already the tighter, safe constraint.
+/// <c>LegacyDbContext</c>. Layout fields are <c>short?</c> with explicit 0..999 / 0..9999 range rules matching the
+/// Oracle precision (3 or 4 digits) — they were <c>byte</c> until risk #24 was closed.
+///
 /// <see cref="CreateChequeTypeCommand.ChequeImage"/> carries no size-limit rule — see the
 /// command's XML doc for why that is a deliberately unmade decision, not an oversight.
 ///
@@ -20,6 +20,34 @@ public sealed class CreateChequeTypeCommandValidator : AbstractValidator<CreateC
 {
     public CreateChequeTypeCommandValidator()
     {
+        // NUMBER(3) ⇒ 0..999، NUMBER(4) ⇒ 0..9999 (پس از عریض‌شدن byte⇒short، ریسک #۲۴).
+        RuleFor(x => x.ChequeWidth).InclusiveBetween((short)0, (short)999);
+        RuleFor(x => x.ChequeHeight).InclusiveBetween((short)0, (short)999);
+        RuleFor(x => x.ChequeAdateLeft).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeAdateTop).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeAdateWidth).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeNdateLeft).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeNdateTop).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeNdateWidth).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeAamountLeft).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeAamountTop).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeAamountWidth).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeLamountLeft).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeLamountTop).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeLamountWidth).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeNamountLeft).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeNamountTop).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeNamountWidth).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeDescribe1Left).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeDescribe1Top).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeDescribe1Width).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeDescribe2Left).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeDescribe2Top).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeDescribe2Width).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeBreaklineLeft).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeBreaklineTop).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeBreaklineWidth).InclusiveBetween((short)0, (short)9999);
+
         RuleFor(x => x.ChequeTypeTitle)
             .MaximumLength(25);
 

@@ -39,6 +39,18 @@ public interface ITafsiliLookupReadRepository
     /// <c>TB_TAFSILI.ID</c> — the same تفصیلی row can be reachable through more than one
     /// تفصیلی گروه.
     /// </summary>
+    /// <summary>
+    /// از <paramref name="candidateIds"/>، آن‌هایی که برای (معین، سطح) و واحد فراخوان قابل انتخاب‌اند — همان قاعدهٔ
+    /// <see cref="GetSelectableItemsAsync"/> (حذف‌نشده + Rule B). پیاده‌سازی پیش‌فرض (برای Fakeها) همه را می‌پذیرد.
+    /// </summary>
+    Task<IReadOnlySet<Guid>> GetSelectableTafsiliIdsAsync(
+        Guid accountCodeId,
+        Guid levelId,
+        IReadOnlyCollection<Guid> candidateIds,
+        string callerVahedCode,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlySet<Guid>>(candidateIds.ToHashSet());
+
     Task<PagedResult<TafsiliLookupItemDto>> GetSelectableItemsAsync(
         Guid accountCodeId,
         Guid levelId,

@@ -38,17 +38,23 @@ public sealed class BankStatementAutoMatchService : IBankStatementAutoMatchServi
     private readonly IBankAccountReadRepository _bankAccountReadRepository;
     private readonly IBankStatementBookCandidateReadRepository _candidateReadRepository;
     private readonly ICurrentUser _currentUser;
+    private readonly IVoucherDetailRepository? _voucherDetails;
+    private readonly IBankCardRepository? _bankCards;
 
     public BankStatementAutoMatchService(
         ITreasuryBankStatementLineRepository lineRepository,
         IBankAccountReadRepository bankAccountReadRepository,
         IBankStatementBookCandidateReadRepository candidateReadRepository,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IVoucherDetailRepository? voucherDetails = null,
+        IBankCardRepository? bankCards = null)
     {
         _lineRepository = lineRepository;
         _bankAccountReadRepository = bankAccountReadRepository;
         _candidateReadRepository = candidateReadRepository;
         _currentUser = currentUser;
+        _voucherDetails = voucherDetails;
+        _bankCards = bankCards;
     }
 
     public async Task<BankStatementAutoMatchResult> AutoMatchAsync(
@@ -106,6 +112,7 @@ public sealed class BankStatementAutoMatchService : IBankStatementAutoMatchServi
                 line.CHANGEUSERID = userId;
                 line.UPDATEDDATE = now;
                 claimed.Add(byNumber[0].VoucherDetailId);
+                await SetReceivedDateAsync(byNumber[0].VoucherDetailId, vahedCode, line.LINE_DATE, cancellationToken);
                 matchedCount++;
             }
         }
@@ -136,11 +143,17 @@ public sealed class BankStatementAutoMatchService : IBankStatementAutoMatchServi
             line.UPDATEDDATE = now;
 
             claimed.Add(match.VoucherDetailId);
+            await SetReceivedDateAsync(match.VoucherDetailId, vahedCode, line.LINE_DATE, cancellationToken);
             matchedCount++;
         }
 
         return new BankStatementAutoMatchResult(matchedCount, unmatchedLines.Count - matchedCount);
     }
+
+    private Task SetReceivedDateAsync(Guid voucherDetailId, string vahedCode, string date, CancellationToken cancellationToken)
+        => _voucherDetails is null
+            ? Task.CompletedTask
+            : BankStatementReceivedDate.SetAsync(_voucherDetails, _bankCards, voucherDetailId, vahedCode, date, cancellationToken);
 
     /// <summary>فقط شمارهٔ عددی چک/فیش (بی صفر پیشرو)؛ مرجع غیرعددی مثل «اعلا-01» ⇒ null.</summary>
     private static string? NormalizeDocNo(string? value)

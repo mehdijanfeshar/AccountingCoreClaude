@@ -107,11 +107,27 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
             request.TafsiliLinks ?? [],
             cancellationToken);
 
+        // ریسک‌های #۹/#۱۴ — TAFSILI_ID کلید خارجی ندارد؛ همان تفصیلی‌هایی که فرم پیشنهاد می‌دهد.
+        await _tafsiliLevelGuard.EnsureTafsiliSelectableAsync(
+            request.AccountId,
+            request.TafsiliLinks ?? [],
+            request.VahedCode,
+            cancellationToken: cancellationToken);
+
         // ماتریس دسترسی کدینگ (ریسک #۲۷) — این Command مسیر ثبت دستی است.
         if (_accountEntryPolicy is not null)
         {
             await _accountEntryPolicy.EnsureManualEntryAllowedAsync(
                 request.VahedCode, head.DATE_DOC, [request.AccountId], cancellationToken);
+        }
+
+        // بدون شمارهٔ ردیف (ثبت تکی از API) ⇒ آخرین ردیف فعال سند + ۱. ذخیرهٔ اتمیک ترتیب را خودش می‌دهد.
+        var radif = request.Radif;
+        if (radif is null)
+        {
+            var lines = await _voucherDetailRepository.GetActiveByHeadAsync(
+                request.VoucherHeadId, request.VahedCode, cancellationToken);
+            radif = (lines.Count == 0 ? 0 : lines.Max(l => l.RADIF ?? 0)) + 1;
         }
 
         var now = DateTime.UtcNow;
@@ -126,7 +142,7 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
             LOWLEVELCODE_ID = request.LowLevelCodeId,
             ETEBAR_ID = request.EtebarId,
             DESCRIPTION = request.Description,
-            RADIF = request.Radif,
+            RADIF = radif,
             DEBTOR = request.Debtor,
             CREDITOR = request.Creditor,
             VAHEDCODE = request.VahedCode,

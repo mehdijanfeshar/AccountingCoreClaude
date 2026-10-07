@@ -12,17 +12,20 @@ public sealed class BankStatementManualMatchService : IBankStatementManualMatchS
     private readonly IBankAccountReadRepository _bankAccountReadRepository;
     private readonly ITreasuryBankStatementLineRepository _lineRepository;
     private readonly ICurrentUser _currentUser;
+    private readonly IBankCardRepository? _bankCards;
 
     public BankStatementManualMatchService(
         IVoucherDetailRepository voucherDetailRepository,
         IBankAccountReadRepository bankAccountReadRepository,
         ITreasuryBankStatementLineRepository lineRepository,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IBankCardRepository? bankCards = null)
     {
         _voucherDetailRepository = voucherDetailRepository;
         _bankAccountReadRepository = bankAccountReadRepository;
         _lineRepository = lineRepository;
         _currentUser = currentUser;
+        _bankCards = bankCards;
     }
 
     public async Task MatchAsync(
@@ -74,20 +77,29 @@ public sealed class BankStatementManualMatchService : IBankStatementManualMatchS
         line.MATCHED_VOUCHERDETAIL_ID = voucherDetailId;
         line.CHANGEUSERID = _currentUser.UserId;
         line.UPDATEDDATE = DateTime.UtcNow;
+
+        await BankStatementReceivedDate.SetAsync(
+            _voucherDetailRepository, _bankCards, voucherDetailId, vahedCode, line.LINE_DATE, cancellationToken);
     }
 
-    public Task UnmatchAsync(TB_TR_BANK_STATEMENT_LINE line, CancellationToken cancellationToken = default)
+    public async Task UnmatchAsync(TB_TR_BANK_STATEMENT_LINE line, CancellationToken cancellationToken = default)
     {
         if (line.MATCH_STATE is not (BankStatementLineMatchState.AutoMatched or BankStatementLineMatchState.ManualMatched))
         {
             throw new TreasuryBankStatementLineStateConflictException(line.ID, line.MATCH_STATE, "تطبیق‌خودکار یا تطبیق‌دستی");
         }
 
+        var previous = line.MATCHED_VOUCHERDETAIL_ID;
+
         line.MATCH_STATE = BankStatementLineMatchState.Unmatched;
         line.MATCHED_VOUCHERDETAIL_ID = null;
         line.CHANGEUSERID = _currentUser.UserId;
         line.UPDATEDDATE = DateTime.UtcNow;
 
-        return Task.CompletedTask;
+        if (previous is { } detailId)
+        {
+            await BankStatementReceivedDate.SetAsync(
+                _voucherDetailRepository, _bankCards, detailId, line.VAHEDCODE, null, cancellationToken);
+        }
     }
 }

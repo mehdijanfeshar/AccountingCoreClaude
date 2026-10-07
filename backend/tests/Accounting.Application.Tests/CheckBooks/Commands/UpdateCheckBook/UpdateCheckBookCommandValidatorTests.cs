@@ -91,7 +91,7 @@ public sealed class UpdateCheckBookCommandValidatorTests
     [Fact]
     public void Validate_EmptyFromCheckNumber_Fails()
     {
-        var result = _validator.Validate(ValidCommand() with { FromCheckNumber = string.Empty });
+        var result = _validator.Validate(ValidCommand() with { FromCheckNumber = string.Empty, CheckBookType = CheckType.Real });
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateCheckBookCommand.FromCheckNumber));
@@ -109,7 +109,7 @@ public sealed class UpdateCheckBookCommandValidatorTests
     [Fact]
     public void Validate_EmptyToCheckNumber_Fails()
     {
-        var result = _validator.Validate(ValidCommand() with { ToCheckNumber = string.Empty });
+        var result = _validator.Validate(ValidCommand() with { ToCheckNumber = string.Empty, CheckBookType = CheckType.Real });
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateCheckBookCommand.ToCheckNumber));
@@ -160,5 +160,20 @@ public sealed class UpdateCheckBookCommandValidatorTests
 
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.PropertyName == nameof(UpdateCheckBookCommand.CheckBookType));
+    }
+
+    [Fact]
+    public void Validate_SoriWithEmptyRange_Passes()
+    {
+        // بازهٔ دسته‌چک صوری را سرور می‌سازد (فاز ۴۹)؛ قواعد بازه فقط برای چک واقعی.
+        var result = _validator.Validate(ValidCommand() with
+        {
+            FromCheckNumber = string.Empty,
+            ToCheckNumber = string.Empty,
+            CheckBookType = CheckType.Sori,
+        });
+
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName is nameof(UpdateCheckBookCommand.FromCheckNumber)
+            or nameof(UpdateCheckBookCommand.ToCheckNumber));
     }
 }

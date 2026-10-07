@@ -24,6 +24,34 @@ public sealed class UpdateChequeTypeCommandValidator : AbstractValidator<UpdateC
         RuleFor(x => x.Id)
             .NotEmpty();
 
+        // NUMBER(3) ⇒ 0..999، NUMBER(4) ⇒ 0..9999 (پس از عریض‌شدن byte⇒short، ریسک #۲۴).
+        RuleFor(x => x.ChequeWidth).InclusiveBetween((short)0, (short)999);
+        RuleFor(x => x.ChequeHeight).InclusiveBetween((short)0, (short)999);
+        RuleFor(x => x.ChequeAdateLeft).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeAdateTop).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeAdateWidth).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeNdateLeft).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeNdateTop).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeNdateWidth).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeAamountLeft).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeAamountTop).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeAamountWidth).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeLamountLeft).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeLamountTop).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeLamountWidth).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeNamountLeft).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeNamountTop).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeNamountWidth).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeDescribe1Left).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeDescribe1Top).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeDescribe1Width).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeDescribe2Left).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeDescribe2Top).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeDescribe2Width).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeBreaklineLeft).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeBreaklineTop).InclusiveBetween((short)0, (short)9999);
+        RuleFor(x => x.ChequeBreaklineWidth).InclusiveBetween((short)0, (short)9999);
+
         RuleFor(x => x.ChequeTypeTitle)
             .MaximumLength(25);
 

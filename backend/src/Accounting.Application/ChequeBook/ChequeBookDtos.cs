@@ -76,7 +76,15 @@ public sealed record ChequePrintDto(
     int? Height,
     int? MarginTop,
     int? MarginLeft,
-    byte[]? Image);
+    byte[]? Image,
+    IReadOnlyList<ChequeFieldLayoutDto>? Fields = null);
+
+/// <summary>
+/// جای یک فیلد روی برگ چک از ستون‌های <c>TB_CHECK_TYPE.CHEQUE_*</c> (میلی‌متر؛ قلم = اندازه به pt). فقط فیلدهایی که
+/// دست‌کم یک مختصات دارند؛ بقیه جای پیش‌فرض قالب مرجع را می‌گیرند. کلیدها: NDATE تاریخ عددی، ADATE تاریخ حروفی،
+/// AAMOUNT مبلغ حروفی، NAMOUNT مبلغ عددی، DESCRIBE1 در وجه، DESCRIBE2 بابت.
+/// </summary>
+public sealed record ChequeFieldLayoutDto(string Key, int? Left, int? Top, int? Width, string? Font);
 
 /// <summary>دسته‌چک صوری قابل انتخاب در فرم سند؛ شمارهٔ بعدی هنگام ثبت سند صادر می‌شود. NextNumber null = پر شده.</summary>
 public sealed record SoriChequeBookDto(

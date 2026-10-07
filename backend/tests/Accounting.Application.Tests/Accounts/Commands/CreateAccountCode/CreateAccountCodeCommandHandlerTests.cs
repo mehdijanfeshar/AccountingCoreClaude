@@ -9,7 +9,8 @@ namespace Accounting.Application.Tests.Accounts.Commands.CreateAccountCode;
 public sealed class CreateAccountCodeCommandHandlerTests
 {
     private static CreateAccountCodeCommand ValidCommand() => new(
-        TypeCode: TypeCodes.Moin,
+        // «گروه» بی‌والد تا قاعدهٔ سلسله‌مراتب (AccountCodeHierarchyRuleTests) به نگاشت فیلدها کاری نداشته باشد.
+        TypeCode: TypeCodes.Group,
         ParentId: null,
         AccCode: "100100",
         AccCodeName: "بانک ملی",

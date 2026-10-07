@@ -246,7 +246,23 @@ public sealed class ChequeBookRepository : IChequeBookRepository
         return new ChequePrintDto(
             row.ID, row.CHEQ_NO, row.CHEQ_DATE, row.PAYTO, row.PAPER_DESC, row.Amount, row.ACCOUNTNUMBER, row.BankName,
             type?.ID, type?.CHEQUE_TYPE_TITLE, type?.CHEQUE_WIDTH, type?.CHEQUE_HEIGHT,
-            type?.PRINTER_MARGINE_TOP, type?.PRINTER_MARGINE_LEFT, type?.CHEQUE_IMAGE);
+            type?.PRINTER_MARGINE_TOP, type?.PRINTER_MARGINE_LEFT, type?.CHEQUE_IMAGE,
+            type is null ? null : ChequeFieldLayouts(type));
+    }
+
+    private static IReadOnlyList<ChequeFieldLayoutDto> ChequeFieldLayouts(TB_CHECK_TYPE t)
+    {
+        ChequeFieldLayoutDto F(string key, short? left, short? top, short? width, string? font)
+            => new(key, left, top, width, string.IsNullOrWhiteSpace(font) ? null : font.Trim());
+        return new[]
+        {
+            F("NDATE", t.CHEQUE_NDATE_LEFT, t.CHEQUE_NDATE_TOP, t.CHEQUE_NDATE_WIDTH, t.CHEQUE_NDATE_FONT),
+            F("ADATE", t.CHEQUE_ADATE_LEFT, t.CHEQUE_ADATE_TOP, t.CHEQUE_ADATE_WIDTH, t.CHEQUE_ADATE_FONT),
+            F("AAMOUNT", t.CHEQUE_AAMOUNT_LEFT, t.CHEQUE_AAMOUNT_TOP, t.CHEQUE_AAMOUNT_WIDTH, t.CHEQUE_AAMOUNT_FONT),
+            F("NAMOUNT", t.CHEQUE_NAMOUNT_LEFT, t.CHEQUE_NAMOUNT_TOP, t.CHEQUE_NAMOUNT_WIDTH, t.CHEQUE_NAMOUNT_FONT),
+            F("DESCRIBE1", t.CHEQUE_DESCRIBE1_LEFT, t.CHEQUE_DESCRIBE1_TOP, t.CHEQUE_DESCRIBE1_WIDTH, t.CHEQUE_DESCRIBE1_FONT),
+            F("DESCRIBE2", t.CHEQUE_DESCRIBE2_LEFT, t.CHEQUE_DESCRIBE2_TOP, t.CHEQUE_DESCRIBE2_WIDTH, t.CHEQUE_DESCRIBE2_FONT),
+        }.Where(f => f.Left is not null || f.Top is not null || f.Width is not null || f.Font is not null).ToList();
     }
 
     public async Task<IReadOnlyList<ChequeLeafDto>> GetLeavesAsync(Guid checkBookId, CancellationToken cancellationToken = default)

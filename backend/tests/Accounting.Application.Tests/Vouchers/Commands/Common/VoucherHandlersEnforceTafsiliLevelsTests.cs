@@ -72,11 +72,16 @@ public sealed class VoucherHandlersEnforceTafsiliLevelsTests
         headRepository
             .Setup(r => r.GetForUpdateAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ExistingHead(headId));
+        // Radif خالی ⇒ Handler آخرین ردیف فعال سند را می‌خواند.
+        var detailRepository = new Mock<IVoucherDetailRepository>();
+        detailRepository
+            .Setup(r => r.GetActiveByHeadAsync(headId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<TB_VOUCHERSDETAIL>());
         var guard = TafsiliLevelGuards.PermissiveMock();
 
         var handler = new CreateVoucherDetailCommandHandler(
             headRepository.Object,
-            new Mock<IVoucherDetailRepository>().Object,
+            detailRepository.Object,
             new Mock<IUnitOfWork>().Object,
             CurrentUser().Object,
             guard.Object);

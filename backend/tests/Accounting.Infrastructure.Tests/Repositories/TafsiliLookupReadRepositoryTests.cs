@@ -145,16 +145,6 @@ public sealed class TafsiliLookupReadRepositoryTests : IDisposable
 
     private static readonly DateTime SeedDate = new(2026, 9, 10, 0, 0, 0, DateTimeKind.Utc);
 
-    private static TB_ACCOUNT_LINK_LEVEL AccountLinkLevel(Guid accountId, Guid levelId, bool isDeleted = false) => new()
-    {
-        ID = Guid.NewGuid(),
-        ACCOUNT_ID = accountId,
-        LEVEL_ID = levelId,
-        CREATEDDATE = SeedDate,
-        ADDUSERID = "seed-user",
-        ISDELETED = isDeleted,
-    };
-
     private static TB_LEVEL_TAFSIL LevelTafsil(Guid id, string levelCode, string levelName = "سطح", bool isDeleted = false) => new()
     {
         ID = id,
@@ -218,6 +208,7 @@ public sealed class TafsiliLookupReadRepositoryTests : IDisposable
     // GetActiveLevelsAsync — Rule A
     // ------------------------------------------------------------------
 
+    // از فاز ۵۲ سطح فعال = سطحی که گروه تفصیلی به معین وصل دارد (TB_ACCOUNT_LINK_TAFSILGROUP)، نه TB_ACCOUNT_LINK_LEVEL.
     [Fact]
     public async Task GetActiveLevelsAsync_ReturnsLevels_OrderedByNumericCode()
     {
@@ -231,10 +222,10 @@ public sealed class TafsiliLookupReadRepositoryTests : IDisposable
             // Deliberately seeded out of order (3, 1, 2) to prove the repository sorts, not the
             // seed/insertion order.
             seedContext.TB_LEVEL_TAFSILs.AddRange(level3, level1, level2);
-            seedContext.TB_ACCOUNT_LINK_LEVELs.AddRange(
-                AccountLinkLevel(accountId, level3.ID),
-                AccountLinkLevel(accountId, level1.ID),
-                AccountLinkLevel(accountId, level2.ID));
+            seedContext.TB_ACCOUNT_LINK_TAFSILGROUPs.AddRange(
+                AccountLinkTafsilGroup(accountId, level3.ID, Guid.NewGuid()),
+                AccountLinkTafsilGroup(accountId, level1.ID, Guid.NewGuid()),
+                AccountLinkTafsilGroup(accountId, level2.ID, Guid.NewGuid()));
             await seedContext.SaveChangesAsync();
         }
 
@@ -257,9 +248,9 @@ public sealed class TafsiliLookupReadRepositoryTests : IDisposable
         using (var seedContext = CreateContext())
         {
             seedContext.TB_LEVEL_TAFSILs.AddRange(validLevel, garbageLevel);
-            seedContext.TB_ACCOUNT_LINK_LEVELs.AddRange(
-                AccountLinkLevel(accountId, validLevel.ID),
-                AccountLinkLevel(accountId, garbageLevel.ID));
+            seedContext.TB_ACCOUNT_LINK_TAFSILGROUPs.AddRange(
+                AccountLinkTafsilGroup(accountId, validLevel.ID, Guid.NewGuid()),
+                AccountLinkTafsilGroup(accountId, garbageLevel.ID, Guid.NewGuid()));
             await seedContext.SaveChangesAsync();
         }
 
@@ -282,7 +273,7 @@ public sealed class TafsiliLookupReadRepositoryTests : IDisposable
         using (var seedContext = CreateContext())
         {
             seedContext.TB_LEVEL_TAFSILs.Add(level);
-            seedContext.TB_ACCOUNT_LINK_LEVELs.Add(AccountLinkLevel(accountId, level.ID, isDeleted: true));
+            seedContext.TB_ACCOUNT_LINK_TAFSILGROUPs.Add(AccountLinkTafsilGroup(accountId, level.ID, Guid.NewGuid(), isDeleted: true));
             await seedContext.SaveChangesAsync();
         }
 
@@ -297,7 +288,7 @@ public sealed class TafsiliLookupReadRepositoryTests : IDisposable
     [Fact]
     public async Task GetActiveLevelsAsync_DuplicateLinkRowsToSameLevel_LevelAppearsOnceInResult()
     {
-        // TB_ACCOUNT_LINK_LEVEL has no unique constraint on (ACCOUNT_ID, LEVEL_ID) — this seeds
+        // TB_ACCOUNT_LINK_TAFSILGROUP (منبع سطوح فعال از فاز ۵۲) has no unique constraint on (ACCOUNT_ID, LEVEL_ID) — this seeds
         // exactly that anomaly (two non-deleted link rows to the same level for the same account)
         // to prove the repository still returns the level exactly once.
         var accountId = Guid.NewGuid();
@@ -306,9 +297,9 @@ public sealed class TafsiliLookupReadRepositoryTests : IDisposable
         using (var seedContext = CreateContext())
         {
             seedContext.TB_LEVEL_TAFSILs.Add(level);
-            seedContext.TB_ACCOUNT_LINK_LEVELs.AddRange(
-                AccountLinkLevel(accountId, level.ID),
-                AccountLinkLevel(accountId, level.ID));
+            seedContext.TB_ACCOUNT_LINK_TAFSILGROUPs.AddRange(
+                AccountLinkTafsilGroup(accountId, level.ID, Guid.NewGuid()),
+                AccountLinkTafsilGroup(accountId, level.ID, Guid.NewGuid()));
             await seedContext.SaveChangesAsync();
         }
 
@@ -329,7 +320,7 @@ public sealed class TafsiliLookupReadRepositoryTests : IDisposable
         using (var seedContext = CreateContext())
         {
             seedContext.TB_LEVEL_TAFSILs.Add(level);
-            seedContext.TB_ACCOUNT_LINK_LEVELs.Add(AccountLinkLevel(accountId, level.ID));
+            seedContext.TB_ACCOUNT_LINK_TAFSILGROUPs.Add(AccountLinkTafsilGroup(accountId, level.ID, Guid.NewGuid()));
             await seedContext.SaveChangesAsync();
         }
 

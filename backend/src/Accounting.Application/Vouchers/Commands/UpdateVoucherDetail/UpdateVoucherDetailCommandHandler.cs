@@ -120,7 +120,7 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
             }
         }
 
-        await EnsureTafsiliLevelsSatisfiedAsync(entity, request, cancellationToken);
+        var storedLinks = await EnsureTafsiliLevelsSatisfiedAsync(entity, request, cancellationToken);
 
         var previousCheckId = entity.CHECK_ID;
 
@@ -130,7 +130,7 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
         entity.LOWLEVELCODE_ID = request.LowLevelCodeId;
         entity.ETEBAR_ID = request.EtebarId;
         entity.DESCRIPTION = request.Description;
-        entity.RADIF = request.Radif;
+        entity.RADIF = request.Radif ?? entity.RADIF;
         entity.DEBTOR = request.Debtor;
         entity.CREDITOR = request.Creditor;
         entity.VAHEDCODE = request.VahedCode;
@@ -143,7 +143,7 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
 
         if (request.TafsiliLinks is not null)
         {
-            await ReconcileTafsiliLinksAsync(entity, request.TafsiliLinks, now, cancellationToken);
+            await ReconcileTafsiliLinksAsync(entity, request.TafsiliLinks, storedLinks, now, cancellationToken);
         }
 
         // دفتر چک — چک ردیف و «در وجه»/تاریخ/شرح آن.
@@ -183,7 +183,8 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
     /// editable. A request that changes the حساب <i>is</i> re-validated: the stored تفصیلی were
     /// valid for the old حساب and say nothing about the new one.
     /// </summary>
-    private async Task EnsureTafsiliLevelsSatisfiedAsync(
+    /// Returns the stored links when it had to read them (so the reconcile step does not read again).
+    private async Task<IReadOnlyList<TB_VOUCHERDETAIL_LINK_TAFSILI>?> EnsureTafsiliLevelsSatisfiedAsync(
         TB_VOUCHERSDETAIL entity,
         UpdateVoucherDetailCommand request,
         CancellationToken cancellationToken)
@@ -192,20 +193,26 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
 
         if (request.TafsiliLinks is null && !accountChanged)
         {
-            return;
+            return null;
         }
 
-        var effectiveLinks = request.TafsiliLinks;
-
-        if (effectiveLinks is null)
-        {
-            var storedLinks = await _voucherDetailRepository.GetActiveTafsiliLinksAsync(entity.ID, cancellationToken);
-            effectiveLinks = storedLinks
+        var storedLinks = await _voucherDetailRepository.GetActiveTafsiliLinksAsync(entity.ID, cancellationToken);
+        var effectiveLinks = request.TafsiliLinks
+            ?? storedLinks
                 .Select(link => new VoucherDetailTafsiliLinkInput(link.TAFSILI_ID, link.LEVEL_ID))
                 .ToList();
-        }
 
         await _tafsiliLevelGuard.EnsureSatisfiedAsync(request.AccountId, effectiveLinks, cancellationToken);
+
+        // ریسک‌های #۹/#۱۴ — فقط تفصیلی‌های تازه؛ با عوض‌شدن معین همه دوباره کنترل می‌شوند.
+        await _tafsiliLevelGuard.EnsureTafsiliSelectableAsync(
+            request.AccountId,
+            effectiveLinks,
+            request.VahedCode,
+            accountChanged ? null : storedLinks.Select(link => link.TAFSILI_ID).ToList(),
+            cancellationToken);
+
+        return storedLinks;
     }
 
     /// <summary>
@@ -215,10 +222,11 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
     private async Task ReconcileTafsiliLinksAsync(
         TB_VOUCHERSDETAIL entity,
         IReadOnlyList<VoucherDetailTafsiliLinkInput> requestedLinks,
+        IReadOnlyList<TB_VOUCHERDETAIL_LINK_TAFSILI>? preloadedLinks,
         DateTime now,
         CancellationToken cancellationToken)
     {
-        var existingLinks = await _voucherDetailRepository.GetActiveTafsiliLinksAsync(
+        var existingLinks = preloadedLinks ?? await _voucherDetailRepository.GetActiveTafsiliLinksAsync(
             entity.ID, cancellationToken);
 
         // Duplicate (TafsiliId, LevelId) pairs in the request collapse to one — the same تفصیلی

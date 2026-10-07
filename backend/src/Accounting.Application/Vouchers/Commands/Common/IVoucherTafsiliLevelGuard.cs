@@ -38,4 +38,18 @@ public interface IVoucherTafsiliLevelGuard
         Guid? accountCodeId,
         IReadOnlyCollection<VoucherDetailTafsiliLinkInput> tafsiliLinks,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// ریسک‌های #۹/#۱۴: <c>TB_VOUCHERDETAIL_LINK_TAFSILI.TAFSILI_ID</c> کلید خارجی ندارد. هر تفصیلی ردیف باید
+    /// همان باشد که فرم سند برای آن (معین، سطح) و واحد پیشنهاد می‌دهد (حذف‌نشده، عضو گروه وصل به معین در
+    /// آن سطح، Rule B دامنهٔ واحد). فقط ثبت دستی ردیف سند این را صدا می‌زند؛ لینک‌هایی که از قبل روی ردیف
+    /// بوده‌اند (<paramref name="alreadyLinkedTafsiliIds"/>) دوباره کنترل نمی‌شوند تا دادهٔ قدیمی ویرایش‌پذیر بماند.
+    /// </summary>
+    Task EnsureTafsiliSelectableAsync(
+        Guid? accountCodeId,
+        IReadOnlyCollection<VoucherDetailTafsiliLinkInput> tafsiliLinks,
+        string vahedCode,
+        IReadOnlyCollection<Guid>? alreadyLinkedTafsiliIds = null,
+        CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

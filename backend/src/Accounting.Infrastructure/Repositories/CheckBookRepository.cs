@@ -55,6 +55,23 @@ public sealed class CheckBookRepository : ICheckBookRepository
         => await _dbContext.TB_CHECKs.Where(c => c.CHECKBOOK_ID == checkBookId)
             .MaxAsync(c => (string?)c.CHEQ_NO, cancellationToken);
 
+    public async Task LockForNumberingAsync(Guid checkBookId, CancellationToken cancellationToken = default)
+    {
+        // فقط اوراکل و فقط داخل تراکنش (ذخیرهٔ اتمیک سند)؛ قفل با commit/rollback آزاد می‌شود.
+        // شناسهٔ Legacy ممکن است حروف بزرگ داشته باشد (ریسک #۱۱)، پس هر دو شکل.
+        if (_dbContext.Database.CurrentTransaction is null
+            || _dbContext.Database.ProviderName?.Contains("Oracle", StringComparison.OrdinalIgnoreCase) != true)
+        {
+            return;
+        }
+
+        var id = checkBookId.ToString("D");
+        await _dbContext.Database.ExecuteSqlRawAsync(
+            "BEGIN FOR r IN (SELECT ID FROM TB_CHECKBOOK WHERE ID IN ({0}, {1}) FOR UPDATE) LOOP NULL; END LOOP; END;",
+            [id.ToLowerInvariant(), id.ToUpperInvariant()],
+            cancellationToken);
+    }
+
     public Task<TB_CHECKBOOK?> FindSameRangeForUpdateAsync(
         Guid accountId, string from, string to, string vahedCode, CancellationToken cancellationToken = default)
         => _dbContext.TB_CHECKBOOKs.FirstOrDefaultAsync(
