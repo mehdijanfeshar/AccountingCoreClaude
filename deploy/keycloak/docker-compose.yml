@@ -1,0 +1,26 @@
+# Keycloak محلی برای توسعه (برنچ keycloak) — فقط توسعه، نه استقرار.
+#   راه‌اندازی:  docker compose -f deploy/keycloak/docker-compose.yml up -d
+#   کنسول مدیریت: http://localhost:8180/admin   (admin / admin)
+#   Realm:        http://localhost:8180/realms/accounting
+# Realm از realm-accounting.json فقط در اولین اجرا وارد می‌شود (اگر Realm از قبل باشد import رد می‌شود).
+# برای شروع از صفر: docker compose -f deploy/keycloak/docker-compose.yml down -v
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: accounting-keycloak
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm", "--http-port=8180"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # آدرسی که در iss توکن‌ها می‌آید و مرورگرها با آن وارد می‌شوند. برای آزمون از ماشین‌های دیگر شبکه، در فایل
+      # .env کنار همین فایل (در گیت نمی‌رود) بگذارید: KC_HOSTNAME=http://<IP ماشین>:8180
+      KC_HOSTNAME: ${KC_HOSTNAME:-http://localhost:8180}
+    ports:
+      - "8180:8180"
+    volumes:
+      - ./realm-accounting.json:/opt/keycloak/data/import/realm-accounting.json:ro
+      - keycloak-data:/opt/keycloak/data
+
+volumes:
+  keycloak-data:

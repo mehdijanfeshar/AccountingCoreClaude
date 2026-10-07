@@ -1,0 +1,271 @@
+{
+  "realm": "accounting",
+  "enabled": true,
+  "displayName": "سامانهٔ حسابداری",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": true,
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "fa",
+    "en"
+  ],
+  "defaultLocale": "fa",
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "roles": {
+    "client": {
+      "accounting-api": [
+        {
+          "name": "FINANCIAL CORE SETAD ADMIN",
+          "description": "مدیر ستاد",
+          "clientRole": true
+        },
+        {
+          "name": "FINANCIAL CORE MALI ADMIN",
+          "description": "مسئول حسابداری",
+          "clientRole": true
+        },
+        {
+          "name": "FINANCIAL CORE HLT ADMIN",
+          "description": "مدیر درمانی",
+          "clientRole": true
+        },
+        {
+          "name": "FINANCIAL CORE EDK ADMIN",
+          "description": "مدیر بیمه‌ای",
+          "clientRole": true
+        },
+        {
+          "name": "FINANCIAL CORE USER",
+          "description": "کارمند حسابداری",
+          "clientRole": true
+        },
+        {
+          "name": "FINANCIAL CORE REPORT",
+          "description": "گزارش‌گیری و حسابرسی",
+          "clientRole": true
+        },
+        {
+          "name": "FINANCIAL CORE IT",
+          "description": "فناوری اطلاعات",
+          "clientRole": true
+        },
+        {
+          "name": "FINANCIAL CORE NATIONAL",
+          "description": "مدیریتی سطح کشور",
+          "clientRole": true
+        }
+      ]
+    }
+  },
+  "clients": [
+    {
+      "clientId": "accounting-api",
+      "name": "Accounting API",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "accounting-ui",
+      "name": "Accounting UI",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "rootUrl": "http://localhost:4200",
+      "baseUrl": "/",
+      "redirectUris": [
+        "http://localhost:4200/*",
+        "http://localhost:4300/*",
+        "http://172.16.15.65:4200/*"
+      ],
+      "webOrigins": [
+        "http://localhost:4200",
+        "http://localhost:4300",
+        "http://172.16.15.65:4200"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:4200/*##http://localhost:4300/*##http://172.16.15.65:4200/*"
+      },
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "audience accounting-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "accounting-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "vahed_code",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "vahed_code",
+            "claim.name": "vahed_code",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "0000000001",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "مدیر",
+      "lastName": "ستاد",
+      "email": "0000000001@example.local",
+      "attributes": {
+        "vahed_code": [
+          "0000"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Pass@123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "accounting-api": [
+          "FINANCIAL CORE SETAD ADMIN",
+          "FINANCIAL CORE NATIONAL"
+        ]
+      }
+    },
+    {
+      "username": "0000000002",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "مسئول",
+      "lastName": "حسابداری",
+      "email": "0000000002@example.local",
+      "attributes": {
+        "vahed_code": [
+          "1155"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Pass@123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "accounting-api": [
+          "FINANCIAL CORE MALI ADMIN"
+        ]
+      }
+    },
+    {
+      "username": "0000000003",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "کارمند",
+      "lastName": "حسابداری",
+      "email": "0000000003@example.local",
+      "attributes": {
+        "vahed_code": [
+          "1155"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Pass@123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "accounting-api": [
+          "FINANCIAL CORE USER"
+        ]
+      }
+    },
+    {
+      "username": "0000000004",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "حسابرس",
+      "lastName": "گزارش",
+      "email": "0000000004@example.local",
+      "attributes": {
+        "vahed_code": [
+          "1155"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Pass@123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "accounting-api": [
+          "FINANCIAL CORE REPORT"
+        ]
+      }
+    },
+    {
+      "username": "0000000005",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "بدون",
+      "lastName": "نقش",
+      "email": "0000000005@example.local",
+      "attributes": {
+        "vahed_code": [
+          "1155"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Pass@123",
+          "temporary": false
+        }
+      ],
+      "clientRoles": {
+        "accounting-api": []
+      }
+    }
+  ],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"vahed_code\",\"displayName\":\"کد واحد\",\"validations\":{\"pattern\":{\"pattern\":\"^[0-9]{4}$\",\"error-message\":\"کد واحد ۴ رقم است.\"}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]},\"multivalued\":false}],\"groups\":[],\"unmanagedAttributePolicy\":\"ADMIN_VIEW\"}"
+          ]
+        }
+      }
+    ]
+  }
+}

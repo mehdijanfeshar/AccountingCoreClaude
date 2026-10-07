@@ -16,6 +16,15 @@
 
 ---
 
+### فاز ۵۳ / ورود با Keycloak — قابل انتخاب با تنظیمات (۲۰۲۶-۱۰-۰۷، هر دو ریپو، برنچ `keycloak`)
+
+تصمیم‌های صاحب پروژه: Keycloak کنار سامانهٔ ورود سازمان و قابل انتخاب با تنظیمات (پیش‌فرض همان قبلی)؛ Keycloak محلی برای توسعه؛ نقش‌ها = Client Role، کد واحد = ویژگی کاربر؛ فرانت با `oidc-client-ts`. راهنما: `docs/keycloak.md`.
+- بک‌اند: `Auth:Provider` (Tamin | Keycloak) و بخش `Keycloak`. `AddKeycloakJwt` (JWT Bearer با discovery/JWKS، همان طرح Bearer) + `KeycloakClaimsTransformation`: `preferred_username` ⇒ NameIdentifier (کد ملی؛ `sub` ۳۶ نویسه در ADDUSERID ۱۰ نویسه جا نمی‌شود)، `vahed_code` ⇒ `urn:tamin:jwt:claim:org`، Client Roleهای `accounting-api` و Realm Roleها ⇒ Role. `PortalRoleClaimsMiddleware` فقط در حالت Tamin. ۵ تست (`KeycloakClaimsTransformationTests`).
+- `deploy/keycloak`: docker-compose (Keycloak 26، پورت ۸۱۸۰) + `realm-accounting.json` (Clientهای `accounting-ui` عمومی/PKCE و `accounting-api` bearer-only، Mapper audience و vahed_code، User Profile با `vahed_code`، ۸ نقش، ۵ کاربر نمونه با رمز `Pass@123`، زبان پیش‌فرض فارسی).
+- فرانت: `src/lib/auth/keycloak.ts` (`VITE_AUTH_PROVIDER=keycloak`)، تمدید خودکار با refresh token؛ `bootstrapAuth`/`startLogin`/`startLogout` واگذار می‌کنند و توکن مثل قبل در `tokenStore`.
+- آزمون واقعی (Keycloak محلی + API روی Oracle توسعه): بدون توکن و توکن دست‌کاری‌شده ۴۰۱؛ `api/me` شناسه/واحد/نقش درست؛ فهرست اسناد ۲۰۰؛ کاربر بی‌نقش ۴۰۳؛ ستاد با هدر واحد 1155 ۲۰۰ و کاربر 1155 با هدر 0000 ۴۰۳. ورود از مرورگر (صفحهٔ Keycloak و برگشت) هنوز دستی امتحان نشده.
+- باز: `directAccessGrantsEnabled` فقط برای آزمون توسعه؛ Keycloak واقعی (HTTPS، پایگاه‌داده، همگام‌سازی کاربران/کد ملی) تصمیم جدا؛ متن ۴۰۳ «نقشی در سامانهٔ ورود سازمان…» در حالت Keycloak هم همان است.
+
 ### فاز ۵۲-ب / کارهای فنی باقی‌مانده (۲۰۲۶-۱۰-۰۷، هر دو ریپو، برنچ `hesabyar`)
 
 ۲۰ تست تازه (`Application.Tests/Phase52B/Phase52BRulesTests`) + ۴ تست قدیمی به‌روز شد؛ تست‌های بخش‌های لمس‌شده بدون شکست تازه ؛ ۱۵ تست کهنهٔ دسته‌چک (فاز ۴۹) و سطوح تفصیلی (منبع تازهٔ فاز ۵۲) هم با رفتار فعلی هماهنگ شد ⇒ ۶۱۳ تست این بخش‌ها همه سبز. build و tsc سبز. DDL لازم ندارد.

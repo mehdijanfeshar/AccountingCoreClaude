@@ -71,11 +71,21 @@ builder.Services.AddAssistantLlm(builder.Configuration);
 // Accounting service in the org IDP. Override via configuration key "Tamin:Idp:Audience" (User
 // Secrets in Development, real config/secret store in other environments) once a dedicated
 // audience exists — see the empty placeholder in appsettings.json.
-builder.Services.AddTaminJWTToken(
-    validAudience: builder.Configuration["Tamin:Idp:Audience"] ?? "136f697b158116450170417a5105224e",
-    environment: builder.Environment.IsProduction()
-        ? Tamin.Framework.Common.Security.Environments.Production
-        : Tamin.Framework.Common.Security.Environments.Test);
+// سامانهٔ ورود قابل انتخاب (برنچ keycloak): Auth:Provider = Tamin (پیش‌فرض، رفتار قبلی) یا Keycloak. هر دو همان طرح
+// «Bearer» را ثبت می‌کنند، پس رویدادهای ProblemDetails پایین و FallbackPolicy برای هر دو یکسان‌اند.
+var useKeycloak = string.Equals(builder.Configuration["Auth:Provider"], "Keycloak", StringComparison.OrdinalIgnoreCase);
+if (useKeycloak)
+{
+    builder.Services.AddKeycloakJwt(builder.Configuration);
+}
+else
+{
+    builder.Services.AddTaminJWTToken(
+        validAudience: builder.Configuration["Tamin:Idp:Audience"] ?? "136f697b158116450170417a5105224e",
+        environment: builder.Environment.IsProduction()
+            ? Tamin.Framework.Common.Security.Environments.Production
+            : Tamin.Framework.Common.Security.Environments.Test);
+}
 
 // AddTaminJWTToken pre-wires JwtBearerEvents.OnMessageReceived and OnAuthenticationFailed (its
 // own diagnostic logging) on the "Bearer" scheme it just registered. Assigning a brand-new
@@ -193,7 +203,11 @@ if (corsOrigins.Length > 0)
 
 app.UseAuthentication();
 // نقش‌های کاربر از پورتال سامانهٔ ورود (توکن نقش ندارد) — پیش از Authorization و MediatR.
-app.UseMiddleware<Accounting.Api.Security.PortalRoleClaimsMiddleware>();
+// Keycloak نقش‌ها را خودش در توکن می‌گذارد؛ گرفتن نقش از پورتال فقط برای سامانهٔ ورود سازمان است.
+if (!useKeycloak)
+{
+    app.UseMiddleware<Accounting.Api.Security.PortalRoleClaimsMiddleware>();
+}
 app.UseAuthorization();
 
 app.MapControllers();
