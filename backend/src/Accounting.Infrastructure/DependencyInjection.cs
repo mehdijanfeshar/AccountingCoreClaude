@@ -32,6 +32,13 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAccountCodeRepository, AccountCodeRepository>();
+        services.AddScoped<IDeleteDependencyChecker, DeleteDependencyChecker>();
+        services.AddScoped<IVoucherRestoreRepository, VoucherRestoreRepository>();
+        services.AddScoped<ISystemVoucherInboxRepository, SystemVoucherInboxRepository>();
+        services.AddScoped<Accounting.Application.Vouchers.Commands.Common.IAccountEntryPolicy, AccountEntryPolicy>();
+        services.AddScoped<IMonthReopenRepository, MonthReopenRepository>();
+        services.AddSingleton<IMonthReopenCodeGenerator, MonthReopenCodeGenerator>();
+        services.AddScoped<IMonthCloseRepository, MonthCloseRepository>();
         services.AddScoped<IVoucherHeadRepository, VoucherHeadRepository>();
         services.AddScoped<IVoucherDetailRepository, VoucherDetailRepository>();
         services.AddScoped<IAccountCodeReadRepository, AccountCodeReadRepository>();

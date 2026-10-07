@@ -111,6 +111,46 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     "Conflict",
                     voucherStateChangeDeniedException.PublicDetail)),
 
+            MonthReopenException monthReopenException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    monthReopenException.PublicDetail)),
+
+            LevelTafsilRuleException levelTafsilRuleException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    levelTafsilRuleException.PublicDetail)),
+
+            BusinessRuleException businessRuleException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    businessRuleException.PublicDetail)),
+
+            DeleteBlockedException deleteBlockedException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    deleteBlockedException.PublicDetail)),
+
+            VoucherUnbalancedException voucherUnbalancedException => (
+                StatusCodes.Status409Conflict,
+                BuildProblemDetails(
+                    httpContext,
+                    StatusCodes.Status409Conflict,
+                    "Conflict",
+                    voucherUnbalancedException.PublicDetail)),
+
             VoucherNotEditableException voucherNotEditableException => (
                 StatusCodes.Status409Conflict,
                 BuildProblemDetails(

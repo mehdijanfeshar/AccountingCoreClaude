@@ -38,7 +38,8 @@ public sealed class CreatePersonActionCommandHandler : IRequestHandler<CreatePer
             USERID = request.UserId,
             FROMDATE = request.FromDate,
             TODATE = request.ToDate,
-            STATUS = request.Status,
+            // ریسک ۲-ب: ردیف تازه همیشه فعال (مرجع: ثابت true).
+            STATUS = true,
             OPERATORROLE = request.OperatorRole,
             VAHEDCODE = request.VahedCode,
             ADDUSERID = _currentUser.UserId,

@@ -19,17 +19,20 @@ namespace Accounting.Application.Accounts.Commands.DeleteAccountCode;
 public sealed class DeleteAccountCodeCommandHandler : IRequestHandler<DeleteAccountCodeCommand>
 {
     private readonly IAccountCodeRepository _accountCodeRepository;
+    private readonly IDeleteDependencyChecker _dependencyChecker;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
     public DeleteAccountCodeCommandHandler(
         IAccountCodeRepository accountCodeRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IDeleteDependencyChecker dependencyChecker)
     {
         _accountCodeRepository = accountCodeRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _dependencyChecker = dependencyChecker;
     }
 
     public async Task Handle(DeleteAccountCodeCommand request, CancellationToken cancellationToken)
@@ -44,6 +47,12 @@ public sealed class DeleteAccountCodeCommandHandler : IRequestHandler<DeleteAcco
         if (entity.ISDELETED == true)
         {
             return;
+        }
+
+        // Risks #6/#7 (2026-10-07): soft delete gets no ORA-02292, so dependents are checked here.
+        if (await _dependencyChecker.FindAccountCodeBlockerAsync(entity.ID, cancellationToken) is { } blocker)
+        {
+            throw new DeleteBlockedException("AccountCode", entity.ID, blocker);
         }
 
         entity.ISDELETED = true;

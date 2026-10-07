@@ -22,15 +22,18 @@ public sealed class DeleteExpenseCommandHandler : IRequestHandler<DeleteExpenseC
     private readonly IExpenseRepository _expenseRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IDeleteDependencyChecker? _deleteDependencyChecker;
 
     public DeleteExpenseCommandHandler(
         IExpenseRepository expenseRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IDeleteDependencyChecker? deleteDependencyChecker = null)
     {
         _expenseRepository = expenseRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _deleteDependencyChecker = deleteDependencyChecker;
     }
 
     public async Task Handle(DeleteExpenseCommand request, CancellationToken cancellationToken)
@@ -45,6 +48,13 @@ public sealed class DeleteExpenseCommandHandler : IRequestHandler<DeleteExpenseC
         if (entity.ISDELETED == true)
         {
             return;
+        }
+
+        // ریسک ۲-الف: حذف نرم نباید رکوردی را که هنوز جای دیگری استفاده می‌شود بی‌صدا یتیم کند.
+        if (_deleteDependencyChecker is not null
+            && await _deleteDependencyChecker.FindBlockerAsync(DeleteGuardTarget.Expense, entity.ID, cancellationToken) is { } blocker)
+        {
+            throw new DeleteBlockedException("Expense", entity.ID, blocker);
         }
 
         entity.ISDELETED = true;

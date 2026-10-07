@@ -46,7 +46,7 @@ public sealed class ChangeVoucherStateCommandHandlerTests
         return new Harness(
             repository,
             unitOfWork,
-            new ChangeVoucherStateCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object));
+            new ChangeVoucherStateCommandHandler(repository.Object, Accounting.Application.Tests.Vouchers.Commands.Common.BalancedDetailRepository.Create(), unitOfWork.Object, currentUser.Object));
     }
 
     [Fact]

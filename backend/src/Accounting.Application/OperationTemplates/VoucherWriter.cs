@@ -27,6 +27,7 @@ public sealed class VoucherWriter : IVoucherWriter
     private readonly IVoucherChequeService _chequeService;
     private readonly IVoucherLineExtrasService _extrasService;
     private readonly ICurrentUser _currentUser;
+    private readonly IAccountEntryPolicy? _accountEntryPolicy;
 
     public VoucherWriter(
         IVoucherHeadRepository voucherHeadRepository,
@@ -34,7 +35,8 @@ public sealed class VoucherWriter : IVoucherWriter
         IVoucherTafsiliLevelGuard tafsiliLevelGuard,
         IVoucherChequeService chequeService,
         IVoucherLineExtrasService extrasService,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IAccountEntryPolicy? accountEntryPolicy = null)
     {
         _voucherHeadRepository = voucherHeadRepository;
         _voucherDetailRepository = voucherDetailRepository;
@@ -42,6 +44,7 @@ public sealed class VoucherWriter : IVoucherWriter
         _chequeService = chequeService;
         _extrasService = extrasService;
         _currentUser = currentUser;
+        _accountEntryPolicy = accountEntryPolicy;
     }
 
     public async Task<(Guid VoucherId, string VoucherNo)> CreateDraftVoucherAsync(VoucherDraft draft, CancellationToken ct)
@@ -58,6 +61,10 @@ public sealed class VoucherWriter : IVoucherWriter
             await _tafsiliLevelGuard.EnsureSatisfiedAsync(draft.Lines[i].SubsidiaryAccountId, linksByLine[i], ct);
 
         var dateDoc = ToJalali(draft.VoucherDate);
+
+        // ماتریس دسترسی کدینگ (ریسک #۲۷): حسابیار ثبت دستیِ کاربر است، نه سند سیستمی.
+        if (_accountEntryPolicy is not null)
+            await _accountEntryPolicy.EnsureManualEntryAllowedAsync(draft.VahedCode, dateDoc, draft.Lines.Select(l => (Guid?)l.SubsidiaryAccountId), ct);
         var year = dateDoc[..4];
         var docNum = await _voucherHeadRepository.GetNextDocNumAsync(draft.VahedCode, year, ct);
 

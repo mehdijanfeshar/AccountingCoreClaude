@@ -208,6 +208,10 @@ public partial class LegacyDbContext : DbContext
 
     public virtual DbSet<TB_FS_PERIOD_LOG> TB_FS_PERIOD_LOGs { get; set; }
 
+    public virtual DbSet<TB_MONTH_REOPEN> TB_MONTH_REOPENs { get; set; }
+
+    public virtual DbSet<TB_MONTH_CLOSE_LOG> TB_MONTH_CLOSE_LOGs { get; set; }
+
     public virtual DbSet<TB_FS_RUN_MANUAL> TB_FS_RUN_MANUALs { get; set; }
 
     // خزانه‌داری، بخش ۴-ج (۲۰۲۶-۰۹-۲۹) — دریافت وجه + انتقال وجه.
@@ -809,10 +813,10 @@ public partial class LegacyDbContext : DbContext
             // `.HasColumnType("NUMBER(1)")` and gets NO `.HasConversion<>()` at all — exact
             // precedent: TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE (short?, phase 20-b), proven safe in
             // LINQ predicates without a conversion because plain short/short? never triggers the
-            // "NUMBER(1) ⇒ bool" convention (that convention only fires for CLR bool/bool?).
+            // "NUMBER(1) ⇒ bool" convention — but only because no NUMBER(1) store type is declared
+            // here: with HasColumnType("NUMBER(1)") the Oracle provider picks its bool mapping (2026-10-07).
             entity.Property(e => e.ATTRIBBOXNO)
-                .HasComment("مشخصه تعداد شناسه ")
-                .HasColumnType("NUMBER(1)");
+                .HasComment("مشخصه تعداد شناسه "); // NUMBER(1) in Oracle — no HasColumnType: see TB_TAFSIL_LINK_TAFSILGROUP.VAHEDTYPE
             entity.Property(e => e.ATTRIBSUM)
                 .HasComment("جمع پذير يا جمع ناپذير — Accounting.Domain.ValueObjects.AttribSum (1=Summable,2=UnSummable)")
                 .HasConversion<int>();
@@ -3017,6 +3021,86 @@ public partial class LegacyDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.REASON)
                 .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.CREATEDDATE).HasPrecision(6);
+        });
+
+        // DDL 073 — برگشت صورتحساب ماه.
+        modelBuilder.Entity<TB_MONTH_REOPEN>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_MONTH_REOPEN");
+
+            entity.ToTable("TB_MONTH_REOPEN");
+
+            entity.HasIndex(e => new { e.VAHEDCODE, e.YEAR, e.MONTH, e.SEQ }, "UK_MONTH_REOPEN_SEQ").IsUnique();
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false)
+                .IsFixedLength();
+            entity.Property(e => e.MONTH).HasColumnType("NUMBER(2)");
+            entity.Property(e => e.SEQ).HasColumnType("NUMBER(4)");
+            entity.Property(e => e.REASON)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.ISSUEDBY)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.ISSUEDDATE).HasPrecision(6);
+            entity.Property(e => e.FAILED_ATTEMPTS).HasColumnType("NUMBER(2)");
+            entity.Property(e => e.USEDBY)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.USEDDATE).HasPrecision(6);
+            entity.Property(e => e.REVERTED_COUNT).HasColumnType("NUMBER(6)");
+        });
+
+        // DDL 074 — لاگ صورتحساب ماه.
+        modelBuilder.Entity<TB_MONTH_CLOSE_LOG>(entity =>
+        {
+            entity.HasKey(e => e.ID).HasName("PK_MONTH_CLOSE_LOG");
+
+            entity.ToTable("TB_MONTH_CLOSE_LOG");
+
+            entity.HasIndex(e => new { e.VAHEDCODE, e.YEAR, e.MONTH }, "IDX_MONTH_CLOSE_LOG_UNIT");
+
+            entity.Property(e => e.ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.BATCH_ID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.VAHEDCODE)
+                .HasMaxLength(4)
+                .IsUnicode(false);
+            entity.Property(e => e.YEAR)
+                .HasMaxLength(4)
+                .IsUnicode(false)
+                .IsFixedLength();
+            entity.Property(e => e.MONTH).HasColumnType("NUMBER(2)");
+            // No NUMBER(1) column type here: the Oracle provider maps NUMBER(1) to bool and the int
+            // property then fails at tracking time ("No coercion operator … Int32 and Boolean").
+            entity.Property(e => e.RESULT);
+            entity.Property(e => e.ACCEPTED_COUNT).HasColumnType("NUMBER(6)");
+            entity.Property(e => e.PENDING_VOUCHERS).HasColumnType("NUMBER(6)");
+            entity.Property(e => e.PENDING_ELAMS).HasColumnType("NUMBER(6)");
+            entity.Property(e => e.REASON)
+                .HasMaxLength(1000)
+                .IsUnicode(false);
+            entity.Property(e => e.USERID)
+                .HasMaxLength(10)
                 .IsUnicode(false);
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);
         });
@@ -5738,7 +5822,9 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.VAHEDCODE)
                 .HasMaxLength(4)
                 .IsUnicode(false);
-            entity.Property(e => e.VAHEDTYPE).HasColumnType("NUMBER(1)");
+            // short? on a NUMBER(1) column: no HasColumnType — the Oracle provider maps a NUMBER(1)
+            // store type to bool and tracking then fails ("No coercion operator … Int16 and Boolean").
+            entity.Property(e => e.VAHEDTYPE);
 
             entity.HasOne(d => d.TAFSILGROUP).WithMany(p => p.TB_TAFSIL_LINK_TAFSILGROUPs)
                 .HasForeignKey(d => d.TAFSILGROUP_ID)

@@ -22,15 +22,18 @@ public sealed class DeleteTafsiliCommandHandler : IRequestHandler<DeleteTafsiliC
     private readonly ITafsiliRepository _tafsiliRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IDeleteDependencyChecker? _deleteDependencyChecker;
 
     public DeleteTafsiliCommandHandler(
         ITafsiliRepository tafsiliRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IDeleteDependencyChecker? deleteDependencyChecker = null)
     {
         _tafsiliRepository = tafsiliRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _deleteDependencyChecker = deleteDependencyChecker;
     }
 
     public async Task Handle(DeleteTafsiliCommand request, CancellationToken cancellationToken)
@@ -45,6 +48,13 @@ public sealed class DeleteTafsiliCommandHandler : IRequestHandler<DeleteTafsiliC
         if (entity.ISDELETED == true)
         {
             return;
+        }
+
+        // ریسک ۲-الف: حذف نرم نباید رکوردی را که هنوز جای دیگری استفاده می‌شود بی‌صدا یتیم کند.
+        if (_deleteDependencyChecker is not null
+            && await _deleteDependencyChecker.FindBlockerAsync(DeleteGuardTarget.Tafsili, entity.ID, cancellationToken) is { } blocker)
+        {
+            throw new DeleteBlockedException("Tafsili", entity.ID, blocker);
         }
 
         entity.ISDELETED = true;

@@ -1,6 +1,7 @@
 using Accounting.Application.Common.Exceptions;
 using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Vouchers.Commands.Common;
 using MediatR;
 
 namespace Accounting.Application.Vouchers.Commands.ChangeVoucherState;
@@ -8,15 +9,18 @@ namespace Accounting.Application.Vouchers.Commands.ChangeVoucherState;
 public sealed class ChangeVoucherStateCommandHandler : IRequestHandler<ChangeVoucherStateCommand>
 {
     private readonly IVoucherHeadRepository _voucherHeadRepository;
+    private readonly IVoucherDetailRepository _voucherDetailRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
     public ChangeVoucherStateCommandHandler(
         IVoucherHeadRepository voucherHeadRepository,
+        IVoucherDetailRepository voucherDetailRepository,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser)
     {
         _voucherHeadRepository = voucherHeadRepository;
+        _voucherDetailRepository = voucherDetailRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
     }
@@ -49,6 +53,13 @@ public sealed class ChangeVoucherStateCommandHandler : IRequestHandler<ChangeVou
             {
                 throw new VoucherStateChangeDeniedException(head.ID);
             }
+        }
+
+        // Risk #3 (owner 2026-10-07): leaving یادداشت needs a balanced voucher with lines. Whole
+        // batch checked before anything is written, same all-or-nothing contract as above.
+        if (VoucherBalanceGuard.RequiresBalance(request.NewState))
+        {
+            await VoucherBalanceGuard.EnsureBalancedAsync(_voucherDetailRepository, found, cancellationToken);
         }
 
         var now = DateTime.UtcNow;

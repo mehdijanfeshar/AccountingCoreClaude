@@ -75,7 +75,7 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, Accounting.Application.Tests.Vouchers.Commands.Common.BalancedDetailRepository.Create(), unitOfWork.Object, currentUser.Object);
         var command = ValidCommand(id);
 
         await handler.Handle(command, CancellationToken.None);
@@ -109,7 +109,7 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, Accounting.Application.Tests.Vouchers.Commands.Common.BalancedDetailRepository.Create(), unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -127,7 +127,7 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("srvusr02");
 
-        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, Accounting.Application.Tests.Vouchers.Commands.Common.BalancedDetailRepository.Create(), unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -151,7 +151,7 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, Accounting.Application.Tests.Vouchers.Commands.Common.BalancedDetailRepository.Create(), unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -170,7 +170,7 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, Accounting.Application.Tests.Vouchers.Commands.Common.BalancedDetailRepository.Create(), unitOfWork.Object, currentUser.Object);
 
         await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(ValidCommand(id), CancellationToken.None));
 
@@ -187,7 +187,7 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, Accounting.Application.Tests.Vouchers.Commands.Common.BalancedDetailRepository.Create(), unitOfWork.Object, currentUser.Object);
 
         await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(ValidCommand(id), CancellationToken.None));
 
@@ -204,7 +204,7 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, Accounting.Application.Tests.Vouchers.Commands.Common.BalancedDetailRepository.Create(), unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -224,7 +224,7 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
 
         repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
-        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, Accounting.Application.Tests.Vouchers.Commands.Common.BalancedDetailRepository.Create(), unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(id), token);
 
@@ -242,7 +242,7 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, Accounting.Application.Tests.Vouchers.Commands.Common.BalancedDetailRepository.Create(), unitOfWork.Object, currentUser.Object);
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -263,7 +263,7 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, Accounting.Application.Tests.Vouchers.Commands.Common.BalancedDetailRepository.Create(), unitOfWork.Object, currentUser.Object);
         var command = ValidCommand(id) with { VahedCode = "0009" };
 
         await handler.Handle(command, CancellationToken.None);
@@ -286,7 +286,7 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
         var currentUser = CurrentUserMock();
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
-        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, Accounting.Application.Tests.Vouchers.Commands.Common.BalancedDetailRepository.Create(), unitOfWork.Object, currentUser.Object);
         var behavior = new VahedScopeBehavior<UpdateVoucherHeadCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(id) with { VahedCode = "9999" };
 

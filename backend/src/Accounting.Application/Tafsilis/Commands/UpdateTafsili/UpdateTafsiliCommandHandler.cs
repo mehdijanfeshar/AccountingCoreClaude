@@ -1,6 +1,7 @@
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Application.Tafsilis.Commands.Common;
 using MediatR;
 
 namespace Accounting.Application.Tafsilis.Commands.UpdateTafsili;
@@ -34,15 +35,18 @@ public sealed class UpdateTafsiliCommandHandler : IRequestHandler<UpdateTafsiliC
     private readonly ITafsiliRepository _tafsiliRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IUnitAccessReadRepository _unitAccess;
 
     public UpdateTafsiliCommandHandler(
         ITafsiliRepository tafsiliRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IUnitAccessReadRepository unitAccess)
     {
         _tafsiliRepository = tafsiliRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _unitAccess = unitAccess;
     }
 
     public async Task Handle(UpdateTafsiliCommand request, CancellationToken cancellationToken)
@@ -54,13 +58,16 @@ public sealed class UpdateTafsiliCommandHandler : IRequestHandler<UpdateTafsiliC
             throw new NotFoundException("Tafsili", request.Id);
         }
 
+        var scope = await TafsiliScopePolicy.ResolveAsync(
+            _currentUser, _unitAccess, request.VahedCode, request.Owner, request.VahedType, request.TafsilGroupLinkVahedType, cancellationToken);
+
         entity.TAFSILI_CODE = request.TafsiliCode;
         entity.TAFSILI_NAME = request.TafsiliName;
         entity.TAFSIL_DESC = request.TafsilDesc;
         entity.ISACTIVE = request.IsActive;
         entity.PERSONTYPE = request.PersonType;
-        entity.OWNER = request.Owner;
-        entity.VAHEDTYPE = request.VahedType;
+        entity.OWNER = scope.Owner;
+        entity.VAHEDTYPE = scope.VahedType;
         entity.VAHEDCODE = request.VahedCode;
         entity.CHANGEUSERID = _currentUser.UserId;
         entity.UPDATEDDATE = DateTime.UtcNow;
@@ -79,7 +86,7 @@ public sealed class UpdateTafsiliCommandHandler : IRequestHandler<UpdateTafsiliC
             }
         }
 
-        short? groupLinkVahedType = request.TafsilGroupLinkVahedType is { } category ? (short)category : null;
+        short? groupLinkVahedType = scope.LinkVahedType;
 
         foreach (var tafsilGroupId in requestedGroupIds)
         {
@@ -94,7 +101,7 @@ public sealed class UpdateTafsiliCommandHandler : IRequestHandler<UpdateTafsiliC
                     ID = Guid.NewGuid(),
                     TAFSIL_ID = request.Id,
                     TAFSILGROUP_ID = tafsilGroupId,
-                    VAHEDCODE = entity.VAHEDCODE ?? _currentUser.VahedCode ?? string.Empty,
+                    VAHEDCODE = scope.LinkVahedCode,
                     VAHEDTYPE = groupLinkVahedType,
                     ADDUSERID = _currentUser.UserId,
                     CREATEDDATE = DateTime.UtcNow,

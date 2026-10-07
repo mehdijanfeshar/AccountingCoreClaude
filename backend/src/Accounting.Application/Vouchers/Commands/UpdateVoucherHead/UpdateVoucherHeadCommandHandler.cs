@@ -1,6 +1,7 @@
 using Accounting.Application.Common.Security;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Vouchers.Commands.Common;
 using MediatR;
 
 namespace Accounting.Application.Vouchers.Commands.UpdateVoucherHead;
@@ -28,15 +29,18 @@ namespace Accounting.Application.Vouchers.Commands.UpdateVoucherHead;
 public sealed class UpdateVoucherHeadCommandHandler : IRequestHandler<UpdateVoucherHeadCommand>
 {
     private readonly IVoucherHeadRepository _voucherHeadRepository;
+    private readonly IVoucherDetailRepository _voucherDetailRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
     public UpdateVoucherHeadCommandHandler(
         IVoucherHeadRepository voucherHeadRepository,
+        IVoucherDetailRepository voucherDetailRepository,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser)
     {
         _voucherHeadRepository = voucherHeadRepository;
+        _voucherDetailRepository = voucherDetailRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
     }
@@ -54,9 +58,17 @@ public sealed class UpdateVoucherHeadCommandHandler : IRequestHandler<UpdateVouc
         // must not live only in the cartable UI.
         VoucherEditability.EnsureEditable(entity.ID, entity.DOCLIFE);
 
+        // Risk #5 (owner 2026-10-07): only یادداشت ↔ موقت here (validator); null keeps the state.
+        // Moving یادداشت → موقت needs a balanced voucher (risk #3).
+        var newState = request.DocLife ?? entity.DOCLIFE;
+        if (newState != entity.DOCLIFE && VoucherBalanceGuard.RequiresBalance(newState))
+        {
+            await VoucherBalanceGuard.EnsureBalancedAsync(_voucherDetailRepository, [entity], cancellationToken);
+        }
+
         entity.DOC_NUM = request.DocNum;
         entity.DATE_DOC = request.DateDoc;
-        entity.DOCLIFE = request.DocLife;
+        entity.DOCLIFE = newState;
         entity.HEAD_DESC = request.HeadDesc;
         entity.APENDIX = request.Apendix;
         entity.SYSTEM_TYPE = request.SystemTypeId;

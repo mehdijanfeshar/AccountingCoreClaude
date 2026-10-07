@@ -6,9 +6,12 @@ using Accounting.Application.Vouchers.Commands.DeleteVoucherHead;
 using Accounting.Application.Vouchers.Commands.UpdateVoucherHead;
 using Accounting.Application.Vouchers.Commands.ReverseVoucher;
 using Accounting.Application.Vouchers.Commands.SortVouchers;
+using Accounting.Application.Vouchers.Commands.SaveVoucher;
+using Accounting.Application.Vouchers.Restore;
 using Accounting.Application.Vouchers.Queries;
 using Accounting.Application.Vouchers.Queries.GetVoucherHeadById;
 using Accounting.Application.Vouchers.Queries.GetVoucherHeads;
+using Accounting.Application.Vouchers.Queries.GetNextDocNum;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -132,6 +135,40 @@ public sealed class VoucherHeadsController : ControllerBase
 
         return Ok(result);
     }
+
+    /// <summary>شمارهٔ پیشنهادی سند بعدی واحد هدر در سال (پیش‌فرض فرم صدور سند).</summary>
+    [HttpGet("next-doc-num")]
+    [ProducesResponseType(typeof(NextDocNumDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetNextDocNum([FromQuery] string year, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(new GetNextDocNumQuery(year), cancellationToken));
+
+    /// <summary>
+    /// ذخیرهٔ اتمیک سند از فرم: سرسند + ردیف‌ها (+ ردیف‌های حذفی در ویرایش) در یک تراکنش
+    /// (ریسک #۲۱). <c>headId</c> خالی = سند جدید.
+    /// </summary>
+    [HttpPost("save")]
+    [ProducesResponseType(typeof(SaveVoucherResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Save([FromBody] SaveVoucherCommand command, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(command, cancellationToken));
+
+    /// <summary>سندهای حذف‌شدهٔ واحد در سال (برای بازگردانی).</summary>
+    [HttpGet("deleted")]
+    [ProducesResponseType(typeof(IReadOnlyList<DeletedVoucherDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDeleted([FromQuery] string year, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(new GetDeletedVouchersQuery(year), cancellationToken));
+
+    /// <summary>بازگردانی سند حذف‌شده — در وضعیت یادداشت؛ شمارهٔ گرفته‌شده ⇒ شمارهٔ تازه.</summary>
+    [HttpPost("{id:guid}/restore")]
+    [ProducesResponseType(typeof(RestoreVoucherResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Restore(Guid id, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(new RestoreVoucherCommand(id), cancellationToken));
 
     /// <summary>
     /// Returns a single voucher head by <c>ID</c>, or 404 when it does not exist.

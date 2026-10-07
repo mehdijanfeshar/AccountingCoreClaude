@@ -57,6 +57,7 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
     private readonly IVoucherTafsiliLevelGuard _tafsiliLevelGuard;
     private readonly IVoucherChequeService? _chequeService;
     private readonly IVoucherLineExtrasService? _extrasService;
+    private readonly IAccountEntryPolicy? _accountEntryPolicy;
 
     public CreateVoucherDetailCommandHandler(
         IVoucherHeadRepository voucherHeadRepository,
@@ -65,10 +66,12 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
         ICurrentUser currentUser,
         IVoucherTafsiliLevelGuard tafsiliLevelGuard,
         IVoucherChequeService? chequeService = null,
-        IVoucherLineExtrasService? extrasService = null)
+        IVoucherLineExtrasService? extrasService = null,
+        IAccountEntryPolicy? accountEntryPolicy = null)
     {
         _chequeService = chequeService;
         _extrasService = extrasService;
+        _accountEntryPolicy = accountEntryPolicy;
         _voucherHeadRepository = voucherHeadRepository;
         _voucherDetailRepository = voucherDetailRepository;
         _unitOfWork = unitOfWork;
@@ -103,6 +106,13 @@ public sealed class CreateVoucherDetailCommandHandler : IRequestHandler<CreateVo
             request.AccountId,
             request.TafsiliLinks ?? [],
             cancellationToken);
+
+        // ماتریس دسترسی کدینگ (ریسک #۲۷) — این Command مسیر ثبت دستی است.
+        if (_accountEntryPolicy is not null)
+        {
+            await _accountEntryPolicy.EnsureManualEntryAllowedAsync(
+                request.VahedCode, head.DATE_DOC, [request.AccountId], cancellationToken);
+        }
 
         var now = DateTime.UtcNow;
 

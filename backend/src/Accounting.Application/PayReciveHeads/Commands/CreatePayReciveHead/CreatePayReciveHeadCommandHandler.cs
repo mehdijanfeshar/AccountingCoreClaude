@@ -48,7 +48,7 @@ public sealed class CreatePayReciveHeadCommandHandler : IRequestHandler<CreatePa
         var entity = new TB_PAYRECIVHEAD
         {
             ID = Guid.NewGuid(),
-            PAYRECIVCODE = request.PayReciveCode,
+            PAYRECIVCODE = PayReciveCodeFormat.Normalize(request.PayReciveCode),
             PAYRECIVDATE = request.PayReciveDate,
             PAYRECIVDESCRIPTION = request.PayReciveDescription,
             PAYRECIVTYPE = request.PayReciveType,

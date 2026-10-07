@@ -37,7 +37,7 @@ public sealed class DeleteLevelTafsilCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter9");
 
-        var handler = new DeleteLevelTafsilCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteLevelTafsilCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         await handler.Handle(new DeleteLevelTafsilCommand(id), CancellationToken.None);
 
@@ -66,7 +66,7 @@ public sealed class DeleteLevelTafsilCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new DeleteLevelTafsilCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteLevelTafsilCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         await handler.Handle(new DeleteLevelTafsilCommand(id), CancellationToken.None);
 
@@ -82,7 +82,7 @@ public sealed class DeleteLevelTafsilCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new DeleteLevelTafsilCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteLevelTafsilCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => handler.Handle(new DeleteLevelTafsilCommand(id), CancellationToken.None));
@@ -104,7 +104,7 @@ public sealed class DeleteLevelTafsilCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("newDeleter");
 
-        var handler = new DeleteLevelTafsilCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteLevelTafsilCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         var exception = await Record.ExceptionAsync(
             () => handler.Handle(new DeleteLevelTafsilCommand(id), CancellationToken.None));
@@ -129,7 +129,7 @@ public sealed class DeleteLevelTafsilCommandHandlerTests
 
         repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
 
-        var handler = new DeleteLevelTafsilCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteLevelTafsilCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         await handler.Handle(new DeleteLevelTafsilCommand(id), token);
 

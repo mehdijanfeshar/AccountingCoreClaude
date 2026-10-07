@@ -55,9 +55,13 @@ public sealed class TafsiliLookupReadRepository : ITafsiliLookupReadRepository
         Guid accountCodeId,
         CancellationToken cancellationToken = default)
     {
-        // ISDELETED is non-nullable bool on both TB_ACCOUNT_LINK_LEVEL and TB_LEVEL_TAFSIL, so
-        // "== false" (not "!= true") is the correct/only "not deleted" predicate for either.
-        var rows = await _dbContext.TB_ACCOUNT_LINK_LEVELs
+        // Source of truth = TB_ACCOUNT_LINK_TAFSILGROUP (2026-10-07). Owner rule (phase 34): a level
+        // is active/required for a معین exactly when a live گروه تفصیلی link exists for it.
+        // TB_ACCOUNT_LINK_LEVEL is still kept in step by AccountLevelLinkSynchronizer, but only on
+        // the next save of that معین's links — legacy rows that were never re-saved (e.g. 005000:
+        // groups on levels 1 and 3, level rows 3 and 4) made the voucher form ask for an
+        // unsatisfiable level 4 and skip level 1. Reading the group links directly cannot drift.
+        var rows = await _dbContext.TB_ACCOUNT_LINK_TAFSILGROUPs
             .AsNoTracking()
             .Where(l => l.ACCOUNT_ID == accountCodeId && l.ISDELETED == false && l.LEVEL.ISDELETED == false)
             .Select(l => new { l.LEVEL.ID, l.LEVEL.LEVEL_CODE, l.LEVEL.LEVEL_NAME })

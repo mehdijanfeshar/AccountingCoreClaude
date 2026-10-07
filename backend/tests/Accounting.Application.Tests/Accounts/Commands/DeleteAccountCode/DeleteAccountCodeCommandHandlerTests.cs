@@ -37,7 +37,7 @@ public sealed class DeleteAccountCodeCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter9");
 
-        var handler = new DeleteAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         await handler.Handle(new DeleteAccountCodeCommand(id), CancellationToken.None);
 
@@ -71,7 +71,7 @@ public sealed class DeleteAccountCodeCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new DeleteAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         await handler.Handle(new DeleteAccountCodeCommand(id), CancellationToken.None);
 
@@ -87,7 +87,7 @@ public sealed class DeleteAccountCodeCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new DeleteAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => handler.Handle(new DeleteAccountCodeCommand(id), CancellationToken.None));
@@ -109,7 +109,7 @@ public sealed class DeleteAccountCodeCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("newDeleter");
 
-        var handler = new DeleteAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         var exception = await Record.ExceptionAsync(
             () => handler.Handle(new DeleteAccountCodeCommand(id), CancellationToken.None));
@@ -131,7 +131,7 @@ public sealed class DeleteAccountCodeCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter5");
 
-        var handler = new DeleteAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         await handler.Handle(new DeleteAccountCodeCommand(id), CancellationToken.None);
 
@@ -154,7 +154,7 @@ public sealed class DeleteAccountCodeCommandHandlerTests
 
         repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
 
-        var handler = new DeleteAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteAccountCodeCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         await handler.Handle(new DeleteAccountCodeCommand(id), token);
 

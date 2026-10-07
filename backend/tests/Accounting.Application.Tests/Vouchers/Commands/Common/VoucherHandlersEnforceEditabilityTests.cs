@@ -75,7 +75,7 @@ public sealed class VoucherHandlersEnforceEditabilityTests
         var repository = HeadRepositoryReturning(id, docLife);
         var unitOfWork = new Mock<IUnitOfWork>();
 
-        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, unitOfWork.Object, CurrentUser().Object);
+        var handler = new UpdateVoucherHeadCommandHandler(repository.Object, Accounting.Application.Tests.Vouchers.Commands.Common.BalancedDetailRepository.Create(), unitOfWork.Object, CurrentUser().Object);
 
         await Assert.ThrowsAsync<VoucherNotEditableException>(
             () => handler.Handle(UpdateCommand(id), CancellationToken.None));

@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using FluentValidation;
 
 namespace Accounting.Application.Vouchers.Commands.CreateVoucherHead;
@@ -60,7 +61,12 @@ public sealed class CreateVoucherHeadCommandValidator : AbstractValidator<Create
         // still passes — the column is optional. ⚠️ Note this rule also rejects 0, which is the
         // Oracle column's own DEFAULT; see the DocLife XML doc for why 0 was not added to the
         // enum and what that means for editing any pre-existing row that carries it.
+        //
+        // Owner decision 2026-10-07: the voucher form may only set یادداشت or موقت; reviewed and
+        // accepted are reached through change-state only. Null means یادداشت (see the handler).
         RuleFor(x => x.DocLife)
-            .IsInEnum();
+            .IsInEnum()
+            .Must(d => d is null or DocLife.Draft or DocLife.Temporary)
+            .WithMessage("در فرم سند فقط وضعیت «یادداشت» یا «موقت» قابل انتخاب است؛ بقیه از کارتابل.");
     }
 }

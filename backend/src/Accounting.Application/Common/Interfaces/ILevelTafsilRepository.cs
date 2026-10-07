@@ -19,4 +19,9 @@ public interface ILevelTafsilRepository
     /// decides how to treat <c>ISDELETED</c>).
     /// </summary>
     Task<TB_LEVEL_TAFSIL?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>تعداد سطوح فعال، و آیا کد داده‌شده روی سطح فعال دیگری هست (به‌جز <paramref name="excludeId"/>).</summary>
+    Task<int> CountActiveAsync(CancellationToken cancellationToken = default);
+
+    Task<bool> ActiveLevelCodeExistsAsync(string levelCode, Guid? excludeId, CancellationToken cancellationToken = default);
 }

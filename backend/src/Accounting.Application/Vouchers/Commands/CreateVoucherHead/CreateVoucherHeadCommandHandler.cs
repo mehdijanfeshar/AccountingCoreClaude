@@ -1,6 +1,7 @@
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Vouchers.Commands.Common;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using MediatR;
 
 namespace Accounting.Application.Vouchers.Commands.CreateVoucherHead;
@@ -37,19 +38,22 @@ public sealed class CreateVoucherHeadCommandHandler : IRequestHandler<CreateVouc
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
     private readonly IVoucherTafsiliLevelGuard _tafsiliLevelGuard;
+    private readonly IAccountEntryPolicy? _accountEntryPolicy;
 
     public CreateVoucherHeadCommandHandler(
         IVoucherHeadRepository voucherHeadRepository,
         IVoucherDetailRepository voucherDetailRepository,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
-        IVoucherTafsiliLevelGuard tafsiliLevelGuard)
+        IVoucherTafsiliLevelGuard tafsiliLevelGuard,
+        IAccountEntryPolicy? accountEntryPolicy = null)
     {
         _voucherHeadRepository = voucherHeadRepository;
         _voucherDetailRepository = voucherDetailRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _tafsiliLevelGuard = tafsiliLevelGuard;
+        _accountEntryPolicy = accountEntryPolicy;
     }
 
     public async Task<Guid> Handle(CreateVoucherHeadCommand request, CancellationToken cancellationToken)
@@ -61,7 +65,9 @@ public sealed class CreateVoucherHeadCommandHandler : IRequestHandler<CreateVouc
             ID = Guid.NewGuid(),
             DOC_NUM = request.DocNum,
             DATE_DOC = request.DateDoc,
-            DOCLIFE = request.DocLife,
+            // Null used to fall through to the column's DEFAULT 0 — outside the enum, so the new
+            // voucher was immediately non-editable. Null now means یادداشت (2026-10-07).
+            DOCLIFE = request.DocLife ?? DocLife.Draft,
             HEAD_DESC = request.HeadDesc,
             APENDIX = request.Apendix,
             SYSTEM_TYPE = request.SystemTypeId,
@@ -77,6 +83,15 @@ public sealed class CreateVoucherHeadCommandHandler : IRequestHandler<CreateVouc
             CREATEDDATE = now,
             ISDELETED = false,
         };
+
+        // Risk #3: a voucher created straight into موقت must already be balanced.
+        if (VoucherBalanceGuard.RequiresBalance(entity.DOCLIFE))
+        {
+            VoucherBalanceGuard.EnsureBalanced(
+                entity.ID,
+                entity.DOC_NUM,
+                (request.InitialDetails ?? []).Select(d => (d.Debtor, d.Creditor)));
+        }
 
         await _voucherHeadRepository.AddAsync(entity, cancellationToken);
 
@@ -95,6 +110,13 @@ public sealed class CreateVoucherHeadCommandHandler : IRequestHandler<CreateVouc
             foreach (var detailInput in initialDetails)
             {
                 await _tafsiliLevelGuard.EnsureSatisfiedAsync(detailInput.AccountId, [], cancellationToken);
+            }
+
+            if (_accountEntryPolicy is not null)
+            {
+                // ماتریس دسترسی کدینگ (ریسک #۲۷) — مسیر ثبت دستی.
+                await _accountEntryPolicy.EnsureManualEntryAllowedAsync(
+                    request.VahedCode, request.DateDoc, initialDetails.Select(d => d.AccountId), cancellationToken);
             }
 
             foreach (var detailInput in initialDetails)

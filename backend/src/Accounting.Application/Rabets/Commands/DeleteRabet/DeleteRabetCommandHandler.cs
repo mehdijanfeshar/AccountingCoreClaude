@@ -22,15 +22,18 @@ public sealed class DeleteRabetCommandHandler : IRequestHandler<DeleteRabetComma
     private readonly IRabetRepository _rabetRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IDeleteDependencyChecker? _deleteDependencyChecker;
 
     public DeleteRabetCommandHandler(
         IRabetRepository rabetRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IDeleteDependencyChecker? deleteDependencyChecker = null)
     {
         _rabetRepository = rabetRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _deleteDependencyChecker = deleteDependencyChecker;
     }
 
     public async Task Handle(DeleteRabetCommand request, CancellationToken cancellationToken)
@@ -45,6 +48,13 @@ public sealed class DeleteRabetCommandHandler : IRequestHandler<DeleteRabetComma
         if (entity.ISDELETED == true)
         {
             return;
+        }
+
+        // ریسک ۲-الف: حذف نرم نباید رکوردی را که هنوز جای دیگری استفاده می‌شود بی‌صدا یتیم کند.
+        if (_deleteDependencyChecker is not null
+            && await _deleteDependencyChecker.FindBlockerAsync(DeleteGuardTarget.Rabet, entity.ID, cancellationToken) is { } blocker)
+        {
+            throw new DeleteBlockedException("Rabet", entity.ID, blocker);
         }
 
         entity.ISDELETED = true;

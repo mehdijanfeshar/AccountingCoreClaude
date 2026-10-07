@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using FluentValidation;
 
 namespace Accounting.Application.Vouchers.Commands.UpdateVoucherHead;
@@ -65,10 +66,11 @@ public sealed class UpdateVoucherHeadCommandValidator : AbstractValidator<Update
         // Oracle column's own DEFAULT; see the DocLife XML doc for why 0 was not added to the
         // enum and what that means for editing any pre-existing row that carries it.
         //
-        // ⚠️ This rule does NOT address the separate open risk that this command lets DOCLIFE be
-        // changed at all: the reference project keeps state transitions in their own
-        // ChangeState command and its update path never touches the column.
+        // Owner decision 2026-10-07 (risk #5): editing may only move یادداشت ↔ موقت; reviewed and
+        // accepted are reached through change-state only. Null leaves the state unchanged.
         RuleFor(x => x.DocLife)
-            .IsInEnum();
+            .IsInEnum()
+            .Must(d => d is null or DocLife.Draft or DocLife.Temporary)
+            .WithMessage("در فرم سند فقط وضعیت «یادداشت» یا «موقت» قابل انتخاب است؛ بقیه از کارتابل.");
     }
 }

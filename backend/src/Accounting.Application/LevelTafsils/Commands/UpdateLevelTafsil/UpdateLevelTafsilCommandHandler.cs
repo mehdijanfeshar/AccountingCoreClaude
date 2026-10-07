@@ -39,6 +39,12 @@ public sealed class UpdateLevelTafsilCommandHandler : IRequestHandler<UpdateLeve
             throw new NotFoundException("LevelTafsil", request.Id);
         }
 
+        // Risk #23: LEVEL_CODE unique among active levels (no Oracle UNIQUE).
+        if (await _levelTafsilRepository.ActiveLevelCodeExistsAsync(request.LevelCode, entity.ID, cancellationToken))
+        {
+            throw new LevelTafsilRuleException($"سطح تفصیلی با کد «{request.LevelCode.Trim()}» از قبل وجود دارد.");
+        }
+
         entity.LEVEL_CODE = request.LevelCode;
         entity.LEVEL_NAME = request.LevelName;
         entity.CHANGEUSERID = _currentUser.UserId;

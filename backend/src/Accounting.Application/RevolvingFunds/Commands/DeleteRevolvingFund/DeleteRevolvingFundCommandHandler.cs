@@ -26,15 +26,18 @@ public sealed class DeleteRevolvingFundCommandHandler : IRequestHandler<DeleteRe
     private readonly IRevolvingFundRepository _revolvingFundRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IDeleteDependencyChecker? _deleteDependencyChecker;
 
     public DeleteRevolvingFundCommandHandler(
         IRevolvingFundRepository revolvingFundRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IDeleteDependencyChecker? deleteDependencyChecker = null)
     {
         _revolvingFundRepository = revolvingFundRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _deleteDependencyChecker = deleteDependencyChecker;
     }
 
     public async Task Handle(DeleteRevolvingFundCommand request, CancellationToken cancellationToken)
@@ -49,6 +52,13 @@ public sealed class DeleteRevolvingFundCommandHandler : IRequestHandler<DeleteRe
         if (entity.ISDELETED == true)
         {
             return;
+        }
+
+        // ریسک ۲-الف: حذف نرم نباید رکوردی را که هنوز جای دیگری استفاده می‌شود بی‌صدا یتیم کند.
+        if (_deleteDependencyChecker is not null
+            && await _deleteDependencyChecker.FindBlockerAsync(DeleteGuardTarget.RevolvingFund, entity.ID, cancellationToken) is { } blocker)
+        {
+            throw new DeleteBlockedException("RevolvingFund", entity.ID, blocker);
         }
 
         entity.ISDELETED = true;

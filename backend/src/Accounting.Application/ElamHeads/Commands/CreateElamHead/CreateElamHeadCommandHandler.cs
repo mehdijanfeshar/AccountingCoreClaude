@@ -45,14 +45,16 @@ public sealed class CreateElamHeadCommandHandler : IRequestHandler<CreateElamHea
         {
             ID = Guid.NewGuid(),
             VOUCHERSHEAD_ID = request.VoucherHeadId,
-            ELAMH_SERIALNO = request.SerialNo,
-            ELAMH_CODE = request.Code,
+            // ریسک ۲-ب: سریال (MAX+1)، کد (از TB_RABET) و WEB_STAT (ماشین حالت) فقط در ماژول اعلامیه (Elams) تعیین می‌شوند؛
+            // این مسیر عمومی آن‌ها را خالی می‌گذارد.
+            ELAMH_SERIALNO = null,
+            ELAMH_CODE = null,
             ELAMH_DABIRNO = request.DabirNo,
             ELAMH_DABIRDATE = request.DabirDate,
             ELAMH_PRINTNO = request.PrintNo,
             ELAMH_CASE = request.Case,
             SERIALNO_INPUT = request.SerialNoInput,
-            WEB_STAT = request.WebStat,
+            WEB_STAT = null,
             ELAMH_DATE = request.Date,
             ELAMH_DESC = request.Desc,
             WORKSHOP_ID = request.WorkShopId,

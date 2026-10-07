@@ -26,6 +26,9 @@ public sealed class UpdateVoucherDetailCommandValidator : AbstractValidator<Upda
         RuleFor(x => x.Id)
             .NotEmpty();
 
+        RuleFor(x => x.Debtor).WholeRialAmount("مبلغ بدهکار");
+        RuleFor(x => x.Creditor).WholeRialAmount("مبلغ بستانکار");
+
         RuleFor(x => x.Description)
             .MaximumLength(200);
 

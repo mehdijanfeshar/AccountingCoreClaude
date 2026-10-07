@@ -18,17 +18,20 @@ namespace Accounting.Application.TafsilGroups.Commands.DeleteTafsilGroup;
 public sealed class DeleteTafsilGroupCommandHandler : IRequestHandler<DeleteTafsilGroupCommand>
 {
     private readonly ITafsilGroupRepository _tafsilGroupRepository;
+    private readonly IDeleteDependencyChecker _dependencyChecker;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
     public DeleteTafsilGroupCommandHandler(
         ITafsilGroupRepository tafsilGroupRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IDeleteDependencyChecker dependencyChecker)
     {
         _tafsilGroupRepository = tafsilGroupRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _dependencyChecker = dependencyChecker;
     }
 
     public async Task Handle(DeleteTafsilGroupCommand request, CancellationToken cancellationToken)
@@ -43,6 +46,12 @@ public sealed class DeleteTafsilGroupCommandHandler : IRequestHandler<DeleteTafs
         if (entity.ISDELETED)
         {
             return;
+        }
+
+        // Risks #6/#7 (2026-10-07): soft delete gets no ORA-02292, so dependents are checked here.
+        if (await _dependencyChecker.FindTafsilGroupBlockerAsync(entity.ID, cancellationToken) is { } blocker)
+        {
+            throw new DeleteBlockedException("TafsilGroup", entity.ID, blocker);
         }
 
         entity.ISDELETED = true;

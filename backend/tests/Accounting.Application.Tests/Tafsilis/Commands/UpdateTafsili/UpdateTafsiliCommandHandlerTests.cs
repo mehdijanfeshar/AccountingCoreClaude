@@ -68,7 +68,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
         var command = ValidCommand(id);
 
         await handler.Handle(command, CancellationToken.None);
@@ -91,7 +91,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("srvusr02");
 
-        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -112,7 +112,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -132,7 +132,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
         var command = ValidCommand(id);
         command.VahedCode = "2002"; // simulates VahedScopeBehavior having already run
 
@@ -150,7 +150,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
 
         await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(ValidCommand(id), CancellationToken.None));
 
@@ -167,7 +167,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
 
         await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(ValidCommand(id), CancellationToken.None));
 
@@ -198,7 +198,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
 
         await handler.Handle(ValidCommand(id, new[] { keepGroupId, addGroupId }), CancellationToken.None);
 
@@ -241,7 +241,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
 
         await handler.Handle(
             ValidCommand(id, new[] { keepGroupId, addGroupId }, VahedCategory.All),
@@ -262,7 +262,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -285,7 +285,7 @@ public sealed class UpdateTafsiliCommandHandlerTests
             .Setup(r => r.GetTafsiliGroupLinksAsync(id, token))
             .ReturnsAsync(Array.Empty<TB_TAFSIL_LINK_TAFSILGROUP>());
 
-        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
 
         await handler.Handle(ValidCommand(id), token);
 

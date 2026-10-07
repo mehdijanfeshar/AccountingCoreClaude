@@ -109,4 +109,14 @@ public interface IVoucherDetailRepository
         Guid voucherHeadId,
         string vahedCode,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// جمع بدهکار، جمع بستانکار و تعداد ردیف‌های فعال هر سند (برای کنترل تراز). سندی که ردیف
+    /// فعال ندارد در خروجی نیست. فقط ردیف‌های ذخیره‌شده را می‌بیند، نه تغییرات stage‌شده.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, VoucherTotals>> GetTotalsByHeadsAsync(
+        IReadOnlyCollection<Guid> voucherHeadIds,
+        CancellationToken cancellationToken = default);
 }
+
+public sealed record VoucherTotals(decimal Debtor, decimal Creditor, int LineCount);

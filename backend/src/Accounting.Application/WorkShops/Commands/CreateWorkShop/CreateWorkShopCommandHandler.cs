@@ -49,7 +49,8 @@ public sealed class CreateWorkShopCommandHandler : IRequestHandler<CreateWorkSho
             WORKSHOPNAME = request.WorkShopName,
             WORKSHOPCODE = request.WorkShopCode,
             VAHEDCODE = request.VahedCode,
-            ISACTIVE = request.IsActive,
+            // ریسک ۲-ب: کارگاه تازه همیشه فعال است (مرجع: ثابت true)؛ غیرفعال‌سازی با ویرایش.
+            ISACTIVE = true,
             CHECKFILE = request.CheckFile,
             ADDUSERID = _currentUser.UserId,
             CREATEDDATE = DateTime.UtcNow,

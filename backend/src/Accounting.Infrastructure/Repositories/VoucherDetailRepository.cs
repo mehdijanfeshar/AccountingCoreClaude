@@ -96,4 +96,30 @@ public sealed class VoucherDetailRepository : IVoucherDetailRepository
             .ThenBy(d => d.ID)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyDictionary<Guid, VoucherTotals>> GetTotalsByHeadsAsync(
+        IReadOnlyCollection<Guid> voucherHeadIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (voucherHeadIds.Count == 0)
+        {
+            return new Dictionary<Guid, VoucherTotals>();
+        }
+
+        var ids = voucherHeadIds.Select(id => (Guid?)id).ToList();
+
+        var rows = await _dbContext.TB_VOUCHERSDETAILs
+            .Where(d => ids.Contains(d.VOUCHERSHEAD_ID) && d.ISDELETED != true)
+            .GroupBy(d => d.VOUCHERSHEAD_ID)
+            .Select(g => new
+            {
+                HeadId = g.Key,
+                Debtor = g.Sum(d => d.DEBTOR ?? 0m),
+                Creditor = g.Sum(d => d.CREDITOR ?? 0m),
+                Count = g.Count(),
+            })
+            .ToListAsync(cancellationToken);
+
+        return rows.ToDictionary(r => r.HeadId!.Value, r => new VoucherTotals(r.Debtor, r.Creditor, r.Count));
+    }
 }

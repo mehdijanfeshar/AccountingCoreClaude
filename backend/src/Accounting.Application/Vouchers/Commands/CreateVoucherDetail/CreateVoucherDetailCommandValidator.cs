@@ -27,6 +27,9 @@ public sealed class CreateVoucherDetailCommandValidator : AbstractValidator<Crea
         RuleFor(x => x.VoucherHeadId)
             .NotEmpty();
 
+        RuleFor(x => x.Debtor).WholeRialAmount("مبلغ بدهکار");
+        RuleFor(x => x.Creditor).WholeRialAmount("مبلغ بستانکار");
+
         RuleFor(x => x.Description)
             .MaximumLength(200);
 

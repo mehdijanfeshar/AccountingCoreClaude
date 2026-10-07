@@ -65,6 +65,7 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
     private readonly IVoucherTafsiliLevelGuard _tafsiliLevelGuard;
     private readonly IVoucherChequeService? _chequeService;
     private readonly IVoucherLineExtrasService? _extrasService;
+    private readonly IAccountEntryPolicy? _accountEntryPolicy;
 
     public UpdateVoucherDetailCommandHandler(
         IVoucherDetailRepository voucherDetailRepository,
@@ -73,10 +74,12 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
         ICurrentUser currentUser,
         IVoucherTafsiliLevelGuard tafsiliLevelGuard,
         IVoucherChequeService? chequeService = null,
-        IVoucherLineExtrasService? extrasService = null)
+        IVoucherLineExtrasService? extrasService = null,
+        IAccountEntryPolicy? accountEntryPolicy = null)
     {
         _chequeService = chequeService;
         _extrasService = extrasService;
+        _accountEntryPolicy = accountEntryPolicy;
         _voucherDetailRepository = voucherDetailRepository;
         _voucherHeadRepository = voucherHeadRepository;
         _unitOfWork = unitOfWork;
@@ -106,6 +109,14 @@ public sealed class UpdateVoucherDetailCommandHandler : IRequestHandler<UpdateVo
             if (head is not null)
             {
                 VoucherEditability.EnsureEditable(head.ID, head.DOCLIFE);
+
+                // ماتریس دسترسی کدینگ (ریسک #۲۷) فقط وقتی معین عوض شود — ویرایش مبلغ/شرح ردیفی که
+                // پیش از اعمال ماتریس ثبت شده نباید قفل شود.
+                if (_accountEntryPolicy is not null && request.AccountId != entity.ACCOUNT_ID)
+                {
+                    await _accountEntryPolicy.EnsureManualEntryAllowedAsync(
+                        request.VahedCode, head.DATE_DOC, [request.AccountId], cancellationToken);
+                }
             }
         }
 

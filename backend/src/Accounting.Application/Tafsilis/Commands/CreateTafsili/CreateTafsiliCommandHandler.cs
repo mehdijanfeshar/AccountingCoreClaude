@@ -1,5 +1,6 @@
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Application.Tafsilis.Commands.Common;
 using MediatR;
 
 namespace Accounting.Application.Tafsilis.Commands.CreateTafsili;
@@ -32,19 +33,25 @@ public sealed class CreateTafsiliCommandHandler : IRequestHandler<CreateTafsiliC
     private readonly ITafsiliRepository _tafsiliRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IUnitAccessReadRepository _unitAccess;
 
     public CreateTafsiliCommandHandler(
         ITafsiliRepository tafsiliRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IUnitAccessReadRepository unitAccess)
     {
         _tafsiliRepository = tafsiliRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _unitAccess = unitAccess;
     }
 
     public async Task<Guid> Handle(CreateTafsiliCommand request, CancellationToken cancellationToken)
     {
+        var scope = await TafsiliScopePolicy.ResolveAsync(
+            _currentUser, _unitAccess, request.VahedCode, request.Owner, request.VahedType, request.TafsilGroupLinkVahedType, cancellationToken);
+
         var entity = new TB_TAFSILI
         {
             ID = Guid.NewGuid(),
@@ -53,8 +60,8 @@ public sealed class CreateTafsiliCommandHandler : IRequestHandler<CreateTafsiliC
             TAFSIL_DESC = request.TafsilDesc,
             ISACTIVE = request.IsActive,
             PERSONTYPE = request.PersonType,
-            OWNER = request.Owner,
-            VAHEDTYPE = request.VahedType,
+            OWNER = scope.Owner,
+            VAHEDTYPE = scope.VahedType,
             VAHEDCODE = request.VahedCode,
             ADDUSERID = _currentUser.UserId,
             CREATEDDATE = DateTime.UtcNow,
@@ -63,7 +70,7 @@ public sealed class CreateTafsiliCommandHandler : IRequestHandler<CreateTafsiliC
 
         await _tafsiliRepository.AddAsync(entity, cancellationToken);
 
-        short? groupLinkVahedType = request.TafsilGroupLinkVahedType is { } category ? (short)category : null;
+        short? groupLinkVahedType = scope.LinkVahedType;
 
         foreach (var tafsilGroupId in request.TafsilGroupIds)
         {
@@ -73,7 +80,7 @@ public sealed class CreateTafsiliCommandHandler : IRequestHandler<CreateTafsiliC
                     ID = Guid.NewGuid(),
                     TAFSIL_ID = entity.ID,
                     TAFSILGROUP_ID = tafsilGroupId,
-                    VAHEDCODE = request.VahedCode,
+                    VAHEDCODE = scope.LinkVahedCode,
                     VAHEDTYPE = groupLinkVahedType,
                     ADDUSERID = _currentUser.UserId,
                     CREATEDDATE = DateTime.UtcNow,

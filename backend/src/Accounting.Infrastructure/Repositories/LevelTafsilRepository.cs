@@ -30,4 +30,14 @@ public sealed class LevelTafsilRepository : ILevelTafsilRepository
         return await _dbContext.TB_LEVEL_TAFSILs
             .FirstOrDefaultAsync(l => l.ID == id, cancellationToken);
     }
+
+    public Task<int> CountActiveAsync(CancellationToken cancellationToken = default)
+        => _dbContext.TB_LEVEL_TAFSILs.CountAsync(l => !l.ISDELETED, cancellationToken);
+
+    public async Task<bool> ActiveLevelCodeExistsAsync(string levelCode, Guid? excludeId, CancellationToken cancellationToken = default)
+    {
+        var code = levelCode.Trim();
+        return await _dbContext.TB_LEVEL_TAFSILs
+            .CountAsync(l => !l.ISDELETED && l.LEVEL_CODE.Trim() == code && (excludeId == null || l.ID != excludeId), cancellationToken) > 0;
+    }
 }

@@ -48,14 +48,13 @@ public sealed class UpdateElamHeadCommandHandler : IRequestHandler<UpdateElamHea
         }
 
         entity.VOUCHERSHEAD_ID = request.VoucherHeadId;
-        entity.ELAMH_SERIALNO = request.SerialNo;
-        entity.ELAMH_CODE = request.Code;
+        // ریسک ۲-ب: سریال، کد (از TB_RABET) و WEB_STAT (ماشین حالت) سمت سرورند؛ این مسیر عمومی دیگر عوضشان نمی‌کند.
+        // ثبت و گردش اعلامیه فقط از ماژول اعلامیه (Elams).
         entity.ELAMH_DABIRNO = request.DabirNo;
         entity.ELAMH_DABIRDATE = request.DabirDate;
         entity.ELAMH_PRINTNO = request.PrintNo;
         entity.ELAMH_CASE = request.Case;
         entity.SERIALNO_INPUT = request.SerialNoInput;
-        entity.WEB_STAT = request.WebStat;
         entity.ELAMH_DATE = request.Date;
         entity.ELAMH_DESC = request.Desc;
         entity.WORKSHOP_ID = request.WorkShopId;

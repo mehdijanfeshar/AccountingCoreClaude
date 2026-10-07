@@ -43,7 +43,7 @@ public sealed class CreateTafsiliCommandHandlerTests
             .Callback<TB_TAFSILI, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
         var command = ValidCommand();
 
         await handler.Handle(command, CancellationToken.None);
@@ -71,7 +71,7 @@ public sealed class CreateTafsiliCommandHandlerTests
             .Callback<TB_TAFSILI, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -91,7 +91,7 @@ public sealed class CreateTafsiliCommandHandlerTests
             .Callback<TB_TAFSILI, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -112,7 +112,7 @@ public sealed class CreateTafsiliCommandHandlerTests
             .Callback<TB_TAFSILI, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
 
         var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -139,7 +139,7 @@ public sealed class CreateTafsiliCommandHandlerTests
             .Callback<TB_TAFSIL_LINK_TAFSILGROUP, CancellationToken>((link, _) => stagedLinks.Add(link))
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
         var command = ValidCommand(groupIds);
 
         await handler.Handle(command, CancellationToken.None);
@@ -169,7 +169,7 @@ public sealed class CreateTafsiliCommandHandlerTests
             .Callback<TB_TAFSIL_LINK_TAFSILGROUP, CancellationToken>((link, _) => stagedLinks.Add(link))
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
         var command = ValidCommand(groupIds, VahedCategory.All);
 
         await handler.Handle(command, CancellationToken.None);
@@ -185,7 +185,7 @@ public sealed class CreateTafsiliCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -201,7 +201,7 @@ public sealed class CreateTafsiliCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -220,7 +220,7 @@ public sealed class CreateTafsiliCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateTafsiliCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IUnitAccessReadRepository>().Object);
 
         await handler.Handle(ValidCommand(), token);
 

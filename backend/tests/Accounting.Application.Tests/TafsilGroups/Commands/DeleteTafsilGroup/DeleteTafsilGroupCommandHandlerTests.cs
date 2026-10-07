@@ -38,7 +38,7 @@ public sealed class DeleteTafsilGroupCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("deleter9");
 
-        var handler = new DeleteTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         await handler.Handle(new DeleteTafsilGroupCommand(id), CancellationToken.None);
 
@@ -67,7 +67,7 @@ public sealed class DeleteTafsilGroupCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new DeleteTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         await handler.Handle(new DeleteTafsilGroupCommand(id), CancellationToken.None);
 
@@ -83,7 +83,7 @@ public sealed class DeleteTafsilGroupCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new DeleteTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => handler.Handle(new DeleteTafsilGroupCommand(id), CancellationToken.None));
@@ -105,7 +105,7 @@ public sealed class DeleteTafsilGroupCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("newDeleter");
 
-        var handler = new DeleteTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         var exception = await Record.ExceptionAsync(
             () => handler.Handle(new DeleteTafsilGroupCommand(id), CancellationToken.None));
@@ -130,7 +130,7 @@ public sealed class DeleteTafsilGroupCommandHandlerTests
 
         repository.Setup(r => r.GetForUpdateAsync(id, token)).ReturnsAsync(entity);
 
-        var handler = new DeleteTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new DeleteTafsilGroupCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, new Moq.Mock<Accounting.Application.Common.Interfaces.IDeleteDependencyChecker>().Object);
 
         await handler.Handle(new DeleteTafsilGroupCommand(id), token);
 

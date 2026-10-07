@@ -54,7 +54,7 @@ public sealed class UpdatePayReciveHeadCommandHandler : IRequestHandler<UpdatePa
             throw new NotFoundException("PayReciveHead", request.Id);
         }
 
-        entity.PAYRECIVCODE = request.PayReciveCode;
+        entity.PAYRECIVCODE = PayReciveCodeFormat.Normalize(request.PayReciveCode);
         entity.PAYRECIVDATE = request.PayReciveDate;
         entity.PAYRECIVDESCRIPTION = request.PayReciveDescription;
         entity.PAYRECIVTYPE = request.PayReciveType;

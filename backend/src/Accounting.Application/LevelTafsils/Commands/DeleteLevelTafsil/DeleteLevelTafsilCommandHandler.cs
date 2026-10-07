@@ -20,17 +20,20 @@ namespace Accounting.Application.LevelTafsils.Commands.DeleteLevelTafsil;
 public sealed class DeleteLevelTafsilCommandHandler : IRequestHandler<DeleteLevelTafsilCommand>
 {
     private readonly ILevelTafsilRepository _levelTafsilRepository;
+    private readonly IDeleteDependencyChecker _dependencyChecker;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
     public DeleteLevelTafsilCommandHandler(
         ILevelTafsilRepository levelTafsilRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IDeleteDependencyChecker dependencyChecker)
     {
         _levelTafsilRepository = levelTafsilRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _dependencyChecker = dependencyChecker;
     }
 
     public async Task Handle(DeleteLevelTafsilCommand request, CancellationToken cancellationToken)
@@ -45,6 +48,12 @@ public sealed class DeleteLevelTafsilCommandHandler : IRequestHandler<DeleteLeve
         if (entity.ISDELETED)
         {
             return;
+        }
+
+        // Risks #6/#7 (2026-10-07): soft delete gets no ORA-02292, so dependents are checked here.
+        if (await _dependencyChecker.FindLevelTafsilBlockerAsync(entity.ID, cancellationToken) is { } blocker)
+        {
+            throw new DeleteBlockedException("LevelTafsil", entity.ID, blocker);
         }
 
         entity.ISDELETED = true;

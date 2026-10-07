@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using MediatR;
@@ -16,6 +17,8 @@ namespace Accounting.Application.LevelTafsils.Commands.CreateLevelTafsil;
 /// </summary>
 public sealed class CreateLevelTafsilCommandHandler : IRequestHandler<CreateLevelTafsilCommand, Guid>
 {
+    public const int MaxActiveLevels = 7;
+
     private readonly ILevelTafsilRepository _levelTafsilRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
@@ -32,6 +35,18 @@ public sealed class CreateLevelTafsilCommandHandler : IRequestHandler<CreateLeve
 
     public async Task<Guid> Handle(CreateLevelTafsilCommand request, CancellationToken cancellationToken)
     {
+        // Risk #23 (2026-10-07): no UNIQUE on LEVEL_CODE in Oracle and the voucher path maps
+        // level 1..7 only, so both rules live here.
+        if (await _levelTafsilRepository.CountActiveAsync(cancellationToken) >= MaxActiveLevels)
+        {
+            throw new LevelTafsilRuleException($"حداکثر {MaxActiveLevels} سطح تفصیلی فعال مجاز است.");
+        }
+
+        if (await _levelTafsilRepository.ActiveLevelCodeExistsAsync(request.LevelCode, null, cancellationToken))
+        {
+            throw new LevelTafsilRuleException($"سطح تفصیلی با کد «{request.LevelCode.Trim()}» از قبل وجود دارد.");
+        }
+
         var entity = new TB_LEVEL_TAFSIL
         {
             ID = Guid.NewGuid(),

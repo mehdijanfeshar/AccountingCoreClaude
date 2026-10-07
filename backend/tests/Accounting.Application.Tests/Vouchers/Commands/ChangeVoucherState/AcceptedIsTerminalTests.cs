@@ -30,7 +30,7 @@ public sealed class AcceptedIsTerminalTests
         var currentUser = new Mock<ICurrentUser>();
         currentUser.SetupGet(u => u.UserId).Returns("mover1");
 
-        return (new ChangeVoucherStateCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object),
+        return (new ChangeVoucherStateCommandHandler(repository.Object, Accounting.Application.Tests.Vouchers.Commands.Common.BalancedDetailRepository.Create(), unitOfWork.Object, currentUser.Object),
             unitOfWork);
     }
 

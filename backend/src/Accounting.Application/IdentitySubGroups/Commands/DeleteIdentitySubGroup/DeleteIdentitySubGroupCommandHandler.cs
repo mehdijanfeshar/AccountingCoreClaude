@@ -20,15 +20,18 @@ public sealed class DeleteIdentitySubGroupCommandHandler : IRequestHandler<Delet
     private readonly IIdentitySubGroupRepository _identitySubGroupRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IDeleteDependencyChecker? _deleteDependencyChecker;
 
     public DeleteIdentitySubGroupCommandHandler(
         IIdentitySubGroupRepository identitySubGroupRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IDeleteDependencyChecker? deleteDependencyChecker = null)
     {
         _identitySubGroupRepository = identitySubGroupRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _deleteDependencyChecker = deleteDependencyChecker;
     }
 
     public async Task Handle(DeleteIdentitySubGroupCommand request, CancellationToken cancellationToken)
@@ -43,6 +46,13 @@ public sealed class DeleteIdentitySubGroupCommandHandler : IRequestHandler<Delet
         if (entity.ISDELETED)
         {
             return;
+        }
+
+        // ریسک ۲-الف: حذف نرم نباید رکوردی را که هنوز جای دیگری استفاده می‌شود بی‌صدا یتیم کند.
+        if (_deleteDependencyChecker is not null
+            && await _deleteDependencyChecker.FindBlockerAsync(DeleteGuardTarget.IdentitySubGroup, entity.ID, cancellationToken) is { } blocker)
+        {
+            throw new DeleteBlockedException("IdentitySubGroup", entity.ID, blocker);
         }
 
         entity.ISDELETED = true;
