@@ -53,7 +53,7 @@ public static class AppRoles
     {
         "AccountCodes", "AccountCodeInterfaces", "AccountExceptions", "TafsilGroups", "LevelTafsils", "Rabets",
         "WhiteAndBlackLists", "WhiteLists", "SysTypes", "VahedInfos", "VahedTypes", "Years",
-        "IdentityGroups", "IdentitySubGroups", "RoleAccess",
+        "IdentityGroups", "IdentitySubGroups", "RoleAccess", "RabetClosings",
     };
 
     /// <summary>ماژول‌هایی که نوشتن‌شان برای ادمین‌های واحد است (نه کارمند).</summary>

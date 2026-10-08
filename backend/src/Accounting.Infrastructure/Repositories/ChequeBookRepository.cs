@@ -43,7 +43,10 @@ public sealed class ChequeBookRepository : IChequeBookRepository
     public async Task<IReadOnlyList<AvailableChequeDto>> GetAvailableAsync(
         string vahedCode, Guid? accountCodeId, string? search, CancellationToken cancellationToken = default)
     {
-        var used = ActiveDetails().Where(d => d.CHECK_ID != null).Select(d => d.CHECK_ID);
+        // «Not used in a live voucher» is a NOT EXISTS, not `!used.Contains(c.ID)`. CHECK_ID is nullable,
+        // so EF wraps NOT IN in COALESCE(CASE ... THEN True ELSE False END, False), and Oracle has no
+        // boolean literals: ORA-00904 "FALSE". The request failed every time and the voucher form's
+        // picker showed it as «no free leaves». Guarded by OracleBooleanProjectionTests.
         var q =
             from c in _dbContext.TB_CHECKs.AsNoTracking()
             join b in _dbContext.TB_CHECKBOOKs.AsNoTracking() on c.CHECKBOOK_ID equals b.ID
@@ -52,7 +55,7 @@ public sealed class ChequeBookRepository : IChequeBookRepository
                   && c.VAHEDCODE == vahedCode
                   && b.CHECKBOOK_TYPE != CheckType.Sori
                   && c.EBTAL != CheckCancelStatus.Canceled
-                  && !used.Contains(c.ID)
+                  && !ActiveDetails().Any(d => d.CHECK_ID == c.ID)
             select new { c, b, a };
         if (accountCodeId is { } acc)
             q = q.Where(x => x.a.ACCOUNTCODE_ID == acc);

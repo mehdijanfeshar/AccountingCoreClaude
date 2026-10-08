@@ -48,6 +48,13 @@ public sealed class VoucherHeadReadRepositoryFilterTests : IDisposable
             PARENTHEAD_ID TEXT,
             GLOBALNUMBER TEXT
         );
+        CREATE TABLE TB_VOUCHERSDETAIL (
+            ID TEXT PRIMARY KEY, ACCOUNT_ID TEXT, RECEIP_ID TEXT, CHECK_ID TEXT,
+            LOWLEVELCODE_ID TEXT, ETEBAR_ID TEXT, DESCRIPTION TEXT, RADIF INTEGER,
+            DEBTOR NUMERIC, CREDITOR NUMERIC, CREATEDDATE TEXT, UPDATEDDATE TEXT,
+            ADDUSERID TEXT, CHANGEUSERID TEXT, VAHEDCODE TEXT, ISDELETED INTEGER,
+            VOUCHERSHEAD_ID TEXT, YEAR TEXT
+        );
         """;
 
     private const string Vahed = "1155";
@@ -116,7 +123,7 @@ public sealed class VoucherHeadReadRepositoryFilterTests : IDisposable
 
         var docNums = await DocNumsAsync(new VoucherHeadFilter());
 
-        // Newest first (by DATE_DOC) — see Ordering_PutsTheNewestVoucherFirst below.
+        // Largest voucher number first — see Ordering_PutsTheLargestVoucherNumberFirst below.
         Assert.Equal(new[] { "000002", "000001" }, docNums);
     }
 
@@ -131,12 +138,12 @@ public sealed class VoucherHeadReadRepositoryFilterTests : IDisposable
 
         var docNums = await DocNumsAsync(new VoucherHeadFilter(DateDocFrom: "14040215", DateDocTo: "14040331"));
 
-        // Both bounds are included; the pair comes back newest-first.
+        // Both bounds are included; the pair comes back largest-number-first.
         Assert.Equal(new[] { "000003", "000002" }, docNums);
     }
 
     [Fact]
-    public async Task Ordering_PutsTheNewestVoucherFirst()
+    public async Task Ordering_PutsTheLargestVoucherNumberFirst()
     {
         // Seeded deliberately out of order, and with DOC_NUM running opposite to DATE_DOC, so a
         // result ordered by number would be visibly different from one ordered by date.
@@ -147,9 +154,9 @@ public sealed class VoucherHeadReadRepositoryFilterTests : IDisposable
 
         var docNums = await DocNumsAsync(new VoucherHeadFilter());
 
-        // The cartable is a work queue: the voucher someone needs is almost always one of the
-        // most recent, never 000001 from last Farvardin.
-        Assert.Equal(new[] { "000001", "000003", "000002" }, docNums);
+        // Project owner, 2026-10-08: the cartable is ordered by voucher number, not date. Dates can
+        // be wrong until «مرتب‌سازی» renumbers by date; the number is the voucher's identity.
+        Assert.Equal(new[] { "000003", "000002", "000001" }, docNums);
     }
 
     [Fact]

@@ -69,7 +69,8 @@ public sealed class CreateVoucherHeadCommandHandlerTests
         Assert.Equal(command.SndVahedCode, staged.SNDVAHEDCODE);
         Assert.Equal(command.ParentHeadId, staged.PARENTHEAD_ID);
         Assert.Equal(command.AttachFileName, staged.ATTACHFILE_NAME);
-        Assert.Equal(command.AtfNum, staged.ATF_NUM);
+        // Server-assigned on save (VoucherAtfNumberInterceptor); the client value is ignored.
+        Assert.Null(staged.ATF_NUM);
     }
 
     [Fact]

@@ -5472,7 +5472,7 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.TITLE)
                 .HasMaxLength(200)
                 .IsUnicode(false);
-            entity.Property(e => e.TYPEACCOUNTCODE).HasColumnType("NUMBER(1)");
+            entity.Property(e => e.TYPEACCOUNTCODE).HasConversion<int?>();
             entity.Property(e => e.UPDATEDDATE).HasPrecision(6);
             entity.Property(e => e.VAHEDTYPE_ID)
                 .HasMaxLength(36)

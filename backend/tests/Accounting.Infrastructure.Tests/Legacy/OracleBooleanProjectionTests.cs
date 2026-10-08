@@ -173,6 +173,78 @@ public sealed class OracleBooleanProjectionTests
     /// Matches <c>TRUE</c>/<c>FALSE</c> only as standalone words, so a column or alias that merely
     /// contains those letters does not trip the assertion.
     /// </summary>
+    /// <summary>
+    /// The 2026-10-08 defect: «free cheque leaves» filtered with <c>!used.Contains(c.ID)</c>, where
+    /// <c>used</c> projects the nullable <c>TB_VOUCHERSDETAIL.CHECK_ID</c>. EF wraps that NOT IN in a
+    /// COALESCE of TRUE/FALSE, so <c>GET /api/cheque-book/available</c> 500'd on every call.
+    /// </summary>
+    [Fact]
+    public void Not_in_over_a_nullable_column_emits_a_literal_oracle_rejects()
+    {
+        using var context = CreateOracleContext();
+
+        var used = context.TB_VOUCHERSDETAILs.Where(d => d.CHECK_ID != null).Select(d => d.CHECK_ID!.Value);
+        var sql = context.TB_CHECKs.AsNoTracking().Where(c => !used.Contains(c.ID)).Select(c => c.ID).ToQueryString();
+
+        Assert.Contains("FALSE", sql, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>The shape <c>ChequeBookRepository.GetAvailableAsync</c> ships: NOT EXISTS.</summary>
+    [Fact]
+    public void The_shipped_free_cheque_leaf_filter_emits_no_boolean_literal()
+    {
+        using var context = CreateOracleContext();
+
+        var sql = context.TB_CHECKs
+            .AsNoTracking()
+            .Where(c => !context.TB_VOUCHERSDETAILs
+                .Where(d => d.ISDELETED != true && d.VOUCHERSHEAD!.ISDELETED != true)
+                .Any(d => d.CHECK_ID == c.ID))
+            .Select(c => c.ID)
+            .ToQueryString();
+
+        AssertNoBooleanLiteral(sql);
+    }
+
+    /// <summary>The cartable's per-voucher debit/credit totals (VoucherHeadReadRepository.ToDto).</summary>
+    [Fact]
+    public void The_voucher_cartable_totals_emit_no_boolean_literal()
+    {
+        using var context = CreateOracleContext();
+
+        var sql = context.TB_VOUCHERSHEADs
+            .AsNoTracking()
+            .Select(v => new
+            {
+                v.ID,
+                Debtor = v.TB_VOUCHERSDETAILs.Where(d => d.ISDELETED != true).Sum(d => d.DEBTOR ?? 0),
+                Creditor = v.TB_VOUCHERSDETAILs.Where(d => d.ISDELETED != true).Sum(d => d.CREDITOR ?? 0),
+            })
+            .ToQueryString();
+
+        AssertNoBooleanLiteral(sql);
+    }
+
+    /// <summary>
+    /// 2026-10-08: <c>DetailReader.GetByIdsAsync</c> (Hesabyar preview) projected
+    /// <c>Visible = l.VAHEDCODE == … || l.VAHEDTYPE == …</c>; every preview with a تفصیلی 500'd.
+    /// The shipped shape selects the raw columns.
+    /// </summary>
+    [Fact]
+    public void The_shipped_tafsili_group_link_lookup_emits_no_boolean_literal()
+    {
+        using var context = CreateOracleContext();
+        var ids = new List<Guid> { Guid.NewGuid() };
+
+        var sql = context.TB_TAFSIL_LINK_TAFSILGROUPs
+            .AsNoTracking()
+            .Where(l => ids.Contains(l.TAFSIL_ID) && l.ISDELETED == false)
+            .Select(l => new { l.TAFSIL_ID, l.TAFSILGROUP_ID, l.VAHEDCODE, l.VAHEDTYPE })
+            .ToQueryString();
+
+        AssertNoBooleanLiteral(sql);
+    }
+
     private static void AssertNoBooleanLiteral(string sql)
     {
         var offending = System.Text.RegularExpressions.Regex.Matches(

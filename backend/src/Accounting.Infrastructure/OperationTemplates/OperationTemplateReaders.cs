@@ -88,15 +88,20 @@ public sealed class DetailReader : IDetailReader
         var callerCategory = (short)VahedCategoryMapper.FromTypeCode(typeCode);
         var allCategory = (short)VahedCategory.All;
 
-        var links = await _db.TB_TAFSIL_LINK_TAFSILGROUPs.AsNoTracking()
-            .Where(l => idList.Contains(l.TAFSIL_ID) && l.ISDELETED == false)
+        // Raw columns, visibility decided in C#: projecting the comparison put TRUE/FALSE literals into
+        // the SQL and Oracle rejected it (ORA-00904 "FALSE"), so every Hesabyar preview with a تفصیلی
+        // 500'd. Rule from OracleBooleanProjectionTests: select the value, decide in C#.
+        var links = (await _db.TB_TAFSIL_LINK_TAFSILGROUPs.AsNoTracking()
+                .Where(l => idList.Contains(l.TAFSIL_ID) && l.ISDELETED == false)
+                .Select(l => new { l.TAFSIL_ID, l.TAFSILGROUP_ID, l.VAHEDCODE, l.VAHEDTYPE })
+                .ToListAsync(ct))
             .Select(l => new
             {
                 l.TAFSIL_ID,
                 l.TAFSILGROUP_ID,
                 Visible = l.VAHEDCODE == vahedCode || l.VAHEDTYPE == allCategory || l.VAHEDTYPE == callerCategory,
             })
-            .ToListAsync(ct);
+            .ToList();
 
         return tafsilis.ToDictionary(t => t.ID, t =>
         {

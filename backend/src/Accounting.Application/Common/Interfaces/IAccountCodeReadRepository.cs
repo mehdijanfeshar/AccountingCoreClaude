@@ -27,6 +27,16 @@ public interface IAccountCodeReadRepository
     Task<AccountCodeDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Like <see cref="GetPagedAsync"/>, narrowed over the whole table before paging: ACCCODE starts
+    /// with <paramref name="search"/>, or ACCCODENAME contains it. Same ordering.
+    /// </summary>
+    Task<PagedResult<AccountCodeDto>> SearchPagedAsync(
+        string search,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns every non-deleted <c>TB_ACCOUNT_LINK_TAFSILGROUP</c> row belonging to
     /// <paramref name="accountCodeId"/>, projected to <see cref="AccountTafsilGroupLinkDto"/>.
     /// Not paginated — a معین is expected to have very few such links (at most a handful per

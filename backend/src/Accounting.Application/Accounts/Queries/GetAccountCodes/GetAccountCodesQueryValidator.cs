@@ -25,5 +25,8 @@ public sealed class GetAccountCodesQueryValidator : AbstractValidator<GetAccount
 
         RuleFor(x => x.PageSize)
             .InclusiveBetween(1, MaxPageSize);
+
+        RuleFor(x => x.Search)
+            .MaximumLength(100);
     }
 }

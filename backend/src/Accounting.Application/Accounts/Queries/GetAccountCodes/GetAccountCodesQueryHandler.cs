@@ -18,5 +18,13 @@ public sealed class GetAccountCodesQueryHandler : IRequestHandler<GetAccountCode
     }
 
     public Task<PagedResult<AccountCodeDto>> Handle(GetAccountCodesQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, cancellationToken);
+    {
+        var search = string.IsNullOrWhiteSpace(request.Search)
+            ? null
+            : Accounting.Application.FinancialStatements.Engine.FsText.NormalizeDigits(request.Search).Trim();
+
+        return search is null
+            ? _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, cancellationToken)
+            : _readRepository.SearchPagedAsync(search, request.PageNumber, request.PageSize, cancellationToken);
+    }
 }

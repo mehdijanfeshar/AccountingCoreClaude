@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Domain.Entity;
 
@@ -7,7 +8,7 @@ public partial class TB_RABET_CLOSING
 {
     public Guid ID { get; set; }
 
-    public bool? TYPEACCOUNTCODE { get; set; }
+    public RabetAccountLevel? TYPEACCOUNTCODE { get; set; }
 
     public Guid VAHEDTYPE_ID { get; set; }
 

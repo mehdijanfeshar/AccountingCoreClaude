@@ -28,7 +28,9 @@ public static class DependencyInjection
         }
 
         services.AddDbContext<LegacyDbContext>(options =>
-            options.UseOracle(configuration.GetConnectionString("DefaultConnection")));
+            options.UseOracle(configuration.GetConnectionString("DefaultConnection"))
+                // شمارهٔ عطف سند: سرور هنگام ایجاد تخصیص می‌دهد و هرگز عوض نمی‌شود.
+                .AddInterceptors(new VoucherAtfNumberInterceptor()));
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAccountCodeRepository, AccountCodeRepository>();
@@ -40,6 +42,9 @@ public static class DependencyInjection
         services.AddScoped<Accounting.Application.Common.Security.IRoleMenuAccessStore, RoleMenuAccessStore>();
         services.AddSingleton<IMonthReopenCodeGenerator, MonthReopenCodeGenerator>();
         services.AddScoped<IMonthCloseRepository, MonthCloseRepository>();
+        services.AddScoped<Accounting.Application.Vouchers.YearEnd.IYearEndRepository, YearEndRepository>();
+        services.AddScoped<Accounting.Application.RabetClosings.IRabetClosingRepository, RabetClosingRepository>();
+        services.AddScoped<Accounting.Application.Rabets.Queries.GetRabetTypes.IRabetTypeReadRepository, RabetTypeReadRepository>();
         services.AddScoped<IVoucherHeadRepository, VoucherHeadRepository>();
         services.AddScoped<IVoucherDetailRepository, VoucherDetailRepository>();
         services.AddScoped<IAccountCodeReadRepository, AccountCodeReadRepository>();

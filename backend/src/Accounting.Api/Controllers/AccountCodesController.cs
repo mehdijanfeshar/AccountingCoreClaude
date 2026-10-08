@@ -96,7 +96,7 @@ public sealed class AccountCodesController : ControllerBase
     }
 
     /// <summary>
-    /// Returns a page of account codes.
+    /// Returns a page of account codes, optionally narrowed by <c>search</c> (code prefix or title).
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<AccountCodeDto>), StatusCodes.Status200OK)]
@@ -106,9 +106,10 @@ public sealed class AccountCodesController : ControllerBase
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetAccountCodesQuery(pageNumber, pageSize), cancellationToken);
+        var result = await _mediator.Send(new GetAccountCodesQuery(pageNumber, pageSize, search), cancellationToken);
 
         return Ok(result);
     }

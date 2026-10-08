@@ -56,4 +56,6 @@ public sealed record VoucherHeadDto(
     bool? IsAutomatic,
     string? SndVahedCode,
     Guid? ParentHeadId,
-    string? GlobalNumber);
+    string? GlobalNumber,
+    decimal TotalDebtor = 0,
+    decimal TotalCreditor = 0);

@@ -48,7 +48,11 @@ public sealed class VoucherHeadReadRepository : IVoucherHeadReadRepository
         v.ISAUTOMATIC,
         v.SNDVAHEDCODE,
         v.PARENTHEAD_ID,
-        v.GLOBALNUMBER);
+        v.GLOBALNUMBER,
+        // جمع بدهکار/بستانکار ردیف‌های زندهٔ سند، برای کارتابل (۲۰۲۶-۱۰-۰۸). A correlated SUM per row of
+        // the page: cheap at page sizes, and the voucher's balance is visible without opening it.
+        v.TB_VOUCHERSDETAILs.Where(d => d.ISDELETED != true).Sum(d => d.DEBTOR ?? 0),
+        v.TB_VOUCHERSDETAILs.Where(d => d.ISDELETED != true).Sum(d => d.CREDITOR ?? 0));
 
     private readonly LegacyDbContext _dbContext;
 
@@ -143,20 +147,15 @@ public sealed class VoucherHeadReadRepository : IVoucherHeadReadRepository
         var totalCount = await query.CountAsync(cancellationToken);
 
         var items = await query
-            // Newest first — the cartable is a work queue, and the voucher someone needs is
-            // almost always one of the most recent, not voucher 000001 from last Farvardin.
+            // Largest voucher number first, within the newest year (project owner, 2026-10-08). The
+            // number is the voucher's identity in the cartable; dates can be wrong until «مرتب‌سازی»
+            // renumbers by date, so ordering by date put vouchers out of numeric order.
             //
-            // Sorting on strings is safe for these particular columns and is why no conversion is
-            // needed: DATE_DOC is fixed-width YYYYMMDD and YEAR is fixed-width YYYY, so
-            // alphabetical order IS chronological order. DOC_NUM is the exception — it is a
-            // variable-width numeric string, so "10" sorts before "2" — but it only breaks ties
-            // between vouchers already sharing a date, where being off by a few is harmless.
-            // Converting it would cost a full-table function scan on every page.
-            //
-            // ID stays the final tie-breaker so paging is stable across rows that match on
-            // everything else.
+            // DOC_NUM is a numeric string that is not always zero-padded, so length sorts first: a
+            // longer number is a larger one, and within one length alphabetical order is numeric
+            // order. YEAR is fixed-width YYYY. ID is the final tie-breaker for stable paging.
             .OrderByDescending(v => v.YEAR)
-            .ThenByDescending(v => v.DATE_DOC)
+            .ThenByDescending(v => v.DOC_NUM!.Length)
             .ThenByDescending(v => v.DOC_NUM)
             .ThenBy(v => v.ID)
             .Skip((pageNumber - 1) * pageSize)

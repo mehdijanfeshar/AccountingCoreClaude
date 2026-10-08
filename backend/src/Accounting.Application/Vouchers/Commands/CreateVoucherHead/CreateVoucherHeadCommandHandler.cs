@@ -78,7 +78,8 @@ public sealed class CreateVoucherHeadCommandHandler : IRequestHandler<CreateVouc
             SNDVAHEDCODE = request.SndVahedCode,
             PARENTHEAD_ID = request.ParentHeadId,
             ATTACHFILE_NAME = request.AttachFileName,
-            ATF_NUM = request.AtfNum,
+            // شمارهٔ عطف را سرور هنگام ذخیره تخصیص می‌دهد (VoucherAtfNumberInterceptor)؛ مقدار ورودی نادیده گرفته می‌شود.
+            ATF_NUM = null,
             ADDUSERID = _currentUser.UserId,
             CREATEDDATE = now,
             ISDELETED = false,

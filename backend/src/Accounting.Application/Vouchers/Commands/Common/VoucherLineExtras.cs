@@ -125,7 +125,8 @@ public sealed class VoucherLineExtrasException : Exception
 /// و باید با نوع (عدد/تاریخ)، طول و کنترل (غیرصفر/تاریخ) همان تعریف بخواند.</item>
 /// <item>ویژگی: اگر حساب یا یکی از تفصیلی‌های ردیف به گروه ویژگی وصل است، شناسنامهٔ همان گروه باید انتخاب شود
 /// و همهٔ فیلدهای <b>متغیر</b> آن مقدار بگیرند (فیلدهای ثابت از خود شناسنامه می‌آیند).</item>
-/// <item>فیش: فقط روی ردیف بدهکار حساب بانکی؛ شماره در همان نوع/واحد/سال تکراری نباشد.</item>
+/// <item>فیش: فقط روی ردیف بدهکار حساب بانکی و آنجا <b>الزامی</b>؛ شماره در همان نوع/واحد/سال تکراری نباشد.
+/// ردیف بستانکار حساب بانکی بدون برگ چک یا چک صوری ثبت نمی‌شود.</item>
 /// </list>
 /// </summary>
 public interface IVoucherLineExtrasService
@@ -176,7 +177,11 @@ public sealed class VoucherLineExtrasService : IVoucherLineExtrasService
         var year = line.YEAR;
         var requirements = await _store.GetRequirementsAsync(accountId, tafsiliIds, vahed, year, ct);
         var isDebit = (line.DEBTOR ?? 0) > 0;
+        var isCredit = (line.CREDITOR ?? 0) > 0;
         var errors = await CheckAsync(requirements, isDebit, extras, vahed, year, replace ? line.RECEIP_ID : null, ct);
+        // CHECK_ID is already set by VoucherChequeService (real leaf, or the leaf issued for a fictitious cheque).
+        if (requirements.IsBankAccount && isCredit && line.CHECK_ID is null)
+            errors.Add(BankCreditNeedsCheque);
         if (errors.Count > 0)
             throw new VoucherLineExtrasException(errors);
 
@@ -258,6 +263,13 @@ public sealed class VoucherLineExtrasService : IVoucherLineExtrasService
         }
     }
 
+    /// <summary>
+    /// ردیف حساب بانکی (معینی که در تعریف حساب بانک انتخاب شده) بدون مدرک ثبت نمی‌شود — تصمیم صاحب پروژه ۲۰۲۶-۱۰-۰۸:
+    /// بدهکار (واریز) ⇒ فیش/حواله با شمارهٔ دستی؛ بستانکار (برداشت) ⇒ برگ چک واقعی یا چک صوری (اعلامیه).
+    /// </summary>
+    internal const string BankDebitNeedsReceipt = "واریز به حساب بانکی بدون فیش/حواله ثبت نمی‌شود؛ شمارهٔ فیش یا حواله را وارد کنید.";
+    internal const string BankCreditNeedsCheque = "برداشت از حساب بانکی بدون چک ثبت نمی‌شود؛ برگ چک یا چک صوری (اعلامیه) را انتخاب کنید.";
+
     private async Task<List<string>> CheckAsync(
         VoucherLineRequirements requirements, bool isDebit, VoucherLineExtrasInput? extras, string vahed, string year,
         Guid? currentReceiptId, CancellationToken ct)
@@ -299,6 +311,9 @@ public sealed class VoucherLineExtrasService : IVoucherLineExtrasService
                     errors.Add($"«{field.Title}» (ویژگی {group.Title}): {problem}");
             }
         }
+
+        if (requirements.IsBankAccount && isDebit && extras?.Receipt is null)
+            errors.Add(BankDebitNeedsReceipt);
 
         if (extras?.Receipt is { } receipt)
         {

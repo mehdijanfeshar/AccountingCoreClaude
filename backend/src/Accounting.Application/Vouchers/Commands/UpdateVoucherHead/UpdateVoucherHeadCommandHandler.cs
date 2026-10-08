@@ -79,7 +79,7 @@ public sealed class UpdateVoucherHeadCommandHandler : IRequestHandler<UpdateVouc
         entity.SNDVAHEDCODE = request.SndVahedCode;
         entity.PARENTHEAD_ID = request.ParentHeadId;
         entity.ATTACHFILE_NAME = request.AttachFileName;
-        entity.ATF_NUM = request.AtfNum;
+        // ATF_NUM عمداً دست نمی‌خورد: شمارهٔ عطف هنگام ایجاد تخصیص می‌یابد و هرگز عوض نمی‌شود.
         entity.CHANGEUSERID = _currentUser.UserId;
         entity.UPDATEDDATE = DateTime.UtcNow;
 

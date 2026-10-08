@@ -46,6 +46,8 @@ public static class MenuCatalog
     [
         M("/base/account-codes", Base, "کدینگ حسابداری", MenuGroupAccess.OperateOrNational,
             "Accounts", "AccountCodes", "AccountCodeInterfaces", "AccountExceptions", "Tafsilis"),
+        M("/base/year-end-settings", Base, "تعریف رابط‌ها", MenuGroupAccess.OperateOrNational,
+            "Rabets", "AccountCodeInterfaces", "RabetClosings", "AccountExceptions"),
         M("/base/tafsil-groups", Base, "گروه تفصیلی", MenuGroupAccess.OperateOrNational, "TafsilGroups"),
         M("/base/level-tafsils", Base, "سطوح تفصیلی", MenuGroupAccess.OperateOrNational, "LevelTafsils"),
         M("/base/bank", Base, "بانک", MenuGroupAccess.OperateOrNational, "BankAccounts", "CheckBooks", "ChequeTypes"),
@@ -62,6 +64,7 @@ public static class MenuCatalog
 
         M("/operation/voucher-heads", Operation, "کارتابل اسناد", MenuGroupAccess.Operate, "Vouchers"),
         M("/operation/vouchers/new", Operation, "صدور سند", MenuGroupAccess.Operate, "Vouchers"),
+        M("/operation/year-end", Operation, "سند افتتاحیه و اختتامیه", MenuGroupAccess.Operate, "Vouchers"),
         M("/operation/elams", Operation, "اسناد اعلامیه", MenuGroupAccess.Operate, "Elams", "ElamHeads"),
         M("/operation/bank-card", Operation, "کارت حساب جاری", MenuGroupAccess.Operate, "BankCards", "BankCartDetails"),
         M("/operation/cheque-book", Operation, "دفتر چک", MenuGroupAccess.Operate, "ChequeBook"),

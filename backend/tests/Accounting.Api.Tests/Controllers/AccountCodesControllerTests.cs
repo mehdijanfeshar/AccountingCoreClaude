@@ -104,7 +104,7 @@ public sealed class AccountCodesControllerTests
 
         var controller = new AccountCodesController(mediator.Object);
 
-        var actionResult = await controller.GetList(pageNumber: 3, pageSize: 15, CancellationToken.None);
+        var actionResult = await controller.GetList(pageNumber: 3, pageSize: 15, cancellationToken: CancellationToken.None);
 
         Assert.NotNull(capturedQuery);
         Assert.Equal(3, capturedQuery!.PageNumber);
@@ -148,7 +148,7 @@ public sealed class AccountCodesControllerTests
         var controller = new AccountCodesController(mediator.Object);
         using var cts = new CancellationTokenSource();
 
-        await controller.GetList(1, 20, cts.Token);
+        await controller.GetList(1, 20, cancellationToken: cts.Token);
 
         mediator.Verify(
             m => m.Send(It.IsAny<GetAccountCodesQuery>(), cts.Token),

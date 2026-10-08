@@ -69,6 +69,12 @@ public sealed class RabetsController : ControllerBase
             new CreateRabetResponse(id));
     }
 
+    /// <summary>انواع حساب رابط (TB_RABET_TYPE) — کد ۱/۲/۳ = اعلامیهٔ صادره/رسیده/صادرهٔ درآمد.</summary>
+    [HttpGet("types")]
+    [ProducesResponseType(typeof(IReadOnlyList<Accounting.Application.Rabets.Queries.GetRabetTypes.RabetTypeDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTypes(CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(new Accounting.Application.Rabets.Queries.GetRabetTypes.GetRabetTypesQuery(), cancellationToken));
+
     /// <summary>
     /// Returns a page of rabet links.
     /// </summary>

@@ -93,7 +93,8 @@ public sealed class UpdateVoucherHeadCommandHandlerTests
         Assert.Equal(command.SndVahedCode, entity.SNDVAHEDCODE);
         Assert.Equal(command.ParentHeadId, entity.PARENTHEAD_ID);
         Assert.Equal(command.AttachFileName, entity.ATTACHFILE_NAME);
-        Assert.Equal(command.AtfNum, entity.ATF_NUM);
+        // Never taken from the request: the reference number is fixed at creation (VoucherAtfNumberInterceptor).
+        Assert.Null(entity.ATF_NUM);
     }
 
     [Fact]

@@ -9,4 +9,8 @@ namespace Accounting.Application.Accounts.Queries.GetAccountCodes;
 /// </summary>
 /// <param name="PageNumber">1-based page number.</param>
 /// <param name="PageSize">Page size, capped by <see cref="GetAccountCodesQueryValidator.MaxPageSize"/>.</param>
-public sealed record GetAccountCodesQuery(int PageNumber, int PageSize) : IRequest<PagedResult<AccountCodeDto>>;
+/// <param name="Search">
+/// Optional search over the WHOLE chart, not one page: codes that start with it, or titles that
+/// contain it. Persian/Arabic digits are accepted. Empty means no filter.
+/// </param>
+public sealed record GetAccountCodesQuery(int PageNumber, int PageSize, string? Search = null) : IRequest<PagedResult<AccountCodeDto>>;
