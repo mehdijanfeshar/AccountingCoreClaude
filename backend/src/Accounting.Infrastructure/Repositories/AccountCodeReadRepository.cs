@@ -3,6 +3,7 @@ using Accounting.Application.Accounts.Queries;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
+using Accounting.Domain.ValueObjects;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;
 
@@ -154,6 +155,26 @@ public sealed class AccountCodeReadRepository : IAccountCodeReadRepository
             .Where(l => l.ACCOUNT_ID == accountCodeId && l.ISDELETED == false)
             .OrderBy(l => l.ID)
             .Select(ToLinkDto)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<AccountCodeDto>> ListMoinsAsync(string? search, CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.TB_ACCOUNTCODEs
+            .AsNoTracking()
+            .Where(a => a.ISDELETED != true && a.TYPECODE == TypeCodes.Moin);
+
+        var term = search?.Trim();
+        if (!string.IsNullOrEmpty(term))
+        {
+            query = query.Where(a => (a.ACCCODE != null && a.ACCCODE.StartsWith(term))
+                                     || (a.ACCCODENAME != null && a.ACCCODENAME.Contains(term)));
+        }
+
+        return await query
+            .OrderBy(a => a.ACCCODE)
+            .ThenBy(a => a.ID)
+            .Select(ToDto)
             .ToListAsync(cancellationToken);
     }
 }

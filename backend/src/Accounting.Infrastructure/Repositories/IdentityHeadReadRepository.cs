@@ -97,9 +97,11 @@ public sealed class IdentityHeadReadRepository : IIdentityHeadReadRepository
             .Select(ToDto)
             .ToListAsync(cancellationToken);
 
+        var used = await UsedHeadIdsAsync(items.Select(i => i.Id).ToList(), cancellationToken);
+
         return new PagedResult<IdentityHeadDto>
         {
-            Items = items,
+            Items = items.Select(i => i with { IsUsed = used.Contains(i.Id) }).ToList(),
             PageNumber = pageNumber,
             PageSize = pageSize,
             TotalCount = totalCount,
@@ -125,10 +127,32 @@ public sealed class IdentityHeadReadRepository : IIdentityHeadReadRepository
 
         // No ISDELETED filter here on purpose: GetById returns the row regardless of its deletion
         // state; the caller decides what to do based on IdentityHeadDto.IsDeleted.
-        return await _dbContext.TB_IDENTITYHEADs
+        var dto = await _dbContext.TB_IDENTITYHEADs
             .AsNoTracking()
             .Where(h => h.ID == id)
             .Select(ToDto)
             .FirstOrDefaultAsync(cancellationToken);
+        if (dto is null)
+            return null;
+
+        var used = await UsedHeadIdsAsync([dto.Id], cancellationToken);
+        return dto with { IsUsed = used.Contains(dto.Id) };
+    }
+
+    /// <summary>
+    /// شناسنامه‌هایی از <paramref name="ids"/> که روی ردیف سند استفاده شده‌اند. جدا از <c>ToDto</c>
+    /// چون پروژکشن بولی (<c>Count(..) &gt; 0</c>) روی اوراکل ORA-00904 "FALSE" می‌دهد.
+    /// </summary>
+    private async Task<HashSet<Guid>> UsedHeadIdsAsync(List<Guid> ids, CancellationToken cancellationToken)
+    {
+        if (ids.Count == 0)
+            return [];
+        var used = await _dbContext.TB_IDENTITYDETAILs
+            .AsNoTracking()
+            .Where(d => ids.Contains(d.IDENTITYHEAD_ID) && d.ISDELETED != true)
+            .Select(d => d.IDENTITYHEAD_ID)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        return used.ToHashSet();
     }
 }

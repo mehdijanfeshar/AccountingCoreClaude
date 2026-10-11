@@ -29,6 +29,12 @@ public sealed class VoucherLineExtrasController : ControllerBase
     public async Task<IActionResult> Heads(Guid groupId, [FromQuery] string year, CancellationToken ct) =>
         Ok(await _mediator.Send(new ListIdentityHeadOptionsQuery(groupId, year), ct));
 
+    /// <summary>اطلاعات تکمیلی همهٔ ردیف‌های یک سند، آمادهٔ نمایش (صفحهٔ «نمایش سند»).</summary>
+    [HttpGet("vouchers/{voucherHeadId:guid}/display")]
+    [ProducesResponseType(typeof(IReadOnlyList<VoucherLineDisplayDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Display(Guid voucherHeadId, CancellationToken ct) =>
+        Ok(await _mediator.Send(new GetVoucherLinesDisplayQuery(voucherHeadId), ct));
+
     /// <summary>مقادیر ذخیره‌شدهٔ یک ردیف.</summary>
     [HttpGet("details/{detailId:guid}")]
     [ProducesResponseType(typeof(VoucherLineExtrasDto), StatusCodes.Status200OK)]

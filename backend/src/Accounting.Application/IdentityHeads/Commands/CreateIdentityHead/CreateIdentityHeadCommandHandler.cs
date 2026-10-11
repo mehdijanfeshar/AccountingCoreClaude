@@ -23,6 +23,8 @@ public sealed class CreateIdentityHeadCommandHandler : IRequestHandler<CreateIde
 
     public async Task<Guid> Handle(CreateIdentityHeadCommand request, CancellationToken cancellationToken)
     {
+        await FixedValuesGuard.EnsureCompleteAsync(_identityHeadRepository, request.IdentityGroupId, request.FixItems, cancellationToken);
+
         var now = DateTime.UtcNow;
 
         var serial = await _identityHeadRepository.GetNextSerialAsync(

@@ -29,4 +29,13 @@ public interface IAccountEntryPolicy
         string? dateDoc,
         IEnumerable<Guid?> accountIds,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// همهٔ معین‌هایی که آرتیکل دستی روی آن‌ها برای نوع واحد و تاریخ مجاز است — همان قاعدهٔ
+    /// <see cref="EnsureManualEntryAllowedAsync"/>، برای اینکه لیست انتخاب معین فقط همین‌ها را نشان دهد.
+    /// </summary>
+    Task<IReadOnlySet<Guid>> GetManualEntryAllowedIdsAsync(
+        string vahedCode,
+        string? dateDoc,
+        CancellationToken cancellationToken = default);
 }

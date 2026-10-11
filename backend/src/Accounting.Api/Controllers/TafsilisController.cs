@@ -96,9 +96,10 @@ public sealed class TafsilisController : ControllerBase
     public async Task<IActionResult> GetList(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetTafsilisQuery(pageNumber, pageSize), cancellationToken);
+        var result = await _mediator.Send(new GetTafsilisQuery(pageNumber, pageSize, search), cancellationToken);
 
         return Ok(result);
     }

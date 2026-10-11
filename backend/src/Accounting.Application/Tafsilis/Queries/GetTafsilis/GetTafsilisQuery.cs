@@ -14,7 +14,8 @@ namespace Accounting.Application.Tafsilis.Queries.GetTafsilis;
 /// </summary>
 /// <param name="PageNumber">1-based page number.</param>
 /// <param name="PageSize">Page size, capped by <see cref="GetTafsilisQueryValidator.MaxPageSize"/>.</param>
-public sealed record GetTafsilisQuery(int PageNumber, int PageSize) : IRequest<PagedResult<TafsiliDto>>, IVahedScopedQuery
+/// <param name="Search">اختیاری — بخشی از کد یا نام تفصیلی (برای فهرست‌های انتخابی).</param>
+public sealed record GetTafsilisQuery(int PageNumber, int PageSize, string? Search = null) : IRequest<PagedResult<TafsiliDto>>, IVahedScopedQuery
 {
     /// <summary>
     /// Organizational unit code to filter by. Server-assigned by <c>VahedScopeBehavior</c> from

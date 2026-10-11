@@ -115,6 +115,26 @@ public sealed class AccountCodesController : ControllerBase
     }
 
     /// <summary>
+    /// لیست انتخاب معینِ ثبت سند: فقط معین‌های مجاز برای نوع واحد کاربر در تاریخ سند (ماتریس دسترسی کدینگ).
+    /// </summary>
+    [HttpGet("entry-moins")]
+    [ProducesResponseType(typeof(PagedResult<AccountCodeDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetEntryMoins(
+        [FromQuery] string? search = null,
+        [FromQuery] string? dateDoc = null,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _mediator.Send(
+            new Accounting.Application.Accounts.Queries.GetEntryMoins.GetEntryMoinsQuery(search, dateDoc, pageNumber, pageSize),
+            cancellationToken);
+
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Returns a single account code by <c>ID</c>, or 404 when it does not exist.
     /// </summary>
     [HttpGet("{id:guid}")]

@@ -38,7 +38,7 @@ public sealed class GetTafsilisQueryHandlerTests
             TotalCount = 51,
         };
         readRepository
-            .Setup(r => r.GetPagedAsync(2, 25, "1001", It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetPagedAsync(2, 25, "1001", null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
 
         var handler = new GetTafsilisQueryHandler(readRepository.Object);
@@ -47,7 +47,7 @@ public sealed class GetTafsilisQueryHandlerTests
         var result = await handler.Handle(query, CancellationToken.None);
 
         Assert.Same(expected, result);
-        readRepository.Verify(r => r.GetPagedAsync(2, 25, "1001", It.IsAny<CancellationToken>()), Times.Once);
+        readRepository.Verify(r => r.GetPagedAsync(2, 25, "1001", null, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

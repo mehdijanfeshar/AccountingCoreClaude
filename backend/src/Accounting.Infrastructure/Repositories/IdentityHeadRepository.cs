@@ -1,3 +1,4 @@
+using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using Accounting.Infrastructure.Legacy;
@@ -74,4 +75,16 @@ public sealed class IdentityHeadRepository : IIdentityHeadRepository
 
         return (highest ?? 0) + 1;
     }
+
+    public async Task<bool> IsUsedInVouchersAsync(Guid id, CancellationToken cancellationToken = default)
+        // CountAsync، نه AnyAsync — روی اوراکل ORA-00904.
+        => await _dbContext.TB_IDENTITYDETAILs
+            .CountAsync(d => d.IDENTITYHEAD_ID == id && d.ISDELETED != true, cancellationToken) > 0;
+
+    public async Task<IReadOnlyList<Guid>> GetFixedSubGroupIdsAsync(Guid identityGroupId, CancellationToken cancellationToken = default)
+        => await _dbContext.TB_IDENTITYSUBGRPs
+            .AsNoTracking()
+            .Where(s => s.IDENTYGROUPS_ID == identityGroupId && s.ISDELETED != true && s.FIXED == IdentitySubGroupKind.Fixed)
+            .Select(s => s.ID)
+            .ToListAsync(cancellationToken);
 }

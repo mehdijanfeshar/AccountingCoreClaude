@@ -39,6 +39,8 @@ public sealed class CreateIdentitySubGroupCommandValidator : AbstractValidator<C
             .MaximumLength(4);
 
         RuleFor(x => x.IdentySubGroupsCode)
+            .NotEmpty()
+            .Matches("^[0-9]+$").WithMessage("کد ویژگی فقط عدد است.")
             .MaximumLength(2);
 
         RuleFor(x => x.SubgrpsLen)
@@ -51,7 +53,7 @@ public sealed class CreateIdentitySubGroupCommandValidator : AbstractValidator<C
             .IsInEnum();
 
         RuleFor(x => x.SubgrpsType)
-            .IsInEnum()
-            .When(x => x.SubgrpsType.HasValue);
+            .NotNull().WithMessage("حالت ویژگی الزامی است.")
+            .IsInEnum();
     }
 }

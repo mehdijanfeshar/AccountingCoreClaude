@@ -30,6 +30,14 @@ public sealed class UpdateIdentityHeadCommandHandler : IRequestHandler<UpdateIde
             throw new NotFoundException("IdentityHead", request.Id);
         }
 
+        // برنامهٔ مرجع (identity-head-edit): مقادیرِ به‌کاررفته در سند قابل ویرایش نیستند.
+        if (await _identityHeadRepository.IsUsedInVouchersAsync(entity.ID, cancellationToken))
+        {
+            throw new BusinessRuleException("این مقداردهی در سند استفاده شده و قابل ویرایش نیست.");
+        }
+
+        await FixedValuesGuard.EnsureCompleteAsync(_identityHeadRepository, entity.IDENTITYGROUPS_ID, request.FixItems, cancellationToken);
+
         entity.CHANGEUSERID = _currentUser.UserId;
         entity.UPDATEDDATE = DateTime.UtcNow;
 

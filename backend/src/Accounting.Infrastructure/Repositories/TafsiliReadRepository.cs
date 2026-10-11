@@ -34,6 +34,7 @@ public sealed class TafsiliReadRepository : ITafsiliReadRepository
         int pageNumber,
         int pageSize,
         string vahedCode,
+        string? search,
         CancellationToken cancellationToken = default)
     {
         // Logical delete filter: ISDELETED is bool? in Legacy, so both false and NULL mean
@@ -44,6 +45,10 @@ public sealed class TafsiliReadRepository : ITafsiliReadRepository
         var query = _dbContext.TB_TAFSILIs
             .AsNoTracking()
             .Where(t => t.ISDELETED != true && t.VAHEDCODE == vahedCode);
+
+        var term = search?.Trim();
+        if (!string.IsNullOrEmpty(term))
+            query = query.Where(t => t.TAFSILI_CODE!.Contains(term) || t.TAFSILI_NAME!.Contains(term));
 
         var totalCount = await query.CountAsync(cancellationToken);
 

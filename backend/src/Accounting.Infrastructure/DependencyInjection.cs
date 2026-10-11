@@ -120,6 +120,7 @@ public static class DependencyInjection
         services.AddScoped<IElamWorkflowRepository, ElamWorkflowRepository>();
         // شناسه/ویژگی/فیش ردیف سند.
         services.AddScoped<Accounting.Application.Vouchers.Commands.Common.IVoucherLineExtrasStore, VoucherLineExtrasStore>();
+        services.AddScoped<Accounting.Application.Vouchers.Queries.LineExtras.IVoucherLineDisplayReader, VoucherLineDisplayReader>();
         services.AddScoped<IElamWorkflowReadRepository, ElamWorkflowReadRepository>();
         services.AddScoped<IBankCardRepository, BankCardRepository>();
         services.AddScoped<IChequeBookRepository, ChequeBookRepository>();

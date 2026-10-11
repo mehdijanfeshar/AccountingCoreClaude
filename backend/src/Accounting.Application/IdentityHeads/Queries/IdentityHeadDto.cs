@@ -29,6 +29,7 @@ namespace Accounting.Application.IdentityHeads.Queries;
 /// <param name="AddUserId">Audit trail: creating user identifier.</param>
 /// <param name="ChangeUserId">Audit trail: last modifying user identifier.</param>
 /// <param name="IsDeleted">Logical-delete flag.</param>
+/// <param name="IsUsed">روی ردیف سندی استفاده شده (<c>TB_IDENTITYDETAIL</c>)؛ ویرایش/حذف ممنوع.</param>
 public sealed record IdentityHeadDto(
     Guid Id,
     Guid IdentityGroupId,
@@ -41,7 +42,8 @@ public sealed record IdentityHeadDto(
     DateTime? UpdatedDate,
     string? AddUserId,
     string? ChangeUserId,
-    bool IsDeleted);
+    bool IsDeleted,
+    bool IsUsed = false);
 
 /// <summary>
 /// One fixed-value item of a شناسنامه — the value recorded for a single fixed subgroup.

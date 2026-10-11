@@ -29,4 +29,5 @@ public sealed record IdentityGroupDto(
     DateTime? UpdatedDate,
     string? AddUserId,
     string? ChangeUserId,
-    bool IsDeleted);
+    bool IsDeleted,
+    string? TafsiliTitle = null);

@@ -5,6 +5,7 @@ using Accounting.Application.IdentitySubGroups.Commands.UpdateIdentitySubGroup;
 using Accounting.Application.IdentitySubGroups.Queries;
 using Accounting.Application.IdentitySubGroups.Queries.GetIdentitySubGroupById;
 using Accounting.Application.IdentitySubGroups.Queries.GetIdentitySubGroups;
+using Accounting.Application.IdentitySubGroups.Queries.GetNextIdentitySubGroupCode;
 using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -109,6 +110,19 @@ public sealed class IdentitySubGroupsController : ControllerBase
             cancellationToken);
 
         return Ok(result);
+    }
+
+    /// <summary>
+    /// کد پیشنهادی ویژگی بعدی در واحد و سال (بیشترین + ۱، دو رقمی).
+    /// </summary>
+    [HttpGet("next-code")]
+    [ProducesResponseType(typeof(NextIdentitySubGroupCodeResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetNextCode([FromQuery] string year, CancellationToken cancellationToken)
+    {
+        var code = await _mediator.Send(new GetNextIdentitySubGroupCodeQuery(year), cancellationToken);
+
+        return Ok(new NextIdentitySubGroupCodeResponse(code));
     }
 
     /// <summary>
@@ -217,3 +231,6 @@ public sealed record UpdateIdentitySubGroupRequest(
     IdentitySubGroupType? SubgrpsType,
     string Year,
     string? IdentySubGroupsCode);
+
+/// <summary>پاسخ <c>GET api/identity-sub-groups/next-code</c>.</summary>
+public sealed record NextIdentitySubGroupCodeResponse(string Code);

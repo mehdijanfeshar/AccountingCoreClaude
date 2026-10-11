@@ -133,4 +133,14 @@ public sealed class IdentitySubGroupReadRepository : IIdentitySubGroupReadReposi
             .Select(ToDto)
             .FirstOrDefaultAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<string>> GetCodesAsync(
+        string vahedCode,
+        string year,
+        CancellationToken cancellationToken = default)
+        => await _dbContext.TB_IDENTITYSUBGRPs
+            .AsNoTracking()
+            .Where(s => s.VAHEDCODE == vahedCode && s.YEAR == year && s.IDENTYSUBGROUPS_CODE != null)
+            .Select(s => s.IDENTYSUBGROUPS_CODE!)
+            .ToListAsync(cancellationToken);
 }

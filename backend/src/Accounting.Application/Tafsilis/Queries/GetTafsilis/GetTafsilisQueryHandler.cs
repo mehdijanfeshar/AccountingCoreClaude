@@ -18,5 +18,5 @@ public sealed class GetTafsilisQueryHandler : IRequestHandler<GetTafsilisQuery, 
     }
 
     public Task<PagedResult<TafsiliDto>> Handle(GetTafsilisQuery request, CancellationToken cancellationToken)
-        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, request.VahedCode, cancellationToken);
+        => _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, request.VahedCode, request.Search, cancellationToken);
 }

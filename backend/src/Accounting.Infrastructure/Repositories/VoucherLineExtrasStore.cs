@@ -101,14 +101,26 @@ public sealed class VoucherLineExtrasStore : IVoucherLineExtrasStore
             ? []
             : await _db.TB_IDENTITYFIXITEMs.AsNoTracking()
                 .Where(f => f.ISDELETED != true && headIds.Contains(f.IDENTITYHEAD_ID))
-                .Select(f => new { f.IDENTITYHEAD_ID, f.IDENTITYSUBGRPS_ID, Title = f.IDENTITYSUBGRPS.SUBGRPS_DESC, f.FIXITEMS_VALUE })
+                .Select(f => new { f.IDENTITYHEAD_ID, f.IDENTITYSUBGRPS_ID, f.FIXITEMS_VALUE })
                 .ToListAsync(ct);
+
+        // همهٔ اجزای ثابت فعلی گروه، نه فقط آن‌هایی که مقدار دارند: شناسنامه‌ای که پیش از افزودن یک جزء
+        // ثابت ساخته شده باید با «—» برای آن جزء دیده شود، نه بی‌برچسب («شناسنامه ۱»).
+        var fixedSubGroups = await _db.TB_IDENTITYSUBGRPs.AsNoTracking()
+            .Where(s => s.ISDELETED != true && s.IDENTYGROUPS_ID == groupId && s.FIXED == IdentitySubGroupKind.Fixed)
+            .OrderBy(s => s.IDENTYSUBGROUPS_CODE)
+            .Select(s => new { s.ID, s.SUBGRPS_DESC })
+            .ToListAsync(ct);
+
         return heads
             .Select(h => new IdentityHeadOption(
                 h.ID,
                 h.SERIAL,
-                fixedValues.Where(f => f.IDENTITYHEAD_ID == h.ID)
-                    .Select(f => new IdentityHeadFixedValue(f.IDENTITYSUBGRPS_ID, f.Title, f.FIXITEMS_VALUE))
+                fixedSubGroups
+                    .Select(s => new IdentityHeadFixedValue(
+                        s.ID,
+                        s.SUBGRPS_DESC,
+                        fixedValues.FirstOrDefault(f => f.IDENTITYHEAD_ID == h.ID && f.IDENTITYSUBGRPS_ID == s.ID)?.FIXITEMS_VALUE))
                     .ToList()))
             .ToList();
     }

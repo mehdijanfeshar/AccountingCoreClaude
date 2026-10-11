@@ -24,5 +24,8 @@ public sealed class GetTafsilisQueryValidator : AbstractValidator<GetTafsilisQue
 
         RuleFor(x => x.PageSize)
             .InclusiveBetween(1, MaxPageSize);
+
+        RuleFor(x => x.Search)
+            .MaximumLength(100);
     }
 }

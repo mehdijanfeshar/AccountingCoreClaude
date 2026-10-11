@@ -23,6 +23,8 @@ public sealed class CreateIdentityGroupCommandValidator : AbstractValidator<Crea
             .MaximumLength(100);
 
         RuleFor(x => x.IdentityGroupsCode)
+            .NotEmpty()
+            .Matches("^[0-9]+$").WithMessage("کد گروه فقط عدد است.")
             .MaximumLength(3);
 
         RuleFor(x => x.VahedCode)

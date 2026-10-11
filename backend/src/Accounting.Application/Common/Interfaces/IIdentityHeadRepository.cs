@@ -56,4 +56,13 @@ public interface IIdentityHeadRepository
         string vahedCode,
         string year,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// آیا این شناسنامه روی ردیف سندی (<c>TB_IDENTITYDETAIL</c> حذف‌نشده) استفاده شده است —
+    /// همان «turnover» برنامهٔ مرجع؛ چنین شناسنامه‌ای قابل ویرایش/حذف نیست.
+    /// </summary>
+    Task<bool> IsUsedInVouchersAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>شناسهٔ اجزای ثابت فعال (<c>FIXED = Fixed</c>) یک گروه — هرکدام مقدار الزامی دارد.</summary>
+    Task<IReadOnlyList<Guid>> GetFixedSubGroupIdsAsync(Guid identityGroupId, CancellationToken cancellationToken = default);
 }

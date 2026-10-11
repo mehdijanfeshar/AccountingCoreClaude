@@ -48,4 +48,9 @@ public interface IIdentitySubGroupReadRepository
     /// logical-delete state, or <see langword="null"/> if no such row exists.
     /// </summary>
     Task<IdentitySubGroupDto?> GetByIdAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// کد همهٔ زیرگروه‌های واحد در سال (حذف‌شده‌ها هم — برای پیشنهاد کد بعدی، تا کد تکراری نشود).
+    /// </summary>
+    Task<IReadOnlyList<string>> GetCodesAsync(string vahedCode, string year, CancellationToken cancellationToken = default);
 }

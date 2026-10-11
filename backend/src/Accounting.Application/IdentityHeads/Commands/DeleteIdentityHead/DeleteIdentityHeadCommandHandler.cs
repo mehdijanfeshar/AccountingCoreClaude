@@ -33,6 +33,11 @@ public sealed class DeleteIdentityHeadCommandHandler : IRequestHandler<DeleteIde
             return;
         }
 
+        if (await _identityHeadRepository.IsUsedInVouchersAsync(entity.ID, cancellationToken))
+        {
+            throw new DeleteBlockedException("IdentityHead", entity.ID, "این مقداردهی در سند استفاده شده و قابل حذف نیست.");
+        }
+
         var now = DateTime.UtcNow;
 
         entity.ISDELETED = true;

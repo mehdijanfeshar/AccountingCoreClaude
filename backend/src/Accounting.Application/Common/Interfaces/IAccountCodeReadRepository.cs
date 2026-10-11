@@ -45,4 +45,10 @@ public interface IAccountCodeReadRepository
     Task<IReadOnlyList<AccountTafsilGroupLinkDto>> GetTafsilGroupLinksAsync(
         Guid accountCodeId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// همهٔ حساب‌های معین (<c>TYPECODE = Moin</c>) حذف‌نشده، به ترتیب کد؛ با <paramref name="search"/>
+    /// فقط کدی که با آن شروع شود یا عنوانی که آن را داشته باشد.
+    /// </summary>
+    Task<IReadOnlyList<AccountCodeDto>> ListMoinsAsync(string? search, CancellationToken cancellationToken = default);
 }

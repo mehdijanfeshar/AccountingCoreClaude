@@ -32,7 +32,8 @@ public sealed class IdentityGroupReadRepository : IIdentityGroupReadRepository
         g.UPDATEDDATE,
         g.ADDUSERID,
         g.CHANGEUSERID,
-        g.ISDELETED);
+        g.ISDELETED,
+        g.TAFSILI == null ? null : g.TAFSILI.TAFSILI_CODE + " - " + g.TAFSILI.TAFSILI_NAME);
 
     private readonly LegacyDbContext _dbContext;
 
