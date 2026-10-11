@@ -6482,9 +6482,11 @@ public partial class LegacyDbContext : DbContext
 
         modelBuilder.Entity<TB_WORKSHOP_LINK_TAFSILI>(entity =>
         {
-            entity
-                .HasNoKey()
-                .ToTable("TB_WORKSHOP_LINK_TAFSILI");
+            // The table has no PK constraint, so the scaffold produced HasNoKey() — which made
+            // the entity untrackable (create/update of a workshop's تفصیلی links threw). ID is a
+            // Guid always set via Guid.NewGuid() by the handlers, so it is a safe EF-only key.
+            entity.HasKey(e => e.ID);
+            entity.ToTable("TB_WORKSHOP_LINK_TAFSILI");
 
             entity.Property(e => e.ADDUSERID)
                 .HasMaxLength(10)

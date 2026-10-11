@@ -30,15 +30,12 @@ public sealed class WorkShopReadRepository : IWorkShopReadRepository
     /// it into a column-level SQL projection instead of loading the full entity. Deliberately
     /// excludes <c>CHECKFILE</c> (the BLOB column) — see <see cref="WorkShopDto"/> XML doc.
     ///
-    /// Instance-level (and not <c>static readonly</c> like its sibling repositories) purely
-    /// because of the تفصیلی links: the scaffolded model configures no relationship between
-    /// <c>TB_WORKSHOP</c> and <c>TB_WORKSHOP_LINK_TAFSILI</c> — unlike <c>TB_EXPENCE</c> and
-    /// <c>TB_REVOLVING_FUND</c>, which both have the inverse collection — so they can only be
-    /// reached through an explicit correlated subquery over the <see cref="LegacyDbContext"/>
-    /// set, which a static field cannot capture. EF Core still translates it to one SQL
-    /// statement; nothing is evaluated client-side.
+    /// The تفصیلی links are left empty here and filled by <see cref="AttachLinksAsync"/>:
+    /// <c>TB_WORKSHOP_LINK_TAFSILI</c> has no PK constraint in Oracle, and a correlated collection
+    /// subquery inside the projection failed on it ("Unable to translate a collection subquery
+    /// in a projection") while it was mapped keyless. Two flat queries avoid that shape entirely.
     /// </summary>
-    private Expression<Func<TB_WORKSHOP, WorkShopDto>> ToDto => w => new WorkShopDto(
+    private static readonly Expression<Func<TB_WORKSHOP, WorkShopDto>> ToDto = w => new WorkShopDto(
         w.ID,
         w.ACCOUNTCODE_ID,
         w.BRANCH_ID,
@@ -51,10 +48,35 @@ public sealed class WorkShopReadRepository : IWorkShopReadRepository
         w.ADDUSERID,
         w.CHANGEUSERID,
         w.ISDELETED,
-        _dbContext.TB_WORKSHOP_LINK_TAFSILIs
-            .Where(l => l.WORKSHOP_ID == w.ID && l.ISDELETED == false)
-            .Select(l => new WorkShopTafsiliLinkDto(l.TAFSILI_ID, l.LEVEL_ID))
-            .ToList());
+        Array.Empty<WorkShopTafsiliLinkDto>());
+
+    /// <summary>
+    /// Loads the live تفصیلی links of the given workshops in one query and attaches them.
+    /// </summary>
+    private async Task<List<WorkShopDto>> AttachLinksAsync(
+        List<WorkShopDto> items,
+        CancellationToken cancellationToken)
+    {
+        if (items.Count == 0)
+            return items;
+
+        var ids = items.Select(i => i.Id).ToList();
+        var links = await _dbContext.TB_WORKSHOP_LINK_TAFSILIs
+            .AsNoTracking()
+            .Where(l => ids.Contains(l.WORKSHOP_ID) && l.ISDELETED == false)
+            .Select(l => new { l.WORKSHOP_ID, l.TAFSILI_ID, l.LEVEL_ID })
+            .ToListAsync(cancellationToken);
+
+        var byWorkShop = links.ToLookup(l => l.WORKSHOP_ID);
+        return items
+            .Select(i => i with
+            {
+                TafsiliLinks = byWorkShop[i.Id]
+                    .Select(l => new WorkShopTafsiliLinkDto(l.TAFSILI_ID, l.LEVEL_ID))
+                    .ToList(),
+            })
+            .ToList();
+    }
 
     public async Task<PagedResult<WorkShopDto>> GetPagedAsync(
         int pageNumber,
@@ -93,6 +115,8 @@ public sealed class WorkShopReadRepository : IWorkShopReadRepository
             .Select(ToDto)
             .ToListAsync(cancellationToken);
 
+        items = await AttachLinksAsync(items, cancellationToken);
+
         return new PagedResult<WorkShopDto>
         {
             Items = items,
@@ -122,10 +146,12 @@ public sealed class WorkShopReadRepository : IWorkShopReadRepository
 
         // No ISDELETED filter here on purpose: GetById returns the row regardless of its
         // deletion state; the caller decides what to do based on WorkShopDto.IsDeleted.
-        return await _dbContext.TB_WORKSHOPs
+        var dto = await _dbContext.TB_WORKSHOPs
             .AsNoTracking()
             .Where(w => w.ID == id)
             .Select(ToDto)
             .FirstOrDefaultAsync(cancellationToken);
+
+        return dto is null ? null : (await AttachLinksAsync([dto], cancellationToken))[0];
     }
 }
