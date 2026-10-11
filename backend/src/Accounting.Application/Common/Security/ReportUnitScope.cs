@@ -57,6 +57,12 @@ public interface IMultiUnitReportQuery : IVahedScopedQuery
     ReportUnitScopeMode UnitScope { get; }
 
     UnitCategory? UnitCategory { get; }
+
+    /// <summary>
+    /// فقط واحدهای یک استان (<c>TB_PROVINCE.PROVINCECODE</c>، از شهر واحد). پیش‌فرض null — فعلاً فقط مرور حساب‌ها
+    /// پرش می‌کند؛ گزارش‌های دیگر پس از تأیید صاحب پروژه.
+    /// </summary>
+    string? ProvinceCode => null;
 }
 
 /// <summary>
@@ -100,14 +106,17 @@ public sealed class ReportUnitScopeBehavior<TRequest, TResponse> : IPipelineBeha
 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
-        if (request is not IMultiUnitReportQuery q || (q.UnitScope == ReportUnitScopeMode.Self && q.UnitCategory is null))
+        if (request is not IMultiUnitReportQuery q
+            || (q.UnitScope == ReportUnitScopeMode.Self && q.UnitCategory is null && string.IsNullOrWhiteSpace(q.ProvinceCode)))
             return await next(cancellationToken);
 
         // فاز ۵۴: «همهٔ واحدها» و انتخاب گروه واحد (بیمه‌ای/درمانی/ستادی) = قابلیت reports.unit-category
-        // (پیش‌فرض: مدیر ستاد مرکزی یا نقش مدیریتی سطح کشور).
-        if ((q.UnitScope == ReportUnitScopeMode.AllUnits || q.UnitCategory is not null) && !await CanSeeAllUnitsAsync(cancellationToken))
+        // (پیش‌فرض: مدیر ستاد مرکزی یا نقش مدیریتی سطح کشور). انتخاب استان هم همین قابلیت.
+        var province = string.IsNullOrWhiteSpace(q.ProvinceCode) ? null : q.ProvinceCode.Trim();
+        if ((q.UnitScope == ReportUnitScopeMode.AllUnits || q.UnitCategory is not null || province is not null)
+            && !await CanSeeAllUnitsAsync(cancellationToken))
             throw new RoleAccessDeniedException(
-                "گزارش «همهٔ واحدها» و انتخاب گروه واحد (بیمه‌ای/درمانی/ستادی) فقط برای کاربر ستاد مرکزی، نقش مدیریتی سطح کشور یا نقشی که این قابلیت را دارد ممکن است.");
+                "گزارش «همهٔ واحدها» و انتخاب استان یا گروه واحد (بیمه‌ای/درمانی/ستادی) فقط برای کاربر ستاد مرکزی، نقش مدیریتی سطح کشور یا نقشی که این قابلیت را دارد ممکن است.");
 
         var all = await _unitAccess.GetAllUnitsAsync(cancellationToken);
         IEnumerable<UnitNode> units = q.UnitScope switch
@@ -118,10 +127,15 @@ public sealed class ReportUnitScopeBehavior<TRequest, TResponse> : IPipelineBeha
         };
         if (q.UnitCategory is { } category)
             units = units.Where(u => UnitCategories.Of(u.TypeCode) == category);
+        if (province is not null)
+        {
+            var provinces = await _unitAccess.GetUnitProvincesAsync(cancellationToken);
+            units = units.Where(u => provinces.TryGetValue(u.VahedCode, out var p) && p.ProvinceCode == province);
+        }
 
         var codes = units.Select(u => u.VahedCode).Distinct().ToList();
         if (codes.Count == 0)
-            throw new RoleAccessDeniedException("در این دامنه و گروه، واحدی برای گزارش نیست.");
+            throw new RoleAccessDeniedException("در این دامنه، استان و گروه، واحدی برای گزارش نیست.");
         _scope.Set(codes);
         return await next(cancellationToken);
     }

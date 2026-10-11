@@ -28,5 +28,9 @@ public sealed class GetAccountCodesQueryValidator : AbstractValidator<GetAccount
 
         RuleFor(x => x.Search)
             .MaximumLength(100);
+
+        RuleFor(x => x.TypeCode)
+            .IsInEnum().WithMessage("سطح حساب نامعتبر است.")
+            .When(x => x.TypeCode is not null);
     }
 }

@@ -143,6 +143,7 @@ public static class DependencyInjection
         services.AddScoped<IBankAccountRepository, BankAccountRepository>();
         services.AddScoped<IBankCartDetailRepository, BankCartDetailRepository>();
         services.AddScoped<ICheckBookRepository, CheckBookRepository>();
+        services.AddScoped<IFinancialYearRepository, FinancialYearRepository>();
         services.AddScoped<IChequesIncorrentRepository, ChequesIncorrentRepository>();
         services.AddScoped<IElamHeadRepository, ElamHeadRepository>();
         services.AddScoped<IExpenseRepository, ExpenseRepository>();

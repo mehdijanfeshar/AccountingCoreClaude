@@ -107,9 +107,10 @@ public sealed class AccountCodesController : ControllerBase
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
         [FromQuery] string? search = null,
+        [FromQuery] Accounting.Domain.ValueObjects.TypeCodes? typeCode = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetAccountCodesQuery(pageNumber, pageSize, search), cancellationToken);
+        var result = await _mediator.Send(new GetAccountCodesQuery(pageNumber, pageSize, search) { TypeCode = typeCode }, cancellationToken);
 
         return Ok(result);
     }

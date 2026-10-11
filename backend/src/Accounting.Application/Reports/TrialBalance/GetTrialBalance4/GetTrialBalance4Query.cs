@@ -49,6 +49,9 @@ public sealed record GetTrialBalance4Query(
     /// <summary>فقط واحدهای یک گروه (بیمه‌ای/درمانی/ستادی).</summary>
     public UnitCategory? UnitCategory { get; init; }
 
+    /// <summary>فقط واحدهای یک استان (کد استان) — فقط با قابلیت reports.unit-category.</summary>
+    public string? ProvinceCode { get; init; }
+
     /// <summary>
     /// Organizational unit code to filter by. Server-assigned by <c>VahedScopeBehavior</c> from
     /// the authenticated caller's own <c>VahedCode</c> — never bound from client input (the

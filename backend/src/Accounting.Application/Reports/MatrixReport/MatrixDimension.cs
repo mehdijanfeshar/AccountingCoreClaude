@@ -51,4 +51,13 @@ public enum MatrixDimension
 
     /// <summary>تفصیلی سطح ۷.</summary>
     Tafsili7 = 10,
+
+    /// <summary>استان واحد (از شهر واحد) — مثلاً «معین × استان».</summary>
+    Province = 11,
+
+    /// <summary>گروه واحد — بیمه‌ای/درمانی/ستادی (کد 1/2/3).</summary>
+    UnitCategory = 12,
+
+    /// <summary>واحد.</summary>
+    Unit = 13,
 }

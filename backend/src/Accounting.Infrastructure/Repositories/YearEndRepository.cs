@@ -101,24 +101,27 @@ public sealed class YearEndRepository(LegacyDbContext db) : IYearEndRepository
             join r in db.TB_ACCOUNTCODEs.AsNoTracking() on rc.ACCOUNTCODE_RABET_ID equals r.ID
             where rc.ISDELETED != true && rc.YEAR == year && rc.VAHEDTYPE_ID == vahedTypeId
                   && a.ACCCODE != null && r.ACCCODE != null
-            select new { a.ID, a.ACCCODE, Rabet = new YearEndAccountRef(r.ID, r.ACCCODE!, r.ACCCODENAME) })
+            select new { a.ID, a.ACCCODE, rc.TYPEACCOUNTCODE, Rabet = new YearEndAccountRef(r.ID, r.ACCCODE!, r.ACCCODENAME) })
             .ToListAsync(ct);
 
         var map = new Dictionary<Guid, YearEndAccountRef>();
-        var kols = configured.Where(c => c.ACCCODE!.Length == 4).ToList();
-        if (kols.Count > 0)
+        // گروه (۲۰۲۶-۱۰-۱۱) و کل به همهٔ معین‌های زیرشان می‌رسند؛ اولویت: معین > کل > گروه — پس اول گروه، بعد کل
+        // نوشته می‌شود تا تعریف دقیق‌تر جای عام‌تر را بگیرد.
+        var groups = configured.Where(c => c.TYPEACCOUNTCODE == RabetAccountLevel.Group).ToList();
+        var kols = configured.Where(c => c.TYPEACCOUNTCODE != RabetAccountLevel.Group && c.ACCCODE!.Length == 4).ToList();
+        if (groups.Count > 0 || kols.Count > 0)
         {
             // A rabet set on a کل reaches every معین under it (VW_RABETCLOSING_ACCOUNTS).
             var moeins = await db.TB_ACCOUNTCODEs.AsNoTracking()
                 .Where(a => a.ISDELETED != true && a.ACCCODE != null && a.ACCCODE.Length == 6)
                 .Select(a => new { a.ID, a.ACCCODE })
                 .ToListAsync(ct);
-            foreach (var kol in kols)
-                foreach (var m in moeins.Where(m => m.ACCCODE!.StartsWith(kol.ACCCODE!, StringComparison.Ordinal)))
-                    map[m.ID] = kol.Rabet;
+            foreach (var parent in groups.Concat(kols))
+                foreach (var m in moeins.Where(m => m.ACCCODE!.StartsWith(parent.ACCCODE!, StringComparison.Ordinal)))
+                    map[m.ID] = parent.Rabet;
         }
         // A rabet set on the معین itself wins over its کل.
-        foreach (var moein in configured.Where(c => c.ACCCODE!.Length == 6))
+        foreach (var moein in configured.Where(c => c.TYPEACCOUNTCODE != RabetAccountLevel.Group && c.ACCCODE!.Length == 6))
             map[moein.ID] = moein.Rabet;
         return map;
     }

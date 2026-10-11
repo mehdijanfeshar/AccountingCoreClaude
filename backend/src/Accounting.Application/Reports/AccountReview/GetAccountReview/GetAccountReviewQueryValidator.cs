@@ -37,15 +37,32 @@ public sealed class GetAccountReviewQueryValidator : AbstractValidator<GetAccoun
                 .MaximumLength(MaxCodeLength).WithMessage($"کد نباید بیش از {MaxCodeLength} کاراکتر باشد.");
         }).When(x => x.Scope is { Count: > 0 });
 
+        // دو خانواده: کدینگ/تفصیلی (۱..۱۰) که ترتیب دارند، و تفکیک واحد (استان/گروه/واحد) که فقط تکراری نباشند.
+        // مسیر می‌تواند هر دو را داشته باشد — «معین X ← استان تهران ← درمانی ← واحد Y».
         RuleFor(x => x)
-            .Must(x => x.Scope!.All(s => s.Level < x.Level))
+            .Must(x => x.Scope!.All(s =>
+                AccountReviewLevels.IsUnitDimension(s.Level) || AccountReviewLevels.IsUnitDimension(x.Level) || s.Level < x.Level))
             .WithMessage("هر مرحله از مسیر باید سطحی بالاتر از سطح گزارش باشد.")
+            .When(x => x.Scope is { Count: > 0 });
+
+        RuleFor(x => x)
+            .Must(x => x.Scope!.All(s => s.Level != x.Level))
+            .WithMessage("سطح گزارش نمی‌تواند در مسیر هم باشد.")
+            .When(x => x.Scope is { Count: > 0 });
+
+        RuleFor(x => x)
+            .Must(x => x.Scope!.All(s => s.Level != AccountReviewLevel.Voucher))
+            .WithMessage("«سند» فقط سطح نمایش است و در مسیر نمی‌آید.")
             .When(x => x.Scope is { Count: > 0 });
 
         RuleFor(x => x)
             .Must(x => x.Scope!.Select(s => s.Level).Distinct().Count() == x.Scope!.Count)
             .WithMessage("هر سطح فقط یک بار می‌تواند در مسیر بیاید.")
             .When(x => x.Scope is { Count: > 0 });
+
+        RuleFor(x => x.ProvinceCode)
+            .MaximumLength(MaxCodeLength).WithMessage("کد استان نامعتبر است.")
+            .When(x => !string.IsNullOrWhiteSpace(x.ProvinceCode));
 
         RuleFor(x => x.FromDate)
             .Matches("^[0-9]{8}$").WithMessage("تاریخ باید به شکل YYYYMMDD باشد.")

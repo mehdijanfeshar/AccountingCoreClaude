@@ -17,7 +17,7 @@ public sealed record RabetClosingDto(
     Guid Id, string? Year, Guid VahedTypeId, string? VahedTypeName, RabetAccountLevel? Level,
     Guid? AccountId, string? AccCode, string? AccName, Guid? RabetId, string? RabetCode, string? RabetName, string? Title);
 
-public sealed record RabetClosingAccount(Guid Id, string? AccCode, string? AccName);
+public sealed record RabetClosingAccount(Guid Id, string? AccCode, string? AccName, Accounting.Domain.ValueObjects.TypeCodes? TypeCode = null);
 
 public interface IRabetClosingRepository
 {
@@ -74,12 +74,15 @@ public sealed class CreateRabetClosingsHandler(IRabetClosingRepository repo, ICu
         {
             var account = accounts.FirstOrDefault(a => a.Id == id)
                 ?? throw new BusinessRuleException("یکی از حساب‌های انتخاب‌شده پیدا نشد.");
-            levels[id] = account.AccCode?.Length switch
-            {
-                4 => RabetAccountLevel.Kol,
-                6 => RabetAccountLevel.Moein,
-                _ => throw new BusinessRuleException($"حساب {account.AccCode} کل یا معین نیست؛ فقط کل (۴ رقم) یا معین (۶ رقم) پذیرفته می‌شود."),
-            };
+            // گروه از سطح کدینگ (طول کد گروه ثابت نیست)؛ کل و معین مثل قبل از طول کد.
+            levels[id] = account.TypeCode == Accounting.Domain.ValueObjects.TypeCodes.Group
+                ? RabetAccountLevel.Group
+                : account.AccCode?.Length switch
+                {
+                    4 => RabetAccountLevel.Kol,
+                    6 => RabetAccountLevel.Moein,
+                    _ => throw new BusinessRuleException($"حساب {account.AccCode} گروه، کل یا معین نیست؛ فقط گروه، کل (۴ رقم) یا معین (۶ رقم) پذیرفته می‌شود."),
+                };
         }
 
         var vahedTypeIds = c.VahedTypeIds.Distinct().ToList();

@@ -42,4 +42,27 @@ public enum AccountReviewLevel
 
     /// <summary>تفصیلی سطح ۷.</summary>
     Tafsili7 = 10,
+
+    // ── تفکیک واحد (درخواست صاحب پروژه ۲۰۲۶-۱۰-۱۱): خانوادهٔ دوم، مستقل از کدینگ. هر حساب را می‌توان به استان،
+    // گروه واحد (بیمه‌ای/درمانی/ستادی)، واحد و در نهایت سند شکست و با همان مسیر برگشت. کد مرحله: کد استان،
+    // شمارهٔ گروه (1/2/3)، کد واحد. «سند» فقط سطح نمایش است (مرحلهٔ مسیر نمی‌شود) و یک واحد مشخص می‌خواهد.
+
+    /// <summary>استان (از شهر واحد).</summary>
+    Province = 11,
+
+    /// <summary>گروه واحد — بیمه‌ای/درمانی/ستادی.</summary>
+    UnitCategory = 12,
+
+    /// <summary>واحد.</summary>
+    Unit = 13,
+
+    /// <summary>سند — فقط در یک واحد.</summary>
+    Voucher = 14,
+}
+
+/// <summary>دو خانوادهٔ سطح مرور حساب‌ها.</summary>
+public static class AccountReviewLevels
+{
+    /// <summary>استان / گروه واحد / واحد / سند.</summary>
+    public static bool IsUnitDimension(AccountReviewLevel level) => level >= AccountReviewLevel.Province;
 }

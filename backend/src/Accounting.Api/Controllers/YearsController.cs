@@ -1,5 +1,6 @@
 using Accounting.Application.Years.Queries;
 using Accounting.Application.Years.Queries.GetYears;
+using Accounting.Application.Years.Commands.CreateFinancialYear;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -48,4 +49,22 @@ public sealed class YearsController : ControllerBase
 
         return Ok(result);
     }
+
+    /// <summary>وضعیت ایجاد سال مالی تازه (فقط مدیر ستاد مرکزی): سال قابل ایجاد، اجازه، دلیل و تعداد حساب‌های بانکی.</summary>
+    [HttpGet("creation-status")]
+    [ProducesResponseType(typeof(FinancialYearCreationStatusDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetCreationStatus(CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(new GetFinancialYearCreationStatusQuery(), cancellationToken));
+
+    /// <summary>
+    /// ایجاد سال مالی تازه (فروردین، فقط مدیر ستاد مرکزی): ردیف تازهٔ TB_YEAR به‌عنوان سال پیش‌فرض و یک دسته‌چک
+    /// صوری سال تازه برای هر حساب بانکی. ۴۰۹ = خارج از فروردین یا سال تکراری.
+    /// </summary>
+    [HttpPost("create")]
+    [ProducesResponseType(typeof(CreateFinancialYearResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Create(CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(new CreateFinancialYearCommand(), cancellationToken));
 }

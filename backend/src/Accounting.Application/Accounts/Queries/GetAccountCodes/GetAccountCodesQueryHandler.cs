@@ -23,6 +23,9 @@ public sealed class GetAccountCodesQueryHandler : IRequestHandler<GetAccountCode
             ? null
             : Accounting.Application.FinancialStatements.Engine.FsText.NormalizeDigits(request.Search).Trim();
 
+        if (request.TypeCode is { } typeCode)
+            return _readRepository.GetPagedByTypeAsync(typeCode, search, request.PageNumber, request.PageSize, cancellationToken);
+
         return search is null
             ? _readRepository.GetPagedAsync(request.PageNumber, request.PageSize, cancellationToken)
             : _readRepository.SearchPagedAsync(search, request.PageNumber, request.PageSize, cancellationToken);

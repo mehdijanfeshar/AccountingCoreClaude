@@ -24,6 +24,8 @@ namespace Accounting.Application.Reports.AccountReview;
 /// and offering a drill-down that lands on an empty table reads as a broken report.
 /// </para>
 /// </summary>
+/// <param name="VahedCode">سطح «واحد» و «سند»: کد واحد ردیف (برای باز کردن سند با هدر همان واحد).</param>
+/// <param name="VoucherId">سطح «سند»: شناسهٔ سرسند (TB_VOUCHERSHEAD.ID)؛ null اگر پیدا نشد.</param>
 public sealed record AccountReviewRowDto(
     string Code,
     string Name,
@@ -32,4 +34,6 @@ public sealed record AccountReviewRowDto(
     decimal Creditor,
     decimal DebtorBalance,
     decimal CreditorBalance,
-    bool HasChildren);
+    bool HasChildren,
+    string? VahedCode = null,
+    Guid? VoucherId = null);

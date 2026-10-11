@@ -9,6 +9,9 @@ namespace Accounting.Domain.ValueObjects;
 /// </summary>
 public enum RabetAccountLevel
 {
+    /// <summary>گروه — به همهٔ معین‌های زیر آن می‌رسد (درخواست صاحب پروژه ۲۰۲۶-۱۰-۱۱؛ مرجع این مقدار را نداشت).</summary>
+    Group = 1,
+
     /// <summary>کد کل.</summary>
     Kol = 2,
 

@@ -40,11 +40,26 @@ public sealed class MatrixReportReadRepository : IMatrixReportReadRepository
 
     private readonly IReportUnitScope? _unitScope;
 
-    public MatrixReportReadRepository(LegacyDbContext dbContext, IReportUnitScope? unitScope = null)
+    private readonly IUnitAccessReadRepository? _units;
+
+    public MatrixReportReadRepository(
+        LegacyDbContext dbContext, IReportUnitScope? unitScope = null, IUnitAccessReadRepository? units = null)
     {
         _dbContext = dbContext;
         _unitScope = unitScope;
+        _units = units;
     }
+
+    private sealed record Cell(string? RowCode, string? RowName, string? ColumnCode, string? ColumnName, decimal Debtor, decimal Creditor);
+
+    private static bool IsUnitDimension(MatrixDimension d) => d >= MatrixDimension.Province;
+
+    private static UnitDimension ToUnitDimension(MatrixDimension d) => d switch
+    {
+        MatrixDimension.Province => UnitDimension.Province,
+        MatrixDimension.UnitCategory => UnitDimension.Category,
+        _ => UnitDimension.Unit,
+    };
 
     /// <summary>
     /// Dimension-independent shape the view rows are normalised into before grouping. Making the
@@ -81,19 +96,20 @@ public sealed class MatrixReportReadRepository : IMatrixReportReadRepository
             f.RowCode != null && f.RowCode != "" &&
             f.ColumnCode != null && f.ColumnCode != "");
 
-        if (!string.IsNullOrWhiteSpace(query.RowCodeFilter))
+        // بُعد استان/گروه/واحد در SQL همان VAHEDCODE است؛ پیشوند کد آن‌ها پس از نگاشت (در حافظه) اعمال می‌شود.
+        if (!string.IsNullOrWhiteSpace(query.RowCodeFilter) && !IsUnitDimension(query.RowDimension))
         {
             var prefix = query.RowCodeFilter;
             facts = facts.Where(f => f.RowCode!.StartsWith(prefix));
         }
 
-        if (!string.IsNullOrWhiteSpace(query.ColumnCodeFilter))
+        if (!string.IsNullOrWhiteSpace(query.ColumnCodeFilter) && !IsUnitDimension(query.ColumnDimension))
         {
             var prefix = query.ColumnCodeFilter;
             facts = facts.Where(f => f.ColumnCode!.StartsWith(prefix));
         }
 
-        var cells = await facts
+        var cells = (await facts
             .GroupBy(f => new { f.RowCode, f.RowName, f.ColumnCode, f.ColumnName })
             .Select(g => new
             {
@@ -104,7 +120,14 @@ public sealed class MatrixReportReadRepository : IMatrixReportReadRepository
                 Debtor = g.Sum(x => x.Debtor ?? 0m),
                 Creditor = g.Sum(x => x.Creditor ?? 0m),
             })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken))
+            .Select(c => new Cell(c.RowCode, c.RowName, c.ColumnCode, c.ColumnName, c.Debtor, c.Creditor))
+            .ToList();
+
+        if (IsUnitDimension(query.RowDimension) || IsUnitDimension(query.ColumnDimension))
+        {
+            cells = await MapUnitDimensionsAsync(cells, query, cancellationToken);
+        }
 
         // Everything below is over the materialised cell set, which is one row per populated
         // intersection — small by construction, and far cheaper to pivot in memory than to ask
@@ -165,6 +188,45 @@ public sealed class MatrixReportReadRepository : IMatrixReportReadRepository
             cells.Sum(c => c.Creditor),
             totalColumnCount,
             truncated);
+    }
+
+    /// <summary>
+    /// کد واحد روی محور(های) استان/گروه/واحد به کد و عنوان همان بُعد نگاشت و خانه‌ها دوباره جمع می‌شوند.
+    /// </summary>
+    private async Task<List<Cell>> MapUnitDimensionsAsync(List<Cell> cells, GetMatrixReportQuery query, CancellationToken cancellationToken)
+    {
+        var info = await ReportUnitInfo.LoadAsync(_units, cancellationToken);
+
+        (string? Code, string? Name) Map(string? code, string? name, MatrixDimension d)
+            => IsUnitDimension(d) && code is not null ? ReportUnitInfo.Key(info, code, ToUnitDimension(d)) : (code, name);
+
+        var mapped = cells.Select(c =>
+        {
+            var row = Map(c.RowCode, c.RowName, query.RowDimension);
+            var column = Map(c.ColumnCode, c.ColumnName, query.ColumnDimension);
+            return c with { RowCode = row.Code, RowName = row.Name, ColumnCode = column.Code, ColumnName = column.Name };
+        });
+
+        if (!string.IsNullOrWhiteSpace(query.RowCodeFilter) && IsUnitDimension(query.RowDimension))
+        {
+            mapped = mapped.Where(c => c.RowCode!.StartsWith(query.RowCodeFilter, StringComparison.Ordinal));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.ColumnCodeFilter) && IsUnitDimension(query.ColumnDimension))
+        {
+            mapped = mapped.Where(c => c.ColumnCode!.StartsWith(query.ColumnCodeFilter, StringComparison.Ordinal));
+        }
+
+        return mapped
+            .GroupBy(c => (c.RowCode, c.ColumnCode))
+            .Select(g => new Cell(
+                g.Key.RowCode,
+                g.First().RowName,
+                g.Key.ColumnCode,
+                g.First().ColumnName,
+                g.Sum(x => x.Debtor),
+                g.Sum(x => x.Creditor)))
+            .ToList();
     }
 
     private IQueryable<VW_CONSOLIDATE_REPORT> Filter(GetMatrixReportQuery query)
@@ -246,6 +308,7 @@ public sealed class MatrixReportReadRepository : IMatrixReportReadRepository
         MatrixDimension.Tafsili5 => nameof(VW_CONSOLIDATE_REPORT.TAFSILICODE5),
         MatrixDimension.Tafsili6 => nameof(VW_CONSOLIDATE_REPORT.TAFSILICODE6),
         MatrixDimension.Tafsili7 => nameof(VW_CONSOLIDATE_REPORT.TAFSILICODE7),
+        MatrixDimension.Province or MatrixDimension.UnitCategory or MatrixDimension.Unit => nameof(VW_CONSOLIDATE_REPORT.VAHEDCODE),
         _ => throw new ArgumentOutOfRangeException(nameof(dimension), dimension, "Unknown cross-tab dimension."),
     };
 
@@ -262,6 +325,8 @@ public sealed class MatrixReportReadRepository : IMatrixReportReadRepository
         MatrixDimension.Tafsili5 => nameof(VW_CONSOLIDATE_REPORT.TAFSILINAME5),
         MatrixDimension.Tafsili6 => nameof(VW_CONSOLIDATE_REPORT.TAFSILINAME6),
         MatrixDimension.Tafsili7 => nameof(VW_CONSOLIDATE_REPORT.TAFSILINAME7),
+        // عنوان پس از نگاشت در حافظه گذاشته می‌شود.
+        MatrixDimension.Province or MatrixDimension.UnitCategory or MatrixDimension.Unit => nameof(VW_CONSOLIDATE_REPORT.VAHEDCODE),
         _ => throw new ArgumentOutOfRangeException(nameof(dimension), dimension, "Unknown cross-tab dimension."),
     };
 
@@ -278,6 +343,9 @@ public sealed class MatrixReportReadRepository : IMatrixReportReadRepository
         MatrixDimension.Tafsili5 => "تفصیلی ۵",
         MatrixDimension.Tafsili6 => "تفصیلی ۶",
         MatrixDimension.Tafsili7 => "تفصیلی ۷",
+        MatrixDimension.Province => "استان",
+        MatrixDimension.UnitCategory => "گروه واحد",
+        MatrixDimension.Unit => "واحد",
         _ => "تفصیلی",
     };
 }

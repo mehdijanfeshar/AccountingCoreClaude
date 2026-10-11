@@ -30,6 +30,9 @@ public sealed record GetGeneralLedgerQuery(
 
     public UnitCategory? UnitCategory { get; init; }
 
+    /// <summary>فقط واحدهای یک استان (کد استان) — فقط با قابلیت reports.unit-category.</summary>
+    public string? ProvinceCode { get; init; }
+
     [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }

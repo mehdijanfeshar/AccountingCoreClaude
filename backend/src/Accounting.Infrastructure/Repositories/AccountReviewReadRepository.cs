@@ -1,3 +1,4 @@
+using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Security;
 using System.Linq.Expressions;
 using Accounting.Application.Common.Interfaces;
@@ -41,11 +42,17 @@ public sealed class AccountReviewReadRepository : IAccountReviewReadRepository
 
     private readonly IReportUnitScope? _unitScope;
 
-    public AccountReviewReadRepository(LegacyDbContext dbContext, IReportUnitScope? unitScope = null)
+    private readonly IUnitAccessReadRepository? _units;
+
+    public AccountReviewReadRepository(
+        LegacyDbContext dbContext, IReportUnitScope? unitScope = null, IUnitAccessReadRepository? units = null)
     {
         _dbContext = dbContext;
         _unitScope = unitScope;
+        _units = units;
     }
+
+    private const string UnknownCode = ReportUnitInfo.UnknownCode;
 
     /// <summary>
     /// Level-independent shape the view rows are normalised into before grouping. Making the level
@@ -73,7 +80,41 @@ public sealed class AccountReviewReadRepository : IAccountReviewReadRepository
         GetAccountReviewQuery query,
         CancellationToken cancellationToken = default)
     {
-        var rows = Filter(query);
+        var steps = query.Scope ?? Array.Empty<AccountReviewScopeItem>();
+        var unitSteps = steps.Where(s => AccountReviewLevels.IsUnitDimension(s.Level)).ToList();
+        var label = LevelLabel(query.Level);
+
+        // واحدهای دامنه (ReportUnitScopeBehavior یا فقط واحد جاری)، باریک‌شده با مراحل استان/گروه/واحد مسیر.
+        // این مراحل فقط از دامنهٔ مجاز کم می‌کنند، هرگز به آن نمی‌افزایند.
+        IReadOnlyList<string> baseCodes = _unitScope?.VahedCodes is { Count: > 0 } scoped ? scoped : [query.VahedCode];
+        var needInfo = baseCodes.Count > 1 || unitSteps.Count > 0 || AccountReviewLevels.IsUnitDimension(query.Level);
+        var info = needInfo ? await ReportUnitInfo.LoadAsync(_units, cancellationToken) : new Dictionary<string, ReportUnitInfo>(StringComparer.Ordinal);
+        var codes = baseCodes.Where(c => unitSteps.All(s => MatchesUnitStep(info, c, s))).Distinct().ToList();
+
+        if (codes.Count == 0)
+        {
+            return new AccountReviewResultDto([], query.Level, label, await ResolveScopeAsync(null, steps, info, cancellationToken), []);
+        }
+
+        if (query.Level == AccountReviewLevel.Voucher && codes.Count != 1)
+        {
+            throw new BusinessRuleException("برای دیدن اسناد، ابتدا یک واحد را باز کنید (تفکیک «واحد» و سپس کلیک روی همان واحد).");
+        }
+
+        var rows = Filter(query, codes);
+
+        if (AccountReviewLevels.IsUnitDimension(query.Level))
+        {
+            var unitRows = query.Level == AccountReviewLevel.Voucher
+                ? await VoucherRowsAsync(rows, query.Year, codes[0], label, cancellationToken)
+                : await UnitDimensionRowsAsync(rows, query.Level, info, label, cancellationToken);
+            return new AccountReviewResultDto(
+                unitRows,
+                query.Level,
+                label,
+                await ResolveScopeAsync(rows, steps, info, cancellationToken),
+                await AvailableLevelsAsync(rows, codes, info, cancellationToken));
+        }
 
         var aggregates = await rows
             .Select(LevelProjection(query.Level))
@@ -93,9 +134,6 @@ public sealed class AccountReviewReadRepository : IAccountReviewReadRepository
                 ChildCount = g.Count(x => x.NextCode != null && x.NextCode != ""),
             })
             .ToListAsync(cancellationToken);
-
-        var label = LevelLabel(query.Level);
-        var scope = query.Scope ?? Array.Empty<AccountReviewScopeItem>();
 
         var reportRows = aggregates
             .OrderBy(a => a.Code, StringComparer.Ordinal)
@@ -118,8 +156,133 @@ public sealed class AccountReviewReadRepository : IAccountReviewReadRepository
             reportRows,
             query.Level,
             label,
-            await ResolveScopeAsync(rows, scope, cancellationToken),
-            await AvailableLevelsAsync(rows, cancellationToken));
+            await ResolveScopeAsync(rows, steps, info, cancellationToken),
+            await AvailableLevelsAsync(rows, codes, info, cancellationToken));
+    }
+
+    /// <summary>
+    /// استان / گروه واحد / واحد: جمع در SQL به تفکیک <c>VAHEDCODE</c> (چند صد ردیف حداکثر)، سپس گروه‌بندی دوم در
+    /// حافظه با مشخصات واحد — استان و گروه در view نیستند.
+    /// </summary>
+    private static async Task<List<AccountReviewRowDto>> UnitDimensionRowsAsync(
+        IQueryable<VW_CONSOLIDATE_REPORT> rows,
+        AccountReviewLevel level,
+        IReadOnlyDictionary<string, ReportUnitInfo> info,
+        string label,
+        CancellationToken cancellationToken)
+    {
+        var perUnit = await rows
+            .GroupBy(v => v.VAHEDCODE)
+            .Select(g => new
+            {
+                Vahed = g.Key,
+                Debtor = g.Sum(v => v.DEBTOR ?? 0m),
+                Creditor = g.Sum(v => v.CREDITOR ?? 0m),
+            })
+            .ToListAsync(cancellationToken);
+
+        return perUnit
+            .Where(u => !string.IsNullOrEmpty(u.Vahed))
+            .Select(u =>
+            {
+                var (code, name) = ReportUnitInfo.Key(info, u.Vahed!, level switch
+                {
+                    AccountReviewLevel.Province => UnitDimension.Province,
+                    AccountReviewLevel.UnitCategory => UnitDimension.Category,
+                    _ => UnitDimension.Unit,
+                });
+                return (Code: code, Name: name, u.Debtor, u.Creditor);
+            })
+            .GroupBy(x => x.Code, StringComparer.Ordinal)
+            .Select(g =>
+            {
+                var debtor = g.Sum(x => x.Debtor);
+                var creditor = g.Sum(x => x.Creditor);
+                return new AccountReviewRowDto(
+                    g.Key,
+                    g.First().Name,
+                    label,
+                    debtor,
+                    creditor,
+                    Math.Max(debtor - creditor, 0m),
+                    Math.Max(creditor - debtor, 0m),
+                    HasChildren: true,
+                    VahedCode: level == AccountReviewLevel.Unit ? g.Key : null);
+            })
+            .OrderBy(r => r.Code, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    /// <summary>
+    /// اسناد یک واحد با گردش همین مسیر؛ شناسهٔ سرسند از یکتایی (DOC_NUM, YEAR, VAHEDCODE) پیدا می‌شود تا ردیف
+    /// به صفحهٔ نمایش سند برود.
+    /// </summary>
+    private async Task<List<AccountReviewRowDto>> VoucherRowsAsync(
+        IQueryable<VW_CONSOLIDATE_REPORT> rows,
+        string year,
+        string vahedCode,
+        string label,
+        CancellationToken cancellationToken)
+    {
+        var vouchers = await rows
+            .GroupBy(v => new { v.VOUCHERNUMBER, v.VOUCHERDATE })
+            .Select(g => new
+            {
+                g.Key.VOUCHERNUMBER,
+                g.Key.VOUCHERDATE,
+                Debtor = g.Sum(v => v.DEBTOR ?? 0m),
+                Creditor = g.Sum(v => v.CREDITOR ?? 0m),
+            })
+            .ToListAsync(cancellationToken);
+
+        var heads = await _dbContext.TB_VOUCHERSHEADs
+            .AsNoTracking()
+            .Where(h => h.VAHEDCODE == vahedCode && h.YEAR == year)
+            .Select(h => new { h.ID, h.DOC_NUM })
+            .ToListAsync(cancellationToken);
+        var idByNumber = new Dictionary<string, Guid>(StringComparer.Ordinal);
+        foreach (var h in heads)
+        {
+            if (!string.IsNullOrWhiteSpace(h.DOC_NUM))
+            {
+                idByNumber.TryAdd(NormalizeNumber(h.DOC_NUM), h.ID);
+            }
+        }
+
+        return vouchers
+            .Where(v => !string.IsNullOrWhiteSpace(v.VOUCHERNUMBER))
+            .OrderBy(v => v.VOUCHERDATE ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(v => NormalizeNumber(v.VOUCHERNUMBER!).PadLeft(12, '0'), StringComparer.Ordinal)
+            .Select(v => new AccountReviewRowDto(
+                v.VOUCHERNUMBER!.Trim(),
+                v.VOUCHERDATE is { Length: 8 } d ? $"سند مورخ {d[..4]}/{d[4..6]}/{d[6..]}" : "سند",
+                label,
+                v.Debtor,
+                v.Creditor,
+                Math.Max(v.Debtor - v.Creditor, 0m),
+                Math.Max(v.Creditor - v.Debtor, 0m),
+                HasChildren: false,
+                VahedCode: vahedCode,
+                VoucherId: idByNumber.TryGetValue(NormalizeNumber(v.VOUCHERNUMBER!), out var id) ? id : null))
+            .ToList();
+    }
+
+    private static string NormalizeNumber(string number)
+    {
+        var trimmed = number.Trim().TrimStart('0');
+        return trimmed.Length == 0 ? "0" : trimmed;
+    }
+
+    private static bool MatchesUnitStep(IReadOnlyDictionary<string, ReportUnitInfo> info, string vahedCode, AccountReviewScopeItem step)
+    {
+        info.TryGetValue(vahedCode, out var i);
+        return step.Level switch
+        {
+            AccountReviewLevel.Province => string.Equals(i?.ProvinceCode ?? UnknownCode, step.Code, StringComparison.Ordinal),
+            AccountReviewLevel.UnitCategory => string.Equals(i?.CategoryCode ?? UnknownCode, step.Code, StringComparison.Ordinal),
+            AccountReviewLevel.Unit => string.Equals(vahedCode, step.Code, StringComparison.Ordinal),
+            _ => true,
+        };
     }
 
     /// <summary>
@@ -133,8 +296,9 @@ public sealed class AccountReviewReadRepository : IAccountReviewReadRepository
     /// </para>
     /// </summary>
     private static async Task<IReadOnlyList<AccountReviewScopeDto>> ResolveScopeAsync(
-        IQueryable<VW_CONSOLIDATE_REPORT> rows,
+        IQueryable<VW_CONSOLIDATE_REPORT>? rows,
         IReadOnlyList<AccountReviewScopeItem> scope,
+        IReadOnlyDictionary<string, ReportUnitInfo> info,
         CancellationToken cancellationToken)
     {
         if (scope.Count == 0)
@@ -142,7 +306,7 @@ public sealed class AccountReviewReadRepository : IAccountReviewReadRepository
             return Array.Empty<AccountReviewScopeDto>();
         }
 
-        var names = await rows
+        var names = rows is null || scope.All(s => AccountReviewLevels.IsUnitDimension(s.Level)) ? null : await rows
             .Select(v => new
             {
                 v.GROUPNAME,
@@ -158,13 +322,14 @@ public sealed class AccountReviewReadRepository : IAccountReviewReadRepository
             })
             .FirstOrDefaultAsync(cancellationToken);
 
+        // ترتیب همان ترتیب کاربر است (مسیر می‌تواند «معین ← استان ← واحد» یا «استان ← معین» باشد)؛ برگشت از
+        // جزء به کل در فرانت با بریدن همین فهرست انجام می‌شود.
         return scope
-            .OrderBy(s => s.Level)
             .Select(s => new AccountReviewScopeDto(
                 s.Level,
                 LevelLabel(s.Level),
                 s.Code,
-                (names is null ? null : s.Level switch
+                AccountReviewLevels.IsUnitDimension(s.Level) ? UnitStepName(info, s) : (names is null ? null : s.Level switch
                 {
                     AccountReviewLevel.Group => names.GROUPNAME,
                     AccountReviewLevel.Kol => names.KOLNAME,
@@ -190,7 +355,58 @@ public sealed class AccountReviewReadRepository : IAccountReviewReadRepository
     /// invites exactly the boolean-literal translation Oracle rejects.
     /// </para>
     /// </summary>
+    private static string UnitStepName(IReadOnlyDictionary<string, ReportUnitInfo> info, AccountReviewScopeItem step)
+    {
+        if (step.Level == AccountReviewLevel.Unit)
+        {
+            return info.TryGetValue(step.Code, out var u) ? u.Name : string.Empty;
+        }
+
+        var match = info.Values.FirstOrDefault(i => step.Level == AccountReviewLevel.Province
+            ? i.ProvinceCode == step.Code
+            : i.CategoryCode == step.Code);
+        return match is null ? string.Empty : step.Level == AccountReviewLevel.Province ? match.ProvinceName : match.CategoryName;
+    }
+
+    /// <summary>
+    /// سطوح کدینگ/تفصیلی که در مسیر داده دارند، به‌علاوهٔ تفکیک واحد: استان/گروه/واحد وقتی واحدهای دامنه در آن
+    /// بیش از یک مقدار دارند، و «سند» وقتی دامنه یک واحد است.
+    /// </summary>
     private static async Task<IReadOnlyList<AccountReviewLevel>> AvailableLevelsAsync(
+        IQueryable<VW_CONSOLIDATE_REPORT> rows,
+        IReadOnlyList<string> codes,
+        IReadOnlyDictionary<string, ReportUnitInfo> info,
+        CancellationToken cancellationToken)
+    {
+        var levels = (await CodingLevelsAsync(rows, cancellationToken)).ToList();
+        if (levels.Count == 0)
+        {
+            return levels;
+        }
+
+        if (codes.Count > 1)
+        {
+            if (codes.Select(c => info.TryGetValue(c, out var i) ? i.ProvinceCode : UnknownCode).Distinct().Count() > 1)
+            {
+                levels.Add(AccountReviewLevel.Province);
+            }
+
+            if (codes.Select(c => info.TryGetValue(c, out var i) ? i.CategoryCode : UnknownCode).Distinct().Count() > 1)
+            {
+                levels.Add(AccountReviewLevel.UnitCategory);
+            }
+
+            levels.Add(AccountReviewLevel.Unit);
+        }
+        else
+        {
+            levels.Add(AccountReviewLevel.Voucher);
+        }
+
+        return levels;
+    }
+
+    private static async Task<IReadOnlyList<AccountReviewLevel>> CodingLevelsAsync(
         IQueryable<VW_CONSOLIDATE_REPORT> rows,
         CancellationToken cancellationToken)
     {
@@ -233,7 +449,7 @@ public sealed class AccountReviewReadRepository : IAccountReviewReadRepository
         return pairs.Where(p => p.Count > 0).Select(p => p.Level).ToList();
     }
 
-    private IQueryable<VW_CONSOLIDATE_REPORT> Filter(GetAccountReviewQuery query)
+    private IQueryable<VW_CONSOLIDATE_REPORT> Filter(GetAccountReviewQuery query, IReadOnlyList<string> codes)
     {
         var rows = _dbContext.VW_CONSOLIDATE_REPORTs
             .AsNoTracking()
@@ -241,12 +457,15 @@ public sealed class AccountReviewReadRepository : IAccountReviewReadRepository
             // `!= true` on a bool? renders `<> True`, which Oracle rejects with ORA-00904.
             .Where(v => v.ISDELETED == null || v.ISDELETED != 1)
             .Where(v => v.YEAR == query.Year)
-            // دامنهٔ چندواحدی (همهٔ واحدها / زیرمجموعه / گروه) — ReportUnitScopeBehavior؛ وگرنه فقط واحد جاری.
-            .WhereVahed(v => v.VAHEDCODE, query.VahedCode, _unitScope?.VahedCodes);
+            // دامنهٔ چندواحدی (همهٔ واحدها / زیرمجموعه / گروه / استان) باریک‌شده با مراحل واحدی مسیر؛
+            // یک واحد ⇒ برابری ساده.
+            .WhereVahed(v => v.VAHEDCODE, codes[0], codes.Count > 1 ? codes : null);
 
         // The drill-down path. Each step is one equality on the level's own column, which the view
-        // has already flattened onto every line — so depth costs no joins.
-        foreach (var step in query.Scope ?? Array.Empty<AccountReviewScopeItem>())
+        // has already flattened onto every line — so depth costs no joins. مراحل استان/گروه/واحد
+        // پیش‌تر در فهرست codes اعمال شده‌اند.
+        foreach (var step in (query.Scope ?? Array.Empty<AccountReviewScopeItem>())
+                     .Where(s => !AccountReviewLevels.IsUnitDimension(s.Level)))
         {
             rows = rows.Where(ScopePredicate(step.Level, step.Code));
         }
@@ -347,6 +566,10 @@ public sealed class AccountReviewReadRepository : IAccountReviewReadRepository
         AccountReviewLevel.Tafsili5 => "تفصیلی ۵",
         AccountReviewLevel.Tafsili6 => "تفصیلی ۶",
         AccountReviewLevel.Tafsili7 => "تفصیلی ۷",
+        AccountReviewLevel.Province => "استان",
+        AccountReviewLevel.UnitCategory => "گروه واحد",
+        AccountReviewLevel.Unit => "واحد",
+        AccountReviewLevel.Voucher => "سند",
         _ => "تفصیلی",
     };
 }

@@ -66,6 +66,9 @@ public sealed record GetMatrixReportQuery(
     /// <summary>فقط واحدهای یک گروه (بیمه‌ای/درمانی/ستادی).</summary>
     public UnitCategory? UnitCategory { get; init; }
 
+    /// <summary>فقط واحدهای یک استان (کد استان) — فقط با قابلیت reports.unit-category.</summary>
+    public string? ProvinceCode { get; init; }
+
     /// <summary>
     /// Server-assigned by <c>VahedScopeBehavior</c> from the caller's effective unit — never bound
     /// from client input. The view carries <c>VAHEDCODE</c>, so without this the report would

@@ -37,6 +37,17 @@ public interface IAccountCodeReadRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// مثل <see cref="SearchPagedAsync"/> (جست‌وجو اختیاری)، فقط حساب‌های یک سطح کدینگ — تب‌های گروه/کل/معین
+    /// انتخابگر حساب (مثلاً رابط برای یک گروه).
+    /// </summary>
+    Task<PagedResult<AccountCodeDto>> GetPagedByTypeAsync(
+        Accounting.Domain.ValueObjects.TypeCodes typeCode,
+        string? search,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns every non-deleted <c>TB_ACCOUNT_LINK_TAFSILGROUP</c> row belonging to
     /// <paramref name="accountCodeId"/>, projected to <see cref="AccountTafsilGroupLinkDto"/>.
     /// Not paginated — a معین is expected to have very few such links (at most a handful per

@@ -13,4 +13,8 @@ namespace Accounting.Application.Accounts.Queries.GetAccountCodes;
 /// Optional search over the WHOLE chart, not one page: codes that start with it, or titles that
 /// contain it. Persian/Arabic digits are accepted. Empty means no filter.
 /// </param>
-public sealed record GetAccountCodesQuery(int PageNumber, int PageSize, string? Search = null) : IRequest<PagedResult<AccountCodeDto>>;
+public sealed record GetAccountCodesQuery(int PageNumber, int PageSize, string? Search = null) : IRequest<PagedResult<AccountCodeDto>>
+{
+    /// <summary>فقط یک سطح کدینگ (گروه/کل/معین) — تب‌های انتخابگر حساب. null = همه.</summary>
+    public Accounting.Domain.ValueObjects.TypeCodes? TypeCode { get; init; }
+}

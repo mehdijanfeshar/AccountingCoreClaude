@@ -6556,7 +6556,8 @@ public partial class LegacyDbContext : DbContext
 
             entity.ToTable("TB_YEAR");
 
-            entity.Property(e => e.WORKING_YEAR).HasPrecision(4);
+            // سال را «ایجاد سال مالی» صریحاً می‌نویسد؛ کلید عددی نباید تولیدشدهٔ پایگاه‌داده فرض شود.
+            entity.Property(e => e.WORKING_YEAR).HasPrecision(4).ValueGeneratedNever();
             entity.Property(e => e.ISCURRENT)
                 .HasDefaultValueSql("0 ")
                 .HasColumnType("NUMBER(1)");

@@ -119,6 +119,43 @@ public sealed class AccountCodeReadRepository : IAccountCodeReadRepository
         };
     }
 
+    public async Task<PagedResult<AccountCodeDto>> GetPagedByTypeAsync(
+        TypeCodes typeCode,
+        string? search,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        // TYPECODE enum است (NUMBER(1) با HasConversion<int?>) — مقایسهٔ عددی، نه بولی.
+        var query = _dbContext.TB_ACCOUNTCODEs
+            .AsNoTracking()
+            .Where(a => a.ISDELETED != true)
+            .Where(a => a.TYPECODE == typeCode);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(a => (a.ACCCODE != null && a.ACCCODE.StartsWith(search))
+                                     || (a.ACCCODENAME != null && a.ACCCODENAME.Contains(search)));
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderBy(a => a.ACCCODE)
+            .ThenBy(a => a.ID)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Select(ToDto)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<AccountCodeDto>
+        {
+            Items = items,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+        };
+    }
+
     public Task<AccountCodeDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         // No ISDELETED filter here on purpose: GetById returns the row regardless of its

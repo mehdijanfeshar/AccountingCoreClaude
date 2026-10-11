@@ -32,7 +32,7 @@ public sealed class RabetClosingRepository(LegacyDbContext db) : IRabetClosingRe
     public async Task<IReadOnlyList<RabetClosingAccount>> GetAccountsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)
         => await db.TB_ACCOUNTCODEs.AsNoTracking()
             .Where(a => ids.Contains(a.ID) && a.ISDELETED != true)
-            .Select(a => new RabetClosingAccount(a.ID, a.ACCCODE, a.ACCCODENAME))
+            .Select(a => new RabetClosingAccount(a.ID, a.ACCCODE, a.ACCCODENAME, a.TYPECODE))
             .ToListAsync(ct);
 
     public async Task<IReadOnlyList<Guid>> GetExistingVahedTypeIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)

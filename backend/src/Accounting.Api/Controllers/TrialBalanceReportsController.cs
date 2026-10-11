@@ -6,6 +6,7 @@ using Accounting.Application.Reports.MatrixReport;
 using Accounting.Application.Reports.MatrixReport.GetMatrixReport;
 using Accounting.Application.Reports.AccountReview;
 using Accounting.Application.Reports.AccountReview.GetAccountReview;
+using Accounting.Application.Reports.AccountReview.GetReportProvinces;
 using Accounting.Application.Reports.TrialBalance;
 using Accounting.Application.Reports.TrialBalance.GetTrialBalance4;
 using Accounting.Application.Reports.TrialBalance.GetTrialBalance6;
@@ -88,10 +89,11 @@ public sealed class TrialBalanceReportsController : ControllerBase
         [FromQuery] List<SearchParam>? filters = null,
         [FromQuery] ReportUnitScopeMode unitScope = ReportUnitScopeMode.Self,
         [FromQuery] UnitCategory? unitCategory = null,
+        [FromQuery] string? provinceCode = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetTrialBalance4Query(year, fromDate, toDate, level, docLife, filters) { UnitScope = unitScope, UnitCategory = unitCategory },
+            new GetTrialBalance4Query(year, fromDate, toDate, level, docLife, filters) { UnitScope = unitScope, UnitCategory = unitCategory, ProvinceCode = provinceCode },
             cancellationToken);
 
         return Ok(result);
@@ -127,10 +129,11 @@ public sealed class TrialBalanceReportsController : ControllerBase
         [FromQuery] List<SearchParam>? filters = null,
         [FromQuery] ReportUnitScopeMode unitScope = ReportUnitScopeMode.Self,
         [FromQuery] UnitCategory? unitCategory = null,
+        [FromQuery] string? provinceCode = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetTrialBalance6Query(year, fromDate, toDate, level, docLife, filters) { UnitScope = unitScope, UnitCategory = unitCategory },
+            new GetTrialBalance6Query(year, fromDate, toDate, level, docLife, filters) { UnitScope = unitScope, UnitCategory = unitCategory, ProvinceCode = provinceCode },
             cancellationToken);
 
         return Ok(result);
@@ -167,10 +170,11 @@ public sealed class TrialBalanceReportsController : ControllerBase
         [FromQuery] List<SearchParam>? filters = null,
         [FromQuery] ReportUnitScopeMode unitScope = ReportUnitScopeMode.Self,
         [FromQuery] UnitCategory? unitCategory = null,
+        [FromQuery] string? provinceCode = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new GetTrialBalance8Query(year, fromDate, toDate, level, docLife, filters) { UnitScope = unitScope, UnitCategory = unitCategory },
+            new GetTrialBalance8Query(year, fromDate, toDate, level, docLife, filters) { UnitScope = unitScope, UnitCategory = unitCategory, ProvinceCode = provinceCode },
             cancellationToken);
 
         return Ok(result);
@@ -218,6 +222,7 @@ public sealed class TrialBalanceReportsController : ControllerBase
         [FromQuery] List<AccountReviewScopeItem>? scope = null,
         [FromQuery] ReportUnitScopeMode unitScope = ReportUnitScopeMode.Self,
         [FromQuery] UnitCategory? unitCategory = null,
+        [FromQuery] string? provinceCode = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
@@ -230,11 +235,17 @@ public sealed class TrialBalanceReportsController : ControllerBase
                 fromVoucherNo,
                 toVoucherNo,
                 docLife,
-                systemTypeId) { UnitScope = unitScope, UnitCategory = unitCategory },
+                systemTypeId) { UnitScope = unitScope, UnitCategory = unitCategory, ProvinceCode = provinceCode },
             cancellationToken);
 
         return Ok(result);
     }
+
+    /// <summary>استان‌های دارای واحد — برای انتخاب استان در دامنهٔ گزارش.</summary>
+    [HttpGet("provinces")]
+    [ProducesResponseType(typeof(IReadOnlyList<ReportProvinceDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetProvinces(CancellationToken cancellationToken = default)
+        => Ok(await _mediator.Send(new GetReportProvincesQuery(), cancellationToken));
 
     /// <summary>
     /// گزارش ماتریسی — turnover crossed over two dimensions at once: one on the rows, one on the
@@ -276,6 +287,7 @@ public sealed class TrialBalanceReportsController : ControllerBase
         [FromQuery] string? columnCodeFilter = null,
         [FromQuery] ReportUnitScopeMode unitScope = ReportUnitScopeMode.Self,
         [FromQuery] UnitCategory? unitCategory = null,
+        [FromQuery] string? provinceCode = null,
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
@@ -288,7 +300,7 @@ public sealed class TrialBalanceReportsController : ControllerBase
                 docLife,
                 systemTypeId,
                 rowCodeFilter,
-                columnCodeFilter) { UnitScope = unitScope, UnitCategory = unitCategory },
+                columnCodeFilter) { UnitScope = unitScope, UnitCategory = unitCategory, ProvinceCode = provinceCode },
             cancellationToken);
 
         return Ok(result);
@@ -314,9 +326,10 @@ public sealed class TrialBalanceReportsController : ControllerBase
         [FromQuery] int pageSize = 100,
         [FromQuery] ReportUnitScopeMode unitScope = ReportUnitScopeMode.Self,
         [FromQuery] UnitCategory? unitCategory = null,
+        [FromQuery] string? provinceCode = null,
         CancellationToken cancellationToken = default)
         => Ok(await _mediator.Send(
             new GetGeneralLedgerQuery(year, fromDate, toDate, fromKol, toKol, docLife, fromVoucherNo, toVoucherNo, pageNumber, pageSize)
-            { UnitScope = unitScope, UnitCategory = unitCategory },
+            { UnitScope = unitScope, UnitCategory = unitCategory, ProvinceCode = provinceCode },
             cancellationToken));
 }

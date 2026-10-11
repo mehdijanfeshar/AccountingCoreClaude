@@ -70,6 +70,14 @@ public interface IUnitAccessReadRepository
     Task<IReadOnlyList<UnitNode>> GetAllUnitsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// استان هر واحد (کد واحد ⇒ استان) از <c>TB_VAHED_INFO.CITY_ID → TB_CITY.PROVINCE_ID → TB_PROVINCE</c> — برای
+    /// دامنه و تفکیک استانی گزارش‌ها. جدا از <see cref="GetAllUnitsAsync"/> تا خطای این دو جدول به مسیرهای دسترسی
+    /// نرسد. واحدی که شهر/استانش پیدا نشود در فهرست نیست.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, UnitProvince>> GetUnitProvincesAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyDictionary<string, UnitProvince>>(new Dictionary<string, UnitProvince>());
+
+    /// <summary>
     /// True when <paramref name="ownVahedCode"/> may act as <paramref name="targetVahedCode"/> —
     /// the membership test behind <see cref="IUnitScopeResolver"/>, and the reference project's
     /// <c>BusinessUserAccess.HaveAccessToUnit</c>.
@@ -99,5 +107,8 @@ public interface IUnitAccessReadRepository
 /// <param name="VahedName">TB_VAHED_INFO.VAHEDNAME.</param>
 /// <param name="IsHeadquarters">True when this unit's type grants blanket access to every unit.</param>
 public sealed record UnitProfile(string VahedName, bool IsHeadquarters);
+
+/// <summary>استان یک واحد.</summary>
+public sealed record UnitProvince(string ProvinceCode, string ProvinceName);
 
 public sealed record UnitNode(Guid Id, string VahedCode, string VahedName, Guid? ParentId, bool IsHeadquarters, string? TypeCode = null);

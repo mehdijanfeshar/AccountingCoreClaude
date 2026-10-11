@@ -117,6 +117,38 @@ public sealed class UnitAccessReadRepository : IUnitAccessReadRepository
             .ToList();
     }
 
+    public async Task<IReadOnlyDictionary<string, UnitProvince>> GetUnitProvincesAsync(CancellationToken cancellationToken = default)
+    {
+        var result = new Dictionary<string, UnitProvince>(StringComparer.Ordinal);
+
+        // TB_VAHED_INFO به TB_CITY navigation ندارد ⇒ join صریح.
+        var query =
+            from v in _dbContext.TB_VAHED_INFOs.AsNoTracking()
+            join c in _dbContext.TB_CITies.AsNoTracking() on v.CITY_ID equals c.ID
+            join p in _dbContext.TB_PROVINCEs.AsNoTracking() on c.PROVINCE_ID equals p.ID
+            select new { v.VAHEDCODE, p.PROVINCECODE, p.PROVINCENAME };
+        try
+        {
+            foreach (var r in await query.ToListAsync(cancellationToken))
+            {
+                if (string.IsNullOrWhiteSpace(r.PROVINCECODE))
+                {
+                    continue;
+                }
+
+                var code = r.PROVINCECODE.Trim();
+                result.TryAdd(r.VAHEDCODE, new UnitProvince(code, string.IsNullOrWhiteSpace(r.PROVINCENAME) ? code : r.PROVINCENAME.Trim()));
+            }
+        }
+        catch (Exception e) when (e.Message.Contains("ORA-00942", StringComparison.Ordinal)
+                                  || e.InnerException?.Message.Contains("ORA-00942", StringComparison.Ordinal) == true)
+        {
+            // جدول شهر/استان در این اسکیما نیست ⇒ همه «استان نامشخص»؛ بقیهٔ گزارش کار می‌کند.
+        }
+
+        return result;
+    }
+
     public async Task<UnitProfile?> GetUnitProfileAsync(
         string vahedCode,
         CancellationToken cancellationToken = default)
