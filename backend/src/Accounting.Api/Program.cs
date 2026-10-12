@@ -195,6 +195,37 @@ if (app.Environment.IsDevelopment())
 
 app.UseExceptionHandler();
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
+// سخت‌سازی پاسخ: جلوگیری از حدس‌زدن نوع محتوا (فایل پیوست)، قاب‌شدن در iframe و کش پاسخ‌های حاوی داده مالی.
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        var headers = context.Response.Headers;
+        headers["X-Content-Type-Options"] = "nosniff";
+        headers["X-Frame-Options"] = "DENY";
+        headers["Referrer-Policy"] = "no-referrer";
+        // API فقط JSON/فایل می‌دهد و هیچ صفحه‌ای رندر نمی‌کند؛ پس هر محتوای فعالی (اسکریپت، قاب) اگر به‌اشتباه
+        // به‌عنوان صفحه باز شود اجرا نمی‌شود. Swagger (فقط Development) این سیاست را نمی‌گیرد.
+        if (!context.Request.Path.StartsWithSegments("/swagger"))
+        {
+            headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'; sandbox";
+        }
+        if (!headers.ContainsKey("Cache-Control"))
+        {
+            headers["Cache-Control"] = "no-store";
+        }
+
+        return Task.CompletedTask;
+    });
+
+    await next();
+});
+
 app.UseHttpsRedirection();
 
 // پیش از Authentication تا preflight (OPTIONS بدون توکن) به FallbackPolicy نخورد.

@@ -573,6 +573,7 @@ public sealed class PettyCashController : ControllerBase
     /// </summary>
     [HttpPost("expense-docs/{id:guid}/attachments")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(Accounting.Api.Security.UploadGuard.AttachmentRequestLimit)]
     [ProducesResponseType(typeof(UploadPettyCashAttachmentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
@@ -592,10 +593,20 @@ public sealed class PettyCashController : ControllerBase
             return ValidationProblem(ModelState);
         }
 
+        var fileError = await Accounting.Api.Security.UploadGuard.ValidateAttachmentAsync(
+            request.File, UploadPettyCashAttachmentCommandValidator.MaxAttachmentSizeBytes, cancellationToken);
+        if (fileError is not null)
+        {
+            ModelState.AddModelError(nameof(request.File), fileError);
+
+            return ValidationProblem(ModelState);
+        }
+
         await using var stream = new MemoryStream();
         await request.File.CopyToAsync(stream, cancellationToken);
 
-        var attachName = string.IsNullOrWhiteSpace(request.AttachName) ? request.File.FileName : request.AttachName!;
+        var attachName = Accounting.Api.Security.UploadGuard.SafeFileName(
+            string.IsNullOrWhiteSpace(request.AttachName) ? request.File.FileName : request.AttachName);
 
         var command = new UploadPettyCashAttachmentCommand(id, attachName, request.File.ContentType, stream.ToArray());
 
@@ -621,8 +632,22 @@ public sealed class PettyCashController : ControllerBase
             return NotFound();
         }
 
-        return File(result.Content, result.ContentType ?? "application/octet-stream", result.AttachName);
+        // Content-Type را کاربر هنگام آپلود می‌فرستد؛ فقط انواع بی‌خطر پس داده می‌شود (نه text/html یا svg)،
+        // و نام فایل یعنی Content-Disposition: attachment (دانلود، نه نمایش در مرورگر).
+        var contentType = result.ContentType is { } ct && SafeDownloadTypes.Contains(ct.Trim().ToLowerInvariant())
+            ? ct.Trim()
+            : "application/octet-stream";
+
+        return File(result.Content, contentType, result.AttachName);
     }
+
+    private static readonly HashSet<string> SafeDownloadTypes = new(StringComparer.Ordinal)
+    {
+        "application/pdf", "image/png", "image/jpeg", "image/gif", "image/webp", "text/plain",
+        "application/zip", "application/msword", "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    };
 
     /// <summary>
     /// بخش ۲-ب — soft-deletes a پیوست. Only while the document is پیش‌نویس/برگشتی, only by the

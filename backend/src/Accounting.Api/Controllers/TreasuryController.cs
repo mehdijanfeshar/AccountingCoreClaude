@@ -1016,6 +1016,7 @@ public sealed class TreasuryController : ControllerBase
     /// </summary>
     [HttpPost("statements/{id:guid}/import")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(Accounting.Api.Security.UploadGuard.DiskRequestLimit)]
     [ProducesResponseType(typeof(ImportBankStatementResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -1026,6 +1027,13 @@ public sealed class TreasuryController : ControllerBase
         if (request.File is null || request.File.Length == 0)
         {
             ModelState.AddModelError(nameof(request.File), "فایل صورت‌حساب الزامی است.");
+
+            return ValidationProblem(ModelState);
+        }
+
+        if (await Accounting.Api.Security.UploadGuard.ValidateDiskFileAsync(request.File, cancellationToken) is { } fileError)
+        {
+            ModelState.AddModelError(nameof(request.File), fileError);
 
             return ValidationProblem(ModelState);
         }

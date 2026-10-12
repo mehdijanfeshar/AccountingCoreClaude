@@ -68,6 +68,7 @@ public sealed class BankCardsController : ControllerBase
     /// <summary>دیسکت بانک رفاه (<c>STM001</c>) برای یک حساب و یک ماه.</summary>
     [HttpPost("import")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(Accounting.Api.Security.UploadGuard.DiskRequestLimit)]
     [ProducesResponseType(typeof(BankCardImportResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
@@ -76,6 +77,12 @@ public sealed class BankCardsController : ControllerBase
         if (request.File is null || request.File.Length == 0)
         {
             ModelState.AddModelError(nameof(request.File), "فایل دیسکت الزامی است.");
+            return ValidationProblem(ModelState);
+        }
+
+        if (await Accounting.Api.Security.UploadGuard.ValidateDiskFileAsync(request.File, cancellationToken) is { } fileError)
+        {
+            ModelState.AddModelError(nameof(request.File), fileError);
             return ValidationProblem(ModelState);
         }
 

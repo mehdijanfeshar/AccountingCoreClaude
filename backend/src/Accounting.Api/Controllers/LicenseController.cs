@@ -92,7 +92,8 @@ public sealed class LicenseController : ControllerBase
             graceDaysLeft = u.Status.GraceDaysLeft,
         }),
         state = s.State.ToString(),
-        customer = s.Customer,
+        // نام مشتری برای درخواست بدون احراز هویت فاش نمی‌شود (این endpoint عمداً عمومی است).
+        customer = _currentUser.IsAuthenticated ? s.Customer : null,
         expiresAt = s.ExpiresAt?.ToString("yyyy-MM-dd"),
         daysLeft = s.DaysLeft,
         graceDaysLeft = s.GraceDaysLeft,
