@@ -32,6 +32,9 @@ public sealed class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQ
     {
         var vahedCode = _currentUser.VahedCode;
         var (roles, menuAccess) = await RolesAndMenuAccessAsync(cancellationToken);
+        var canViewAudit = menuAccess is not null
+            ? menuAccess.GetValueOrDefault(MenuCatalog.AuditLogKey) >= RoleMenuAccessLevels.View
+            : _currentUser.IsInRole(AppRoles.Audit);
         var abilities = _hq is null ? null : await _hq.GrantedAbilitiesAsync(cancellationToken);
 
         // Unlike GetAccessibleUnitsQuery this does NOT throw on a missing org claim. This endpoint
@@ -40,7 +43,7 @@ public sealed class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQ
         // a permissions problem.
         if (string.IsNullOrWhiteSpace(vahedCode))
         {
-            return new CurrentUserDto(_currentUser.UserId, VahedCode: null, VahedName: null, IsHeadquarters: false, roles, _currentUser.TokenDiagnostics, menuAccess, abilities, _currentUser.IsInRole(AppRoles.Audit));
+            return new CurrentUserDto(_currentUser.UserId, VahedCode: null, VahedName: null, IsHeadquarters: false, roles, _currentUser.TokenDiagnostics, menuAccess, abilities, canViewAudit);
         }
 
         var profile = await _readRepository.GetUnitProfileAsync(vahedCode, cancellationToken);
@@ -54,7 +57,7 @@ public sealed class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQ
             _currentUser.TokenDiagnostics,
             menuAccess,
             abilities,
-            _currentUser.IsInRole(AppRoles.Audit));
+            canViewAudit);
     }
 
     /// <summary>
@@ -73,10 +76,14 @@ public sealed class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQ
         var roles = fixedRoles.Concat(all.Where(snapshot.IsConfiguredRole))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-        var menuAccess = _currentUser.IsInRole(AppRoles.SetadAdmin)
-            ? MenuCatalog.All.Select(m => m.Key).Concat(MenuCatalog.Tabs.Select(t => t.Key))
-                .ToDictionary(k => k, _ => RoleMenuAccessLevels.Edit, StringComparer.Ordinal)
-            : snapshot.MenuAccessFor(all);
+        var menuAccess = snapshot.MenuAccessFor(all);
+        if (_currentUser.IsInRole(AppRoles.SetadAdmin))
+        {
+            var auditLevel = menuAccess[MenuCatalog.AuditLogKey];
+            menuAccess = MenuCatalog.All.Select(m => m.Key).Concat(MenuCatalog.Tabs.Select(t => t.Key))
+                .ToDictionary(k => k, _ => RoleMenuAccessLevels.Edit, StringComparer.Ordinal);
+            menuAccess[MenuCatalog.AuditLogKey] = auditLevel;
+        }
         return (roles, menuAccess);
     }
 }

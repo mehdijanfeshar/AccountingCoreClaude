@@ -14,6 +14,9 @@ public enum MenuGroupAccess
 
     /// <summary>نقش‌های عملیاتی یا مدیریتی سطح کشور.</summary>
     OperateOrNational,
+
+    /// <summary>فقط نقش لاگ تغییرات (<see cref="AppRoles.Audit"/>) — مدیر ستاد هم خودکار ندارد.</summary>
+    Audit,
 }
 
 /// <param name="Key">کلید منو = مسیر صفحه در فرانت (<c>to</c> در navConfig).</param>
@@ -38,6 +41,9 @@ public static class MenuCatalog
     private const string Reports = "گزارش‌ها";
     private const string Treasury = "تنخواه و خزانه‌داری";
     private const string Fs = "صورت‌های مالی";
+
+    /// <summary>منوی لاگ تغییرات؛ مدیر ستاد هم فقط با تخصیص صریح در «دسترسی نقش‌ها» می‌بیند.</summary>
+    public const string AuditLogKey = "/reports/audit-log";
 
     private static MenuDefinition M(string key, string group, string title, MenuGroupAccess access, params string[] modules)
         => new(key, group, title, access, modules);
@@ -80,6 +86,7 @@ public static class MenuCatalog
         M("/reports/account-review", Reports, "مرور حساب‌ها", MenuGroupAccess.Any),
         M("/reports/attribute-accounts", Reports, "مغایرت‌گیری حساب‌های شناسه‌دار", MenuGroupAccess.Any),
         M("/reports/matrix", Reports, "گزارش ماتریسی", MenuGroupAccess.Any),
+        M(AuditLogKey, Reports, "مشاهده لاگ تغییرات", MenuGroupAccess.Audit),
 
         M("/treasury/petty-cash/dashboard", Treasury, "داشبورد تنخواه", MenuGroupAccess.Operate),
         M("/treasury/petty-cash/cartable", Treasury, "کارتابل تنخواه", MenuGroupAccess.Operate, "PettyCash"),
@@ -189,6 +196,7 @@ public static class MenuCatalog
         {
             MenuGroupAccess.Operate => operate,
             MenuGroupAccess.OperateOrNational => operate || role == AppRoles.National,
+            MenuGroupAccess.Audit => role == AppRoles.Audit,
             _ => AppRoles.All.Contains(role),
         };
         if (!visible)

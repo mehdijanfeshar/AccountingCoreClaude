@@ -46,10 +46,24 @@ public sealed class RoleMenuAccessSnapshot
         return MenuCatalog.ParentMenuKey(key) is { } parent && m.TryGetValue(parent, out var pl) ? pl : RoleMenuAccessLevels.None;
     }
 
+    /// <summary>
+    /// دسترسی لاگ تغییرات: طبق جدول؛ تا وقتی هیچ نقشی برای این منو ردیف ندارد (پیش از اولین ذخیره) پیش‌فرض
+    /// <see cref="AppRoles.Audit"/> است.
+    /// </summary>
+    public bool CanViewAuditLog(IEnumerable<string> roles)
+        => _byRole.Values.Any(m => m.ContainsKey(MenuCatalog.AuditLogKey))
+            ? LevelFor(roles, MenuCatalog.AuditLogKey) >= RoleMenuAccessLevels.View
+            : roles.Contains(AppRoles.Audit, StringComparer.OrdinalIgnoreCase);
+
     /// <summary>سطح هر منو و هر تبِ فهرست برای کاربر (بیشترین میان نقش‌هایش).</summary>
     public Dictionary<string, int> MenuAccessFor(IReadOnlyCollection<string> roles)
         => MenuCatalog.All.Select(m => m.Key).Concat(MenuCatalog.Tabs.Select(t => t.Key))
-            .ToDictionary(k => k, k => LevelFor(roles, k), StringComparer.Ordinal);
+            .ToDictionary(
+                k => k,
+                k => k == MenuCatalog.AuditLogKey
+                    ? (CanViewAuditLog(roles) ? RoleMenuAccessLevels.View : RoleMenuAccessLevels.None)
+                    : LevelFor(roles, k),
+                StringComparer.Ordinal);
 }
 
 /// <summary>خواندن (با کش کوتاه) و نوشتن جدول دسترسی نقش‌ها.</summary>

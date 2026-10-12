@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Accounting.Api.Controllers;
 
-/// <summary>لاگ تغییرات — فقط خواندن و فقط نقش مدیر مالی (FINANCIAL CORE AUDIT). هیچ endpoint نوشتنی ندارد.</summary>
+/// <summary>لاگ تغییرات — فقط خواندن و فقط نقش‌هایی که منوی «مشاهده لاگ تغییرات» را دارند (پیش‌فرض FINANCIAL CORE MALI ADMIN). هیچ endpoint نوشتنی ندارد.</summary>
 [ApiController]
 [Route("api/audit-logs")]
 public sealed class AuditLogsController : ControllerBase

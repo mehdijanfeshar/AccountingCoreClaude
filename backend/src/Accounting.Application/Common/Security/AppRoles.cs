@@ -35,10 +35,10 @@ public static class AppRoles
     public const string National = "FINANCIAL CORE NATIONAL";
 
     /// <summary>
-    /// مدیر مالی — تنها نقشی که لاگ تغییرات (<c>TB_AUDITLOG</c>) را می‌بیند (تصمیم صاحب پروژه ۲۰۲۶-۱۰-۱۲). عمداً
-    /// در <see cref="All"/> نیست: به‌تنهایی دسترسی دیگری نمی‌دهد، و مدیر ستاد هم بدون آن لاگ را نمی‌بیند.
+    /// تنها نقشی که لاگ تغییرات (<c>TB_AUDITLOG</c>) را می‌بیند. تصمیم صاحب پروژه ۲۰۲۶-۱۰-۱۲: نقش جدا نداریم؛
+    /// همان «مسئول حسابداری» (<see cref="MaliAdmin"/>) است. مدیر ستاد بدون این نقش لاگ را نمی‌بیند.
     /// </summary>
-    public const string Audit = "FINANCIAL CORE AUDIT";
+    public const string Audit = MaliAdmin;
 
     /// <summary>ماژول لاگ تغییرات — فقط <see cref="Audit"/>، بدون استثنای مدیر ستاد و بدون جدول دسترسی نقش‌ها.</summary>
     public const string AuditModule = "AuditLogs";
