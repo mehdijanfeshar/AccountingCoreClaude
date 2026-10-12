@@ -65,11 +65,18 @@ public static class AppRoles
         "IdentityGroups", "IdentitySubGroups", "RoleAccess", "RabetClosings",
     };
 
+    /// <summary>
+    /// نوشتن فقط برای مدیر ستاد، و <b>حتی با جدول «دسترسی نقش‌ها» هم باز نمی‌شود</b>: ویرایش کدینگ تا سطح معین
+    /// (ایجاد/ویرایش/حذف حساب) و پیوند معین به گروه تفصیلی (ماژول <c>Accounts</c>). سطح تفصیلی
+    /// (<c>Tafsilis</c>) در این فهرست نیست و کاربر حسابداری هم می‌تواند تعریف کند.
+    /// </summary>
+    public static readonly HashSet<string> HeadquartersOnlyModules = new(StringComparer.Ordinal) { "Accounts" };
+
     /// <summary>ماژول‌هایی که نوشتن‌شان برای ادمین‌های واحد است (نه کارمند).</summary>
     public static readonly HashSet<string> UnitAdminModules = new(StringComparer.Ordinal)
     {
-        "BankAccounts", "CheckBooks", "ChequeTypes", "AttribForAccountCodes", "Expenses", "Tafsilis",
-        "PersonActions", "RevolvingFunds", "IdentityHeads", "Accounts",
+        "BankAccounts", "CheckBooks", "ChequeTypes", "AttribForAccountCodes", "Expenses",
+        "PersonActions", "RevolvingFunds", "IdentityHeads",
     };
 
     /// <summary>نقش‌های مجاز برای یک درخواست MediatR بر اساس ماژول و خواندن/نوشتن.</summary>
@@ -79,7 +86,7 @@ public static class AppRoles
             return All;
         if (module == "FinancialStatements")
             return FinancialStatementWriters;
-        if (ReferenceModules.Contains(module))
+        if (ReferenceModules.Contains(module) || HeadquartersOnlyModules.Contains(module))
             return ReferenceWriters;
         if (UnitAdminModules.Contains(module))
             return UnitAdminWriters;

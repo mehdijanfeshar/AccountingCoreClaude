@@ -14,6 +14,9 @@ public sealed record RoleAccessMenuDto(string Key, string Group, string Title, b
 /// <param name="Key">کلید ذخیره (<c>ability:…</c>) — همان کلید ماتریس.</param>
 public sealed record RoleAccessAbilityDto(string Key, string Group, string? MenuKey, string Title);
 
+/// <param name="MenuKey">منوی والد؛ کلید تب = <c>MenuKey#TabKey</c>.</param>
+public sealed record RoleAccessTabDto(string Key, string MenuKey, string Title);
+
 public sealed record RoleAccessRoleDto(string Name, string? Label, bool BuiltIn, bool Configured);
 
 /// <param name="Available">DDL 075 اجرا شده است.</param>
@@ -25,6 +28,7 @@ public sealed record RoleAccessDto(
     IReadOnlyList<RoleAccessRoleDto> Roles,
     IReadOnlyList<RoleAccessMenuDto> Menus,
     IReadOnlyList<RoleAccessAbilityDto> Abilities,
+    IReadOnlyList<RoleAccessTabDto> Tabs,
     IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> Matrix);
 
 internal static class RoleAccessGuard
@@ -49,23 +53,25 @@ internal static class RoleAccessGuard
 
     /// <summary>همهٔ کلیدهای ماتریس: منوها و قابلیت‌ها (<c>ability:…</c>).</summary>
     public static IEnumerable<string> AllKeys
-        => MenuCatalog.All.Select(m => m.Key).Concat(AbilityCatalog.All.Select(a => AbilityCatalog.StorageKey(a.Key)));
+        => MenuCatalog.All.Select(m => m.Key).Concat(MenuCatalog.Tabs.Select(t => t.Key)).Concat(AbilityCatalog.All.Select(a => AbilityCatalog.StorageKey(a.Key)));
 
     public static Dictionary<string, int> Defaults(string role)
     {
         var levels = MenuCatalog.All.ToDictionary(m => m.Key, m => MenuCatalog.DefaultLevel(role, m), StringComparer.Ordinal);
+        foreach (var t in MenuCatalog.Tabs)
+            levels[t.Key] = MenuCatalog.DefaultLevel(role, t);
         foreach (var a in AbilityCatalog.All)
             levels[AbilityCatalog.StorageKey(a.Key)] = AbilityCatalog.DefaultFor(role, a) ? RoleMenuAccessLevels.View : RoleMenuAccessLevels.None;
         return levels;
     }
 
     public static bool IsKnownKey(string key)
-        => MenuCatalog.Contains(key)
+        => MenuCatalog.Contains(key) || MenuCatalog.ContainsTab(key)
             || (AbilityCatalog.IsStorageKey(key) && AbilityCatalog.Contains(key[AbilityCatalog.StoragePrefix.Length..]));
 
     /// <summary>سقف سطح هر کلید: قابلیت ۰/۱، منوی فقط‌خواندنی ۰/۱، بقیه ۰..۲.</summary>
     public static int MaxLevel(string key)
-        => AbilityCatalog.IsStorageKey(key) || MenuCatalog.All.First(m => m.Key == key).HasWrite is false
+        => AbilityCatalog.IsStorageKey(key) || (!MenuCatalog.ContainsTab(key) && MenuCatalog.All.First(m => m.Key == key).HasWrite is false)
             ? RoleMenuAccessLevels.View
             : RoleMenuAccessLevels.Edit;
 }
@@ -103,7 +109,7 @@ public sealed class GetRoleAccessQueryHandler : IRequestHandler<GetRoleAccessQue
         var matrix = names.ToDictionary(
             n => n,
             n => (IReadOnlyDictionary<string, int>)(snapshot is not null && snapshot.IsConfiguredRole(n)
-                ? RoleAccessGuard.AllKeys.ToDictionary(k => k, k => snapshot.ForRole(n).GetValueOrDefault(k), StringComparer.Ordinal)
+                ? RoleAccessGuard.AllKeys.ToDictionary(k => k, k => snapshot.LevelFor([n], k), StringComparer.Ordinal)
                 : AppRoles.All.Contains(n) ? RoleAccessGuard.Defaults(n) : RoleAccessGuard.AllKeys.ToDictionary(k => k, _ => 0, StringComparer.Ordinal)),
             StringComparer.OrdinalIgnoreCase);
 
@@ -113,6 +119,7 @@ public sealed class GetRoleAccessQueryHandler : IRequestHandler<GetRoleAccessQue
             roles,
             MenuCatalog.All.Select(m => new RoleAccessMenuDto(m.Key, m.Group, m.Title, m.HasWrite)).ToList(),
             AbilityCatalog.All.Select(a => new RoleAccessAbilityDto(AbilityCatalog.StorageKey(a.Key), a.Group, a.MenuKey, a.Title)).ToList(),
+            MenuCatalog.Tabs.Select(t => new RoleAccessTabDto(t.Key, t.MenuKey, t.Title)).ToList(),
             matrix);
     }
 }
@@ -152,10 +159,13 @@ public sealed class SaveRoleAccessCommandHandler : IRequestHandler<SaveRoleAcces
         RoleAccessGuard.EnsureSetadAdmin(_currentUser);
         await EnsureAvailableAsync(_store, cancellationToken);
         // منوی فقط‌خواندنی «ثبت و تغییر» ندارد؛ قابلیت فقط دارد/ندارد.
-        var levels = RoleAccessGuard.AllKeys.ToDictionary(
-            k => k,
-            k => Math.Min(request.Levels.GetValueOrDefault(k), RoleAccessGuard.MaxLevel(k)),
-            StringComparer.Ordinal);
+        // تبِ نیامده در درخواست ذخیره نمی‌شود تا سطح منوی والد را ارث ببرد.
+        var levels = RoleAccessGuard.AllKeys
+            .Where(k => !MenuCatalog.ContainsTab(k) || request.Levels.ContainsKey(k))
+            .ToDictionary(
+                k => k,
+                k => Math.Min(request.Levels.GetValueOrDefault(k), RoleAccessGuard.MaxLevel(k)),
+                StringComparer.Ordinal);
         await _store.SaveRoleAsync(request.Role.Trim(), levels, _currentUser.UserId, cancellationToken);
     }
 

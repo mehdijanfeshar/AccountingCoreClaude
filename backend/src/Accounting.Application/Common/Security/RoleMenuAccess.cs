@@ -29,13 +29,27 @@ public sealed class RoleMenuAccessSnapshot
 
     /// <summary>بیشترین سطح میان نقش‌های کاربر برای یک منو.</summary>
     public int LevelFor(IEnumerable<string> roles, string menuKey)
-        => roles.Select(r => _byRole.TryGetValue(r, out var m) && m.TryGetValue(menuKey, out var l) ? l : RoleMenuAccessLevels.None)
+        => roles.Select(r => RoleLevel(r, menuKey))
             .DefaultIfEmpty(RoleMenuAccessLevels.None)
             .Max();
 
-    /// <summary>سطح هر منوی فهرست برای کاربر (بیشترین میان نقش‌هایش).</summary>
+    /// <summary>
+    /// سطح یک نقش برای یک کلید. تبِ (<c>menu#tab</c>) بی‌ردیف برای آن نقش، سطح منوی والد را ارث می‌برد — پس
+    /// نقش‌هایی که پیش از افزودن تب‌ها پیکربندی شده‌اند رفتارشان عوض نمی‌شود.
+    /// </summary>
+    private int RoleLevel(string role, string key)
+    {
+        if (!_byRole.TryGetValue(role, out var m))
+            return RoleMenuAccessLevels.None;
+        if (m.TryGetValue(key, out var l))
+            return l;
+        return MenuCatalog.ParentMenuKey(key) is { } parent && m.TryGetValue(parent, out var pl) ? pl : RoleMenuAccessLevels.None;
+    }
+
+    /// <summary>سطح هر منو و هر تبِ فهرست برای کاربر (بیشترین میان نقش‌هایش).</summary>
     public Dictionary<string, int> MenuAccessFor(IReadOnlyCollection<string> roles)
-        => MenuCatalog.All.ToDictionary(m => m.Key, m => LevelFor(roles, m.Key), StringComparer.Ordinal);
+        => MenuCatalog.All.Select(m => m.Key).Concat(MenuCatalog.Tabs.Select(t => t.Key))
+            .ToDictionary(k => k, k => LevelFor(roles, k), StringComparer.Ordinal);
 }
 
 /// <summary>خواندن (با کش کوتاه) و نوشتن جدول دسترسی نقش‌ها.</summary>

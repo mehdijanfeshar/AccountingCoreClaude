@@ -74,7 +74,8 @@ public sealed class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQ
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
         var menuAccess = _currentUser.IsInRole(AppRoles.SetadAdmin)
-            ? MenuCatalog.All.ToDictionary(m => m.Key, _ => RoleMenuAccessLevels.Edit, StringComparer.Ordinal)
+            ? MenuCatalog.All.Select(m => m.Key).Concat(MenuCatalog.Tabs.Select(t => t.Key))
+                .ToDictionary(k => k, _ => RoleMenuAccessLevels.Edit, StringComparer.Ordinal)
             : snapshot.MenuAccessFor(all);
         return (roles, menuAccess);
     }

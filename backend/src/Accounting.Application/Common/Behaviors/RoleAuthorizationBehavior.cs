@@ -54,6 +54,10 @@ public sealed class RoleAuthorizationBehavior<TRequest, TResponse> : IPipelineBe
         if (_currentUser.IsInRole(AppRoles.SetadAdmin))
             return await next(cancellationToken);
 
+        // ویرایش کدینگ تا سطح معین و پیوند معین↔گروه تفصیلی: فقط مدیر ستاد؛ جدول «دسترسی نقش‌ها» این را باز نمی‌کند.
+        if (!isQuery && AppRoles.HeadquartersOnlyModules.Contains(module))
+            throw new RoleAccessDeniedException("ویرایش کدینگ تا سطح معین و پیوند معین به گروه تفصیلی فقط برای مدیر ستاد مجاز است.");
+
         var snapshot = _accessStore is null ? null : await _accessStore.GetSnapshotAsync(cancellationToken);
         if (snapshot is not null)
         {
@@ -67,7 +71,8 @@ public sealed class RoleAuthorizationBehavior<TRequest, TResponse> : IPipelineBe
                 return await next(cancellationToken);
             if (menus.Count > 0)
             {
-                if (menus.Any(m => snapshot.LevelFor(roles, m.Key) >= RoleMenuAccessLevels.Edit))
+                // منوی دارای تب برای این ماژول: سطح همان تب (ارث‌بر از منو) تعیین می‌کند، نه کل منو.
+                if (MenuCatalog.WriteKeysForModule(module).Any(k => snapshot.LevelFor(roles, k) >= RoleMenuAccessLevels.Edit))
                     return await next(cancellationToken);
                 throw new RoleAccessDeniedException(
                     $"نقش شما برای «{menus[0].Title}» فقط اجازهٔ مشاهده دارد یا دسترسی ندارد؛ ثبت و تغییر مجاز نیست.");

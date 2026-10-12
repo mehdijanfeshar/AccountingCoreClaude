@@ -108,19 +108,81 @@ public static class MenuCatalog
         M("/fs/analysis", Fs, "تحلیل و نسبت‌ها", MenuGroupAccess.Any),
     ];
 
+    /// <summary>
+    /// تب‌های قابل تخصیص جدا (زیر منوی دارای تب). مقدار <c>TabKey</c> باید با <c>value</c> هر <c>Tab</c> در فرانت یکی باشد.
+    /// ماژول هر تب فقط وقتی نوشتن را مجاز می‌کند که سطح همان تب «ثبت و تغییر» باشد؛ تب‌هایی که یک ماژول مشترک دارند
+    /// (گروه/کل/معین = <c>Accounts</c>) در سرور فقط در سطح ماژول جدا می‌شوند و جداسازی‌شان با فرانت است.
+    /// </summary>
+    public static readonly IReadOnlyList<MenuTabDefinition> Tabs =
+    [
+        new("/base/account-codes", "group", "گروه", ["Accounts"]),
+        new("/base/account-codes", "kol", "کل", ["Accounts"]),
+        new("/base/account-codes", "moin", "معین", ["Accounts"]),
+        new("/base/account-codes", "tafsili", "تفصیلی", ["Tafsilis"]),
+        new("/base/account-codes", "moinTafsiliLink", "ارتباط معین با گروه تفصیلی", ["Accounts"]),
+        new("/base/bank", "accounts", "حساب‌های بانکی", ["BankAccounts"]),
+        new("/base/bank", "checkBooks", "دسته‌چک", ["CheckBooks"]),
+        new("/base/bank", "chequeSettings", "تنظیمات محیطی چک", ["ChequeTypes"]),
+        new("/base/features", "groups", "گروه ویژگی", ["IdentityGroups"]),
+        new("/base/features", "parts", "اجزای ویژگی", ["IdentitySubGroups"]),
+        new("/base/features", "records", "ویژگی‌های ثبت‌شده", ["IdentityHeads"]),
+        new("/base/year-end-settings", "elam", "رابط اعلامیه", ["Rabets"]),
+        new("/base/year-end-settings", "interfaces", "رابط افتتاحیه/اختتامیه", ["AccountCodeInterfaces"]),
+        new("/base/year-end-settings", "rabet", "رابط اختتامیه (گروه ۶، ۷، ۸)", ["RabetClosings"]),
+        new("/base/year-end-settings", "exceptions", "حساب‌های مستثنا", ["AccountExceptions"]),
+        // انواع سند و اعلامیه و دریافت/انتقال ماژول Application مشترک دارند؛ جداسازی‌شان فقط در فرانت است.
+        new("/operation/year-end", "closing", "سند اختتامیه", ["Vouchers"]),
+        new("/operation/year-end", "opening", "سند افتتاحیه", ["Vouchers"]),
+        new("/operation/elams", "sent", "سایر اعلامیه‌ها — صادره", ["Elams", "ElamHeads"]),
+        new("/operation/elams", "received", "سایر اعلامیه‌ها — رسیده", ["Elams", "ElamHeads"]),
+        new("/operation/elams", "revenue", "اعلامیهٔ درآمد", ["Elams", "ElamHeads"]),
+        new("/treasury/khazaneh/receipts-transfers", "receipts", "دریافت وجه", ["Treasury", "Receipts"]),
+        new("/treasury/khazaneh/receipts-transfers", "transfers", "انتقال وجه", ["Treasury", "Receipts"]),
+    ];
+
     private static readonly Dictionary<string, MenuDefinition> ByKey = All.ToDictionary(m => m.Key, StringComparer.Ordinal);
 
+    private static readonly Dictionary<string, MenuTabDefinition> TabByKey = Tabs.ToDictionary(t => t.Key, StringComparer.Ordinal);
+
     public static bool Contains(string key) => ByKey.ContainsKey(key);
+
+    public static bool ContainsTab(string key) => TabByKey.ContainsKey(key);
+
+    /// <summary>کلید منوی والد یک کلید تب (<c>menu#tab</c>)؛ null اگر کلید تب نیست.</summary>
+    public static string? ParentMenuKey(string key)
+    {
+        var i = key.IndexOf(MenuTabDefinition.Separator);
+        return i > 0 ? key[..i] : null;
+    }
 
     /// <summary>منوهایی که «ثبت و تغییر»شان نوشتن روی این ماژول را مجاز می‌کند.</summary>
     public static IReadOnlyList<MenuDefinition> MenusForModule(string module)
         => All.Where(m => m.Modules.Contains(module, StringComparer.Ordinal)).ToList();
 
     /// <summary>
+    /// کلیدهایی که «ثبت و تغییر»شان نوشتن روی این ماژول را مجاز می‌کند: اگر منو برای ماژول تب دارد فقط همان تب‌ها،
+    /// وگرنه خود منو (سطح تبِ بی‌ردیف از منو ارث می‌رسد).
+    /// </summary>
+    public static IReadOnlyList<string> WriteKeysForModule(string module)
+        => MenusForModule(module)
+            .SelectMany(m =>
+            {
+                var tabs = Tabs.Where(t => t.MenuKey == m.Key && t.Modules.Contains(module, StringComparer.Ordinal)).ToList();
+                return tabs.Count > 0 ? tabs.Select(t => t.Key) : [m.Key];
+            })
+            .ToList();
+
+    /// <summary>
     /// سطح پیش‌فرض یک نقش ثابت در یک منو، عین رفتار پیش از فاز ۵۴: دیده‌شدن گروه طبق <see cref="MenuDefinition.Access"/>،
     /// و «ثبت و تغییر» وقتی <see cref="AppRoles.AllowedFor"/> نوشتن همهٔ ماژول‌های منو را به نقش بدهد.
     /// </summary>
-    public static int DefaultLevel(string role, MenuDefinition menu)
+    public static int DefaultLevel(string role, MenuDefinition menu) => DefaultLevel(role, menu, menu.Modules);
+
+    /// <summary>پیش‌فرض یک تب: دیده‌شدن از منوی والد، و «ثبت و تغییر» فقط با ماژول‌های خود تب.</summary>
+    public static int DefaultLevel(string role, MenuTabDefinition tab)
+        => DefaultLevel(role, ByKey[tab.MenuKey], tab.Modules);
+
+    private static int DefaultLevel(string role, MenuDefinition menu, IReadOnlyList<string> writeModules)
     {
         var operate = AppRoles.OperationWriters.Contains(role);
         var visible = menu.Access switch
@@ -131,10 +193,20 @@ public static class MenuCatalog
         };
         if (!visible)
             return RoleMenuAccessLevels.None;
-        return menu.HasWrite && menu.Modules.All(module => AppRoles.AllowedFor(module, isQuery: false).Contains(role))
+        return writeModules.Count > 0 && writeModules.All(module => AppRoles.AllowedFor(module, isQuery: false).Contains(role))
             ? RoleMenuAccessLevels.Edit
             : RoleMenuAccessLevels.View;
     }
+}
+
+/// <param name="MenuKey">کلید منوی والد (<see cref="MenuDefinition.Key"/>).</param>
+/// <param name="TabKey"><c>value</c> تب در فرانت.</param>
+public sealed record MenuTabDefinition(string MenuKey, string TabKey, string Title, IReadOnlyList<string> Modules)
+{
+    public const char Separator = '#';
+
+    /// <summary>کلید ذخیره در <c>TB_ROLE_MENU_ACCESS.MENU_KEY</c>: <c>/base/bank#checkBooks</c>.</summary>
+    public string Key => MenuKey + Separator + TabKey;
 }
 
 public static class RoleMenuAccessLevels
