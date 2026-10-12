@@ -19,6 +19,9 @@ public interface ISystemVoucherInboxRepository
     /// <summary>کد تفصیلی ← تفصیلی فعال قابل‌دید برای واحد (اولویت با تفصیلی خود واحد).</summary>
     Task<IReadOnlyDictionary<string, (Guid Id, string Name)>> ResolveTafsilisAsync(IReadOnlyCollection<string> codes, string vahedCode, CancellationToken ct);
 
+    /// <summary>آیا سند دیگری با همین SOURCEID برای این واحد قبلاً دریافت شده (VOUCHERSHEAD_ID پر)؟</summary>
+    Task<bool> IsSourceAlreadyReceivedAsync(Guid sourceId, string vahedCode, Guid excludeHeadId, CancellationToken ct);
+
     /// <summary>شمارهٔ سطح (۱..۷) ← شناسهٔ سطح تفصیلی فعال.</summary>
     Task<IReadOnlyDictionary<int, Guid>> GetLevelIdsByCodeAsync(CancellationToken ct);
 }

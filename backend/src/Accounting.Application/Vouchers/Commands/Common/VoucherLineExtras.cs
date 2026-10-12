@@ -28,7 +28,8 @@ public sealed record VoucherLineReceiptInput(ReceiptType Kind, string? No, strin
 public sealed record VoucherLineExtrasInput(
     IReadOnlyList<VoucherLineAttributeInput>? Attributes = null,
     IReadOnlyList<VoucherLineIdentityInput>? Identities = null,
-    VoucherLineReceiptInput? Receipt = null);
+    VoucherLineReceiptInput? Receipt = null,
+    bool FromOtherSystem = false);
 
 // ───────────── نیازمندی‌ها (برای UI و اعتبارسنجی) ─────────────
 
@@ -312,7 +313,8 @@ public sealed class VoucherLineExtrasService : IVoucherLineExtrasService
             }
         }
 
-        if (requirements.IsBankAccount && isDebit && extras?.Receipt is null)
+        // سند دریافتی از سایر سیستم‌ها: فیش واریز را فرستنده نمی‌دهد؛ برداشت با چک صوری پوشش داده می‌شود.
+        if (requirements.IsBankAccount && isDebit && extras?.Receipt is null && extras?.FromOtherSystem != true)
             errors.Add(BankDebitNeedsReceipt);
 
         if (extras?.Receipt is { } receipt)

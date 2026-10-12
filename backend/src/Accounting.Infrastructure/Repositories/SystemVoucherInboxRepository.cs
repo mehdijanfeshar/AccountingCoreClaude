@@ -95,16 +95,23 @@ public sealed class SystemVoucherInboxRepository : ISystemVoucherInboxRepository
         var rows = await _db.TB_TAFSILIs.AsNoTracking()
             .Where(t => t.TAFSILI_CODE != null && list.Contains(t.TAFSILI_CODE) && t.ISDELETED != true
                         && (t.VAHEDCODE == null || t.VAHEDCODE == vahedCode || t.OWNER == Owners.Global))
-            .Select(t => new { t.ID, t.TAFSILI_CODE, t.TAFSILI_NAME, Own = t.VAHEDCODE == vahedCode })
+            // Oracle: boolean در Select → "FALSE" (ORA-00904)؛ مقایسه بعد از خواندن.
+            .Select(t => new { t.ID, t.TAFSILI_CODE, t.TAFSILI_NAME, t.VAHEDCODE })
             .ToListAsync(ct);
         return rows
             .GroupBy(r => r.TAFSILI_CODE!)
             .ToDictionary(g => g.Key, g =>
             {
-                var pick = g.OrderByDescending(r => r.Own).First();
+                var pick = g.OrderByDescending(r => r.VAHEDCODE == vahedCode).First();
                 return (pick.ID, pick.TAFSILI_NAME ?? string.Empty);
             });
     }
+
+    // Oracle: AnyAsync → ORA-00904 (CLAUDE.md)؛ شمارش.
+    public async Task<bool> IsSourceAlreadyReceivedAsync(Guid sourceId, string vahedCode, Guid excludeHeadId, CancellationToken ct)
+        => await _db.TB_TMP_VOUCHERHEADs.AsNoTracking()
+            .CountAsync(h => h.SOURCEID == sourceId && h.VAHEDCODE == vahedCode && h.ID != excludeHeadId
+                             && h.VOUCHERSHEAD_ID != null && h.ISDELETED != true, ct) > 0;
 
     public async Task<IReadOnlyDictionary<int, Guid>> GetLevelIdsByCodeAsync(CancellationToken ct)
     {

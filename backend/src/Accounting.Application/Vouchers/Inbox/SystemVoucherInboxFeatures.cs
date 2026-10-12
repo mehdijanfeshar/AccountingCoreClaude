@@ -40,7 +40,11 @@ public sealed record SystemVoucherInboxLineDto(
 
 public sealed record SystemVoucherInboxTafsiliDto(int Level, string Code, string? Name);
 
-public sealed record SystemVoucherInboxDetailDto(SystemVoucherInboxItemDto Head, IReadOnlyList<SystemVoucherInboxLineDto> Lines, bool CanReceive);
+public sealed record SystemVoucherInboxDetailDto(
+    SystemVoucherInboxItemDto Head,
+    IReadOnlyList<SystemVoucherInboxLineDto> Lines,
+    bool CanReceive,
+    IReadOnlyList<string> DocumentErrors);
 
 public sealed record GetSystemVoucherInboxQuery(string? Year, bool IncludeReceived)
     : IRequest<IReadOnlyList<SystemVoucherInboxItemDto>>, IVahedScopedQuery
@@ -69,7 +73,7 @@ public sealed class ReceiveSystemVoucherCommandValidator : AbstractValidator<Rec
 }
 
 /// <summary>تبدیل ردیف‌های موقت به حساب/تفصیلی واقعی — مشترک بین پیش‌نمایش و دریافت.</summary>
-internal sealed class SystemVoucherResolver
+public sealed class SystemVoucherResolver
 {
     private readonly ISystemVoucherInboxRepository _repo;
 
@@ -80,7 +84,9 @@ internal sealed class SystemVoucherResolver
         Guid? AccountId,
         string? MoinName,
         IReadOnlyList<(int Level, string Code, Guid? TafsiliId, Guid? LevelId, string? Name)> Tafsilis,
-        string? Error);
+        string? Error,
+        VoucherLineExtrasInput? Extras = null,
+        Guid? SoriCheckBookId = null);
 
     public async Task<IReadOnlyList<Resolved>> ResolveAsync(IReadOnlyList<TB_TMP_VOUCHERSDETAIL> lines, string vahedCode, CancellationToken ct)
     {
@@ -136,6 +142,201 @@ internal sealed class SystemVoucherResolver
     }
 }
 
+/// <summary>
+/// همهٔ کنترل‌های «دریافت» — مشترک بین پیش‌نمایش و دریافت تا آنچه کاربر می‌بیند همان چیزی باشد که ثبت می‌شود.
+/// سطح ردیف: معین تعریف‌شده، تفصیلی‌ها تعریف‌شده و قابل‌دید برای واحد، ریال صحیح، فقط بدهکار یا بستانکار،
+/// ماتریس دسترسی کدینگ واحد (حالت سیستمی)، تفصیلی الزامی/غیرمجاز برای معین، تفصیلی مجاز برای (معین، سطح، واحد).
+/// سطح سند: ردیف دارد، تاریخ/سال معتبر و هم‌خوان، تراز (جمع بدهکار = جمع بستانکار و بزرگ‌تر از صفر)،
+/// ردیف‌ها همان واحد سرسندند، و همان سند (SOURCEID) قبلاً برای این واحد دریافت نشده است.
+/// </summary>
+public sealed class SystemVoucherChecker
+{
+    private readonly ISystemVoucherInboxRepository _repo;
+    private readonly IVoucherTafsiliLevelGuard _tafsiliLevelGuard;
+    private readonly IAccountEntryPolicy _accountEntryPolicy;
+    private readonly IVoucherLineExtrasStore _extrasStore;
+    private readonly IVoucherLineExtrasService _extrasService;
+    private readonly IChequeBookRepository _chequeBooks;
+
+    public SystemVoucherChecker(
+        ISystemVoucherInboxRepository repo,
+        IVoucherTafsiliLevelGuard tafsiliLevelGuard,
+        IAccountEntryPolicy accountEntryPolicy,
+        IVoucherLineExtrasStore extrasStore,
+        IVoucherLineExtrasService extrasService,
+        IChequeBookRepository chequeBooks)
+    {
+        _repo = repo;
+        _tafsiliLevelGuard = tafsiliLevelGuard;
+        _accountEntryPolicy = accountEntryPolicy;
+        _extrasStore = extrasStore;
+        _extrasService = extrasService;
+        _chequeBooks = chequeBooks;
+    }
+
+    /// <summary>
+    /// حساب بانکی/شناسه‌دار/ویژگی‌دار (تصمیم صاحب پروژه ۲۰۲۶-۱۰-۱۲): ردیف بستانکار حساب بانکی ⇒ چک صوری (اعلامیه) از
+    /// دسته‌چک صوری همان حساب بانکی صادر می‌شود؛ حساب شناسه‌دار ⇒ مقدار شناسه باید در ستون VALUE آمده باشد (چند شناسه با
+    /// «|» به ترتیب شمارهٔ کادر)؛ حساب یا تفصیلی ویژگی‌دار از سایر سیستم‌ها نمی‌آید ⇒ رد.
+    /// </summary>
+    private async Task<(VoucherLineExtrasInput? Extras, Guid? SoriBookId, List<string> Errors)> CheckExtrasAsync(
+        SystemVoucherResolver.Resolved r, Guid accountId, string vahedCode, string year, CancellationToken ct)
+    {
+        var errors = new List<string>();
+        var tafsiliIds = r.Tafsilis.Where(t => t.TafsiliId is not null).Select(t => t.TafsiliId!.Value).Distinct().ToList();
+        var requirements = await _extrasStore.GetRequirementsAsync(accountId, tafsiliIds, vahedCode, year, ct);
+
+        if (requirements.Identities.Count > 0)
+        {
+            errors.Add("حساب یا تفصیلی این ردیف ویژگی (شناسنامه) دارد و سند ویژگی‌دار از سایر سیستم‌ها دریافت نمی‌شود");
+            return (null, null, errors);
+        }
+
+        var defs = requirements.Attributes.OrderBy(a => a.BoxNo).ToList();
+        var parts = (r.Source.VALUE ?? string.Empty).Split('|', StringSplitOptions.TrimEntries);
+        if (defs.Count == 0 && !string.IsNullOrWhiteSpace(r.Source.VALUE))
+            errors.Add("برای این حساب شناسه تعریف نشده ولی مقدار شناسه ارسال شده است");
+        else if (defs.Count > 0 && parts.Length > defs.Count)
+            errors.Add($"تعداد مقدارهای شناسه ({parts.Length}) از شناسه‌های تعریف‌شدهٔ حساب ({defs.Count}) بیشتر است");
+
+        var attributes = defs
+            .Select((d, i) => new VoucherLineAttributeInput(d.DefinitionId, i < parts.Length ? parts[i] : null))
+            .ToList();
+        var extras = new VoucherLineExtrasInput(attributes, null, null, FromOtherSystem: true);
+
+        var isDebit = (r.Source.DEBTOR ?? 0) > 0;
+        errors.AddRange(await _extrasService.ValidateAsync(accountId, tafsiliIds, isDebit, extras, vahedCode, year, ct));
+
+        Guid? soriBookId = null;
+        if (requirements.IsBankAccount && !isDebit)
+        {
+            var book = (await _chequeBooks.GetSoriBooksAsync(vahedCode, accountId, ct)).FirstOrDefault(b => b.NextNumber is not null);
+            if (book is null)
+                errors.Add("حساب بانکی است و برای صدور چک صوری (اعلامیه) دسته‌چک صوری با برگ آزاد برایش تعریف نشده است");
+            else
+                soriBookId = book.CheckBookId;
+        }
+
+        return (extras, soriBookId, errors);
+    }
+
+    public sealed record Outcome(
+        IReadOnlyList<SystemVoucherResolver.Resolved> Lines,
+        IReadOnlyList<string> DocumentErrors,
+        string? DateDoc,
+        string? Year)
+    {
+        public bool IsValid => DocumentErrors.Count == 0 && Lines.Count > 0 && Lines.All(l => l.Error is null);
+    }
+
+    public async Task<Outcome> CheckAsync(
+        TB_TMP_VOUCHERHEAD head, IReadOnlyList<TB_TMP_VOUCHERSDETAIL> lines, string vahedCode, CancellationToken ct)
+    {
+        var docErrors = new List<string>();
+
+        if (head.VOUCHERSHEAD_ID is not null)
+            docErrors.Add("این سند قبلاً دریافت شده است.");
+        if (lines.Count == 0)
+            docErrors.Add("این سند ردیفی ندارد.");
+
+        var dateDoc = head.DATE_DOC?.Trim();
+        string? year = null;
+        if (dateDoc is null || dateDoc.Length != 8 || !dateDoc.All(char.IsDigit))
+        {
+            docErrors.Add("تاریخ سند ارسالی نامعتبر است (باید ۸ رقم yyyyMMdd باشد).");
+        }
+        else
+        {
+            year = string.IsNullOrWhiteSpace(head.YEAR) ? dateDoc[..4] : head.YEAR.Trim();
+            if (!dateDoc.StartsWith(year, StringComparison.Ordinal))
+                docErrors.Add("تاریخ سند ارسالی با سال مالی آن نمی‌خواند.");
+        }
+
+        var totalDebtor = lines.Sum(l => l.DEBTOR ?? 0);
+        var totalCreditor = lines.Sum(l => l.CREDITOR ?? 0);
+        if (lines.Count > 0 && (totalDebtor != totalCreditor || totalDebtor <= 0))
+            docErrors.Add($"سند تراز نیست یا مبلغ ندارد (جمع بدهکار {totalDebtor:N0} / جمع بستانکار {totalCreditor:N0}).");
+
+        if (lines.Any(l => !string.IsNullOrWhiteSpace(l.VAHEDCODE) && l.VAHEDCODE != vahedCode))
+            docErrors.Add("ردیف‌هایی از واحد دیگری در این سند آمده است.");
+
+        if (head.SOURCEID is { } sourceId && head.VOUCHERSHEAD_ID is null
+            && await _repo.IsSourceAlreadyReceivedAsync(sourceId, vahedCode, head.ID, ct))
+            docErrors.Add("سندی با همین شناسهٔ منبع (SOURCEID) قبلاً برای این واحد دریافت شده است؛ ارسال تکراری است.");
+
+        var resolved = await new SystemVoucherResolver(_repo).ResolveAsync(lines, vahedCode, ct);
+        var checkedLines = new List<SystemVoucherResolver.Resolved>(resolved.Count);
+        var policyCache = new Dictionary<Guid, string?>();
+        foreach (var r in resolved)
+        {
+            var errors = new List<string>();
+            if (r.Error is not null)
+                errors.Add(r.Error);
+
+            if (r.AccountId is { } accountId)
+            {
+                if (!policyCache.TryGetValue(accountId, out var policyError))
+                {
+                    try
+                    {
+                        await _accountEntryPolicy.EnsureSystemEntryAllowedAsync(vahedCode, dateDoc, [accountId], ct);
+                        policyError = null;
+                    }
+                    catch (BusinessRuleException ex)
+                    {
+                        policyError = ex.Message;
+                    }
+
+                    policyCache[accountId] = policyError;
+                }
+
+                if (policyError is not null)
+                    errors.Add(policyError);
+
+                if (r.Tafsilis.All(t => t.TafsiliId is not null && t.LevelId is not null))
+                {
+                    var links = r.Tafsilis
+                        .DistinctBy(t => (t.TafsiliId, t.LevelId))
+                        .Select(t => new VoucherDetailTafsiliLinkInput(t.TafsiliId!.Value, t.LevelId!.Value))
+                        .ToList();
+                    try
+                    {
+                        await _tafsiliLevelGuard.EnsureSatisfiedAsync(accountId, links, ct);
+                        await _tafsiliLevelGuard.EnsureTafsiliSelectableAsync(accountId, links, vahedCode, cancellationToken: ct);
+                    }
+                    catch (TafsiliLevelRuleException ex)
+                    {
+                        errors.Add(ex.PublicDetail);
+                    }
+                    catch (BusinessRuleException ex)
+                    {
+                        errors.Add(ex.Message);
+                    }
+                }
+            }
+
+            VoucherLineExtrasInput? extras = null;
+            Guid? soriBookId = null;
+            if (r.AccountId is { } extrasAccountId && year is not null)
+            {
+                var (e, book, extrasErrors) = await CheckExtrasAsync(r, extrasAccountId, vahedCode, year, ct);
+                extras = e;
+                soriBookId = book;
+                errors.AddRange(extrasErrors);
+            }
+
+            checkedLines.Add(r with
+            {
+                Error = errors.Count > 0 ? string.Join("؛ ", errors.Distinct()) : null,
+                Extras = extras,
+                SoriCheckBookId = soriBookId,
+            });
+        }
+
+        return new Outcome(checkedLines, docErrors, dateDoc, year);
+    }
+}
+
 internal static class SystemVoucherInboxMapping
 {
     public static SystemVoucherInboxItemDto ToDto(SystemVoucherInboxRow r) => new(
@@ -155,15 +356,21 @@ public sealed class GetSystemVoucherInboxQueryHandler : IRequestHandler<GetSyste
 public sealed class GetSystemVoucherInboxDetailQueryHandler : IRequestHandler<GetSystemVoucherInboxDetailQuery, SystemVoucherInboxDetailDto>
 {
     private readonly ISystemVoucherInboxRepository _repo;
+    private readonly SystemVoucherChecker _checker;
 
-    public GetSystemVoucherInboxDetailQueryHandler(ISystemVoucherInboxRepository repo) => _repo = repo;
+    public GetSystemVoucherInboxDetailQueryHandler(ISystemVoucherInboxRepository repo, SystemVoucherChecker checker)
+    {
+        _repo = repo;
+        _checker = checker;
+    }
 
     public async Task<SystemVoucherInboxDetailDto> Handle(GetSystemVoucherInboxDetailQuery q, CancellationToken ct)
     {
         var found = await _repo.GetForReceiveAsync(q.Id, q.VahedCode, ct)
             ?? throw new NotFoundException(nameof(TB_TMP_VOUCHERHEAD), q.Id);
         var (head, lines) = found;
-        var resolved = await new SystemVoucherResolver(_repo).ResolveAsync(lines, q.VahedCode, ct);
+        var outcome = await _checker.CheckAsync(head, lines, q.VahedCode, ct);
+        var resolved = outcome.Lines;
 
         var headDto = new SystemVoucherInboxItemDto(
             head.ID, head.SYS_TYPE, head.DATE_DOC, head.YEAR, head.HEAD_DESC, head.CREATEDDATE, lines.Count,
@@ -174,8 +381,7 @@ public sealed class GetSystemVoucherInboxDetailQueryHandler : IRequestHandler<Ge
             r.Tafsilis.Select(t => new SystemVoucherInboxTafsiliDto(t.Level, t.Code, t.Name)).ToList(),
             r.Source.DETAIL_DESC, r.Source.DEBTOR ?? 0, r.Source.CREDITOR ?? 0, r.Error)).ToList();
 
-        return new SystemVoucherInboxDetailDto(headDto, lineDtos,
-            head.VOUCHERSHEAD_ID is null && lines.Count > 0 && resolved.All(r => r.Error is null));
+        return new SystemVoucherInboxDetailDto(headDto, lineDtos, head.VOUCHERSHEAD_ID is null && outcome.IsValid, outcome.DocumentErrors);
     }
 }
 
@@ -189,8 +395,9 @@ public sealed class ReceiveSystemVoucherCommandHandler : IRequestHandler<Receive
     private readonly ISystemVoucherInboxRepository _repo;
     private readonly IVoucherHeadRepository _headRepository;
     private readonly IVoucherDetailRepository _detailRepository;
-    private readonly IVoucherTafsiliLevelGuard _tafsiliLevelGuard;
-    private readonly IAccountEntryPolicy _accountEntryPolicy;
+    private readonly SystemVoucherChecker _checker;
+    private readonly IVoucherChequeService _chequeService;
+    private readonly IVoucherLineExtrasService _extrasService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
 
@@ -198,16 +405,18 @@ public sealed class ReceiveSystemVoucherCommandHandler : IRequestHandler<Receive
         ISystemVoucherInboxRepository repo,
         IVoucherHeadRepository headRepository,
         IVoucherDetailRepository detailRepository,
-        IVoucherTafsiliLevelGuard tafsiliLevelGuard,
-        IAccountEntryPolicy accountEntryPolicy,
+        SystemVoucherChecker checker,
+        IVoucherChequeService chequeService,
+        IVoucherLineExtrasService extrasService,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser)
     {
         _repo = repo;
         _headRepository = headRepository;
         _detailRepository = detailRepository;
-        _tafsiliLevelGuard = tafsiliLevelGuard;
-        _accountEntryPolicy = accountEntryPolicy;
+        _checker = checker;
+        _chequeService = chequeService;
+        _extrasService = extrasService;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
     }
@@ -218,32 +427,18 @@ public sealed class ReceiveSystemVoucherCommandHandler : IRequestHandler<Receive
             ?? throw new NotFoundException(nameof(TB_TMP_VOUCHERHEAD), c.Id);
         var (tmp, lines) = found;
 
-        if (tmp.VOUCHERSHEAD_ID is not null)
-            throw new BusinessRuleException("این سند قبلاً دریافت شده است.");
-        if (lines.Count == 0)
-            throw new BusinessRuleException("این سند ردیفی ندارد.");
-
-        var dateDoc = tmp.DATE_DOC?.Trim();
-        if (dateDoc is null || dateDoc.Length != 8 || !dateDoc.All(char.IsDigit))
-            throw new BusinessRuleException("تاریخ سند ارسالی نامعتبر است (باید ۸ رقم yyyyMMdd باشد).");
-        var year = string.IsNullOrWhiteSpace(tmp.YEAR) ? dateDoc[..4] : tmp.YEAR.Trim();
-        if (!dateDoc.StartsWith(year, StringComparison.Ordinal))
-            throw new BusinessRuleException("تاریخ سند ارسالی با سال مالی آن نمی‌خواند.");
-
-        var resolved = await new SystemVoucherResolver(_repo).ResolveAsync(lines, c.VahedCode, ct);
-        var bad = resolved.Where(r => r.Error is not null).Take(3).Select(r => $"ردیف {r.Source.RADIF}: {r.Error}").ToList();
-        if (bad.Count > 0)
-            throw new BusinessRuleException("سند قابل دریافت نیست — " + string.Join(" | ", bad));
-
-        foreach (var r in resolved)
+        var outcome = await _checker.CheckAsync(tmp, lines, c.VahedCode, ct);
+        if (!outcome.IsValid)
         {
-            await _tafsiliLevelGuard.EnsureSatisfiedAsync(
-                r.AccountId,
-                r.Tafsilis.Select(t => new VoucherDetailTafsiliLinkInput(t.TafsiliId!.Value, t.LevelId!.Value)).ToList(),
-                ct);
+            var problems = outcome.DocumentErrors
+                .Concat(outcome.Lines.Where(r => r.Error is not null).Take(3).Select(r => $"ردیف {r.Source.RADIF}: {r.Error}"))
+                .ToList();
+            throw new BusinessRuleException("سند قابل دریافت نیست — " + string.Join(" | ", problems));
         }
 
-        await _accountEntryPolicy.EnsureSystemEntryAllowedAsync(c.VahedCode, dateDoc, resolved.Select(r => r.AccountId), ct);
+        var dateDoc = outcome.DateDoc!;
+        var year = outcome.Year!;
+        var resolved = outcome.Lines;
 
         var now = DateTime.UtcNow;
         var userId = _currentUser.UserId;
@@ -264,6 +459,10 @@ public sealed class ReceiveSystemVoucherCommandHandler : IRequestHandler<Receive
             CREATEDDATE = now,
             ISDELETED = false,
         };
+        // تراکنش: صدور چک صوری شمارهٔ بعدی را از دیتابیس می‌خواند، پس بعد از هر چک ذخیره می‌کنیم؛ خطا همه را برمی‌گرداند.
+        await _unitOfWork.BeginTransactionAsync(ct);
+        try
+        {
         await _headRepository.AddAsync(head, ct);
 
         var radif = 0;
@@ -301,6 +500,25 @@ public sealed class ReceiveSystemVoucherCommandHandler : IRequestHandler<Receive
                     ISDELETED = false,
                 }, ct);
             }
+
+            // حساب بانکی (برداشت) ⇒ چک صوری از دسته‌چک صوری همان حساب؛ تاریخ چک = CHECK_DATE فرستنده یا تاریخ سند.
+            if (r.SoriCheckBookId is { } bookId)
+            {
+                var checkDate = r.Source.CHECK_DATE?.Trim();
+                if (checkDate is not { Length: 8 } || !checkDate.All(char.IsDigit))
+                    checkDate = dateDoc;
+                detail.CHECK_ID = await _chequeService.ApplyAsync(
+                    null, detail.ID, true,
+                    new VoucherChequeInfoInput(null, checkDate, Truncate(r.Source.DETAIL_DESC, 800), bookId),
+                    c.VahedCode, ct);
+                await _unitOfWork.SaveChangesAsync(ct);
+            }
+
+            // شناسه‌ها (VALUE) — همان قاعدهٔ فرم سند.
+            await _extrasService.ApplyAsync(
+                detail,
+                r.Tafsilis.Where(t => t.TafsiliId is not null).Select(t => t.TafsiliId!.Value).Distinct().ToList(),
+                r.Extras, replace: false, ct);
         }
 
         tmp.VOUCHERSHEAD_ID = head.ID;
@@ -308,6 +526,14 @@ public sealed class ReceiveSystemVoucherCommandHandler : IRequestHandler<Receive
         tmp.CHANGEUSERID = userId;
 
         await _unitOfWork.SaveChangesAsync(ct);
+        await _unitOfWork.CommitTransactionAsync(ct);
+        }
+        catch
+        {
+            await _unitOfWork.RollbackTransactionAsync(ct);
+            throw;
+        }
+
         return new ReceiveSystemVoucherResult(head.ID, docNum);
     }
 

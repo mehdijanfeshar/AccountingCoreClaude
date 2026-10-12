@@ -164,6 +164,8 @@ public static class DependencyInjection
         // شناسه/ویژگی/فیش ردیف سند.
         services.AddScoped<Accounting.Application.Vouchers.Commands.Common.IVoucherLineExtrasService,
             Accounting.Application.Vouchers.Commands.Common.VoucherLineExtrasService>();
+        // دریافت اسناد از سایر سیستم‌ها — کنترل‌های مشترک پیش‌نمایش و دریافت.
+        services.AddScoped<Accounting.Application.Vouchers.Inbox.SystemVoucherChecker>();
         services.AddScoped<Accounting.Application.Treasury.Commands.Common.IBankStatementAutoMatchService,
             Accounting.Application.Treasury.Commands.Common.BankStatementAutoMatchService>();
         services.AddScoped<Accounting.Application.Treasury.Commands.Common.IBankStatementManualMatchService,
