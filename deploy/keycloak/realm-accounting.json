@@ -57,6 +57,11 @@
           "name": "FINANCIAL CORE NATIONAL",
           "description": "مدیریتی سطح کشور",
           "clientRole": true
+        },
+        {
+          "name": "FINANCIAL CORE AUDIT",
+          "description": "مدیر مالی — مشاهدهٔ لاگ تغییرات",
+          "clientRole": true
         }
       ]
     }
@@ -177,7 +182,8 @@
       ],
       "clientRoles": {
         "accounting-api": [
-          "FINANCIAL CORE MALI ADMIN"
+          "FINANCIAL CORE MALI ADMIN",
+          "FINANCIAL CORE AUDIT"
         ]
       }
     },

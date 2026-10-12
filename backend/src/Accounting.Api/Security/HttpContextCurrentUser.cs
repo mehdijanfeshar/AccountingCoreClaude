@@ -70,6 +70,21 @@ public sealed class HttpContextCurrentUser : ICurrentUser
 
     public string? VahedCode => _httpContextAccessor.HttpContext?.User?.FindFirstValue(VahedCodeClaimType);
 
+    public string? DisplayName
+    {
+        get
+        {
+            var user = _httpContextAccessor.HttpContext?.User;
+            if (user is null)
+                return null;
+            var name = user.FindFirstValue("name") ?? user.FindFirstValue(ClaimTypes.Name);
+            if (!string.IsNullOrWhiteSpace(name))
+                return name.Trim();
+            var full = $"{user.FindFirstValue("given_name") ?? user.FindFirstValue(ClaimTypes.GivenName)} {user.FindFirstValue("family_name") ?? user.FindFirstValue(ClaimTypes.Surname)}".Trim();
+            return full.Length > 0 ? full : null;
+        }
+    }
+
     /// <summary>
     /// Header name the «تغییر واحد» picker sets. A header rather than a body/query field on
     /// purpose: it applies uniformly to all ~60 existing commands and queries without changing a

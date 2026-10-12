@@ -40,7 +40,7 @@ public sealed class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQ
         // a permissions problem.
         if (string.IsNullOrWhiteSpace(vahedCode))
         {
-            return new CurrentUserDto(_currentUser.UserId, VahedCode: null, VahedName: null, IsHeadquarters: false, roles, _currentUser.TokenDiagnostics, menuAccess, abilities);
+            return new CurrentUserDto(_currentUser.UserId, VahedCode: null, VahedName: null, IsHeadquarters: false, roles, _currentUser.TokenDiagnostics, menuAccess, abilities, _currentUser.IsInRole(AppRoles.Audit));
         }
 
         var profile = await _readRepository.GetUnitProfileAsync(vahedCode, cancellationToken);
@@ -53,7 +53,8 @@ public sealed class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQ
             roles,
             _currentUser.TokenDiagnostics,
             menuAccess,
-            abilities);
+            abilities,
+            _currentUser.IsInRole(AppRoles.Audit));
     }
 
     /// <summary>

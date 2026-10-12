@@ -21,6 +21,9 @@ public interface ICurrentUser
     /// </summary>
     string UserId { get; }
 
+    /// <summary>نام و نام خانوادگی کاربر از توکن (فقط برای نمایش در لاگ تغییرات)، یا null.</summary>
+    string? DisplayName => null;
+
     /// <summary>
     /// The authenticated user's unit code (Tamin IDP <c>urn:tamin:jwt:claim:org</c> claim), if
     /// present. Wired into <c>VahedScopeBehavior</c> (phase 19) for server-side row scoping.

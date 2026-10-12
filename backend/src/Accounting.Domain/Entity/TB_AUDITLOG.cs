@@ -26,4 +26,15 @@ public partial class TB_AUDITLOG
     public string? YEAR { get; set; }
 
     public DateTime? CHANGEDATE { get; set; }
+
+    // DDL 077 (۲۰۲۶-۱۰-۱۲)
+    public string? IPADDRESS { get; set; }
+
+    public Guid? OPERATIONID { get; set; }
+
+    public string? USERFULLNAME { get; set; }
+
+    public string? RECORDLABEL { get; set; }
+
+    public Guid? PARENTID { get; set; }
 }

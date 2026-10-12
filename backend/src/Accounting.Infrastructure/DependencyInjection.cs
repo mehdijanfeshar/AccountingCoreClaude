@@ -27,10 +27,20 @@ public static class DependencyInjection
             LegacyDbContext.DefaultSchema = schema.Trim().ToUpperInvariant();
         }
 
-        services.AddDbContext<LegacyDbContext>(options =>
+        // لاگ تغییرات (DDL 077 لازم). خاموش‌کردن فقط برای وقتی DDL هنوز اجرا نشده: Audit:Enabled=false.
+        var auditEnabled = !string.Equals(configuration["Audit:Enabled"], "false", StringComparison.OrdinalIgnoreCase);
+
+        services.AddDbContext<LegacyDbContext>((sp, options) =>
+        {
             options.UseOracle(configuration.GetConnectionString("DefaultConnection"))
                 // شمارهٔ عطف سند: سرور هنگام ایجاد تخصیص می‌دهد و هرگز عوض نمی‌شود.
-                .AddInterceptors(new VoucherAtfNumberInterceptor()));
+                .AddInterceptors(new VoucherAtfNumberInterceptor());
+            // بعد از عطف، تا مقدار نهایی ثبت شود.
+            if (auditEnabled)
+                options.AddInterceptors(new AuditLogInterceptor(sp));
+        });
+
+        services.AddScoped<Accounting.Application.AuditLogs.IAuditLogReadRepository, AuditLogReadRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAccountCodeRepository, AccountCodeRepository>();

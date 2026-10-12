@@ -16,6 +16,20 @@
 
 ---
 
+### فاز ۵۷ / لاگ تغییرات (Audit Log) (۲۰۲۶-۱۰-۱۲، هر دو ریپو، برنچ `keycloak`)
+
+**درخواست صاحب پروژه:** هر ثبت/اصلاح/حذف (سند، اعلامیه، کارت بانک و…) با ساعت، کد ملی، مقدار قبلی و جدید ثبت شود؛ فقط مدیر مالی ببیند.
+**تصمیم‌ها (۲۰۲۶-۱۰-۱۲):** نقش جدید Keycloak `FINANCIAL CORE AUDIT` (مدیر مالی)؛ همهٔ جدول‌ها؛ دید فقط واحد خود + زیرمجموعه؛ IP هم ثبت شود (DDL).
+
+- **ثبت:** `AuditLogInterceptor` (Infrastructure/Legacy) روی هر `SaveChanges` — در همان تراکنش (تغییر و لاگش با هم ثبت یا رد می‌شوند). ثبت ⇒ یک ردیف با JSON کل رکورد؛ اصلاح ⇒ یک ردیف به ازای هر ستون (قبلی/جدید، بدون ستون‌های ردیابی ADDUSERID/CHANGEUSERID/CREATEDDATE/UPDATEDDATE)؛ حذف نرم (`ISDELETED` ۰←۱) یا واقعی ⇒ یک ردیف با JSON کل رکورد پیش از حذف؛ بازگردانی جدا. کاربر = `ICurrentUser.UserId` (کد ملی)، نام از claim `name`، IP از `IClientInfoProvider`، واحد = VAHEDCODE رکورد یا واحد مؤثر درخواست، زمان UTC. `OPERATIONID` همهٔ ردیف‌های یک ذخیره را گروه می‌کند؛ `PARENTID` سرسند ردیف‌ها (تا ۳ سطح، مثلاً تفصیلی ردیف ← ردیف ← سند)؛ `RECORDLABEL` شمارهٔ سند و… از `AuditTableCatalog` (Application/AuditLogs، عنوان فارسی جدول‌ها).
+- **ثبت نمی‌شود:** خودِ `TB_AUDITLOG` و خروجی‌های محاسبه‌شدهٔ صورت مالی (`TB_FS_RUN_ROW/ACCOUNT/STATEMENT/CHECK`). تنها نوشتن گروهی (`ExecuteUpdate` در تأیید دائم صورتحساب ماه، `MonthCloseRepository.AcceptReviewedAsync`) ردیف‌به‌ردیف ثبت نمی‌شود؛ ردیف `TB_MONTH_CLOSE_LOG` همان عمل ثبت می‌شود.
+- **مشاهده:** `GET /api/audit-logs` (فیلتر: بازهٔ زمان، کد ملی، جدول، عملیات، رکورد/سرسند، یک ذخیره، جست‌وجو در برچسب/نام، `unitScope` 0/1) و `GET /api/audit-logs/tables`. ماژول `AuditLogs` در `RoleAuthorizationBehavior` پیش از استثنای مدیر ستاد: فقط `AppRoles.Audit`، فقط Query. نقش در `AppRoles.All` نیست (دسترسی دیگری نمی‌دهد) و در `MenuCatalog` نیست (در «دسترسی نقش‌ها» قابل تخصیص نیست). `/api/me` ⇒ `canViewAuditLog`.
+- **UI:** `/reports/audit-log` (منوی «لاگ تغییرات» با `auditOnly`)؛ تاریخچهٔ رکورد با کلیک روی برچسب، «همهٔ تغییرات یک ذخیره»، دیالوگ مقادیر ثبت/حذف.
+- ⚠️ **DDL `077_audit_log.sql`** (ستون‌های IP/OPERATIONID/USERFULLNAME/RECORDLABEL/PARENTID، PK، ۵ ایندکس، تریگر «فقط درج») — **بدون آن هر ذخیره خطا (ORA-00904)**؛ یا `Audit:Enabled=false` (ریسک #۳۶). Keycloak: نقش در `deploy/keycloak/realm-accounting.json` (کاربر نمونهٔ ۰۰۰۰۰۰۰۰۰۲).
+- تست نوشته/اجرا نشد (طبق دستور صاحب پروژه)؛ build هر دو ریپو سبز.
+
+---
+
 ### فاز ۵۶ / دامنهٔ استانی گزارش‌ها، ایجاد سال مالی، گرید گزارشی + مرتب‌سازی، رابط اختتامیه روی گروه (۲۰۲۶-۱۰-۱۱، هر دو ریپو، برنچ `keycloak`)
 
 DDL لازم ندارد. تست خودکار نوشته نشد (تصمیم صاحب پروژه)؛ build و tsc سبز، روی دادهٔ واقعی آزموده نشده.

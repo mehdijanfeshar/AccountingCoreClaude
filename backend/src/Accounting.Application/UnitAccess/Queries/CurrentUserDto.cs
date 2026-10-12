@@ -40,4 +40,5 @@ public sealed record CurrentUserDto(
     IReadOnlyList<string>? Roles = null,
     IReadOnlyList<string>? TokenDiagnostics = null,
     IReadOnlyDictionary<string, int>? MenuAccess = null,
-    IReadOnlyList<string>? Abilities = null);
+    IReadOnlyList<string>? Abilities = null,
+    bool CanViewAuditLog = false);

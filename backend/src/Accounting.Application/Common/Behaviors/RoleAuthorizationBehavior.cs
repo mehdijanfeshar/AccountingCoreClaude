@@ -43,6 +43,14 @@ public sealed class RoleAuthorizationBehavior<TRequest, TResponse> : IPipelineBe
 
         var isQuery = type.Name.EndsWith("Query", StringComparison.Ordinal);
 
+        // لاگ تغییرات: فقط نقش مدیر مالی — پیش از استثنای مدیر ستاد و جدول دسترسی نقش‌ها.
+        if (module == AppRoles.AuditModule)
+        {
+            if (isQuery && _currentUser.IsInRole(AppRoles.Audit))
+                return await next(cancellationToken);
+            throw new RoleAccessDeniedException("لاگ تغییرات فقط برای نقش «مدیر مالی» قابل مشاهده است.");
+        }
+
         if (_currentUser.IsInRole(AppRoles.SetadAdmin))
             return await next(cancellationToken);
 

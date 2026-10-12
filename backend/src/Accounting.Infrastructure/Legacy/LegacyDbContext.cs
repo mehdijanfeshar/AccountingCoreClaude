@@ -921,9 +921,25 @@ public partial class LegacyDbContext : DbContext
 
         modelBuilder.Entity<TB_AUDITLOG>(entity =>
         {
-            entity
-                .HasNoKey()
-                .ToTable("TB_AUDITLOG");
+            // لاگ تغییرات (AuditLogInterceptor) — فقط درج می‌شود؛ کلید فقط برای اینکه EF بتواند درج کند.
+            entity.HasKey(e => e.ID);
+            entity.ToTable("TB_AUDITLOG");
+
+            entity.Property(e => e.IPADDRESS)
+                .HasMaxLength(45)
+                .IsUnicode(false);
+            entity.Property(e => e.OPERATIONID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.PARENTID)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasConversion(GuidToChar36Converter.Instance)
+                .IsFixedLength();
+            entity.Property(e => e.USERFULLNAME).HasMaxLength(200);
+            entity.Property(e => e.RECORDLABEL).HasMaxLength(200);
 
             entity.Property(e => e.ACTIONTYPE)
                 .HasMaxLength(50)
