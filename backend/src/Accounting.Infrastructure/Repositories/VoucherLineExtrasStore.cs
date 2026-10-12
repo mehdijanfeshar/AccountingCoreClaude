@@ -202,8 +202,32 @@ public sealed class VoucherLineExtrasStore : IVoucherLineExtrasStore
     public async Task AddAttributeAsync(TB_ATTRIBSINVOUCHER row, CancellationToken ct)
         => await _db.TB_ATTRIBSINVOUCHERs.AddAsync(row, ct);
 
+    /// <summary>
+    /// کلید یکتای <c>AK_AK_IDENTYDETAILS_IDENTYDE</c> (زیرگروه، ویژگی، ردیف، واحد، سال) شامل <c>ISDELETED</c> نیست؛
+    /// پس در ویرایش سند، ردیفی که <see cref="SoftDeleteExtrasAsync"/> حذف نرم کرده همان کلید را اشغال کرده و درج تازه
+    /// ORA-00001 (409) می‌داد. اگر ردیفی با همین کلید هست (حذف‌شده یا نه)، همان زنده و مقدارش به‌روز می‌شود.
+    /// </summary>
     public async Task AddIdentityDetailAsync(TB_IDENTITYDETAIL row, CancellationToken ct)
-        => await _db.TB_IDENTITYDETAILs.AddAsync(row, ct);
+    {
+        bool SameKey(TB_IDENTITYDETAIL d) => d.IDENTITYSUBGRPS_ID == row.IDENTITYSUBGRPS_ID && d.IDENTITYHEAD_ID == row.IDENTITYHEAD_ID
+            && d.VOUCHERSDETAIL_ID == row.VOUCHERSDETAIL_ID && d.VAHEDCODE == row.VAHEDCODE && d.YEAR == row.YEAR;
+
+        var existing = _db.TB_IDENTITYDETAILs.Local.FirstOrDefault(SameKey)
+            ?? await _db.TB_IDENTITYDETAILs.FirstOrDefaultAsync(
+                d => d.IDENTITYSUBGRPS_ID == row.IDENTITYSUBGRPS_ID && d.IDENTITYHEAD_ID == row.IDENTITYHEAD_ID
+                     && d.VOUCHERSDETAIL_ID == row.VOUCHERSDETAIL_ID && d.VAHEDCODE == row.VAHEDCODE && d.YEAR == row.YEAR,
+                ct);
+        if (existing is null)
+        {
+            await _db.TB_IDENTITYDETAILs.AddAsync(row, ct);
+            return;
+        }
+
+        existing.DETAIL_VALUE = row.DETAIL_VALUE;
+        existing.ISDELETED = false;
+        existing.CHANGEUSERID = row.ADDUSERID;
+        existing.UPDATEDDATE = row.CREATEDDATE;
+    }
 
     public async Task AddReceiptAsync(TB_RECEIP row, CancellationToken ct)
         => await _db.TB_RECEIPs.AddAsync(row, ct);
