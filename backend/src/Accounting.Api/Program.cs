@@ -154,6 +154,8 @@ builder.Services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSch
 builder.Services.AddAuthorizationBuilder()
     .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
+builder.Services.AddSingleton<Accounting.Api.Licensing.LicenseService>();
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 
@@ -209,6 +211,8 @@ if (!useKeycloak)
     app.UseMiddleware<Accounting.Api.Security.PortalRoleClaimsMiddleware>();
 }
 app.UseAuthorization();
+// لایسنس: پس از انقضا (یا برای واحد بی‌مجوز) نوشتن بسته می‌شود (فقط‌خواندنی). بعد از احراز هویت، چون واحد کاربر لازم است.
+app.UseMiddleware<Accounting.Api.Licensing.LicenseMiddleware>();
 
 app.MapControllers();
 

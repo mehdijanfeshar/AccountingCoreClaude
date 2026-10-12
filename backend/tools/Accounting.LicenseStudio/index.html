@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>پنل لایسنس</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1c2430; --muted:#6b7686; --line:#e3e7ee; --accent:#1f5fbf;
+          --ok:#1b7f3b; --warn:#b26a00; --bad:#b3261e; --okbg:#e6f4ea; --warnbg:#fff4e0; --badbg:#fdeceb; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12161c; --card:#1b2129; --text:#e6eaf0; --muted:#97a3b4; --line:#2b3441; --accent:#6aa3f5;
+            --ok:#6fd08c; --warn:#f0b24f; --bad:#ff8a80; --okbg:#173022; --warnbg:#3a2c12; --badbg:#3b1a18; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.7 Tahoma, "Segoe UI", sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:20px; margin:0 0 4px; } .sub { color:var(--muted); margin-bottom:20px; }
+  .bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:16px; }
+  .bar input[type=search] { flex:1; min-width:180px; }
+  button, input, select, textarea { font:inherit; color:inherit; }
+  button { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:6px 12px; cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.link { border:0; background:none; color:var(--accent); padding:2px 6px; }
+  button.danger { color:var(--bad); }
+  button:disabled { opacity:.5; cursor:default; }
+  input, select, textarea { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:6px 10px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { padding:10px 12px; text-align:right; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:12px; } tr:last-child td { border-bottom:0; }
+  .badge { display:inline-block; padding:1px 10px; border-radius:99px; font-size:12px; white-space:nowrap; }
+  .ok { background:var(--okbg); color:var(--ok); } .warn { background:var(--warnbg); color:var(--warn); } .bad { background:var(--badbg); color:var(--bad); }
+  .muted { color:var(--muted); font-size:12px; }
+  .alert { padding:10px 14px; border-radius:10px; margin-bottom:14px; background:var(--badbg); color:var(--bad); }
+  dialog { border:1px solid var(--line); border-radius:14px; background:var(--card); color:var(--text); width:min(620px, calc(100vw - 32px)); padding:20px; }
+  dialog::backdrop { background:rgba(0,0,0,.45); }
+  label { display:block; margin:12px 0 4px; font-weight:600; }
+  .row { display:flex; gap:8px; align-items:center; margin-bottom:6px; } .row input { flex:1; }
+  .actions { display:flex; gap:8px; justify-content:flex-start; margin-top:18px; }
+  .ltr { direction:ltr; unicode-bidi:plaintext; }
+  .empty { padding:36px; text-align:center; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>پنل لایسنس</h1>
+  <div class="sub">صدور و مدیریت لایسنس مشتری‌ها — فقط روی سیستم توسعه‌دهنده. <span id="dir" class="ltr"></span></div>
+  <div id="err" class="alert" hidden></div>
+
+  <div class="bar">
+    <input id="q" type="search" placeholder="جست‌وجوی مشتری…">
+    <select id="filter">
+      <option value="">همه وضعیت‌ها</option>
+      <option value="soon">نزدیک انقضا (۳۰ روز)</option>
+      <option value="grace">مهلت ارفاقی</option>
+      <option value="bad">منقضی / فقط‌خواندنی</option>
+    </select>
+    <button class="primary" id="newCustomer">مشتری جدید</button>
+  </div>
+
+  <div class="card"><table>
+    <thead><tr><th>مشتری</th><th>نوع</th><th>انقضا</th><th>وضعیت</th><th>آخرین صدور</th><th></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table><div id="empty" class="empty" hidden>هنوز مشتری‌ای ثبت نشده است.</div></div>
+</main>
+
+<dialog id="dlgCustomer">
+  <h2 id="dlgCustomerTitle" style="margin-top:0">مشتری</h2>
+  <label for="cName">نام مشتری</label><input id="cName" style="width:100%">
+  <label for="cNotes">یادداشت (تلفن، قرارداد، …)</label><textarea id="cNotes" rows="3" style="width:100%"></textarea>
+  <div class="actions"><button class="primary" id="cSave">ذخیره</button><button id="cCancel">انصراف</button></div>
+</dialog>
+
+<dialog id="dlgIssue">
+  <h2 id="iTitle" style="margin-top:0">صدور لایسنس</h2>
+  <label>نوع لایسنس</label>
+  <div class="row">
+    <label style="margin:0;font-weight:400"><input type="radio" name="mode" value="install" checked style="flex:none"> کل نصب (همهٔ واحدها یک تاریخ)</label>
+    <label style="margin:0;font-weight:400"><input type="radio" name="mode" value="units" style="flex:none"> به‌تفکیک واحد</label>
+  </div>
+
+  <div id="installBox">
+    <label for="iExp">تاریخ انقضا</label>
+    <div class="row"><input id="iExp" type="date" style="flex:none"><span id="iExpFa" class="muted"></span>
+      <button class="link" data-add="6">+۶ ماه</button><button class="link" data-add="12">+۱ سال</button></div>
+  </div>
+
+  <div id="unitsBox" hidden>
+    <label>واحدها (فقط واحدهای فهرست مجازند)</label>
+    <div id="unitRows"></div>
+    <div class="row"><button class="link" id="addUnit">+ افزودن واحد</button>
+      <button class="link" id="allPlus12">همه +۱ سال از امروز/انقضای فعلی</button></div>
+  </div>
+
+  <label for="iGrace">مهلت ارفاقی پس از انقضا (روز)</label><input id="iGrace" type="number" min="0" max="365" value="15" style="width:120px">
+  <label for="iNote">یادداشت این صدور</label><input id="iNote" style="width:100%" placeholder="مثلاً: تمدید سالانه ۱۴۰۵، فاکتور ۱۲۳">
+  <div id="iErr" class="alert" hidden style="margin-top:12px"></div>
+  <div class="actions"><button class="primary" id="iSave">صدور و دانلود</button><button id="iCancel">انصراف</button></div>
+</dialog>
+
+<dialog id="dlgHistory">
+  <h2 style="margin-top:0" id="hTitle">تاریخچهٔ صدور</h2>
+  <div id="hBody"></div>
+  <div class="actions"><button id="hClose">بستن</button></div>
+</dialog>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const fa = (iso) => iso ? new Date(iso + 'T00:00:00').toLocaleDateString('fa-IR-u-ca-persian', { year:'numeric', month:'long', day:'numeric' }) : '—';
+const today = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+const daysTo = (s) => Math.round((new Date(s + 'T00:00:00') - today()) / 86400000);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function api(path, body) {
+  const res = await fetch(path, { method: body === undefined ? 'GET' : 'POST', headers: { 'X-Studio': '1', ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) }, body: body !== undefined ? JSON.stringify(body) : undefined });
+  if (!res.ok) throw new Error((await res.text()).replace(/^"|"$/g, '') || res.statusText);
+  return res.headers.get('content-type')?.includes('json') ? res.json() : res;
+}
+let state = { customers: [], keyOk: true };
+
+// وضعیت یک تاریخ نسبت به امروز + مهلت: {cls, text, days}
+function status(exp, grace) {
+  const d = daysTo(exp);
+  if (d >= 0) return { cls: d <= 30 ? 'warn' : 'ok', text: d <= 30 ? `${d} روز تا انقضا` : `${d} روز باقی`, days: d, soon: d <= 30 };
+  if (grace + d >= 0) return { cls: 'warn', text: `مهلت ارفاقی (${grace + d} روز)`, days: d, grace: true };
+  return { cls: 'bad', text: `منقضی (${-d} روز پیش)`, days: d, dead: true };
+}
+// آخرین لایسنس هر مشتری و نزدیک‌ترین انقضای آن
+function summarize(c) {
+  const last = c.licenses[c.licenses.length - 1];
+  if (!last) return null;
+  const items = last.units ? last.units.map(u => ({ code: u.code, exp: u.expiresAt })) : [{ code: null, exp: last.expiresAt }];
+  const sts = items.map(i => ({ ...i, st: status(i.exp, last.graceDays) }));
+  const worst = sts.reduce((a, b) => (a.st.days <= b.st.days ? a : b));
+  return { last, items: sts, worst };
+}
+
+function render() {
+  $('#err').hidden = state.keyOk;
+  if (!state.keyOk) $('#err').textContent = 'کلید خصوصی (private.pem) در پوشهٔ داده پیدا نشد؛ صدور ممکن نیست.';
+  const q = $('#q').value.trim(), f = $('#filter').value;
+  const list = state.customers.map(c => ({ c, s: summarize(c) })).filter(({ c, s }) => {
+    if (q && !(c.name + ' ' + (c.notes || '')).includes(q)) return false;
+    if (f === 'soon') return s && s.items.some(i => i.st.soon);
+    if (f === 'grace') return s && s.items.some(i => i.st.grace);
+    if (f === 'bad') return !s || s.items.some(i => i.st.dead);
+    return true;
+  }).sort((a, b) => (a.s ? a.s.worst.st.days : -1e9) - (b.s ? b.s.worst.st.days : -1e9));
+  $('#empty').hidden = list.length > 0;
+  $('#empty').textContent = state.customers.length ? 'موردی یافت نشد.' : 'هنوز مشتری‌ای ثبت نشده است.';
+  $('#rows').innerHTML = list.map(({ c, s }) => {
+    const unitsHtml = s && s.last.units ? `<div class="muted">${s.items.map(i => `${esc(i.code)}: <span class="badge ${i.st.cls}">${fa(i.exp)}</span>`).join(' ')}</div>` : '';
+    return `<tr>
+      <td><b>${esc(c.name)}</b><div class="muted">${esc(c.notes)}</div></td>
+      <td>${!s ? '—' : s.last.units ? `به‌تفکیک واحد (${s.last.units.length})` : 'کل نصب'}</td>
+      <td>${!s ? '—' : s.last.units ? fa(s.worst.exp) + ' <span class="muted">(نزدیک‌ترین)</span>' : fa(s.last.expiresAt)}${unitsHtml}</td>
+      <td>${!s ? '<span class="badge bad">صادر نشده</span>' : `<span class="badge ${s.worst.st.cls}">${s.worst.st.text}</span>`}</td>
+      <td class="muted">${s ? fa(s.last.issuedAt) : '—'}</td>
+      <td style="white-space:nowrap">
+        <button class="link" data-act="issue" data-id="${c.id}">${s ? 'تمدید / صدور' : 'صدور'}</button>
+        ${s ? `<button class="link" data-act="dl" data-id="${s.last.id}">دانلود</button>` : ''}
+        <button class="link" data-act="hist" data-id="${c.id}">تاریخچه</button>
+        <button class="link" data-act="edit" data-id="${c.id}">ویرایش</button>
+        <button class="link danger" data-act="del" data-id="${c.id}">حذف</button>
+      </td></tr>`;
+  }).join('');
+}
+
+async function load() {
+  const s = await api('/api/state');
+  state = s; $('#dir').textContent = s.dir; render();
+}
+function showErr(e) { $('#err').hidden = false; $('#err').textContent = e.message; }
+
+// ---- مشتری ----
+let editingCustomer = null;
+function openCustomer(c) {
+  editingCustomer = c; $('#dlgCustomerTitle').textContent = c ? 'ویرایش مشتری' : 'مشتری جدید';
+  $('#cName').value = c?.name ?? ''; $('#cNotes').value = c?.notes ?? ''; $('#dlgCustomer').showModal();
+}
+$('#newCustomer').onclick = () => openCustomer(null);
+$('#cCancel').onclick = () => $('#dlgCustomer').close();
+$('#cSave').onclick = async () => {
+  try {
+    const body = { name: $('#cName').value, notes: $('#cNotes').value };
+    const c = await api(editingCustomer ? `/api/customers/${editingCustomer.id}/update` : '/api/customers', body);
+    $('#dlgCustomer').close(); await load();
+    if (!editingCustomer) openIssue(c.id);
+  } catch (e) { showErr(e); }
+};
+
+// ---- صدور ----
+let issuingFor = null;
+function addUnitRow(code = '', exp = '') {
+  const div = document.createElement('div'); div.className = 'row';
+  div.innerHTML = `<input class="u-code ltr" placeholder="کد واحد" value="${esc(code)}" style="max-width:160px"><input class="u-exp" type="date" value="${exp}" style="flex:none"><span class="muted u-fa"></span><button class="link danger">حذف</button>`;
+  const inp = div.querySelector('.u-exp'), out = div.querySelector('.u-fa');
+  const upd = () => out.textContent = fa(inp.value); inp.oninput = upd; upd();
+  div.querySelector('button').onclick = () => div.remove();
+  $('#unitRows').append(div);
+}
+function setMode(m) {
+  document.querySelector(`input[name=mode][value=${m}]`).checked = true;
+  $('#installBox').hidden = m !== 'install'; $('#unitsBox').hidden = m !== 'units';
+}
+document.querySelectorAll('input[name=mode]').forEach(r => r.onchange = () => setMode(r.value));
+const updExp = () => $('#iExpFa').textContent = fa($('#iExp').value);
+$('#iExp').oninput = updExp;
+// افزودن ماه به max(امروز، تاریخ فعلی)
+function plusMonths(from, m) {
+  const base = from && new Date(from + 'T00:00:00') > today() ? new Date(from + 'T00:00:00') : today();
+  base.setMonth(base.getMonth() + m); return iso(base);
+}
+document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { $('#iExp').value = plusMonths($('#iExp').value, +b.dataset.add); updExp(); });
+$('#addUnit').onclick = () => addUnitRow();
+$('#allPlus12').onclick = () => document.querySelectorAll('#unitRows .row').forEach(r => {
+  const i = r.querySelector('.u-exp'); i.value = plusMonths(i.value, 12); i.oninput();
+});
+
+function openIssue(customerId) {
+  issuingFor = state.customers.find(c => c.id === customerId); if (!issuingFor) return;
+  const last = issuingFor.licenses[issuingFor.licenses.length - 1];
+  $('#iTitle').textContent = `صدور لایسنس — ${issuingFor.name}`;
+  $('#iErr').hidden = true; $('#unitRows').innerHTML = ''; $('#iNote').value = '';
+  $('#iGrace').value = last?.graceDays ?? 15;
+  if (last?.units) { setMode('units'); last.units.forEach(u => addUnitRow(u.code, u.expiresAt)); }
+  else { setMode('install'); $('#iExp').value = plusMonths(last?.expiresAt ?? '', 12); }
+  if (last?.units) document.querySelectorAll('#unitRows .row').forEach(r => { const i = r.querySelector('.u-exp'); i.value = plusMonths(i.value, 12); i.oninput(); });
+  updExp(); $('#dlgIssue').showModal();
+}
+$('#iCancel').onclick = () => $('#dlgIssue').close();
+$('#iSave').onclick = async () => {
+  try {
+    const perUnit = document.querySelector('input[name=mode]:checked').value === 'units';
+    const body = { graceDays: +$('#iGrace').value, note: $('#iNote').value,
+      ...(perUnit ? { units: [...document.querySelectorAll('#unitRows .row')].map(r => ({ code: r.querySelector('.u-code').value, expiresAt: r.querySelector('.u-exp').value })) }
+                  : { expiresAt: $('#iExp').value }) };
+    if (perUnit && !body.units.length) throw new Error('حداقل یک واحد اضافه کنید.');
+    const lic = await api(`/api/customers/${issuingFor.id}/licenses`, body);
+    $('#dlgIssue').close(); await load(); download(lic.id, issuingFor.name);
+  } catch (e) { $('#iErr').hidden = false; $('#iErr').textContent = e.message; }
+};
+async function download(licId, name) {
+  const res = await api(`/api/licenses/${licId}/file`);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(await res.blob()); a.download = `license-${name}.lic`.replace(/[\\/:*?"<>|\s]+/g, '_');
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+// ---- تاریخچه ----
+function openHistory(c) {
+  $('#hTitle').textContent = `تاریخچهٔ صدور — ${c.name}`;
+  $('#hBody').innerHTML = c.licenses.length ? `<table><thead><tr><th>تاریخ صدور</th><th>انقضا</th><th>مهلت</th><th>یادداشت</th><th></th></tr></thead><tbody>` +
+    [...c.licenses].reverse().map(l => `<tr><td>${fa(l.issuedAt)}</td>
+      <td>${l.units ? l.units.map(u => `${esc(u.code)}: ${fa(u.expiresAt)}`).join('<br>') : fa(l.expiresAt)}</td>
+      <td>${l.graceDays} روز</td><td>${esc(l.note)}</td>
+      <td><button class="link" data-dl="${l.id}">دانلود</button></td></tr>`).join('') + '</tbody></table>' : '<div class="empty">چیزی صادر نشده است.</div>';
+  $('#hBody').querySelectorAll('[data-dl]').forEach(b => b.onclick = () => download(b.dataset.dl, c.name));
+  $('#dlgHistory').showModal();
+}
+$('#hClose').onclick = () => $('#dlgHistory').close();
+
+$('#rows').onclick = async (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  const c = state.customers.find(x => x.id === b.dataset.id);
+  try {
+    if (b.dataset.act === 'issue') openIssue(b.dataset.id);
+    else if (b.dataset.act === 'edit') openCustomer(c);
+    else if (b.dataset.act === 'hist') openHistory(c);
+    else if (b.dataset.act === 'dl') { const owner = state.customers.find(x => x.licenses.some(l => l.id === b.dataset.id)); download(b.dataset.id, owner.name); }
+    else if (b.dataset.act === 'del' && confirm(`مشتری «${c.name}» و تاریخچهٔ صدورش حذف شود؟ (لایسنس‌های صادرشده همچنان کار می‌کنند)`)) { await api(`/api/customers/${c.id}/delete`, {}); await load(); }
+  } catch (err) { showErr(err); }
+};
+$('#q').oninput = render; $('#filter').onchange = render;
+load().catch(showErr);
+</script>
+</body>
+</html>
