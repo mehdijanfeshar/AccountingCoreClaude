@@ -23,7 +23,7 @@
 - **ساختار:** `<Feature>/Commands|Queries` ⇒ `Application/Commands/<Feature>` و `Application/Queries/<Feature>` (۷۲ ویژگی، ۱۰۶۵ فایل با `git mv`). namespaceها هم‌نام پوشه شدند (`Accounting.Application.Commands.<Feature>...`) در ۱۶۰۹ فایل. پوشه‌های غیر CQRS (Reports، FinancialStatements، Vouchers/Inbox|Restore|YearEnd، Common/Interfaces) دست‌نخورده.
 - **کارایی:** ⚠️ DDL `078_performance_indexes.sql` (ایندکس سر/ردیف سند، پیوند تفصیلی، کدینگ؛ اجرا شد)؛ کش ۶۰ثانیه‌ای `GetAllUnitsAsync`/`GetUnitProvincesAsync`؛ دفتر کل از ۳ به ۲ پیمایش؛ `ChunkedAsync` (۹۰۰تایی) برای `IN` در مغایرت‌گیری بانک (ORA-01795).
 - **بررسی‌شده و بدون تغییر:** N+1 در handlerهای Application کوچک/کران‌دار است. `VoucherReviewReadRepository` دو زیرکوئری همبسته برای جمع هر سند دارد (کاندیدای بهینه‌سازی با join+group)، ولی بدون Oracle زنده تغییر نکرد.
-- **باز:** `EXPLAIN PLAN` تراز/دفتر کل روی دادهٔ واقعی؛ تست اجرا نشد (فقط build).
+- **تست (۲۰۲۶-۱۰-۱۳):** ۶۷ تست کهنه درست شد؛ باگ جابه‌جایی namespace (تشخیص ماژول در `RoleAuthorizationBehavior`/`FsPermissionBehavior`) با `ModuleOf` رفع شد؛ تست ماژول‌های بدون تست (خزانه‌داری، تنخواه، صورت‌های مالی، قالب عملیات، برگشت ماه، لاگ، سال مالی، نقش‌ها، رابط اختتامیه). کل سوییت ۴۳۳۶ تست، سبز. باز: سازندگان سند خزانه، موتور صورت مالی، کنترلرها/ریپازیتوری‌ها؛ باگ احتمالی `FsTemplateChecker.cs:80` (کد تکراری)؛ `EXPLAIN PLAN` تراز/دفتر کل روی داده واقعی.
 
 ### فاز ۵۷ / لاگ تغییرات (Audit Log) (۲۰۲۶-۱۰-۱۲، هر دو ریپو، برنچ `keycloak`)
 
