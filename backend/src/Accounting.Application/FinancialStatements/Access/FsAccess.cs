@@ -120,7 +120,7 @@ public sealed class FsPermissionBehavior<TRequest, TResponse> : IPipelineBehavio
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
         var op = Cache.GetOrAdd(typeof(TRequest), t =>
-            t.Namespace?.StartsWith("Accounting.Application.FinancialStatements", StringComparison.Ordinal) == true
+            Accounting.Application.Common.Behaviors.RoleAuthorizationBehavior<TRequest, TResponse>.ModuleOf(t) == "FinancialStatements"
                 ? t.GetCustomAttribute<FsRequiresAttribute>()?.Operation ?? FsOperation.View
                 : null);
 

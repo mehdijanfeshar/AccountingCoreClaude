@@ -140,9 +140,8 @@ namespace Accounting.Application.Tests.Common.Behaviors
         public void EveryCatalogModule_IsARealApplicationModule()
         {
             var modules = typeof(AppRoles).Assembly.GetTypes()
-                .Select(t => t.Namespace?.Split('.'))
-                .Where(p => p is { Length: > 2 } && p[0] == "Accounting" && p[1] == "Application")
-                .Select(p => p![2])
+                .Select(t => Accounting.Application.Common.Behaviors.RoleAuthorizationBehavior<object, object>.ModuleOf(t))
+                .Where(m => m.Length > 0)
                 .ToHashSet(StringComparer.Ordinal);
 
             var unknown = MenuCatalog.All.SelectMany(m => m.Modules).Distinct().Where(m => !modules.Contains(m)).ToList();

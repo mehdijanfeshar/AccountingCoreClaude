@@ -33,11 +33,23 @@ public sealed class RoleAuthorizationBehavior<TRequest, TResponse> : IPipelineBe
         _accessStore = accessStore;
     }
 
+    /// <summary>
+    /// ماژول یک درخواست از روی namespace: <c>Accounting.Application.Commands.&lt;Module&gt;.…</c> و <c>Accounting.Application.Queries.&lt;Module&gt;.…</c>
+    /// (پوشه‌های ریشهٔ Commands/Queries رد می‌شوند) یا <c>Accounting.Application.&lt;Module&gt;.…</c>.
+    /// </summary>
+    public static string ModuleOf(Type type)
+    {
+        var parts = (type.Namespace ?? string.Empty).Split('.');
+        if (parts.Length <= 2 || parts[0] != "Accounting" || parts[1] != "Application")
+            return string.Empty;
+
+        return parts[2] is "Commands" or "Queries" && parts.Length > 3 ? parts[3] : parts[2];
+    }
+
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
         var type = typeof(TRequest);
-        var parts = (type.Namespace ?? string.Empty).Split('.');
-        var module = parts.Length > 2 && parts[0] == "Accounting" && parts[1] == "Application" ? parts[2] : string.Empty;
+        var module = ModuleOf(type);
         if (module is "" or "UnitAccess")
             return await next(cancellationToken);
 
