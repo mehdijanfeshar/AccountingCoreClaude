@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by انتقال وجه <c>approve</c> when today's already-<see cref="Accounting.Domain.ValueObjects.TransferState.Executed"/>
@@ -6,7 +6,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// transfer's amount, would exceed <c>TB_TR_SETTING.DAILY_TRANSFER_LIMIT</c> — blocking control
 /// (b), خزانه‌داری، بخش ۴-ج.
 /// </summary>
-public sealed class TreasuryTransferDailyLimitExceededException : Exception
+public sealed class TreasuryTransferDailyLimitExceededException : Exception, IPublicProblemException
 {
     public TreasuryTransferDailyLimitExceededException(Guid transferId, decimal alreadyTransferredToday, decimal amount, decimal dailyLimit)
         : base($"Transfer {transferId}: {alreadyTransferredToday} + {amount} would exceed daily limit {dailyLimit}.")
@@ -24,6 +24,8 @@ public sealed class TreasuryTransferDailyLimitExceededException : Exception
     public decimal Amount { get; }
 
     public decimal DailyLimit { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail =>
         $"مجموع انتقال‌های امروز از این حساب ({AlreadyTransferredToday:N0}) به‌علاوهٔ این انتقال ({Amount:N0}) از سقف روزانه ({DailyLimit:N0}) بیشتر می‌شود.";

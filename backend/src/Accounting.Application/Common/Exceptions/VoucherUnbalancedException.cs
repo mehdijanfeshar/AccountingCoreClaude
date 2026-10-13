@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// سند ناتراز (یا بدون ردیف) نمی‌تواند از «یادداشت» خارج شود — تصمیم صاحب پروژه ۲۰۲۶-۱۰-۰۷
@@ -6,7 +6,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// تراز می‌خواهد. 409 مثل <see cref="VoucherNotEditableException"/>: دربارهٔ وضعیت داده است و
 /// کاربر خودش می‌تواند درستش کند.
 /// </summary>
-public sealed class VoucherUnbalancedException : Exception
+public sealed class VoucherUnbalancedException : Exception, IPublicProblemException
 {
     public VoucherUnbalancedException(Guid voucherHeadId, string? docNum, decimal debtor, decimal creditor, int lineCount)
         : base($"Voucher {voucherHeadId} is unbalanced (debtor {debtor}, creditor {creditor}, lines {lineCount}).")
@@ -19,6 +19,8 @@ public sealed class VoucherUnbalancedException : Exception
     }
 
     public Guid VoucherHeadId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail { get; }
 

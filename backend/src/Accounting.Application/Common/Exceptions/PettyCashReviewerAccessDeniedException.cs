@@ -13,7 +13,7 @@
 /// <see cref="PettyCashSelfReviewConflictException"/> (409), which fires only once this check has
 /// already passed.
 /// </summary>
-public sealed class PettyCashReviewerAccessDeniedException : Exception
+public sealed class PettyCashReviewerAccessDeniedException : Exception, IPublicProblemException
 {
     public PettyCashReviewerAccessDeniedException(Guid expenseDocId, Guid revolvingFundId)
         : base($"Caller is not an active reviewer for revolving fund {revolvingFundId} (expense document {expenseDocId}).")
@@ -25,6 +25,8 @@ public sealed class PettyCashReviewerAccessDeniedException : Exception
     public Guid ExpenseDocId { get; }
 
     public Guid RevolvingFundId { get; }
+
+    public int StatusCode => 403;
 
     public string PublicDetail => "شما بررسی‌کنندهٔ مجاز این تنخواه نیستید.";
 }

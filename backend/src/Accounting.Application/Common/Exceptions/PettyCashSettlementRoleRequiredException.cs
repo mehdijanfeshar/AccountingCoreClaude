@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown when the caller finalizing a settlement is not an active
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// (PettyCashRole=4) همان تنخواه". 403, a straight permissions gap — same shape as
 /// <c>PettyCashReplenishmentRoleRequiredException</c>.
 /// </summary>
-public sealed class PettyCashSettlementRoleRequiredException : Exception
+public sealed class PettyCashSettlementRoleRequiredException : Exception, IPublicProblemException
 {
     public PettyCashSettlementRoleRequiredException(Guid fundId)
         : base($"Caller is not an active SeniorAccountant reviewer of petty-cash fund {fundId}.")
@@ -16,6 +16,8 @@ public sealed class PettyCashSettlementRoleRequiredException : Exception
     }
 
     public Guid FundId { get; }
+
+    public int StatusCode => 403;
 
     public string PublicDetail => "فقط حسابدار ارشد همین تنخواه مجاز به نهایی‌سازی تسویهٔ دوره است.";
 }

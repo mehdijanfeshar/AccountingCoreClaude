@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown when a خزانه‌داری بخش ۴-ج operation (دریافت وجه <c>register</c>, انتقال وجه
@@ -9,7 +9,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// type rather than reused — that exception's wording/XML doc is scoped to درخواست پرداخت's own
 /// three GL accounts.
 /// </summary>
-public sealed class TreasurySettingValueMissingException : Exception
+public sealed class TreasurySettingValueMissingException : Exception, IPublicProblemException
 {
     public TreasurySettingValueMissingException(string settingLabel)
         : base($"Treasury setting '{settingLabel}' is not configured for this unit.")
@@ -18,6 +18,8 @@ public sealed class TreasurySettingValueMissingException : Exception
     }
 
     public string SettingLabel { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => $"«{SettingLabel}» هنوز برای این واحد تعریف نشده است.";
 }

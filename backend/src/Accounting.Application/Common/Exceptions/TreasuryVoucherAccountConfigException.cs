@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown when a خزانه‌داری بخش ۴-ج automatic voucher's حساب معین is configured with more تفصیلی
@@ -6,7 +6,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// level) — same shape/reasoning as <c>PaymentRequestVoucherAccountConfigException</c> (بخش ۴-ب),
 /// deliberately its own type so this module never needs to touch بخش ۴-ب's exception.
 /// </summary>
-public sealed class TreasuryVoucherAccountConfigException : Exception
+public sealed class TreasuryVoucherAccountConfigException : Exception, IPublicProblemException
 {
     public TreasuryVoucherAccountConfigException(string accountLabel, Guid accountCodeId, string reason)
         : base($"Account '{accountLabel}' ({accountCodeId}) has an unsupported تفصیلی configuration: {reason}")
@@ -21,6 +21,8 @@ public sealed class TreasuryVoucherAccountConfigException : Exception
     public Guid AccountCodeId { get; }
 
     public string Reason { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => $"پیکربندی تفصیلی حساب «{AccountLabel}» پشتیبانی نمی‌شود: {Reason}";
 }

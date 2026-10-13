@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// The settlement's current Draft period has no <c>COUNTED_BALANCE</c> recorded yet — the caller
@@ -6,7 +6,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// (<c>docs/tankhah-khazaneh-module.md</c> section 9). 409: the period exists but is not in the
 /// state finalize requires, same shape as <c>PettyCashReplenishmentStateConflictException</c>.
 /// </summary>
-public sealed class PettyCashSettlementCountedBalanceRequiredException : Exception
+public sealed class PettyCashSettlementCountedBalanceRequiredException : Exception, IPublicProblemException
 {
     public PettyCashSettlementCountedBalanceRequiredException(Guid fundId, Guid periodId)
         : base($"Settlement period {periodId} of fund {fundId} has no COUNTED_BALANCE recorded yet.")
@@ -18,6 +18,8 @@ public sealed class PettyCashSettlementCountedBalanceRequiredException : Excepti
     public Guid FundId { get; }
 
     public Guid PeriodId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "پیش از نهایی‌سازی، ابتدا باید شمارش صندوق دوره ثبت شود.";
 }

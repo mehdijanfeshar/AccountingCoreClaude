@@ -1,4 +1,4 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Exceptions;
 
@@ -16,7 +16,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// is entitled to edit/delete this document, just not while it is in this state, so the request
 /// conflicts with the resource's current state rather than being malformed or forbidden outright.
 /// </summary>
-public sealed class PettyCashDocNotEditableException : Exception
+public sealed class PettyCashDocNotEditableException : Exception, IPublicProblemException
 {
     public PettyCashDocNotEditableException(Guid expenseDocId, PettyCashDocState state, string action)
         : base($"Petty-cash expense document {expenseDocId} is in state {state} and cannot be {action}.")
@@ -32,6 +32,8 @@ public sealed class PettyCashDocNotEditableException : Exception
 
     /// <summary>Either <c>"updated"</c> or <c>"deleted"</c> — drives <see cref="PublicDetail"/>.</summary>
     public string Action { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail =>
         $"صورت‌هزینه در وضعیت «{StateLabel(State)}» است و قابل {ActionLabel(Action)} نیست.";

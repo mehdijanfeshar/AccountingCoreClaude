@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown on Submit when another non-deleted, non-rejected request in the same unit already
@@ -6,7 +6,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// (<c>docs/tankhah-khazaneh-module.md</c> §۱۰). Application-level duplicate (no DB UNIQUE
 /// constraint backs it — a rejected/soft-deleted request must not block reuse). <b>409</b>.
 /// </summary>
-public sealed class PaymentRequestDuplicateException : Exception
+public sealed class PaymentRequestDuplicateException : Exception, IPublicProblemException
 {
     public PaymentRequestDuplicateException(Guid paymentRequestId, string beneficiaryNationalId, string invoiceRef)
         : base($"Payment request {paymentRequestId} duplicates an existing request with national id {beneficiaryNationalId} and invoice ref {invoiceRef}.")
@@ -15,6 +15,8 @@ public sealed class PaymentRequestDuplicateException : Exception
     }
 
     public Guid PaymentRequestId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "درخواست پرداختی با همین شناسهٔ ملی ذی‌نفع و شمارهٔ فاکتور از قبل ثبت شده است.";
 }

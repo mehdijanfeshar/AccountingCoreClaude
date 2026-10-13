@@ -1,11 +1,11 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown on Submit when <c>INVOICE_REF</c> is set but <c>INVOICE_APPROVED</c> is still
 /// <see langword="false"/> — خزانه‌داری، بخش ۴-الف: تیک دستی تأیید فاکتور اجباری است قبل از ارسال
 /// (<c>docs/tankhah-khazaneh-module.md</c> §۱۰). <b>400</b>.
 /// </summary>
-public sealed class PaymentRequestInvoiceNotApprovedException : Exception
+public sealed class PaymentRequestInvoiceNotApprovedException : Exception, IPublicProblemException
 {
     public PaymentRequestInvoiceNotApprovedException(Guid paymentRequestId)
         : base($"Payment request {paymentRequestId} has an invoice reference but INVOICE_APPROVED is false.")
@@ -14,6 +14,8 @@ public sealed class PaymentRequestInvoiceNotApprovedException : Exception
     }
 
     public Guid PaymentRequestId { get; }
+
+    public int StatusCode => 400;
 
     public string PublicDetail => "شمارهٔ فاکتور ثبت شده اما تیک تأیید فاکتور زده نشده است.";
 }

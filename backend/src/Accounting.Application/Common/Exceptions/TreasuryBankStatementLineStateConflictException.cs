@@ -1,4 +1,4 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Exceptions;
 
@@ -9,7 +9,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// <c>resolve</c> requires <see cref="BankStatementLineMatchState.Unmatched"/>; <c>unresolve</c>
 /// requires <see cref="BankStatementLineMatchState.Resolved"/>) — خزانه‌داری، بخش ۴-د. <b>409.</b>
 /// </summary>
-public sealed class TreasuryBankStatementLineStateConflictException : Exception
+public sealed class TreasuryBankStatementLineStateConflictException : Exception, IPublicProblemException
 {
     public TreasuryBankStatementLineStateConflictException(Guid lineId, BankStatementLineMatchState actualState, string requiredStateDescription)
         : base($"BankStatementLine {lineId} is in match state {actualState}, but this action requires {requiredStateDescription}.")
@@ -21,6 +21,8 @@ public sealed class TreasuryBankStatementLineStateConflictException : Exception
     public Guid LineId { get; }
 
     public BankStatementLineMatchState ActualState { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => $"ردیف صورت‌حساب در وضعیت تطبیق «{StateLabel(ActualState)}» است و این اقدام روی آن ممکن نیست.";
 

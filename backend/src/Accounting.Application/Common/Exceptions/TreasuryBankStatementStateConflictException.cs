@@ -1,4 +1,4 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Exceptions;
 
@@ -8,7 +8,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// (<c>docs/tankhah-khazaneh-module.md</c> §۱۰). Same state-based-refusal shape as
 /// <c>TreasuryReceiptStateConflictException</c>. <b>409.</b>
 /// </summary>
-public sealed class TreasuryBankStatementStateConflictException : Exception
+public sealed class TreasuryBankStatementStateConflictException : Exception, IPublicProblemException
 {
     public TreasuryBankStatementStateConflictException(Guid statementId, BankStatementState actualState, string requiredStateDescription)
         : base($"BankStatement {statementId} is in state {actualState}, but this action requires {requiredStateDescription}.")
@@ -20,6 +20,8 @@ public sealed class TreasuryBankStatementStateConflictException : Exception
     public Guid StatementId { get; }
 
     public BankStatementState ActualState { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => $"صورت‌حساب بانکی در وضعیت «{StateLabel(ActualState)}» است و این اقدام روی آن ممکن نیست.";
 

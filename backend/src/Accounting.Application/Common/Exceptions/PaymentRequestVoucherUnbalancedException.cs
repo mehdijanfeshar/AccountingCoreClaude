@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Defensive guard for both بخش ۴-ب automatic vouchers («شناسایی بدهی» و «پرداخت») — closes open
@@ -8,7 +8,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// can never actually fire; it exists so a future change to that construction cannot silently post
 /// an unbalanced GL voucher — same role as <c>PettyCashSettlementUnbalancedException</c>.
 /// </summary>
-public sealed class PaymentRequestVoucherUnbalancedException : Exception
+public sealed class PaymentRequestVoucherUnbalancedException : Exception, IPublicProblemException
 {
     public PaymentRequestVoucherUnbalancedException(string voucherLabel, decimal totalDebtor, decimal totalCredit)
         : base($"{voucherLabel} voucher is unbalanced: debtor {totalDebtor} != credit {totalCredit}.")
@@ -23,6 +23,8 @@ public sealed class PaymentRequestVoucherUnbalancedException : Exception
     public decimal TotalDebtor { get; }
 
     public decimal TotalCredit { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => $"سند «{VoucherLabel}» تراز نیست؛ عملیات متوقف شد.";
 }

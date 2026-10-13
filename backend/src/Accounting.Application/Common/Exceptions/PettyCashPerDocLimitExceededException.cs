@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by <c>SubmitPettyCashExpenseDocCommandHandler</c> when a document's total amount
@@ -8,7 +8,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// request itself (this specific amount, on this specific fund, right now) is invalid, not a
 /// conflict with another resource.
 /// </summary>
-public sealed class PettyCashPerDocLimitExceededException : Exception
+public sealed class PettyCashPerDocLimitExceededException : Exception, IPublicProblemException
 {
     public PettyCashPerDocLimitExceededException(Guid expenseDocId, decimal totalAmount, decimal perDocLimit)
         : base($"Petty-cash expense document {expenseDocId} total {totalAmount} exceeds the " +
@@ -24,6 +24,8 @@ public sealed class PettyCashPerDocLimitExceededException : Exception
     public decimal TotalAmount { get; }
 
     public decimal PerDocLimit { get; }
+
+    public int StatusCode => 400;
 
     public string PublicDetail =>
         $"مبلغ کل سند ({TotalAmount:N0}) از سقف مجاز هر سند این تنخواه ({PerDocLimit:N0}) بیشتر است.";

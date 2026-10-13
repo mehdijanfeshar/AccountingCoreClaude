@@ -11,12 +11,14 @@ namespace Accounting.Application.Common.Exceptions;
 /// difference between a fixable error and a mystery, and it reveals nothing a user of the form
 /// does not already know.
 /// </summary>
-public abstract class TafsiliLevelRuleException : Exception
+public abstract class TafsiliLevelRuleException : Exception, IPublicProblemException
 {
     protected TafsiliLevelRuleException(string message)
         : base(message)
     {
     }
+
+    public int StatusCode => 400;
 
     /// <summary>The text that is safe to return in the HTTP response body.</summary>
     public abstract string PublicDetail { get; }

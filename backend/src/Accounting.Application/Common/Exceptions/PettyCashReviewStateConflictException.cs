@@ -13,7 +13,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// action is one the caller may legitimately perform on this kind of document, just not while it
 /// is in this particular state, so it is a conflict with current resource state.
 /// </summary>
-public sealed class PettyCashReviewStateConflictException : Exception
+public sealed class PettyCashReviewStateConflictException : Exception, IPublicProblemException
 {
     public PettyCashReviewStateConflictException(
         Guid expenseDocId,
@@ -37,6 +37,8 @@ public sealed class PettyCashReviewStateConflictException : Exception
     public PettyCashDocState RequiredState { get; }
 
     public PettyCashDocAction Action { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail =>
         $"صورت‌هزینه در وضعیت «{StateLabel(ActualState)}» است و این اقدام روی آن ممکن نیست.";

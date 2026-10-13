@@ -1,4 +1,4 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Exceptions;
 
@@ -19,7 +19,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// way out to offer — so the message does not pretend there is, and points at reversal instead.
 /// </para>
 /// </summary>
-public sealed class VoucherStateChangeDeniedException : Exception
+public sealed class VoucherStateChangeDeniedException : Exception, IPublicProblemException
 {
     public VoucherStateChangeDeniedException(Guid voucherHeadId)
         : base($"Voucher {voucherHeadId} is in DocLife.Accepted, which is terminal and cannot be changed.")
@@ -28,6 +28,8 @@ public sealed class VoucherStateChangeDeniedException : Exception
     }
 
     public Guid VoucherHeadId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail =>
         "سند در وضعیت «تأیید دائم» است و وضعیت آن قابل تغییر نیست. " +

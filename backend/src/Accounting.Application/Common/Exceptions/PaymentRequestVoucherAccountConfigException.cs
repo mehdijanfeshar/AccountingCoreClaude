@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown when a تنظیمات-خزانه account configured for بخش ۴-ب's automatic vouchers
@@ -9,7 +9,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// <b>409</b> — a configuration conflict in existing data, not something the caller's request body
 /// could have fixed (same reasoning as <c>PettyCashSettlementTafsiliMissingException</c>).
 /// </summary>
-public sealed class PaymentRequestVoucherAccountConfigException : Exception
+public sealed class PaymentRequestVoucherAccountConfigException : Exception, IPublicProblemException
 {
     public PaymentRequestVoucherAccountConfigException(string accountLabel, Guid accountCodeId, string detail)
         : base($"Account {accountCodeId} ({accountLabel}) has an unsupported تفصیلی level configuration for بخش ۴-ب: {detail}")
@@ -22,6 +22,8 @@ public sealed class PaymentRequestVoucherAccountConfigException : Exception
     public string AccountLabel { get; }
 
     public Guid AccountCodeId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail { get; }
 }

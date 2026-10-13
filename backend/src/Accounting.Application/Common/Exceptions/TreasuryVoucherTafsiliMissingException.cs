@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Translated from <c>TafsiliLevelRuleException</c> when
@@ -6,7 +6,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// resolved تفصیلی assignment — defense-in-depth check, same shape as
 /// <c>PaymentRequestVoucherTafsiliMissingException</c> (بخش ۴-ب).
 /// </summary>
-public sealed class TreasuryVoucherTafsiliMissingException : Exception
+public sealed class TreasuryVoucherTafsiliMissingException : Exception, IPublicProblemException
 {
     public TreasuryVoucherTafsiliMissingException(Guid accountCodeId, string publicDetail)
         : base($"Voucher line for account {accountCodeId} failed تفصیلی level validation: {publicDetail}")
@@ -16,6 +16,8 @@ public sealed class TreasuryVoucherTafsiliMissingException : Exception
     }
 
     public Guid AccountCodeId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail { get; }
 }

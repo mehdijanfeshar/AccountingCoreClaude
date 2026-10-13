@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Wraps <c>TafsiliLevelRuleException</c> into a بخش-۴-ب-specific <b>409</b> — same reasoning as
@@ -9,7 +9,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// body could fix, so 409 rather than the 400 <c>IVoucherTafsiliLevelGuard</c> callers normally get
 /// mapped to.
 /// </summary>
-public sealed class PaymentRequestVoucherTafsiliMissingException : Exception
+public sealed class PaymentRequestVoucherTafsiliMissingException : Exception, IPublicProblemException
 {
     public PaymentRequestVoucherTafsiliMissingException(Guid accountCodeId, string ruleDetail)
         : base($"بخش ۴-ب voucher line for account {accountCodeId} fails تفصیلی الزامی: {ruleDetail}")
@@ -19,6 +19,8 @@ public sealed class PaymentRequestVoucherTafsiliMissingException : Exception
     }
 
     public Guid AccountCodeId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail { get; }
 }

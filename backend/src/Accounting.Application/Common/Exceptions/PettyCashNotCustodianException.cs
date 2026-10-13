@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown when a caller who is not <c>TB_PC_FUND.CUSTODIAN_USERID</c> attempts to
@@ -10,7 +10,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// <b>403, not 409</b> — same shape as <see cref="PettyCashReviewerAccessDeniedException"/>: a
 /// straight permissions gap, not a state conflict.
 /// </summary>
-public sealed class PettyCashNotCustodianException : Exception
+public sealed class PettyCashNotCustodianException : Exception, IPublicProblemException
 {
     public PettyCashNotCustodianException(Guid fundId)
         : base($"Caller is not the custodian of petty-cash fund {fundId}.")
@@ -19,6 +19,8 @@ public sealed class PettyCashNotCustodianException : Exception
     }
 
     public Guid FundId { get; }
+
+    public int StatusCode => 403;
 
     public string PublicDetail => "فقط تنخواه‌دار همین تنخواه می‌تواند این عملیات را انجام دهد.";
 }

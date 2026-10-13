@@ -1,4 +1,4 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Exceptions;
 
@@ -28,7 +28,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// with the resource's current state.
 /// </para>
 /// </summary>
-public sealed class VoucherNotEditableException : Exception
+public sealed class VoucherNotEditableException : Exception, IPublicProblemException
 {
     public VoucherNotEditableException(Guid voucherHeadId, DocLife? docLife)
         : base($"Voucher {voucherHeadId} is in state {(docLife.HasValue ? docLife.Value.ToString() : "null")} and cannot be modified or deleted.")
@@ -40,6 +40,8 @@ public sealed class VoucherNotEditableException : Exception
     public Guid VoucherHeadId { get; }
 
     public DocLife? DocLife { get; }
+
+    public int StatusCode => 409;
 
     /// <summary>
     /// Names the state and the way out. Both are things the accountant already sees in the

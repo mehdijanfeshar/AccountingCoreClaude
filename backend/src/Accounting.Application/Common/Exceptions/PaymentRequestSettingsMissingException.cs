@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown on Submit when the unit has no <c>TB_TR_SETTING</c> row yet (no
@@ -6,7 +6,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// (<c>docs/tankhah-khazaneh-module.md</c> §۱۰). <b>409</b>: the request itself is well-formed, it
 /// conflicts with the unit's missing configuration.
 /// </summary>
-public sealed class PaymentRequestSettingsMissingException : Exception
+public sealed class PaymentRequestSettingsMissingException : Exception, IPublicProblemException
 {
     public PaymentRequestSettingsMissingException(string vahedCode)
         : base($"Unit {vahedCode} has no TB_TR_SETTING row.")
@@ -15,6 +15,8 @@ public sealed class PaymentRequestSettingsMissingException : Exception
     }
 
     public string VahedCode { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "تنظیمات خزانه (آستانهٔ تأیید مدیرعامل) توسط مدیر مالی تعریف نشده است.";
 }

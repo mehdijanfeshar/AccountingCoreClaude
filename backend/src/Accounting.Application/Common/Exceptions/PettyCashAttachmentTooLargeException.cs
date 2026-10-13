@@ -15,7 +15,7 @@
 /// every such case to a <c>ProblemDetails</c> 400 rather than distinguishing HTTP's
 /// payload-too-large status, to keep the client-side error handling uniform.
 /// </summary>
-public sealed class PettyCashAttachmentTooLargeException : Exception
+public sealed class PettyCashAttachmentTooLargeException : Exception, IPublicProblemException
 {
     public PettyCashAttachmentTooLargeException(int actualSizeBytes, int maxSizeBytes)
         : base($"Attachment size {actualSizeBytes} bytes exceeds the {maxSizeBytes}-byte cap.")
@@ -27,6 +27,8 @@ public sealed class PettyCashAttachmentTooLargeException : Exception
     public int ActualSizeBytes { get; }
 
     public int MaxSizeBytes { get; }
+
+    public int StatusCode => 400;
 
     public string PublicDetail => "حجم فایل پیوست بیشتر از حد مجاز (۱۰ مگابایت) است.";
 }

@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Defensive guard: the settlement voucher's total debtor does not equal its total credit —
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// <c>PettyCashSettlementVoucherBuilder</c>) this can never actually fire; it exists so a future
 /// change to that construction cannot silently post an unbalanced GL voucher.
 /// </summary>
-public sealed class PettyCashSettlementUnbalancedException : Exception
+public sealed class PettyCashSettlementUnbalancedException : Exception, IPublicProblemException
 {
     public PettyCashSettlementUnbalancedException(decimal totalDebtor, decimal totalCredit)
         : base($"Settlement voucher is unbalanced: debtor {totalDebtor} != credit {totalCredit}.")
@@ -19,6 +19,8 @@ public sealed class PettyCashSettlementUnbalancedException : Exception
     public decimal TotalDebtor { get; }
 
     public decimal TotalCredit { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "سند تسویه تراز نیست؛ عملیات متوقف شد.";
 }

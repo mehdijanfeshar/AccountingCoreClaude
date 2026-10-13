@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown when a voucher line that بخش ۴-ب needs cannot be built because the unit's
@@ -8,7 +8,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// well-formed, it conflicts with the unit's missing configuration, same shape as
 /// <c>PaymentRequestSettingsMissingException</c>.
 /// </summary>
-public sealed class PaymentRequestTreasurySettingAccountMissingException : Exception
+public sealed class PaymentRequestTreasurySettingAccountMissingException : Exception, IPublicProblemException
 {
     public PaymentRequestTreasurySettingAccountMissingException(string accountLabel)
         : base($"TB_TR_SETTING has no value configured for {accountLabel}.")
@@ -17,6 +17,8 @@ public sealed class PaymentRequestTreasurySettingAccountMissingException : Excep
     }
 
     public string AccountLabel { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => $"{AccountLabel} در تنظیمات خزانه تعریف نشده است.";
 }

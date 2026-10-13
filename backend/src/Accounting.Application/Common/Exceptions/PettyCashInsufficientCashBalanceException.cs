@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by <c>SubmitPettyCashExpenseDocCommandHandler</c> when a document's total amount
@@ -9,7 +9,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// <see cref="PettyCashPerDocLimitExceededException"/>: this specific submission, right now, does
 /// not fit — it is not a conflict with another resource.
 /// </summary>
-public sealed class PettyCashInsufficientCashBalanceException : Exception
+public sealed class PettyCashInsufficientCashBalanceException : Exception, IPublicProblemException
 {
     public PettyCashInsufficientCashBalanceException(Guid expenseDocId, decimal totalAmount, decimal cashBalance)
         : base($"Petty-cash expense document {expenseDocId} total {totalAmount} exceeds the " +
@@ -25,6 +25,8 @@ public sealed class PettyCashInsufficientCashBalanceException : Exception
     public decimal TotalAmount { get; }
 
     public decimal CashBalance { get; }
+
+    public int StatusCode => 400;
 
     public string PublicDetail =>
         $"مبلغ کل سند ({TotalAmount:N0}) از موجودی نقد فعلی تنخواه ({CashBalance:N0}) بیشتر است.";

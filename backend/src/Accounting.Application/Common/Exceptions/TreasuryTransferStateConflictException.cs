@@ -1,4 +1,4 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Exceptions;
 
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// return/reject) requires — خزانه‌داری، بخش ۴-ج. Same state-based-refusal shape as
 /// <c>PaymentRequestStateConflictException</c>.
 /// </summary>
-public sealed class TreasuryTransferStateConflictException : Exception
+public sealed class TreasuryTransferStateConflictException : Exception, IPublicProblemException
 {
     public TreasuryTransferStateConflictException(Guid transferId, TransferState actualState, string requiredStateDescription)
         : base($"Transfer {transferId} is in state {actualState}, but this action requires {requiredStateDescription}.")
@@ -19,6 +19,8 @@ public sealed class TreasuryTransferStateConflictException : Exception
     public Guid TransferId { get; }
 
     public TransferState ActualState { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => $"انتقال وجه در وضعیت «{StateLabel(ActualState)}» است و این اقدام روی آن ممکن نیست.";
 

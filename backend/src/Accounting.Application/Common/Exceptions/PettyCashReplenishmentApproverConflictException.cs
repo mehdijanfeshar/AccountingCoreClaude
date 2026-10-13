@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by <c>ApprovePettyCashReplenishmentCommandHandler</c> when the caller — although a
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 ///
 /// <b>409, not 403</b> — same conflict-of-interest shape as <c>PettyCashSelfReviewConflictException</c>.
 /// </summary>
-public sealed class PettyCashReplenishmentApproverConflictException : Exception
+public sealed class PettyCashReplenishmentApproverConflictException : Exception, IPublicProblemException
 {
     public PettyCashReplenishmentApproverConflictException(Guid replenishmentId)
         : base($"Caller created replenishment {replenishmentId} and cannot also approve it (segregation of duties).")
@@ -16,6 +16,8 @@ public sealed class PettyCashReplenishmentApproverConflictException : Exception
     }
 
     public Guid ReplenishmentId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "ایجادکنندهٔ ترمیم نمی‌تواند تأییدکنندهٔ همان ترمیم باشد.";
 }

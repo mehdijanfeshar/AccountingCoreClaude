@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// The authenticated caller's token names an organizational unit that matches no
@@ -19,7 +19,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// would make a token wiring bug and a data mismatch look identical in logs.
 /// </para>
 /// </summary>
-public sealed class UnknownCallerUnitException : Exception
+public sealed class UnknownCallerUnitException : Exception, IPublicProblemException
 {
     public UnknownCallerUnitException(string vahedCode)
         : base($"The authenticated caller's unit code '{vahedCode}' matches no TB_VAHED_INFO row.")
@@ -28,6 +28,8 @@ public sealed class UnknownCallerUnitException : Exception
     }
 
     public string VahedCode { get; }
+
+    public int StatusCode => 403;
 
     /// <summary>
     /// Safe to return to the caller: it names no Legacy table or column, and the unit code is the

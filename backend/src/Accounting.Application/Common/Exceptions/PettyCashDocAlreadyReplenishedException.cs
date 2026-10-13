@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by <c>CreatePettyCashReplenishmentCommandHandler</c> immediately before inserting each
@@ -8,7 +8,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// no DB unique constraint backing this — see <c>IChargeAndCostRepository.ExistsActiveLinkForCostAsync</c>
 /// XML doc).
 /// </summary>
-public sealed class PettyCashDocAlreadyReplenishedException : Exception
+public sealed class PettyCashDocAlreadyReplenishedException : Exception, IPublicProblemException
 {
     public PettyCashDocAlreadyReplenishedException(Guid expenseDocId)
         : base($"Petty-cash expense document {expenseDocId} is already linked to another ترمیم.")
@@ -17,6 +17,8 @@ public sealed class PettyCashDocAlreadyReplenishedException : Exception
     }
 
     public Guid ExpenseDocId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "یک یا چند صورت‌هزینهٔ انتخاب‌شده هم‌زمان توسط ترمیم دیگری منظور شده‌اند؛ لطفاً دوباره تلاش کنید.";
 }

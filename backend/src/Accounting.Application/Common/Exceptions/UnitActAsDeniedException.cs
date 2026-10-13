@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// The caller asked to act as an organizational unit that is not theirs and not inside their
@@ -19,7 +19,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// «کاربر مورد نظر دسترسی لازم به اطلاعات واحد {0} را ندارد».
 /// </para>
 /// </summary>
-public sealed class UnitActAsDeniedException : Exception
+public sealed class UnitActAsDeniedException : Exception, IPublicProblemException
 {
     public UnitActAsDeniedException(string requestedVahedCode, string callerVahedCode)
         : base($"Caller of unit '{callerVahedCode}' may not act as unit '{requestedVahedCode}'.")
@@ -31,6 +31,8 @@ public sealed class UnitActAsDeniedException : Exception
     public string RequestedVahedCode { get; }
 
     public string CallerVahedCode { get; }
+
+    public int StatusCode => 403;
 
     /// <summary>
     /// Names the requested unit but never the caller's own. The requested code came from the

@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// A Create/Update on <c>TB_PC_FUND</c> whose <c>CODE</c> already matches another non-deleted
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// unique-constraint violation caught after the fact) — it gives a clean, attributable 409 instead
 /// of the generic one <c>UK_PC_FUND_CODE</c> would otherwise produce.
 /// </summary>
-public sealed class PettyCashFundCodeDuplicateException : Exception
+public sealed class PettyCashFundCodeDuplicateException : Exception, IPublicProblemException
 {
     public PettyCashFundCodeDuplicateException(string code)
         : base($"An active petty-cash fund already exists with code '{code}'.")
@@ -16,6 +16,8 @@ public sealed class PettyCashFundCodeDuplicateException : Exception
     }
 
     public string Code { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => $"تنخواه فعالی با کد «{Code}» از قبل در این واحد ثبت شده است.";
 }

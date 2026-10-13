@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by <c>VerifyPettyCashExpenseDocCommandHandler</c> when the document already carries a
@@ -8,7 +8,7 @@ namespace Accounting.Application.Common.Exceptions;
 ///
 /// <b>409</b> — a state conflict, same shape as <see cref="PettyCashReviewStateConflictException"/>.
 /// </summary>
-public sealed class PettyCashAlreadyVerifiedException : Exception
+public sealed class PettyCashAlreadyVerifiedException : Exception, IPublicProblemException
 {
     public PettyCashAlreadyVerifiedException(Guid expenseDocId)
         : base($"Petty-cash expense document {expenseDocId} has already been verified.")
@@ -17,6 +17,8 @@ public sealed class PettyCashAlreadyVerifiedException : Exception
     }
 
     public Guid ExpenseDocId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "این سند قبلاً کنترل و تأیید شده است.";
 }

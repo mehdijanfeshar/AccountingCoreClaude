@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown when the caller holds no active <see cref="Accounting.Domain.ValueObjects.TreasuryRole.Treasurer"/>
@@ -8,12 +8,14 @@ namespace Accounting.Application.Common.Exceptions;
 /// paths can share it, unlike بخش ۴-ب's request-scoped
 /// <c>PaymentRequestTreasurerRoleRequiredException</c>.
 /// </summary>
-public sealed class TreasuryTreasurerRoleRequiredException : Exception
+public sealed class TreasuryTreasurerRoleRequiredException : Exception, IPublicProblemException
 {
     public TreasuryTreasurerRoleRequiredException()
         : base("Caller holds no Treasurer role required for this action.")
     {
     }
+
+    public int StatusCode => 403;
 
     public string PublicDetail => "فقط خزانه‌دار می‌تواند این عملیات را انجام دهد.";
 }

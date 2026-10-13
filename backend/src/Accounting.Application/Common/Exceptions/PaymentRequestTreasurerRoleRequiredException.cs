@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown when the caller holds no active <see cref="Accounting.Domain.ValueObjects.TreasuryRole.Treasurer"/>
@@ -6,7 +6,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// (<c>docs/tankhah-khazaneh-module.md</c> §۱۰). <b>403, not 409</b> — a straight permissions gap,
 /// distinct wording from <c>PaymentRequestRoleRequiredException</c> (approval-chain stage roles).
 /// </summary>
-public sealed class PaymentRequestTreasurerRoleRequiredException : Exception
+public sealed class PaymentRequestTreasurerRoleRequiredException : Exception, IPublicProblemException
 {
     public PaymentRequestTreasurerRoleRequiredException(Guid paymentRequestId)
         : base($"Caller holds no Treasurer role required to act on payment request {paymentRequestId}'s execution.")
@@ -15,6 +15,8 @@ public sealed class PaymentRequestTreasurerRoleRequiredException : Exception
     }
 
     public Guid PaymentRequestId { get; }
+
+    public int StatusCode => 403;
 
     public string PublicDetail => "فقط خزانه‌دار می‌تواند این عملیات را انجام دهد.";
 }

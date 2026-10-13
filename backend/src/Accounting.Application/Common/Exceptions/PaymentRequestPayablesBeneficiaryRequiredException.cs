@@ -1,11 +1,11 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// The unit's «حساب بستانکاران» (<c>TB_TR_SETTING.PAYABLES_ACCOUNT_ID</c>) requires exactly one
 /// تفصیلی level, but the درخواست پرداخت has no <c>BENEFICIARY_TAFSILI_ID</c> to fill it with —
 /// خزانه‌داری، بخش ۴-ب (owner decision ۲۰۲۶-۰۹-۲۹ #۴). <b>409</b>.
 /// </summary>
-public sealed class PaymentRequestPayablesBeneficiaryRequiredException : Exception
+public sealed class PaymentRequestPayablesBeneficiaryRequiredException : Exception, IPublicProblemException
 {
     public PaymentRequestPayablesBeneficiaryRequiredException(Guid paymentRequestId)
         : base($"Payment request {paymentRequestId} has no BENEFICIARY_TAFSILI_ID, but the payables account requires one تفصیلی level.")
@@ -14,6 +14,8 @@ public sealed class PaymentRequestPayablesBeneficiaryRequiredException : Excepti
     }
 
     public Guid PaymentRequestId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "برای این حساب بستانکاران، تفصیلی ذی‌نفع لازم است.";
 }

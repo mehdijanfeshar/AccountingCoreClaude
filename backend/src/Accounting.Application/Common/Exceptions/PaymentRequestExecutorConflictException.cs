@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// SoD on <c>execute</c> — خزانه‌داری، بخش ۴-ب: «اجراکننده ≠ ثبت‌کنندهٔ درخواست» (owner decision
@@ -6,7 +6,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// <c>PaymentRequestApproverConflictException</c> (the approval-chain SoD check this deliberately
 /// does not reuse, since the wording is specific to «اجرا»).
 /// </summary>
-public sealed class PaymentRequestExecutorConflictException : Exception
+public sealed class PaymentRequestExecutorConflictException : Exception, IPublicProblemException
 {
     public PaymentRequestExecutorConflictException(Guid paymentRequestId)
         : base($"Caller is the creator of payment request {paymentRequestId} and cannot execute it.")
@@ -15,6 +15,8 @@ public sealed class PaymentRequestExecutorConflictException : Exception
     }
 
     public Guid PaymentRequestId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "ثبت‌کنندهٔ درخواست پرداخت نمی‌تواند اجراکنندهٔ آن هم باشد.";
 }

@@ -77,9 +77,12 @@ public static class FsTemplateChecker
             CheckFields(r, issues, formulas);
         }
 
-        var valueRowIndex = ordered
-            .Select((r, i) => (r, i))
-            .ToDictionary(x => x.r.Code, x => x.i, StringComparer.Ordinal);
+        // کد تکراری پیش‌تر گزارش شده؛ اینجا نباید استثنا بدهد (ToDictionary روی کلید تکراری می‌ترکید).
+        var valueRowIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            valueRowIndex.TryAdd(ordered[i].Code, i);
+        }
 
         foreach (var (code, f) in formulas)
         {

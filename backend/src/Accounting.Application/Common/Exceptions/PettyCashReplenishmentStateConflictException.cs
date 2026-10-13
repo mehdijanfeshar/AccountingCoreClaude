@@ -1,4 +1,4 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Exceptions;
 
@@ -8,7 +8,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// (<c>docs/tankhah-khazaneh-module.md</c>). Same state-based-refusal shape as
 /// <c>PettyCashReviewStateConflictException</c>.
 /// </summary>
-public sealed class PettyCashReplenishmentStateConflictException : Exception
+public sealed class PettyCashReplenishmentStateConflictException : Exception, IPublicProblemException
 {
     public PettyCashReplenishmentStateConflictException(
         Guid replenishmentId,
@@ -28,6 +28,8 @@ public sealed class PettyCashReplenishmentStateConflictException : Exception
     public PettyCashReplenishmentState ActualState { get; }
 
     public PettyCashReplenishmentState RequiredState { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => $"ترمیم در وضعیت «{StateLabel(ActualState)}» است و این اقدام روی آن ممکن نیست.";
 

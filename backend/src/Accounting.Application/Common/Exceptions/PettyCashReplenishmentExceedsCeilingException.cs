@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by <c>CreatePettyCashReplenishmentCommandHandler</c> as a defensive guard: «ترمیم ≤
@@ -9,7 +9,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// rather than a silent assumption. 400: the amount just does not fit, same shape as
 /// <c>PettyCashPerDocLimitExceededException</c>.
 /// </summary>
-public sealed class PettyCashReplenishmentExceedsCeilingException : Exception
+public sealed class PettyCashReplenishmentExceedsCeilingException : Exception, IPublicProblemException
 {
     public PettyCashReplenishmentExceedsCeilingException(Guid fundId, decimal amount, decimal ceiling)
         : base($"Replenishment total {amount} for petty-cash fund {fundId} exceeds its ceiling {ceiling}.")
@@ -24,6 +24,8 @@ public sealed class PettyCashReplenishmentExceedsCeilingException : Exception
     public decimal Amount { get; }
 
     public decimal Ceiling { get; }
+
+    public int StatusCode => 400;
 
     public string PublicDetail => "مبلغ ترمیم از سقف تنخواه بیشتر است.";
 }

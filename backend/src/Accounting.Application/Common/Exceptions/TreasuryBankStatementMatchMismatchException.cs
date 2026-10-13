@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by manual <c>match</c> (<c>POST statements/{id}/lines/{lineId}/match</c>) when the
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// (<c>docs/tankhah-khazaneh-module.md</c> §۱۰). <b>400</b> — an input mismatch, not a state
 /// conflict.
 /// </summary>
-public sealed class TreasuryBankStatementMatchMismatchException : Exception
+public sealed class TreasuryBankStatementMatchMismatchException : Exception, IPublicProblemException
 {
     public TreasuryBankStatementMatchMismatchException(string reason)
         : base($"Manual match rejected: {reason}")
@@ -16,6 +16,8 @@ public sealed class TreasuryBankStatementMatchMismatchException : Exception
     }
 
     public string Reason { get; }
+
+    public int StatusCode => 400;
 
     public string PublicDetail => Reason;
 }

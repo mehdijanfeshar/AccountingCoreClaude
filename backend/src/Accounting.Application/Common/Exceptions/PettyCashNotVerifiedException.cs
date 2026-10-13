@@ -11,7 +11,7 @@
 /// (otherwise that exception would already have fired), it simply has not completed the first of
 /// the two required approval steps yet.
 /// </summary>
-public sealed class PettyCashNotVerifiedException : Exception
+public sealed class PettyCashNotVerifiedException : Exception, IPublicProblemException
 {
     public PettyCashNotVerifiedException(Guid expenseDocId)
         : base($"Petty-cash expense document {expenseDocId} has not been verified by an inspector yet.")
@@ -20,6 +20,8 @@ public sealed class PettyCashNotVerifiedException : Exception
     }
 
     public Guid ExpenseDocId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "ابتدا بازرس باید کنترل این سند را تأیید کند.";
 }

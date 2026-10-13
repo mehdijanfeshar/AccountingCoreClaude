@@ -13,7 +13,7 @@
 /// authority for this specific amount, so the public message names the real reason rather than a
 /// generic "not a reviewer".
 /// </summary>
-public sealed class PettyCashApprovalAuthorityExceededException : Exception
+public sealed class PettyCashApprovalAuthorityExceededException : Exception, IPublicProblemException
 {
     public PettyCashApprovalAuthorityExceededException(Guid expenseDocId, decimal amount, decimal limit)
         : base(
@@ -30,6 +30,8 @@ public sealed class PettyCashApprovalAuthorityExceededException : Exception
     public decimal Amount { get; }
 
     public decimal Limit { get; }
+
+    public int StatusCode => 403;
 
     public string PublicDetail =>
         "مبلغ این سند بیش از سقف اختیار تأیید شماست؛ تأیید نهایی این سند فقط با مدیرعامل ممکن است.";

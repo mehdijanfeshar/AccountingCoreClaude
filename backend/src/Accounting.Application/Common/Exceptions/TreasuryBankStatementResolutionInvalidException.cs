@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by <c>resolve</c> (<c>POST statements/{id}/lines/{lineId}/resolve</c>) when the
@@ -9,7 +9,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// match this statement's bank account/amount. <b>400</b> — an input rule violation, not a state
 /// conflict (those are <see cref="TreasuryBankStatementLineStateConflictException"/>).
 /// </summary>
-public sealed class TreasuryBankStatementResolutionInvalidException : Exception
+public sealed class TreasuryBankStatementResolutionInvalidException : Exception, IPublicProblemException
 {
     public TreasuryBankStatementResolutionInvalidException(string reason)
         : base($"Resolution rejected: {reason}")
@@ -18,6 +18,8 @@ public sealed class TreasuryBankStatementResolutionInvalidException : Exception
     }
 
     public string Reason { get; }
+
+    public int StatusCode => 400;
 
     public string PublicDetail => Reason;
 }

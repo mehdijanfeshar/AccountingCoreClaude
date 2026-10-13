@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// A مادهٔ هزینه (<c>TB_EXPENCE</c>) whose group of approved صورت‌هزینه rows would become a
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// حساب معین) but the same underlying problem one level down — a GL line needs an account, full
 /// stop.
 /// </summary>
-public sealed class PettyCashSettlementExpenseAccountMissingException : Exception
+public sealed class PettyCashSettlementExpenseAccountMissingException : Exception, IPublicProblemException
 {
     public PettyCashSettlementExpenseAccountMissingException(Guid expenseId)
         : base($"Expense type {expenseId} has no ACCOUNTCODE_ID configured; cannot build its settlement voucher debit line.")
@@ -16,6 +16,8 @@ public sealed class PettyCashSettlementExpenseAccountMissingException : Exceptio
     }
 
     public Guid ExpenseId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "یکی از ماده‌های هزینهٔ منظورشده حساب معین تعریف‌شده ندارد؛ ابتدا آن را تنظیم کنید.";
 }

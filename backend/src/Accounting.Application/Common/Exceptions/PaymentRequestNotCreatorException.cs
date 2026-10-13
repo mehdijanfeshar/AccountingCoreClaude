@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown when a caller who is not a درخواست پرداخت's own creator (<c>ADDUSERID</c>) attempts to
@@ -6,7 +6,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// ثبت‌کننده» (<c>docs/tankhah-khazaneh-module.md</c> §۱۰). Straight permissions gap, same shape as
 /// <c>PettyCashNotCustodianException</c>.
 /// </summary>
-public sealed class PaymentRequestNotCreatorException : Exception
+public sealed class PaymentRequestNotCreatorException : Exception, IPublicProblemException
 {
     public PaymentRequestNotCreatorException(Guid paymentRequestId)
         : base($"Caller is not the creator of payment request {paymentRequestId}.")
@@ -15,6 +15,8 @@ public sealed class PaymentRequestNotCreatorException : Exception
     }
 
     public Guid PaymentRequestId { get; }
+
+    public int StatusCode => 403;
 
     public string PublicDetail => "فقط ثبت‌کنندهٔ درخواست پرداخت می‌تواند این اقدام را انجام دهد.";
 }

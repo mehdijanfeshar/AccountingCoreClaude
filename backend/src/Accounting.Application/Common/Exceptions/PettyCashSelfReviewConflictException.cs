@@ -12,7 +12,7 @@
 /// conflicts with that role because they authored it themselves, a conflict-of-interest state
 /// rather than an outright lack of permission.
 /// </summary>
-public sealed class PettyCashSelfReviewConflictException : Exception
+public sealed class PettyCashSelfReviewConflictException : Exception, IPublicProblemException
 {
     public PettyCashSelfReviewConflictException(Guid expenseDocId)
         : base($"Caller created expense document {expenseDocId} and cannot also review it (segregation of duties).")
@@ -21,6 +21,8 @@ public sealed class PettyCashSelfReviewConflictException : Exception
     }
 
     public Guid ExpenseDocId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "ایجادکنندهٔ سند نمی‌تواند بررسی‌کنندهٔ همان سند باشد.";
 }

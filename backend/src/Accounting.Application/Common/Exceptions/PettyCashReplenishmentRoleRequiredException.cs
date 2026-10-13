@@ -1,4 +1,4 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Exceptions;
 
@@ -14,7 +14,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// <b>403, not 409</b> — a straight permissions gap, same shape as
 /// <c>PettyCashReviewerAccessDeniedException</c>.
 /// </summary>
-public sealed class PettyCashReplenishmentRoleRequiredException : Exception
+public sealed class PettyCashReplenishmentRoleRequiredException : Exception, IPublicProblemException
 {
     public PettyCashReplenishmentRoleRequiredException(Guid fundId, IReadOnlyCollection<PettyCashRole> requiredAnyOf)
         : base($"Caller holds none of the required roles ({string.Join(",", requiredAnyOf)}) for petty-cash fund {fundId}.")
@@ -26,6 +26,8 @@ public sealed class PettyCashReplenishmentRoleRequiredException : Exception
     public Guid FundId { get; }
 
     public IReadOnlyCollection<PettyCashRole> RequiredAnyOf { get; }
+
+    public int StatusCode => 403;
 
     public string PublicDetail => "شما نقش لازم برای این اقدام روی این تنخواه را ندارید.";
 }

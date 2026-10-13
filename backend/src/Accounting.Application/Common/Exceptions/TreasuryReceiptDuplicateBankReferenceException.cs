@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown when <c>TB_TR_RECEIPT.BANK_REFERENCE</c> already exists among the live (non-deleted,
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// (owner decision ۲۰۲۶-۰۹-۲۹؛ same posture as every other application-level uniqueness rule in
 /// this project).
 /// </summary>
-public sealed class TreasuryReceiptDuplicateBankReferenceException : Exception
+public sealed class TreasuryReceiptDuplicateBankReferenceException : Exception, IPublicProblemException
 {
     public TreasuryReceiptDuplicateBankReferenceException(string bankReference, Guid bankAccountId)
         : base($"Bank reference '{bankReference}' already used by a live receipt of bank account {bankAccountId}.")
@@ -19,6 +19,8 @@ public sealed class TreasuryReceiptDuplicateBankReferenceException : Exception
     public string BankReference { get; }
 
     public Guid BankAccountId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "این شمارهٔ مرجع بانکی قبلاً برای دریافت دیگری از همین حساب بانکی ثبت شده است.";
 }

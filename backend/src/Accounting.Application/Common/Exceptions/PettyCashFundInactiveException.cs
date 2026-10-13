@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by <c>CreatePettyCashExpenseDocCommandHandler</c> and
@@ -8,7 +8,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// request is well-formed, it just conflicts with the fund's current (deactivated) state — same
 /// shape as <c>PettyCashDocNotEditableException</c>.
 /// </summary>
-public sealed class PettyCashFundInactiveException : Exception
+public sealed class PettyCashFundInactiveException : Exception, IPublicProblemException
 {
     public PettyCashFundInactiveException(Guid fundId)
         : base($"Petty-cash fund {fundId} is inactive.")
@@ -17,6 +17,8 @@ public sealed class PettyCashFundInactiveException : Exception
     }
 
     public Guid FundId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "این تنخواه غیرفعال است و امکان ثبت یا ارسال صورت‌هزینهٔ جدید روی آن وجود ندارد.";
 }

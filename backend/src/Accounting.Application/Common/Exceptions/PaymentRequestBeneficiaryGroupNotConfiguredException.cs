@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown when a caller sends a non-null <c>BeneficiaryTafsiliId</c> but the unit's
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// well-formed, it conflicts with the unit's missing configuration — same shape as
 /// <see cref="PaymentRequestSettingsMissingException"/>.
 /// </summary>
-public sealed class PaymentRequestBeneficiaryGroupNotConfiguredException : Exception
+public sealed class PaymentRequestBeneficiaryGroupNotConfiguredException : Exception, IPublicProblemException
 {
     public PaymentRequestBeneficiaryGroupNotConfiguredException(string vahedCode)
         : base($"Unit {vahedCode} has no TB_TR_SETTING.BENEFICIARY_TAFSIL_GROUP_ID configured.")
@@ -16,6 +16,8 @@ public sealed class PaymentRequestBeneficiaryGroupNotConfiguredException : Excep
     }
 
     public string VahedCode { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "گروه تفصیلی ذی‌نفع برای این واحد توسط مدیر مالی تعریف نشده است.";
 }

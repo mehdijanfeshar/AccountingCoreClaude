@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// No صورت‌هزینه row is currently eligible for this settlement (no
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// (<c>docs/tankhah-khazaneh-module.md</c> section 9): "حداقل یک سند تأییدشده". 409, same
 /// "nothing to act on" shape as <c>PettyCashNoDocumentsToReplenishException</c>.
 /// </summary>
-public sealed class PettyCashSettlementNoDocumentsException : Exception
+public sealed class PettyCashSettlementNoDocumentsException : Exception, IPublicProblemException
 {
     public PettyCashSettlementNoDocumentsException(Guid fundId)
         : base($"Fund {fundId} has no Approved صورت‌هزینه eligible for settlement.")
@@ -16,6 +16,8 @@ public sealed class PettyCashSettlementNoDocumentsException : Exception
     }
 
     public Guid FundId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "هیچ صورت‌هزینهٔ تأییدشده‌ای برای تسویه در این دوره وجود ندارد.";
 }

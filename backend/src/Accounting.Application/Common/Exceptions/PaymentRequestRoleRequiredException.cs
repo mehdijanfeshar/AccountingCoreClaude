@@ -1,4 +1,4 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Exceptions;
 
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// stage (approve/return/reject) — خزانه‌داری، بخش ۴-الف (<c>docs/tankhah-khazaneh-module.md</c>
 /// §۱۰). <b>403, not 409</b> — a straight permissions gap.
 /// </summary>
-public sealed class PaymentRequestRoleRequiredException : Exception
+public sealed class PaymentRequestRoleRequiredException : Exception, IPublicProblemException
 {
     public PaymentRequestRoleRequiredException(Guid paymentRequestId, TreasuryRole requiredRole)
         : base($"Caller holds no {requiredRole} role required for payment request {paymentRequestId}'s current stage.")
@@ -19,6 +19,8 @@ public sealed class PaymentRequestRoleRequiredException : Exception
     public Guid PaymentRequestId { get; }
 
     public TreasuryRole RequiredRole { get; }
+
+    public int StatusCode => 403;
 
     public string PublicDetail => "شما نقش لازم برای این مرحله از تأیید را ندارید.";
 }

@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Closes the بخش ۳-ب TODO explicitly flagged on <c>DeletePettyCashRefundCommand</c>: an
@@ -8,7 +8,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// row was still active. 409, same "finalized, no way back" shape as a voucher's own
 /// <c>VoucherNotEditableException</c>.
 /// </summary>
-public sealed class PettyCashRefundLockedBySettledPeriodException : Exception
+public sealed class PettyCashRefundLockedBySettledPeriodException : Exception, IPublicProblemException
 {
     public PettyCashRefundLockedBySettledPeriodException(Guid refundId)
         : base($"Refund {refundId} falls inside an already-finalized settlement period and cannot be deleted.")
@@ -17,6 +17,8 @@ public sealed class PettyCashRefundLockedBySettledPeriodException : Exception
     }
 
     public Guid RefundId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "این استرداد در دوره‌ای است که تسویهٔ آن نهایی شده؛ قابل حذف نیست.";
 }

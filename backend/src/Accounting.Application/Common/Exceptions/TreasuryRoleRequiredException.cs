@@ -1,4 +1,4 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Exceptions;
 
@@ -9,7 +9,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// is a unit-wide admin gate (فقط <see cref="TreasuryRole.FinanceManager"/> واحد، با استثنای
 /// bootstrap برای اولین نقش). <b>403</b>.
 /// </summary>
-public sealed class TreasuryRoleRequiredException : Exception
+public sealed class TreasuryRoleRequiredException : Exception, IPublicProblemException
 {
     public TreasuryRoleRequiredException(string vahedCode, TreasuryRole requiredRole)
         : base($"Caller holds no {requiredRole} role for unit {vahedCode}.")
@@ -21,6 +21,8 @@ public sealed class TreasuryRoleRequiredException : Exception
     public string VahedCode { get; }
 
     public TreasuryRole RequiredRole { get; }
+
+    public int StatusCode => 403;
 
     public string PublicDetail => "شما نقش لازم برای این اقدام مدیریتی خزانه‌داری را ندارید.";
 }

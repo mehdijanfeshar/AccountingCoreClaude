@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown when a caller-supplied تفصیلی id is not a member of the unit's configured تفصیلی گروه —
@@ -8,7 +8,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// same split as بخش ۴-الف's <c>PaymentRequestBeneficiaryTafsiliNotInGroupException</c> /
 /// <c>PaymentRequestBeneficiaryGroupNotConfiguredException</c> pair.
 /// </summary>
-public sealed class TreasuryTafsiliNotInGroupException : Exception
+public sealed class TreasuryTafsiliNotInGroupException : Exception, IPublicProblemException
 {
     public TreasuryTafsiliNotInGroupException(Guid tafsiliId, Guid tafsilGroupId)
         : base($"Tafsili {tafsiliId} is not a member of تفصیلی گروه {tafsilGroupId}.")
@@ -20,6 +20,8 @@ public sealed class TreasuryTafsiliNotInGroupException : Exception
     public Guid TafsiliId { get; }
 
     public Guid TafsilGroupId { get; }
+
+    public int StatusCode => 400;
 
     public string PublicDetail => "تفصیلی انتخاب‌شده عضو گروه تفصیلی مشتریان تعریف‌شدهٔ واحد نیست.";
 }

@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// A Create/Update on <c>TB_PC_EXPENSE_DOC</c> whose (vendor national id, invoice number) pair
@@ -11,7 +11,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// same invoice number, which a plain UNIQUE index could not express. 409, since the request
 /// itself is well-formed — it conflicts with another existing document, not with its own shape.
 /// </summary>
-public sealed class PettyCashDuplicateExpenseDocException : Exception
+public sealed class PettyCashDuplicateExpenseDocException : Exception, IPublicProblemException
 {
     public PettyCashDuplicateExpenseDocException(string vendorNationalId, string invoiceNo)
         : base($"An active petty-cash expense document already exists for vendor national id " +
@@ -24,6 +24,8 @@ public sealed class PettyCashDuplicateExpenseDocException : Exception
     public string VendorNationalId { get; }
 
     public string InvoiceNo { get; }
+
+    public int StatusCode => 409;
 
     /// <summary>Echoes the invoice number only — it is exactly what the caller just typed into
     /// the form, not a Legacy identifier.</summary>

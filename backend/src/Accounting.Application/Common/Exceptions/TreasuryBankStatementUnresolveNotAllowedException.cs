@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by <c>unresolve</c> (<c>POST statements/{id}/lines/{lineId}/unresolve</c>) when the
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// (<c>docs/tankhah-khazaneh-module.md</c> §۱۰). Owner instruction: if safe automatic soft-delete
 /// is not possible, disallow rather than silently leave a dangling reference. <b>409.</b>
 /// </summary>
-public sealed class TreasuryBankStatementUnresolveNotAllowedException : Exception
+public sealed class TreasuryBankStatementUnresolveNotAllowedException : Exception, IPublicProblemException
 {
     public TreasuryBankStatementUnresolveNotAllowedException(Guid lineId)
         : base($"BankStatementLine {lineId} cannot be unresolved — its resolution voucher is no longer temporary.")
@@ -16,6 +16,8 @@ public sealed class TreasuryBankStatementUnresolveNotAllowedException : Exceptio
     }
 
     public Guid LineId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail =>
         "سند کارمزد بانکی این ردیف دیگر موقت نیست (نهایی یا حذف شده) — لغو حل این ردیف ممکن نیست.";

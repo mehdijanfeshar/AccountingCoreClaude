@@ -1,4 +1,4 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Exceptions;
 
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// reject/update/delete) requires — خزانه‌داری، بخش ۴-الف (<c>docs/tankhah-khazaneh-module.md</c>
 /// §۱۰). Same state-based-refusal shape as <c>PettyCashReplenishmentStateConflictException</c>.
 /// </summary>
-public sealed class PaymentRequestStateConflictException : Exception
+public sealed class PaymentRequestStateConflictException : Exception, IPublicProblemException
 {
     public PaymentRequestStateConflictException(Guid paymentRequestId, PaymentRequestState actualState, string requiredStateDescription)
         : base($"Payment request {paymentRequestId} is in state {actualState}, but this action requires {requiredStateDescription}.")
@@ -19,6 +19,8 @@ public sealed class PaymentRequestStateConflictException : Exception
     public Guid PaymentRequestId { get; }
 
     public PaymentRequestState ActualState { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => $"درخواست پرداخت در وضعیت «{StateLabel(ActualState)}» است و این اقدام روی آن ممکن نیست.";
 

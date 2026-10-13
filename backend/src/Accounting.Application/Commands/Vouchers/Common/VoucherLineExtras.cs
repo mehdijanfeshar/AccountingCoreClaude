@@ -104,7 +104,7 @@ public interface IVoucherLineExtrasStore
 }
 
 /// <summary>اطلاعات تکمیلی ردیف ناقص یا نادرست است — ۴۲۲ با پیام فارسی.</summary>
-public sealed class VoucherLineExtrasException : Exception
+public sealed class VoucherLineExtrasException : Exception, Accounting.Application.Common.Exceptions.IPublicProblemException
 {
     public VoucherLineExtrasException(IReadOnlyList<string> messages)
         : base(string.Join(" ", messages))
@@ -113,6 +113,8 @@ public sealed class VoucherLineExtrasException : Exception
     }
 
     public IReadOnlyList<string> Messages { get; }
+
+    public int StatusCode => 422;
 
     public string PublicDetail => string.Join(" ", Messages);
 }

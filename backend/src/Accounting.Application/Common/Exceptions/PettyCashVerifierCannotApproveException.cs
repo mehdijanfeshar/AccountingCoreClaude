@@ -11,7 +11,7 @@
 /// caller genuinely holds a final-approval-capable role, this specific document simply conflicts
 /// with that role because they already verified it themselves.
 /// </summary>
-public sealed class PettyCashVerifierCannotApproveException : Exception
+public sealed class PettyCashVerifierCannotApproveException : Exception, IPublicProblemException
 {
     public PettyCashVerifierCannotApproveException(Guid expenseDocId)
         : base(
@@ -22,6 +22,8 @@ public sealed class PettyCashVerifierCannotApproveException : Exception
     }
 
     public Guid ExpenseDocId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "کسی که کنترل سند را تأیید کرده، نمی‌تواند تأییدکنندهٔ نهایی همان سند باشد.";
 }

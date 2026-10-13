@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// The fund has documents still "در جریان" (New/PendingReview/Returned — not yet decided) and the
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// flag on the request itself (fixable by resubmitting with the flag set), not a state conflict
 /// the caller has no way out of.
 /// </summary>
-public sealed class PettyCashSettlementInFlightAcknowledgeRequiredException : Exception
+public sealed class PettyCashSettlementInFlightAcknowledgeRequiredException : Exception, IPublicProblemException
 {
     public PettyCashSettlementInFlightAcknowledgeRequiredException(Guid fundId, int inFlightCount, decimal inFlightAmount)
         : base($"Fund {fundId} has {inFlightCount} in-flight document(s) totalling {inFlightAmount}; acknowledgeInFlightTransfer must be true to finalize.")
@@ -22,6 +22,8 @@ public sealed class PettyCashSettlementInFlightAcknowledgeRequiredException : Ex
     public int InFlightCount { get; }
 
     public decimal InFlightAmount { get; }
+
+    public int StatusCode => 400;
 
     public string PublicDetail =>
         $"{InFlightCount} سند هنوز در جریان بررسی است (جمعاً {InFlightAmount}). برای ادامه، acknowledgeInFlightTransfer را true بفرستید.";

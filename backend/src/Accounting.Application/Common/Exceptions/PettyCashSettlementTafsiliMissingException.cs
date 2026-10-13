@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Wraps <c>TafsiliLevelRuleException</c> (which <c>GlobalExceptionHandler</c> maps to 400 for
@@ -10,7 +10,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// configuration conflict in existing data, not a malformed request (400 would wrongly imply the
 /// caller could fix it by sending different input).
 /// </summary>
-public sealed class PettyCashSettlementTafsiliMissingException : Exception
+public sealed class PettyCashSettlementTafsiliMissingException : Exception, IPublicProblemException
 {
     public PettyCashSettlementTafsiliMissingException(Guid accountCodeId, string ruleDetail)
         : base($"Settlement voucher line for account {accountCodeId} fails تفصیلی الزامی: {ruleDetail}")
@@ -20,6 +20,8 @@ public sealed class PettyCashSettlementTafsiliMissingException : Exception
     }
 
     public Guid AccountCodeId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail { get; }
 }

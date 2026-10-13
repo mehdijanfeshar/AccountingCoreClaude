@@ -1,11 +1,11 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by انتقال وجه <c>approve</c> when the source bank account's current GL balance (owner
 /// decision ۲۰۲۶-۰۹-۲۹: مانده حساب معین بانک مبدأ روی تمام اسناد غیرحذف‌شدهٔ سال، شامل موقت) is
 /// less than the transfer amount — blocking control (a), خزانه‌داری، بخش ۴-ج.
 /// </summary>
-public sealed class TreasuryTransferInsufficientBalanceException : Exception
+public sealed class TreasuryTransferInsufficientBalanceException : Exception, IPublicProblemException
 {
     public TreasuryTransferInsufficientBalanceException(Guid transferId, decimal currentBalance, decimal amount)
         : base($"Transfer {transferId} needs {amount} but source bank account balance is only {currentBalance}.")
@@ -20,6 +20,8 @@ public sealed class TreasuryTransferInsufficientBalanceException : Exception
     public decimal CurrentBalance { get; }
 
     public decimal Amount { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail =>
         $"موجودی حساب بانکی مبدأ ({CurrentBalance:N0}) برای مبلغ انتقال ({Amount:N0}) کافی نیست.";

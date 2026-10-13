@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by <c>DeletePettyCashFundCommandHandler</c> when the target <c>TB_PC_FUND</c> still has
@@ -6,7 +6,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// valid delete target, it just conflicts with live child rows — same shape as
 /// <c>PettyCashDuplicateExpenseDocException</c>.
 /// </summary>
-public sealed class PettyCashFundHasExpenseDocsException : Exception
+public sealed class PettyCashFundHasExpenseDocsException : Exception, IPublicProblemException
 {
     public PettyCashFundHasExpenseDocsException(Guid fundId)
         : base($"Petty-cash fund {fundId} still has non-deleted expense documents.")
@@ -15,6 +15,8 @@ public sealed class PettyCashFundHasExpenseDocsException : Exception
     }
 
     public Guid FundId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "این تنخواه دارای صورت‌هزینهٔ حذف‌نشده است و قابل حذف نیست.";
 }

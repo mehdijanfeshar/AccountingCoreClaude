@@ -1,16 +1,18 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// قاعدهٔ گردش اعلامیه نقض شد (ویرایش اعلامیهٔ دارای سند، تأیید بدون سند، حساب رابط تعریف‌نشده و…)
 /// — ۴۰۹ با پیام فارسی قابل نمایش.
 /// </summary>
-public sealed class ElamConflictException : Exception
+public sealed class ElamConflictException : Exception, IPublicProblemException
 {
     public ElamConflictException(string publicDetail)
         : base(publicDetail)
     {
         PublicDetail = publicDetail;
     }
+
+    public int StatusCode => 409;
 
     public string PublicDetail { get; }
 }

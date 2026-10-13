@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by <c>SubmitPettyCashExpenseDocCommandHandler</c> when the document's
@@ -8,7 +8,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// convention, so "starts with YEAR" is a plain string prefix check. 400: the request's own data
 /// is invalid, not a conflict with another resource.
 /// </summary>
-public sealed class PettyCashInvoiceYearMismatchException : Exception
+public sealed class PettyCashInvoiceYearMismatchException : Exception, IPublicProblemException
 {
     public PettyCashInvoiceYearMismatchException(Guid expenseDocId, string? invoiceDate, string year)
         : base($"Petty-cash expense document {expenseDocId} invoice date '{invoiceDate}' does not " +
@@ -24,6 +24,8 @@ public sealed class PettyCashInvoiceYearMismatchException : Exception
     public string? InvoiceDate { get; }
 
     public string Year { get; }
+
+    public int StatusCode => 400;
 
     public string PublicDetail => "تاریخ فاکتور باید در سال مالی جاری باشد.";
 }

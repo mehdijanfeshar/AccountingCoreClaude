@@ -1,4 +1,4 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Exceptions;
 
@@ -11,7 +11,7 @@ namespace Accounting.Application.Common.Exceptions;
 ///
 /// <b>403, not 409</b> — a straight permissions gap.
 /// </summary>
-public sealed class PettyCashRefundRecorderMismatchException : Exception
+public sealed class PettyCashRefundRecorderMismatchException : Exception, IPublicProblemException
 {
     public PettyCashRefundRecorderMismatchException(Guid fundId, PettyCashRefundRecorder requiredRecorder)
         : base($"Caller is not the designated {requiredRecorder} recorder for petty-cash fund {fundId}.")
@@ -23,6 +23,8 @@ public sealed class PettyCashRefundRecorderMismatchException : Exception
     public Guid FundId { get; }
 
     public PettyCashRefundRecorder RequiredRecorder { get; }
+
+    public int StatusCode => 403;
 
     public string PublicDetail => "شما مجاز به ثبت استرداد وجه برای این تنخواه نیستید.";
 }

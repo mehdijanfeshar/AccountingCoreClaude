@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by <c>Accounting.Application.Common.Security.PettyCashReturnFieldPolicy</c> when an
@@ -11,7 +11,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// <see cref="PettyCashDocNotEditableException"/>: the caller IS allowed to edit this document
 /// right now, just not these particular fields, given why it was returned.
 /// </summary>
-public sealed class PettyCashReturnFieldLockedException : Exception
+public sealed class PettyCashReturnFieldLockedException : Exception, IPublicProblemException
 {
     public PettyCashReturnFieldLockedException(Guid expenseDocId, IReadOnlyList<string> fieldNames)
         : base(
@@ -25,6 +25,8 @@ public sealed class PettyCashReturnFieldLockedException : Exception
     public Guid ExpenseDocId { get; }
 
     public IReadOnlyList<string> FieldNames { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail =>
         $"با توجه به دلیل برگشت سند، تغییر این فیلدها مجاز نیست: {string.Join("، ", FieldNames)}.";

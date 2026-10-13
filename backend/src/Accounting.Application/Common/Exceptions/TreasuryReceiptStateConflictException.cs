@@ -1,4 +1,4 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Exceptions;
 
@@ -7,7 +7,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// requires — خزانه‌داری، بخش ۴-ج. Same state-based-refusal shape as
 /// <c>PaymentRequestStateConflictException</c>.
 /// </summary>
-public sealed class TreasuryReceiptStateConflictException : Exception
+public sealed class TreasuryReceiptStateConflictException : Exception, IPublicProblemException
 {
     public TreasuryReceiptStateConflictException(Guid receiptId, ReceiptState actualState, string requiredStateDescription)
         : base($"Receipt {receiptId} is in state {actualState}, but this action requires {requiredStateDescription}.")
@@ -19,6 +19,8 @@ public sealed class TreasuryReceiptStateConflictException : Exception
     public Guid ReceiptId { get; }
 
     public ReceiptState ActualState { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => $"دریافت وجه در وضعیت «{StateLabel(ActualState)}» است و این اقدام روی آن ممکن نیست.";
 

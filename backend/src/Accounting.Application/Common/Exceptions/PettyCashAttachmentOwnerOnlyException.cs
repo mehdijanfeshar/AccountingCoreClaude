@@ -1,4 +1,4 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown when a caller who is not the owning صورت‌هزینه's <c>ADDUSERID</c> attempts to add or
@@ -11,7 +11,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// is a straight permissions gap (the caller is simply not the document's owner), not a state
 /// conflict the caller could resolve by acting differently.
 /// </summary>
-public sealed class PettyCashAttachmentOwnerOnlyException : Exception
+public sealed class PettyCashAttachmentOwnerOnlyException : Exception, IPublicProblemException
 {
     public PettyCashAttachmentOwnerOnlyException(Guid expenseDocId)
         : base($"Caller is not the owner of petty-cash expense document {expenseDocId}.")
@@ -20,6 +20,8 @@ public sealed class PettyCashAttachmentOwnerOnlyException : Exception
     }
 
     public Guid ExpenseDocId { get; }
+
+    public int StatusCode => 403;
 
     public string PublicDetail => "فقط مالک سند می‌تواند پیوست افزوده یا حذف کند.";
 }

@@ -8,7 +8,7 @@ namespace Accounting.Application.Common.Exceptions;
 /// bulk request (folded into <c>PaymentRequestBulkApproveConflictException.Failures</c> as
 /// <c>"over-bulk-limit"</c>).
 /// </summary>
-public sealed class PaymentRequestBulkLimitExceededException : Exception
+public sealed class PaymentRequestBulkLimitExceededException : Exception, IPublicProblemException
 {
     public PaymentRequestBulkLimitExceededException(Guid paymentRequestId, decimal netPayableAmount, decimal bulkApproveLimit)
         : base($"Payment request {paymentRequestId}'s net payable amount {netPayableAmount} exceeds the bulk-approve limit {bulkApproveLimit}.")
@@ -17,6 +17,8 @@ public sealed class PaymentRequestBulkLimitExceededException : Exception
     }
 
     public Guid PaymentRequestId { get; }
+
+    public int StatusCode => 409;
 
     public string PublicDetail => "مبلغ این درخواست از سقف تأیید گروهی بیشتر است.";
 }
