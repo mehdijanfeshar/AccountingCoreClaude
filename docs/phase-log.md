@@ -16,6 +16,15 @@
 
 ---
 
+### فاز ۵۸ / بازسازی پوشه‌ها و بهینه‌سازی خواندن (۲۰۲۶-۱۰-۱۳، برنچ `changenameSpace`)
+
+**درخواست صاحب پروژه:** با رشد داده (میلیون‌ها سطر) خواندن/گزارش‌های ستاد کند نشود؛ و ساختار پوشه‌ها مثل پروژهٔ قبلی (Commands/Queries در یک جا) شود.
+
+- **ساختار:** `<Feature>/Commands|Queries` ⇒ `Application/Commands/<Feature>` و `Application/Queries/<Feature>` (۷۲ ویژگی، ۱۰۶۵ فایل با `git mv`). namespaceها هم‌نام پوشه شدند (`Accounting.Application.Commands.<Feature>...`) در ۱۶۰۹ فایل. پوشه‌های غیر CQRS (Reports، FinancialStatements، Vouchers/Inbox|Restore|YearEnd، Common/Interfaces) دست‌نخورده.
+- **کارایی:** ⚠️ DDL `078_performance_indexes.sql` (ایندکس سر/ردیف سند، پیوند تفصیلی، کدینگ؛ اجرا شد)؛ کش ۶۰ثانیه‌ای `GetAllUnitsAsync`/`GetUnitProvincesAsync`؛ دفتر کل از ۳ به ۲ پیمایش؛ `ChunkedAsync` (۹۰۰تایی) برای `IN` در مغایرت‌گیری بانک (ORA-01795).
+- **بررسی‌شده و بدون تغییر:** N+1 در handlerهای Application کوچک/کران‌دار است. `VoucherReviewReadRepository` دو زیرکوئری همبسته برای جمع هر سند دارد (کاندیدای بهینه‌سازی با join+group)، ولی بدون Oracle زنده تغییر نکرد.
+- **باز:** `EXPLAIN PLAN` تراز/دفتر کل روی دادهٔ واقعی؛ تست اجرا نشد (فقط build).
+
 ### فاز ۵۷ / لاگ تغییرات (Audit Log) (۲۰۲۶-۱۰-۱۲، هر دو ریپو، برنچ `keycloak`)
 
 **درخواست صاحب پروژه:** هر ثبت/اصلاح/حذف (سند، اعلامیه، کارت بانک و…) با ساعت، کد ملی، مقدار قبلی و جدید ثبت شود؛ فقط مدیر مالی ببیند.
