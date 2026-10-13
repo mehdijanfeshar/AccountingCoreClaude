@@ -1,7 +1,7 @@
-using System.Reflection;
-using Accounting.Application.Accounts.Commands.Common;
+﻿using System.Reflection;
+using Accounting.Application.Commands.Accounts.Common;
 using Accounting.Application.Common.Behaviors;
-using Accounting.Application.Vouchers.Commands.Common;
+using Accounting.Application.Commands.Vouchers.Common;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,7 +64,7 @@ public static class DependencyInjection
         // صورت‌های مالی (فاز ۴۵) — قواعد تفکیک واحد (دیدن/تغییر قالب، اولویت قالب در اجرا، گروه سهم واحدها).
         services.AddScoped<Accounting.Application.FinancialStatements.IFsUnitScopeProvider,
             Accounting.Application.FinancialStatements.FsUnitScopeProvider>();
-        services.AddScoped<Accounting.Application.FinancialStatements.Queries.Drill.FsDrillVoucherReader>();
+        services.AddScoped<Accounting.Application.Queries.FinancialStatements.Drill.FsDrillVoucherReader>();
         services.AddScoped<Accounting.Application.FinancialStatements.Periods.FsPeriodGuard>();
         services.AddScoped<Accounting.Application.FinancialStatements.Access.FsAccessService>();
 
@@ -76,102 +76,102 @@ public static class DependencyInjection
         // Petty-cash module, chunk 1 — the three §4 rules that apply only at Submit, shared by
         // CreatePettyCashExpenseDoc (when submit=true) and SubmitPettyCashExpenseDoc so the two
         // paths cannot drift apart. See IPettyCashSubmitRuleChecker XML doc.
-        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashSubmitRuleChecker,
-            Accounting.Application.PettyCash.Commands.Common.PettyCashSubmitRuleChecker>();
+        services.AddScoped<Accounting.Application.Commands.PettyCash.Common.IPettyCashSubmitRuleChecker,
+            Accounting.Application.Commands.PettyCash.Common.PettyCashSubmitRuleChecker>();
 
         // Petty-cash module, chunk 2 (بخش ۲) — the SoD authorizer and the shared review-transition
         // service used by StartReview/Return/Reject/BulkApprove. See
         // IPettyCashReviewAuthorizer / IPettyCashReviewTransitionService XML docs.
-        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashReviewAuthorizer,
-            Accounting.Application.PettyCash.Commands.Common.PettyCashReviewAuthorizer>();
-        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashReviewTransitionService,
-            Accounting.Application.PettyCash.Commands.Common.PettyCashReviewTransitionService>();
+        services.AddScoped<Accounting.Application.Commands.PettyCash.Common.IPettyCashReviewAuthorizer,
+            Accounting.Application.Commands.PettyCash.Common.PettyCashReviewAuthorizer>();
+        services.AddScoped<Accounting.Application.Commands.PettyCash.Common.IPettyCashReviewTransitionService,
+            Accounting.Application.Commands.PettyCash.Common.PettyCashReviewTransitionService>();
 
         // تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸، تأیید دومرحله‌ای) — final approval, shared by
         // ApprovePettyCashExpenseDoc and BulkApprovePettyCashExpenseDocs. See
         // IPettyCashFinalApprovalService XML doc.
-        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashFinalApprovalService,
-            Accounting.Application.PettyCash.Commands.Common.PettyCashFinalApprovalService>();
+        services.AddScoped<Accounting.Application.Commands.PettyCash.Common.IPettyCashFinalApprovalService,
+            Accounting.Application.Commands.PettyCash.Common.PettyCashFinalApprovalService>();
 
         // بخش ۳-الف (۲۰۲۶-۰۹-۲۸) — role authorizer shared by every ترمیم command. See
         // IPettyCashReplenishmentAuthorizer XML doc.
-        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashReplenishmentAuthorizer,
-            Accounting.Application.PettyCash.Commands.Common.PettyCashReplenishmentAuthorizer>();
-        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashRefundRecorderAuthorizer,
-            Accounting.Application.PettyCash.Commands.Common.PettyCashRefundRecorderAuthorizer>();
+        services.AddScoped<Accounting.Application.Commands.PettyCash.Common.IPettyCashReplenishmentAuthorizer,
+            Accounting.Application.Commands.PettyCash.Common.PettyCashReplenishmentAuthorizer>();
+        services.AddScoped<Accounting.Application.Commands.PettyCash.Common.IPettyCashRefundRecorderAuthorizer,
+            Accounting.Application.Commands.PettyCash.Common.PettyCashRefundRecorderAuthorizer>();
 
         // بخش ۳-ب (۲۰۲۶-۰۹-۲۸) — settlement period boundaries/opening balance (shared by the
         // preview query and the count/finalize commands) and the settlement GL voucher builder
         // (shared shape with every other voucher write path — see its own XML doc).
-        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashSettlementPeriodProvisioner,
-            Accounting.Application.PettyCash.Commands.Common.PettyCashSettlementPeriodProvisioner>();
-        services.AddScoped<Accounting.Application.PettyCash.Commands.Common.IPettyCashSettlementVoucherBuilder,
-            Accounting.Application.PettyCash.Commands.Common.PettyCashSettlementVoucherBuilder>();
+        services.AddScoped<Accounting.Application.Commands.PettyCash.Common.IPettyCashSettlementPeriodProvisioner,
+            Accounting.Application.Commands.PettyCash.Common.PettyCashSettlementPeriodProvisioner>();
+        services.AddScoped<Accounting.Application.Commands.PettyCash.Common.IPettyCashSettlementVoucherBuilder,
+            Accounting.Application.Commands.PettyCash.Common.PettyCashSettlementVoucherBuilder>();
 
         // خزانه‌داری، بخش ۴-الف (۲۰۲۶-۰۹-۲۸) — درخواست پرداخت + کارتابل تأیید
         // (docs/tankhah-khazaneh-module.md §۱۰).
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.ITreasuryRoleAuthorizer,
-            Accounting.Application.Treasury.Commands.Common.TreasuryRoleAuthorizer>();
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestSubmitRuleChecker,
-            Accounting.Application.Treasury.Commands.Common.PaymentRequestSubmitRuleChecker>();
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestApprovalService,
-            Accounting.Application.Treasury.Commands.Common.PaymentRequestApprovalService>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.ITreasuryRoleAuthorizer,
+            Accounting.Application.Commands.Treasury.Common.TreasuryRoleAuthorizer>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.IPaymentRequestSubmitRuleChecker,
+            Accounting.Application.Commands.Treasury.Common.PaymentRequestSubmitRuleChecker>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.IPaymentRequestApprovalService,
+            Accounting.Application.Commands.Treasury.Common.PaymentRequestApprovalService>();
 
         // اصلاح ۴-الف (۲۰۲۶-۰۹-۲۹) — تفصیلی چندسطحی مرکز هزینه + تفصیلی ذی‌نفع اختیاری، مشترک
         // بین Create/UpdatePaymentRequest. See IPaymentRequestTafsiliValidator XML doc.
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestTafsiliValidator,
-            Accounting.Application.Treasury.Commands.Common.PaymentRequestTafsiliValidator>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.IPaymentRequestTafsiliValidator,
+            Accounting.Application.Commands.Treasury.Common.PaymentRequestTafsiliValidator>();
 
         // خزانه‌داری، بخش ۴-ب (۲۰۲۶-۰۹-۲۹) — اجرای پرداخت + دو سند GL خودکار
         // (docs/tankhah-khazaneh-module.md §۱۰). Scoped: PaymentRequestLiabilityVoucherBuilder
         // memoises its per-(vahedCode,year) DOC_NUM reservation for the lifetime of one request —
         // see its own XML doc for why bulk-approve needs that.
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestPayablesTafsiliResolver,
-            Accounting.Application.Treasury.Commands.Common.PaymentRequestPayablesTafsiliResolver>();
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestLiabilityVoucherBuilder,
-            Accounting.Application.Treasury.Commands.Common.PaymentRequestLiabilityVoucherBuilder>();
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestPaymentVoucherBuilder,
-            Accounting.Application.Treasury.Commands.Common.PaymentRequestPaymentVoucherBuilder>();
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IPaymentRequestExecutionAuthorizer,
-            Accounting.Application.Treasury.Commands.Common.PaymentRequestExecutionAuthorizer>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.IPaymentRequestPayablesTafsiliResolver,
+            Accounting.Application.Commands.Treasury.Common.PaymentRequestPayablesTafsiliResolver>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.IPaymentRequestLiabilityVoucherBuilder,
+            Accounting.Application.Commands.Treasury.Common.PaymentRequestLiabilityVoucherBuilder>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.IPaymentRequestPaymentVoucherBuilder,
+            Accounting.Application.Commands.Treasury.Common.PaymentRequestPaymentVoucherBuilder>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.IPaymentRequestExecutionAuthorizer,
+            Accounting.Application.Commands.Treasury.Common.PaymentRequestExecutionAuthorizer>();
 
         // خزانه‌داری، بخش ۴-ج (۲۰۲۶-۰۹-۲۹) — دریافت وجه + انتقال وجه
         // (docs/tankhah-khazaneh-module.md §۱۰). Reuses بخش-۴-ب's PaymentRequestVoucherBuildResult
         // shape and IPayReciveHeadRepository — see each type's own XML doc.
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.ITreasuryTreasurerAuthorizer,
-            Accounting.Application.Treasury.Commands.Common.TreasuryTreasurerAuthorizer>();
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IReceiptPayerValidator,
-            Accounting.Application.Treasury.Commands.Common.ReceiptPayerValidator>();
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IReceiptVoucherBuilder,
-            Accounting.Application.Treasury.Commands.Common.ReceiptVoucherBuilder>();
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IReceiptRegistrationService,
-            Accounting.Application.Treasury.Commands.Common.ReceiptRegistrationService>();
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.ITransferVoucherBuilder,
-            Accounting.Application.Treasury.Commands.Common.TransferVoucherBuilder>();
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.ITransferApprovalService,
-            Accounting.Application.Treasury.Commands.Common.TransferApprovalService>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.ITreasuryTreasurerAuthorizer,
+            Accounting.Application.Commands.Treasury.Common.TreasuryTreasurerAuthorizer>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.IReceiptPayerValidator,
+            Accounting.Application.Commands.Treasury.Common.ReceiptPayerValidator>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.IReceiptVoucherBuilder,
+            Accounting.Application.Commands.Treasury.Common.ReceiptVoucherBuilder>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.IReceiptRegistrationService,
+            Accounting.Application.Commands.Treasury.Common.ReceiptRegistrationService>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.ITransferVoucherBuilder,
+            Accounting.Application.Commands.Treasury.Common.TransferVoucherBuilder>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.ITransferApprovalService,
+            Accounting.Application.Commands.Treasury.Common.TransferApprovalService>();
 
         // خزانه‌داری، بخش ۴-د — مغایرت‌گیری بانکی. IBankStatementFileParser در Infrastructure ثبت می‌شود
         // (دیسکت بانک رفاه)؛ ImportBankStatementCommandHandler آن را اختیاری resolve می‌کند.
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IBankFeeVoucherBuilder,
-            Accounting.Application.Treasury.Commands.Common.BankFeeVoucherBuilder>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.IBankFeeVoucherBuilder,
+            Accounting.Application.Commands.Treasury.Common.BankFeeVoucherBuilder>();
 
         // اعلامیه — گردش صادره/رسیده/درآمد.
         services.AddScoped<Accounting.Application.Elams.ElamWorkflowService>();
         // دفتر چک — چک ردیف سند.
-        services.AddScoped<Accounting.Application.Vouchers.Commands.Common.IVoucherChequeService,
-            Accounting.Application.Vouchers.Commands.Common.VoucherChequeService>();
+        services.AddScoped<Accounting.Application.Commands.Vouchers.Common.IVoucherChequeService,
+            Accounting.Application.Commands.Vouchers.Common.VoucherChequeService>();
         // شناسه/ویژگی/فیش ردیف سند.
-        services.AddScoped<Accounting.Application.Vouchers.Commands.Common.IVoucherLineExtrasService,
-            Accounting.Application.Vouchers.Commands.Common.VoucherLineExtrasService>();
+        services.AddScoped<Accounting.Application.Commands.Vouchers.Common.IVoucherLineExtrasService,
+            Accounting.Application.Commands.Vouchers.Common.VoucherLineExtrasService>();
         // دریافت اسناد از سایر سیستم‌ها — کنترل‌های مشترک پیش‌نمایش و دریافت.
         services.AddScoped<Accounting.Application.Vouchers.Inbox.SystemVoucherChecker>();
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IBankStatementAutoMatchService,
-            Accounting.Application.Treasury.Commands.Common.BankStatementAutoMatchService>();
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IBankStatementManualMatchService,
-            Accounting.Application.Treasury.Commands.Common.BankStatementManualMatchService>();
-        services.AddScoped<Accounting.Application.Treasury.Commands.Common.IBankStatementLineResolutionService,
-            Accounting.Application.Treasury.Commands.Common.BankStatementLineResolutionService>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.IBankStatementAutoMatchService,
+            Accounting.Application.Commands.Treasury.Common.BankStatementAutoMatchService>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.IBankStatementManualMatchService,
+            Accounting.Application.Commands.Treasury.Common.BankStatementManualMatchService>();
+        services.AddScoped<Accounting.Application.Commands.Treasury.Common.IBankStatementLineResolutionService,
+            Accounting.Application.Commands.Treasury.Common.BankStatementLineResolutionService>();
 
         return services;
     }

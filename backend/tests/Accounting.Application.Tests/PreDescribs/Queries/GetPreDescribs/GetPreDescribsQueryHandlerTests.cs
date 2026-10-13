@@ -1,5 +1,5 @@
-using Accounting.Application.PreDescribs.Queries;
-using Accounting.Application.PreDescribs.Queries.GetPreDescribs;
+﻿using Accounting.Application.Queries.PreDescribs;
+using Accounting.Application.Queries.PreDescribs.GetPreDescribs;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Moq;

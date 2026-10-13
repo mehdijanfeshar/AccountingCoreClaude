@@ -1,4 +1,4 @@
-using Accounting.Application.IdentitySubGroups.Commands.UpdateIdentitySubGroup;
+﻿using Accounting.Application.Commands.IdentitySubGroups.UpdateIdentitySubGroup;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.IdentitySubGroups.Commands.UpdateIdentitySubGroup;

@@ -1,4 +1,4 @@
-using Accounting.Application.IdentityGroups.Queries;
+﻿using Accounting.Application.Queries.IdentityGroups;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

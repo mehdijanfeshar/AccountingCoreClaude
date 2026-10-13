@@ -1,4 +1,4 @@
-using Accounting.Application.AccountExceptions.Commands.CreateAccountException;
+﻿using Accounting.Application.Commands.AccountExceptions.CreateAccountException;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using Moq;

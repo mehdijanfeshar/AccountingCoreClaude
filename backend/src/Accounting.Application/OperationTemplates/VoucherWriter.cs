@@ -1,6 +1,6 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.Vouchers.Commands.Common;
+using Accounting.Application.Commands.Vouchers.Common;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 

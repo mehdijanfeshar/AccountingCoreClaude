@@ -1,7 +1,7 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
-/// Thrown by <c>Accounting.Application.PettyCash.Commands.Common.PettyCashReviewAuthorizer</c>
+/// Thrown by <c>Accounting.Application.Commands.PettyCash.Common.PettyCashReviewAuthorizer</c>
 /// when the current caller — although a valid active reviewer for the fund — is also the very
 /// user who created (<c>ADDUSERID</c>) the صورت‌هزینه they are trying to StartReview/Approve/
 /// Return/Reject. Segregation of duties: «ایجادکننده ≠ بررسی‌کننده»

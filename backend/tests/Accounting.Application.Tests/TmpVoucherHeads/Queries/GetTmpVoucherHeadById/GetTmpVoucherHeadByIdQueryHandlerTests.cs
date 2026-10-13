@@ -1,6 +1,6 @@
-using Accounting.Application.Common.Interfaces;
-using Accounting.Application.TmpVoucherHeads.Queries;
-using Accounting.Application.TmpVoucherHeads.Queries.GetTmpVoucherHeadById;
+﻿using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Queries.TmpVoucherHeads;
+using Accounting.Application.Queries.TmpVoucherHeads.GetTmpVoucherHeadById;
 using Moq;
 
 namespace Accounting.Application.Tests.TmpVoucherHeads.Queries.GetTmpVoucherHeadById;

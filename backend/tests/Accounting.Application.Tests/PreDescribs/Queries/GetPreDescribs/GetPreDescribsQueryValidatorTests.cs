@@ -1,4 +1,4 @@
-using Accounting.Application.PreDescribs.Queries.GetPreDescribs;
+﻿using Accounting.Application.Queries.PreDescribs.GetPreDescribs;
 
 namespace Accounting.Application.Tests.PreDescribs.Queries.GetPreDescribs;
 

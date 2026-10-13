@@ -1,4 +1,4 @@
-using Accounting.Application.PersonActions.Queries.GetPersonActions;
+﻿using Accounting.Application.Queries.PersonActions.GetPersonActions;
 
 namespace Accounting.Application.Tests.PersonActions.Queries.GetPersonActions;
 

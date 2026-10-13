@@ -1,4 +1,4 @@
-using Accounting.Application.ChequesIncorrents.Commands.DeleteChequesIncorrent;
+﻿using Accounting.Application.Commands.ChequesIncorrents.DeleteChequesIncorrent;
 
 namespace Accounting.Application.Tests.ChequesIncorrents.Commands.DeleteChequesIncorrent;
 

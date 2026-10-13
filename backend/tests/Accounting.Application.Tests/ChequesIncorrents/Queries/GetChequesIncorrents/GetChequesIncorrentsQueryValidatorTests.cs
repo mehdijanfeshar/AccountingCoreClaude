@@ -1,4 +1,4 @@
-using Accounting.Application.ChequesIncorrents.Queries.GetChequesIncorrents;
+﻿using Accounting.Application.Queries.ChequesIncorrents.GetChequesIncorrents;
 
 namespace Accounting.Application.Tests.ChequesIncorrents.Queries.GetChequesIncorrents;
 

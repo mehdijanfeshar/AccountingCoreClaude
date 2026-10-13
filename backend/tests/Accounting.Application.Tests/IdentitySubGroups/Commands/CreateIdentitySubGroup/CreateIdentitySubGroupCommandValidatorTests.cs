@@ -1,4 +1,4 @@
-using Accounting.Application.IdentitySubGroups.Commands.CreateIdentitySubGroup;
+﻿using Accounting.Application.Commands.IdentitySubGroups.CreateIdentitySubGroup;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.IdentitySubGroups.Commands.CreateIdentitySubGroup;

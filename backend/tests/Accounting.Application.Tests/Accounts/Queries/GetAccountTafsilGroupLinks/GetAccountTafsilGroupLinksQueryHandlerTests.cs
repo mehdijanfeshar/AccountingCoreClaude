@@ -1,5 +1,5 @@
-using Accounting.Application.Accounts.Queries;
-using Accounting.Application.Accounts.Queries.GetAccountTafsilGroupLinks;
+﻿using Accounting.Application.Queries.Accounts;
+using Accounting.Application.Queries.Accounts.GetAccountTafsilGroupLinks;
 using Accounting.Application.Common.Interfaces;
 using Moq;
 

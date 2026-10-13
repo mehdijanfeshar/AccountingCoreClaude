@@ -1,5 +1,5 @@
-using Accounting.Application.AccountExceptions.Queries;
-using Accounting.Application.AccountExceptions.Queries.GetAccountExceptionById;
+﻿using Accounting.Application.Queries.AccountExceptions;
+using Accounting.Application.Queries.AccountExceptions.GetAccountExceptionById;
 using Accounting.Application.Common.Interfaces;
 using Moq;
 

@@ -1,4 +1,4 @@
-using Accounting.Application.PayReciveHeads.Commands.DeletePayReciveHead;
+﻿using Accounting.Application.Commands.PayReciveHeads.DeletePayReciveHead;
 
 namespace Accounting.Application.Tests.PayReciveHeads.Commands.DeletePayReciveHead;
 

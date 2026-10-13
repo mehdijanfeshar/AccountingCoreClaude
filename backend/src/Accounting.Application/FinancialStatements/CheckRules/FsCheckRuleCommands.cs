@@ -1,10 +1,10 @@
-using Accounting.Application.FinancialStatements.Access;
+﻿using Accounting.Application.FinancialStatements.Access;
 using System.Text.Json.Serialization;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Common.Security;
 using Accounting.Application.FinancialStatements.Engine;
-using Accounting.Application.FinancialStatements.Queries;
+using Accounting.Application.Queries.FinancialStatements;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using FluentValidation;

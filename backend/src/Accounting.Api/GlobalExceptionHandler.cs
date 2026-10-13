@@ -1,4 +1,4 @@
-using Accounting.Application.Common.Exceptions;
+﻿using Accounting.Application.Common.Exceptions;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
@@ -617,7 +617,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                     roleAccessDeniedException.PublicDetail)),
 
             // شناسه/ویژگی/فیش ردیف سند ناقص یا نادرست.
-            Accounting.Application.Vouchers.Commands.Common.VoucherLineExtrasException voucherLineExtrasException => (
+            Accounting.Application.Commands.Vouchers.Common.VoucherLineExtrasException voucherLineExtrasException => (
                 StatusCodes.Status422UnprocessableEntity,
                 BuildProblemDetails(
                     httpContext,

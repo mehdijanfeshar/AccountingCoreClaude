@@ -1,7 +1,7 @@
-using Accounting.Application.Common;
+﻿using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.PayReciveHeads.Queries;
-using Accounting.Application.PayReciveHeads.Queries.GetPayReciveHeads;
+using Accounting.Application.Queries.PayReciveHeads;
+using Accounting.Application.Queries.PayReciveHeads.GetPayReciveHeads;
 using Accounting.Domain.ValueObjects;
 using Moq;
 

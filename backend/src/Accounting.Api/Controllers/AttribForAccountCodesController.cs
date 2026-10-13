@@ -1,10 +1,10 @@
-using Accounting.Application.Common;
-using Accounting.Application.AttribForAccountCodes.Commands.CreateAttribForAccountCode;
-using Accounting.Application.AttribForAccountCodes.Commands.DeleteAttribForAccountCode;
-using Accounting.Application.AttribForAccountCodes.Commands.UpdateAttribForAccountCode;
-using Accounting.Application.AttribForAccountCodes.Queries;
-using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodeById;
-using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.AttribForAccountCodes.CreateAttribForAccountCode;
+using Accounting.Application.Commands.AttribForAccountCodes.DeleteAttribForAccountCode;
+using Accounting.Application.Commands.AttribForAccountCodes.UpdateAttribForAccountCode;
+using Accounting.Application.Queries.AttribForAccountCodes;
+using Accounting.Application.Queries.AttribForAccountCodes.GetAttribForAccountCodeById;
+using Accounting.Application.Queries.AttribForAccountCodes.GetAttribForAccountCodes;
 using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

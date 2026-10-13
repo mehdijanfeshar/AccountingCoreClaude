@@ -1,6 +1,6 @@
-using Accounting.Application.Vouchers.Commands.Common;
-using Accounting.Application.Vouchers.Commands.CreateVoucherDetail;
-using Accounting.Application.Vouchers.Commands.UpdateVoucherDetail;
+﻿using Accounting.Application.Commands.Vouchers.Common;
+using Accounting.Application.Commands.Vouchers.CreateVoucherDetail;
+using Accounting.Application.Commands.Vouchers.UpdateVoucherDetail;
 
 namespace Accounting.Application.Tests.Vouchers.Commands.Common;
 

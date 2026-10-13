@@ -1,6 +1,6 @@
-using Accounting.Application.Common.Exceptions;
+﻿using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.PayReciveHeads.Commands.DeletePayReciveHead;
+using Accounting.Application.Commands.PayReciveHeads.DeletePayReciveHead;
 using Accounting.Domain.Entity;
 using Moq;
 

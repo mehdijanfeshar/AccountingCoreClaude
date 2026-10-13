@@ -1,5 +1,5 @@
-using Accounting.Application.Common.Interfaces;
-using Accounting.Application.Treasury.Queries;
+﻿using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Queries.Treasury;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;
 

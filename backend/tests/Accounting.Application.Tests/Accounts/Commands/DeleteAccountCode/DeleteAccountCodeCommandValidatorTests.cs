@@ -1,4 +1,4 @@
-using Accounting.Application.Accounts.Commands.DeleteAccountCode;
+﻿using Accounting.Application.Commands.Accounts.DeleteAccountCode;
 
 namespace Accounting.Application.Tests.Accounts.Commands.DeleteAccountCode;
 

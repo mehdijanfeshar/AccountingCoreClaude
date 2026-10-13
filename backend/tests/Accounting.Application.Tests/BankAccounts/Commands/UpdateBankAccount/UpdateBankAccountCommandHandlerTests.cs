@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.BankAccounts.Commands.UpdateBankAccount;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.BankAccounts.UpdateBankAccount;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;

@@ -1,4 +1,4 @@
-using Accounting.Application.Vouchers.Commands.DeleteVoucherHead;
+﻿using Accounting.Application.Commands.Vouchers.DeleteVoucherHead;
 
 namespace Accounting.Application.Tests.Vouchers.Commands.DeleteVoucherHead;
 

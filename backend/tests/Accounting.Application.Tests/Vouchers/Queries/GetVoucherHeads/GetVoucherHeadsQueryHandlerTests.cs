@@ -1,8 +1,8 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.Vouchers.Queries;
-using Accounting.Application.Vouchers.Queries.GetVoucherHeads;
+using Accounting.Application.Queries.Vouchers;
+using Accounting.Application.Queries.Vouchers.GetVoucherHeads;
 using Moq;
 
 namespace Accounting.Application.Tests.Vouchers.Queries.GetVoucherHeads;

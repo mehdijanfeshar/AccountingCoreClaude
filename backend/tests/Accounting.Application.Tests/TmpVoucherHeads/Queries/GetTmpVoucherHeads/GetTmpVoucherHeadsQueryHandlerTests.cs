@@ -1,7 +1,7 @@
-using Accounting.Application.Common;
+﻿using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.TmpVoucherHeads.Queries;
-using Accounting.Application.TmpVoucherHeads.Queries.GetTmpVoucherHeads;
+using Accounting.Application.Queries.TmpVoucherHeads;
+using Accounting.Application.Queries.TmpVoucherHeads.GetTmpVoucherHeads;
 using Moq;
 
 namespace Accounting.Application.Tests.TmpVoucherHeads.Queries.GetTmpVoucherHeads;

@@ -1,4 +1,4 @@
-using Accounting.Application.TafsilGroups.Commands.UpdateTafsilGroup;
+﻿using Accounting.Application.Commands.TafsilGroups.UpdateTafsilGroup;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

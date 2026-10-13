@@ -1,10 +1,10 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.WorkShops.Queries;
+using Accounting.Application.Queries.WorkShops;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;

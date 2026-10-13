@@ -1,4 +1,4 @@
-using Accounting.Application.AttribForAccountCodes.Commands.DeleteAttribForAccountCode;
+﻿using Accounting.Application.Commands.AttribForAccountCodes.DeleteAttribForAccountCode;
 
 namespace Accounting.Application.Tests.AttribForAccountCodes.Commands.DeleteAttribForAccountCode;
 

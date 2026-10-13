@@ -1,4 +1,4 @@
-using Accounting.Application.WorkShops.Queries.GetWorkShopById;
+﻿using Accounting.Application.Queries.WorkShops.GetWorkShopById;
 
 namespace Accounting.Application.Tests.WorkShops.Queries.GetWorkShopById;
 

@@ -1,5 +1,5 @@
-using Accounting.Application.WhiteAndBlackLists.Queries;
-using Accounting.Application.WhiteAndBlackLists.Queries.GetWhiteAndBlackListById;
+﻿using Accounting.Application.Queries.WhiteAndBlackLists;
+using Accounting.Application.Queries.WhiteAndBlackLists.GetWhiteAndBlackListById;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.ValueObjects;
 using Moq;

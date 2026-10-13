@@ -1,5 +1,5 @@
-using System.Linq.Expressions;
-using Accounting.Application.IdentitySubGroups.Queries;
+﻿using System.Linq.Expressions;
+using Accounting.Application.Queries.IdentitySubGroups;
 using Accounting.Application.Common;
 using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Interfaces;

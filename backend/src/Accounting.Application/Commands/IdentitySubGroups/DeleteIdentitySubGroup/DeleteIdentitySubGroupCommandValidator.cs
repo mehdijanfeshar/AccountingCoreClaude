@@ -1,0 +1,15 @@
+﻿using FluentValidation;
+
+namespace Accounting.Application.Commands.IdentitySubGroups.DeleteIdentitySubGroup;
+
+/// <summary>
+/// Surface-level validation only — the single field is the route-bound <c>Id</c>.
+/// </summary>
+public sealed class DeleteIdentitySubGroupCommandValidator : AbstractValidator<DeleteIdentitySubGroupCommand>
+{
+    public DeleteIdentitySubGroupCommandValidator()
+    {
+        RuleFor(x => x.Id)
+            .NotEmpty();
+    }
+}

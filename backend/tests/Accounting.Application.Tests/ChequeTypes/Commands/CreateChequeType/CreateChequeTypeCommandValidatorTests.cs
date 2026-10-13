@@ -1,4 +1,4 @@
-using Accounting.Application.ChequeTypes.Commands.CreateChequeType;
+﻿using Accounting.Application.Commands.ChequeTypes.CreateChequeType;
 
 namespace Accounting.Application.Tests.ChequeTypes.Commands.CreateChequeType;
 

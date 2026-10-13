@@ -1,4 +1,4 @@
-using Accounting.Application.ChequeTypes.Queries;
+﻿using Accounting.Application.Queries.ChequeTypes;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

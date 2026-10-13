@@ -1,4 +1,4 @@
-using Accounting.Application.Accounts.Commands.CreateAccountCode;
+﻿using Accounting.Application.Commands.Accounts.CreateAccountCode;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;

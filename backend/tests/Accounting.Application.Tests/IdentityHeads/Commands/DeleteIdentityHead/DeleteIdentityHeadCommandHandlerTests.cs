@@ -1,6 +1,6 @@
-using Accounting.Application.Common.Exceptions;
+﻿using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.IdentityHeads.Commands.DeleteIdentityHead;
+using Accounting.Application.Commands.IdentityHeads.DeleteIdentityHead;
 using Accounting.Domain.Entity;
 using Moq;
 

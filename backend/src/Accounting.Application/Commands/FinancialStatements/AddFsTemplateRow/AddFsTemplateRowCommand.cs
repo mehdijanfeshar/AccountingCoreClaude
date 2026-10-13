@@ -1,0 +1,21 @@
+﻿using Accounting.Application.FinancialStatements;
+using Accounting.Domain.ValueObjects;
+using Accounting.Application.FinancialStatements.Access;
+using System.Text.Json.Serialization;
+using Accounting.Application.Common.Security;
+using Accounting.Application.Commands.FinancialStatements.Common;
+using MediatR;
+
+namespace Accounting.Application.Commands.FinancialStatements.AddFsTemplateRow;
+
+/// <summary>
+/// <c>POST api/fs/template-versions/{versionId}/rows</c> — ردیف جدید در نسخهٔ پیش‌نویس. کد تکراری در
+/// نسخه = ۴۰۹. فقط نحو انتخاب‌گر/فرمول اینجا بررسی می‌شود؛ ارجاع و دور در validate/activate.
+/// پاسخ = شناسهٔ ردیف.
+/// </summary>
+[FsRequires(FsOperation.EditTemplate)]
+public sealed record AddFsTemplateRowCommand(Guid VersionId, FsTemplateRowInput Row) : IRequest<Guid>, IVahedScopedCommand
+{
+    [JsonIgnore]
+    public string VahedCode { get; set; } = string.Empty;
+}

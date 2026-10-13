@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteAndBlackLists.Commands.ReactivateWhiteAndBlackList;
+﻿using Accounting.Application.Commands.WhiteAndBlackLists.ReactivateWhiteAndBlackList;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.WhiteAndBlackLists.Commands.ReactivateWhiteAndBlackList;

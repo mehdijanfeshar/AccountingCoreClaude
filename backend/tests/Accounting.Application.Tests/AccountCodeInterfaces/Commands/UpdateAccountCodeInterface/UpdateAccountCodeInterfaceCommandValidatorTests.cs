@@ -1,4 +1,4 @@
-using Accounting.Application.AccountCodeInterfaces.Commands.UpdateAccountCodeInterface;
+﻿using Accounting.Application.Commands.AccountCodeInterfaces.UpdateAccountCodeInterface;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.AccountCodeInterfaces.Commands.UpdateAccountCodeInterface;

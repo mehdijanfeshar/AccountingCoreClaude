@@ -1,4 +1,4 @@
-using Accounting.Application.BankAccounts.Commands.DeleteBankAccount;
+﻿using Accounting.Application.Commands.BankAccounts.DeleteBankAccount;
 
 namespace Accounting.Application.Tests.BankAccounts.Commands.DeleteBankAccount;
 

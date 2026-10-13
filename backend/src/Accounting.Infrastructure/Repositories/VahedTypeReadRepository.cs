@@ -1,6 +1,6 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.VahedTypes.Queries;
+using Accounting.Application.Queries.VahedTypes;
 using Accounting.Domain.Entity;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;

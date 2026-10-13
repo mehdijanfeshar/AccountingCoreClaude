@@ -1,4 +1,4 @@
-using Accounting.Application.IdentitySubGroups.Commands.DeleteIdentitySubGroup;
+﻿using Accounting.Application.Commands.IdentitySubGroups.DeleteIdentitySubGroup;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

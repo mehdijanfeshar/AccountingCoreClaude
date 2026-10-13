@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.BankCartDetails.Commands.UpdateBankCartDetail;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.BankCartDetails.UpdateBankCartDetail;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;

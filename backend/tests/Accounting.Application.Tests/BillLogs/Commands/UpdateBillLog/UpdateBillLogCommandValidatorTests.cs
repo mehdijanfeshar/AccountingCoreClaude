@@ -1,4 +1,4 @@
-using Accounting.Application.BillLogs.Commands.UpdateBillLog;
+﻿using Accounting.Application.Commands.BillLogs.UpdateBillLog;
 
 namespace Accounting.Application.Tests.BillLogs.Commands.UpdateBillLog;
 

@@ -1,10 +1,10 @@
-using Accounting.Application.Common;
-using Accounting.Application.TmpVoucherHeads.Commands.CreateTmpVoucherHead;
-using Accounting.Application.TmpVoucherHeads.Commands.DeleteTmpVoucherHead;
-using Accounting.Application.TmpVoucherHeads.Commands.UpdateTmpVoucherHead;
-using Accounting.Application.TmpVoucherHeads.Queries;
-using Accounting.Application.TmpVoucherHeads.Queries.GetTmpVoucherHeadById;
-using Accounting.Application.TmpVoucherHeads.Queries.GetTmpVoucherHeads;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.TmpVoucherHeads.CreateTmpVoucherHead;
+using Accounting.Application.Commands.TmpVoucherHeads.DeleteTmpVoucherHead;
+using Accounting.Application.Commands.TmpVoucherHeads.UpdateTmpVoucherHead;
+using Accounting.Application.Queries.TmpVoucherHeads;
+using Accounting.Application.Queries.TmpVoucherHeads.GetTmpVoucherHeadById;
+using Accounting.Application.Queries.TmpVoucherHeads.GetTmpVoucherHeads;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

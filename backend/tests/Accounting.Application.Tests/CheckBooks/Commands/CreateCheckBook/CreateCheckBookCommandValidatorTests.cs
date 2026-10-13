@@ -1,4 +1,4 @@
-using Accounting.Application.CheckBooks.Commands.CreateCheckBook;
+﻿using Accounting.Application.Commands.CheckBooks.CreateCheckBook;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.CheckBooks.Commands.CreateCheckBook;

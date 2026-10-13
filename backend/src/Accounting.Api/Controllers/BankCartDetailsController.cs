@@ -1,10 +1,10 @@
-using Accounting.Application.Common;
-using Accounting.Application.BankCartDetails.Commands.CreateBankCartDetail;
-using Accounting.Application.BankCartDetails.Commands.DeleteBankCartDetail;
-using Accounting.Application.BankCartDetails.Commands.UpdateBankCartDetail;
-using Accounting.Application.BankCartDetails.Queries;
-using Accounting.Application.BankCartDetails.Queries.GetBankCartDetailById;
-using Accounting.Application.BankCartDetails.Queries.GetBankCartDetails;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.BankCartDetails.CreateBankCartDetail;
+using Accounting.Application.Commands.BankCartDetails.DeleteBankCartDetail;
+using Accounting.Application.Commands.BankCartDetails.UpdateBankCartDetail;
+using Accounting.Application.Queries.BankCartDetails;
+using Accounting.Application.Queries.BankCartDetails.GetBankCartDetailById;
+using Accounting.Application.Queries.BankCartDetails.GetBankCartDetails;
 using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

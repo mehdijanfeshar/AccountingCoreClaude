@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteAndBlackLists.Commands.CreateWhiteAndBlackList;
+﻿using Accounting.Application.Commands.WhiteAndBlackLists.CreateWhiteAndBlackList;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.WhiteAndBlackLists.Commands.CreateWhiteAndBlackList;

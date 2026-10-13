@@ -1,9 +1,9 @@
-using Accounting.Application.AccountCodeInterfaces.Commands.CreateAccountCodeInterface;
-using Accounting.Application.AccountCodeInterfaces.Commands.DeleteAccountCodeInterface;
-using Accounting.Application.AccountCodeInterfaces.Commands.UpdateAccountCodeInterface;
-using Accounting.Application.AccountCodeInterfaces.Queries;
-using Accounting.Application.AccountCodeInterfaces.Queries.GetAccountCodeInterfaceById;
-using Accounting.Application.AccountCodeInterfaces.Queries.GetAccountCodeInterfaces;
+﻿using Accounting.Application.Commands.AccountCodeInterfaces.CreateAccountCodeInterface;
+using Accounting.Application.Commands.AccountCodeInterfaces.DeleteAccountCodeInterface;
+using Accounting.Application.Commands.AccountCodeInterfaces.UpdateAccountCodeInterface;
+using Accounting.Application.Queries.AccountCodeInterfaces;
+using Accounting.Application.Queries.AccountCodeInterfaces.GetAccountCodeInterfaceById;
+using Accounting.Application.Queries.AccountCodeInterfaces.GetAccountCodeInterfaces;
 using Accounting.Application.Common;
 using Accounting.Domain.ValueObjects;
 using MediatR;

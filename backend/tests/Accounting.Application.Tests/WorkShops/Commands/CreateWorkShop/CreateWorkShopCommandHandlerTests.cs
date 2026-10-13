@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.WorkShops.Commands.CreateWorkShop;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.WorkShops.CreateWorkShop;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

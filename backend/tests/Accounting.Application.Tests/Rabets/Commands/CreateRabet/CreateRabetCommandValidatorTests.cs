@@ -1,4 +1,4 @@
-using Accounting.Application.Rabets.Commands.CreateRabet;
+﻿using Accounting.Application.Commands.Rabets.CreateRabet;
 
 namespace Accounting.Application.Tests.Rabets.Commands.CreateRabet;
 

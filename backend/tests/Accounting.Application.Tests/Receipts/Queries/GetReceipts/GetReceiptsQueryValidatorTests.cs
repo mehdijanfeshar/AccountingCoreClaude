@@ -1,4 +1,4 @@
-using Accounting.Application.Receipts.Queries.GetReceipts;
+﻿using Accounting.Application.Queries.Receipts.GetReceipts;
 
 namespace Accounting.Application.Tests.Receipts.Queries.GetReceipts;
 

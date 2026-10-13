@@ -1,4 +1,4 @@
-using Accounting.Application.BillLogs.Commands.CreateBillLog;
+﻿using Accounting.Application.Commands.BillLogs.CreateBillLog;
 
 namespace Accounting.Application.Tests.BillLogs.Commands.CreateBillLog;
 

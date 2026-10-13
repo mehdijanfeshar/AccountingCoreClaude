@@ -1,4 +1,4 @@
-using Accounting.Application.Expenses.Commands.UpdateExpense;
+﻿using Accounting.Application.Commands.Expenses.UpdateExpense;
 
 namespace Accounting.Application.Tests.Expenses.Commands.UpdateExpense;
 

@@ -1,11 +1,11 @@
-using Accounting.Domain.Entity;
+﻿using Accounting.Domain.Entity;
 
 namespace Accounting.Application.Common.Interfaces;
 
 /// <summary>
 /// Write-side repository for <see cref="TB_EXPENCE"/> (CLR-side naming normalised to
 /// <c>Expense</c> — the Oracle table name itself is misspelled <c>EXPENCE</c>; see
-/// <see cref="Accounting.Application.Expenses.Commands.CreateExpense.CreateExpenseCommand"/> XML
+/// <see cref="Accounting.Application.Commands.Expenses.CreateExpense.CreateExpenseCommand"/> XML
 /// doc). Only stages changes — it does NOT call SaveChanges; the handler owns the transaction
 /// boundary via <see cref="IUnitOfWork"/>.
 /// </summary>

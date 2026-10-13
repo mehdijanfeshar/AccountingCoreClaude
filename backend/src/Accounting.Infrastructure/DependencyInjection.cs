@@ -1,4 +1,4 @@
-using Accounting.Application.Common.Interfaces;
+﻿using Accounting.Application.Common.Interfaces;
 using Accounting.Infrastructure.Idp;
 using Accounting.Infrastructure.Legacy;
 using Accounting.Infrastructure.Persistence;
@@ -47,14 +47,14 @@ public static class DependencyInjection
         services.AddScoped<IDeleteDependencyChecker, DeleteDependencyChecker>();
         services.AddScoped<IVoucherRestoreRepository, VoucherRestoreRepository>();
         services.AddScoped<ISystemVoucherInboxRepository, SystemVoucherInboxRepository>();
-        services.AddScoped<Accounting.Application.Vouchers.Commands.Common.IAccountEntryPolicy, AccountEntryPolicy>();
+        services.AddScoped<Accounting.Application.Commands.Vouchers.Common.IAccountEntryPolicy, AccountEntryPolicy>();
         services.AddScoped<IMonthReopenRepository, MonthReopenRepository>();
         services.AddScoped<Accounting.Application.Common.Security.IRoleMenuAccessStore, RoleMenuAccessStore>();
         services.AddSingleton<IMonthReopenCodeGenerator, MonthReopenCodeGenerator>();
         services.AddScoped<IMonthCloseRepository, MonthCloseRepository>();
         services.AddScoped<Accounting.Application.Vouchers.YearEnd.IYearEndRepository, YearEndRepository>();
         services.AddScoped<Accounting.Application.RabetClosings.IRabetClosingRepository, RabetClosingRepository>();
-        services.AddScoped<Accounting.Application.Rabets.Queries.GetRabetTypes.IRabetTypeReadRepository, RabetTypeReadRepository>();
+        services.AddScoped<Accounting.Application.Queries.Rabets.GetRabetTypes.IRabetTypeReadRepository, RabetTypeReadRepository>();
         services.AddScoped<IVoucherHeadRepository, VoucherHeadRepository>();
         services.AddScoped<IVoucherDetailRepository, VoucherDetailRepository>();
         services.AddScoped<IAccountCodeReadRepository, AccountCodeReadRepository>();
@@ -129,8 +129,8 @@ public static class DependencyInjection
         services.AddScoped<IAttributeAccountReconciliationReadRepository, AttributeAccountReconciliationReadRepository>();
         services.AddScoped<IElamWorkflowRepository, ElamWorkflowRepository>();
         // شناسه/ویژگی/فیش ردیف سند.
-        services.AddScoped<Accounting.Application.Vouchers.Commands.Common.IVoucherLineExtrasStore, VoucherLineExtrasStore>();
-        services.AddScoped<Accounting.Application.Vouchers.Queries.LineExtras.IVoucherLineDisplayReader, VoucherLineDisplayReader>();
+        services.AddScoped<Accounting.Application.Commands.Vouchers.Common.IVoucherLineExtrasStore, VoucherLineExtrasStore>();
+        services.AddScoped<Accounting.Application.Queries.Vouchers.LineExtras.IVoucherLineDisplayReader, VoucherLineDisplayReader>();
         services.AddScoped<IElamWorkflowReadRepository, ElamWorkflowReadRepository>();
         services.AddScoped<IBankCardRepository, BankCardRepository>();
         services.AddScoped<IChequeBookRepository, ChequeBookRepository>();

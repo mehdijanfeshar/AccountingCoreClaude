@@ -1,5 +1,5 @@
-using Accounting.Domain.ValueObjects;
-using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
+﻿using Accounting.Domain.ValueObjects;
+using Accounting.Application.Queries.AttribForAccountCodes.GetAttribForAccountCodes;
 
 namespace Accounting.Application.Tests.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
 

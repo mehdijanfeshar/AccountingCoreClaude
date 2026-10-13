@@ -1,7 +1,7 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
-/// Thrown by <c>Accounting.Application.PettyCash.Commands.Common.PettyCashReviewAuthorizer</c>
+/// Thrown by <c>Accounting.Application.Commands.PettyCash.Common.PettyCashReviewAuthorizer</c>
 /// when the current caller has no active <c>TB_PC_REVIEWER</c> row for a صورت‌هزینه's
 /// <c>FUND_ID</c> — i.e. they are not a designated بررسی‌کننده for that تنخواه at all, so
 /// none of StartReview/Approve/Return/Reject is theirs to perform

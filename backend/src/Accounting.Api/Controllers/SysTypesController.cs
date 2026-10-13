@@ -1,5 +1,5 @@
-using Accounting.Application.SysTypes.Queries;
-using Accounting.Application.SysTypes.Queries.GetSysTypes;
+﻿using Accounting.Application.Queries.SysTypes;
+using Accounting.Application.Queries.SysTypes.GetSysTypes;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

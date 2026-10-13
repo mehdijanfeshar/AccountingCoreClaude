@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Xml.Linq;
@@ -7,7 +7,7 @@ using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Common.Security;
 using Accounting.Application.FinancialStatements.Access;
 using Accounting.Application.FinancialStatements.Engine;
-using Accounting.Application.FinancialStatements.Queries;
+using Accounting.Application.Queries.FinancialStatements;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using FluentValidation;

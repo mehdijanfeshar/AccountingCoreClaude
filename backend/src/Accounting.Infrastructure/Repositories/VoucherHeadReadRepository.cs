@@ -1,8 +1,8 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.Vouchers.Queries;
-using Accounting.Application.Vouchers.Queries.GetVoucherHeads;
+using Accounting.Application.Queries.Vouchers;
+using Accounting.Application.Queries.Vouchers.GetVoucherHeads;
 using Accounting.Domain.Entity;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;

@@ -1,4 +1,4 @@
-using Accounting.Application.TmpVoucherHeads.Queries.GetTmpVoucherHeads;
+﻿using Accounting.Application.Queries.TmpVoucherHeads.GetTmpVoucherHeads;
 
 namespace Accounting.Application.Tests.TmpVoucherHeads.Queries.GetTmpVoucherHeads;
 

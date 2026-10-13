@@ -1,6 +1,6 @@
-using Accounting.Application.Common.Exceptions;
+﻿using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.PersonActions.Commands.DeletePersonAction;
+using Accounting.Application.Commands.PersonActions.DeletePersonAction;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using Moq;

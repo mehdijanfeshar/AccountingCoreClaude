@@ -1,8 +1,9 @@
-using Accounting.Application.Common.Interfaces;
+﻿using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Common.Security;
-using Accounting.Application.UnitAccess.Queries;
+using Accounting.Application.Queries.UnitAccess;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Accounting.Infrastructure.Repositories;
 
@@ -35,8 +36,17 @@ public sealed class UnitAccessReadRepository : IUnitAccessReadRepository
     private readonly LegacyDbContext _dbContext;
     private readonly ICurrentUser? _currentUser;
 
-    public UnitAccessReadRepository(LegacyDbContext dbContext, ICurrentUser? currentUser = null)
+    // درخت واحدها و نگاشت استان در تقریباً هر درخواست گزارش/ثبت خوانده می‌شود ولی به‌ندرت عوض می‌شود؛
+    // کش کوتاه‌مدت و مشترک بین درخواست‌ها بار یک جدول کامل را از هر درخواست برمی‌دارد.
+    private static readonly TimeSpan TreeCacheTtl = TimeSpan.FromSeconds(60);
+    private const string AllUnitsCacheKey = "unit-access:all-units";
+    private const string ProvincesCacheKey = "unit-access:provinces";
+
+    private readonly IMemoryCache? _cache;
+
+    public UnitAccessReadRepository(LegacyDbContext dbContext, ICurrentUser? currentUser = null, IMemoryCache? cache = null)
     {
+        _cache = cache;
         _dbContext = dbContext;
         _currentUser = currentUser;
     }
@@ -99,6 +109,20 @@ public sealed class UnitAccessReadRepository : IUnitAccessReadRepository
 
     public async Task<IReadOnlyList<UnitNode>> GetAllUnitsAsync(CancellationToken cancellationToken = default)
     {
+        if (_cache is null)
+        {
+            return await LoadAllUnitsAsync(cancellationToken);
+        }
+
+        return (await _cache.GetOrCreateAsync(AllUnitsCacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TreeCacheTtl;
+            return await LoadAllUnitsAsync(CancellationToken.None);
+        }))!;
+    }
+
+    private async Task<IReadOnlyList<UnitNode>> LoadAllUnitsAsync(CancellationToken cancellationToken)
+    {
         // TYPECODE projected raw and compared in memory — never project a boolean against Oracle
         // (see CanActAsAsync).
         var units = await _dbContext.TB_VAHED_INFOs
@@ -118,6 +142,20 @@ public sealed class UnitAccessReadRepository : IUnitAccessReadRepository
     }
 
     public async Task<IReadOnlyDictionary<string, UnitProvince>> GetUnitProvincesAsync(CancellationToken cancellationToken = default)
+    {
+        if (_cache is null)
+        {
+            return await LoadUnitProvincesAsync(cancellationToken);
+        }
+
+        return (await _cache.GetOrCreateAsync(ProvincesCacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TreeCacheTtl;
+            return await LoadUnitProvincesAsync(CancellationToken.None);
+        }))!;
+    }
+
+    private async Task<IReadOnlyDictionary<string, UnitProvince>> LoadUnitProvincesAsync(CancellationToken cancellationToken)
     {
         var result = new Dictionary<string, UnitProvince>(StringComparer.Ordinal);
 

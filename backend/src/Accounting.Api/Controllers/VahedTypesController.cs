@@ -1,5 +1,5 @@
-using Accounting.Application.VahedTypes.Queries;
-using Accounting.Application.VahedTypes.Queries.GetVahedTypes;
+﻿using Accounting.Application.Queries.VahedTypes;
+using Accounting.Application.Queries.VahedTypes.GetVahedTypes;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

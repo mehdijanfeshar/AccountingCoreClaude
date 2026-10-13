@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.Receipts.Commands.UpdateReceipt;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.Receipts.UpdateReceipt;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;

@@ -1,4 +1,4 @@
-using Accounting.Application.AccountExceptions.Commands.CreateAccountException;
+﻿using Accounting.Application.Commands.AccountExceptions.CreateAccountException;
 
 namespace Accounting.Application.Tests.AccountExceptions.Commands.CreateAccountException;
 

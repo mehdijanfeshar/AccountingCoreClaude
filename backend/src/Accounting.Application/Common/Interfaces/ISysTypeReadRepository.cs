@@ -1,4 +1,4 @@
-using Accounting.Application.SysTypes.Queries;
+﻿using Accounting.Application.Queries.SysTypes;
 
 namespace Accounting.Application.Common.Interfaces;
 

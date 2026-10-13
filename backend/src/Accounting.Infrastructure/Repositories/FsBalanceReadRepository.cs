@@ -1,7 +1,7 @@
-using System.Text;
+﻿using System.Text;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.FinancialStatements.Engine;
-using Accounting.Application.FinancialStatements.Queries;
+using Accounting.Application.Queries.FinancialStatements;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;
 using Oracle.ManagedDataAccess.Client;
@@ -223,7 +223,7 @@ public sealed class FsBalanceReadRepository : IFsBalanceReadRepository
         return new FsOutOfPeriodVouchers((int)counts.NullDateCount, (int)counts.OtherYearCount, samples);
     }
 
-    public async Task<IReadOnlyList<Application.FinancialStatements.Queries.AccountMapping.FsChartMoein>> GetChartMoeinsAsync(
+    public async Task<IReadOnlyList<Application.Queries.FinancialStatements.AccountMapping.FsChartMoein>> GetChartMoeinsAsync(
         CancellationToken cancellationToken = default)
     {
         // کدینگ کوچک است (چند هزار ردیف): یک‌جا خوانده و والدها در حافظه وصل می‌شوند.
@@ -241,7 +241,7 @@ public sealed class FsBalanceReadRepository : IFsBalanceReadRepository
             {
                 var kol = a.PARENTID is { } k && byId.TryGetValue(k, out var kv) ? kv : null;
                 var group = kol?.PARENTID is { } g && byId.TryGetValue(g, out var gv) ? gv : null;
-                return new Application.FinancialStatements.Queries.AccountMapping.FsChartMoein(
+                return new Application.Queries.FinancialStatements.AccountMapping.FsChartMoein(
                     a.ACCCODE!, a.ACCCODENAME, kol?.ACCCODE, kol?.ACCCODENAME, group?.ACCCODE, group?.ACCCODENAME);
             })
             .OrderBy(m => m.AccCode, StringComparer.Ordinal)

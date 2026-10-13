@@ -1,4 +1,4 @@
-using Accounting.Application.RevolvingFunds.Queries.GetRevolvingFundById;
+﻿using Accounting.Application.Queries.RevolvingFunds.GetRevolvingFundById;
 
 namespace Accounting.Application.Tests.RevolvingFunds.Queries.GetRevolvingFundById;
 

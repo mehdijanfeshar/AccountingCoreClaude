@@ -1,10 +1,10 @@
-using Accounting.Application.Common;
-using Accounting.Application.Rabets.Commands.CreateRabet;
-using Accounting.Application.Rabets.Commands.DeleteRabet;
-using Accounting.Application.Rabets.Commands.UpdateRabet;
-using Accounting.Application.Rabets.Queries;
-using Accounting.Application.Rabets.Queries.GetRabetById;
-using Accounting.Application.Rabets.Queries.GetRabets;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.Rabets.CreateRabet;
+using Accounting.Application.Commands.Rabets.DeleteRabet;
+using Accounting.Application.Commands.Rabets.UpdateRabet;
+using Accounting.Application.Queries.Rabets;
+using Accounting.Application.Queries.Rabets.GetRabetById;
+using Accounting.Application.Queries.Rabets.GetRabets;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -71,9 +71,9 @@ public sealed class RabetsController : ControllerBase
 
     /// <summary>انواع حساب رابط (TB_RABET_TYPE) — کد ۱/۲/۳ = اعلامیهٔ صادره/رسیده/صادرهٔ درآمد.</summary>
     [HttpGet("types")]
-    [ProducesResponseType(typeof(IReadOnlyList<Accounting.Application.Rabets.Queries.GetRabetTypes.RabetTypeDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IReadOnlyList<Accounting.Application.Queries.Rabets.GetRabetTypes.RabetTypeDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTypes(CancellationToken cancellationToken)
-        => Ok(await _mediator.Send(new Accounting.Application.Rabets.Queries.GetRabetTypes.GetRabetTypesQuery(), cancellationToken));
+        => Ok(await _mediator.Send(new Accounting.Application.Queries.Rabets.GetRabetTypes.GetRabetTypesQuery(), cancellationToken));
 
     /// <summary>
     /// Returns a page of rabet links.

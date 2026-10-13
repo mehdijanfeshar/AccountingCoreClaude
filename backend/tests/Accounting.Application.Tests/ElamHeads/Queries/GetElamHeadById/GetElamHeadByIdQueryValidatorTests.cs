@@ -1,4 +1,4 @@
-using Accounting.Application.ElamHeads.Queries.GetElamHeadById;
+﻿using Accounting.Application.Queries.ElamHeads.GetElamHeadById;
 
 namespace Accounting.Application.Tests.ElamHeads.Queries.GetElamHeadById;
 

@@ -1,5 +1,5 @@
-using Accounting.Application.Expenses.Queries;
-using Accounting.Application.Expenses.Queries.GetExpenses;
+﻿using Accounting.Application.Queries.Expenses;
+using Accounting.Application.Queries.Expenses.GetExpenses;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Moq;

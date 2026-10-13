@@ -1,4 +1,4 @@
-using Accounting.Application.TafsilGroups.Queries.GetTafsilGroups;
+﻿using Accounting.Application.Queries.TafsilGroups.GetTafsilGroups;
 
 namespace Accounting.Application.Tests.TafsilGroups.Queries.GetTafsilGroups;
 

@@ -413,13 +413,13 @@ public sealed class FsNarrativeHandlers :
 }
 
 /// <summary><c>GET api/fs/runs/{id}/narratives.docx?divisor=</c> — فایل Word یادداشت‌های اجرا.</summary>
-public sealed record GetFsRunNarrativesDocxQuery(Guid RunId, decimal Divisor) : IRequest<Queries.FsFileDto?>, IVahedScopedQuery
+public sealed record GetFsRunNarrativesDocxQuery(Guid RunId, decimal Divisor) : IRequest<Accounting.Application.Queries.FinancialStatements.FsFileDto?>, IVahedScopedQuery
 {
     [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 
-public sealed class GetFsRunNarrativesDocxQueryHandler : IRequestHandler<GetFsRunNarrativesDocxQuery, Queries.FsFileDto?>
+public sealed class GetFsRunNarrativesDocxQueryHandler : IRequestHandler<GetFsRunNarrativesDocxQuery, Accounting.Application.Queries.FinancialStatements.FsFileDto?>
 {
     private readonly IFsRunRepository _runs;
     private readonly IMediator _mediator;
@@ -432,7 +432,7 @@ public sealed class GetFsRunNarrativesDocxQueryHandler : IRequestHandler<GetFsRu
         _exporter = exporter;
     }
 
-    public async Task<Queries.FsFileDto?> Handle(GetFsRunNarrativesDocxQuery request, CancellationToken cancellationToken)
+    public async Task<Accounting.Application.Queries.FinancialStatements.FsFileDto?> Handle(GetFsRunNarrativesDocxQuery request, CancellationToken cancellationToken)
     {
         var detail = await _runs.GetDetailAsync(request.RunId, request.VahedCode, cancellationToken);
 
@@ -451,7 +451,7 @@ public sealed class GetFsRunNarrativesDocxQueryHandler : IRequestHandler<GetFsRu
             _ => "میلیارد ریال",
         };
 
-        return new Queries.FsFileDto(
+        return new Accounting.Application.Queries.FinancialStatements.FsFileDto(
             $"FS-{detail.Run.RunNo}-notes.docx",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             _exporter.ExportNarratives(detail, narratives, divisor, unitLabel));

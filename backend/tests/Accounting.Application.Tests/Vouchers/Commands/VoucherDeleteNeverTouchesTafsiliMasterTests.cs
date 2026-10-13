@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Accounting.Domain.Entity;
 
 namespace Accounting.Application.Tests.Vouchers.Commands;
@@ -39,8 +39,8 @@ public sealed class VoucherDeleteNeverTouchesTafsiliMasterTests
 {
     private static readonly string[] DeletePathTypeNames =
     [
-        "Accounting.Application.Vouchers.Commands.DeleteVoucherHead.DeleteVoucherHeadCommandHandler",
-        "Accounting.Application.Vouchers.Commands.DeleteVoucherDetail.DeleteVoucherDetailCommandHandler",
+        "Accounting.Application.Commands.Vouchers.DeleteVoucherHead.DeleteVoucherHeadCommandHandler",
+        "Accounting.Application.Commands.Vouchers.DeleteVoucherDetail.DeleteVoucherDetailCommandHandler",
     ];
 
     [Fact]

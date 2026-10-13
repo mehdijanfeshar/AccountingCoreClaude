@@ -1,11 +1,11 @@
-using Accounting.Application.Expenses.Commands.Common;
+﻿using Accounting.Application.Commands.Expenses.Common;
 using Accounting.Application.Common;
-using Accounting.Application.Expenses.Commands.CreateExpense;
-using Accounting.Application.Expenses.Commands.DeleteExpense;
-using Accounting.Application.Expenses.Commands.UpdateExpense;
-using Accounting.Application.Expenses.Queries;
-using Accounting.Application.Expenses.Queries.GetExpenseById;
-using Accounting.Application.Expenses.Queries.GetExpenses;
+using Accounting.Application.Commands.Expenses.CreateExpense;
+using Accounting.Application.Commands.Expenses.DeleteExpense;
+using Accounting.Application.Commands.Expenses.UpdateExpense;
+using Accounting.Application.Queries.Expenses;
+using Accounting.Application.Queries.Expenses.GetExpenseById;
+using Accounting.Application.Queries.Expenses.GetExpenses;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

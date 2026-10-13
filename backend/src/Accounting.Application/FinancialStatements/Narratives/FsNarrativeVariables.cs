@@ -1,6 +1,6 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.RegularExpressions;
-using Accounting.Application.FinancialStatements.Queries;
+using Accounting.Application.Queries.FinancialStatements;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.FinancialStatements.Narratives;

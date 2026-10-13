@@ -1,4 +1,4 @@
-using Accounting.Application.Vouchers.Commands.DeleteVoucherDetail;
+﻿using Accounting.Application.Commands.Vouchers.DeleteVoucherDetail;
 
 namespace Accounting.Application.Tests.Vouchers.Commands.DeleteVoucherDetail;
 

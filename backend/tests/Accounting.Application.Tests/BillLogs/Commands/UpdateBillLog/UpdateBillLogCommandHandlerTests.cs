@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.BillLogs.Commands.UpdateBillLog;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.BillLogs.UpdateBillLog;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;

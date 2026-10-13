@@ -1,5 +1,5 @@
-using Accounting.Application.FinancialStatements.Engine;
-using Accounting.Application.FinancialStatements.Queries;
+﻿using Accounting.Application.FinancialStatements.Engine;
+using Accounting.Application.Queries.FinancialStatements;
 
 namespace Accounting.Application.Common.Interfaces;
 
@@ -46,7 +46,7 @@ public interface IFsBalanceReadRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>بخش ۴۵-و — همهٔ معین‌های حذف‌نشدهٔ کدینگ با کل و گروه والد، به ترتیب کد (نمای «نگاشت حساب‌ها»).</summary>
-    Task<IReadOnlyList<FinancialStatements.Queries.AccountMapping.FsChartMoein>> GetChartMoeinsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Queries.FinancialStatements.AccountMapping.FsChartMoein>> GetChartMoeinsAsync(CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<FsAccountBalance>> GetBalancesAsync(
         string year,

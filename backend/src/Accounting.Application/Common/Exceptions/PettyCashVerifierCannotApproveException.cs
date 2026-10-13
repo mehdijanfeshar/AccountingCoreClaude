@@ -1,7 +1,7 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
-/// Thrown by <c>Accounting.Application.PettyCash.Commands.Common.PettyCashFinalApprovalService</c>
+/// Thrown by <c>Accounting.Application.Commands.PettyCash.Common.PettyCashFinalApprovalService</c>
 /// when the caller giving final approval is the very inspector who verified this document's
 /// control (<c>TB_PC_EXPENSE_DOC.VERIFIED_BY_USERID</c>) — a second segregation-of-duties rule for
 /// تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸)، alongside the existing creator-vs-reviewer one

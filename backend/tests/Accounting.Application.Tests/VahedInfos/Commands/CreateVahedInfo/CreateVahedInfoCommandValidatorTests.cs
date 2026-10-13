@@ -1,4 +1,4 @@
-using Accounting.Application.VahedInfos.Commands.CreateVahedInfo;
+﻿using Accounting.Application.Commands.VahedInfos.CreateVahedInfo;
 
 namespace Accounting.Application.Tests.VahedInfos.Commands.CreateVahedInfo;
 

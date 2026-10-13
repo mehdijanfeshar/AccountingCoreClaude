@@ -1,4 +1,4 @@
-using Accounting.Application.Rabets.Commands.UpdateRabet;
+﻿using Accounting.Application.Commands.Rabets.UpdateRabet;
 
 namespace Accounting.Application.Tests.Rabets.Commands.UpdateRabet;
 

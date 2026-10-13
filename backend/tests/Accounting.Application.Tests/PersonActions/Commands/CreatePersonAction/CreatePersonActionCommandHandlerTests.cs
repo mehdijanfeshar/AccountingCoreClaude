@@ -1,5 +1,5 @@
-using Accounting.Application.Common.Interfaces;
-using Accounting.Application.PersonActions.Commands.CreatePersonAction;
+﻿using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Commands.PersonActions.CreatePersonAction;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using Moq;

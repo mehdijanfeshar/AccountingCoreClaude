@@ -1,4 +1,4 @@
-using Accounting.Application.ChequeTypes.Queries.GetChequeTypes;
+﻿using Accounting.Application.Queries.ChequeTypes.GetChequeTypes;
 
 namespace Accounting.Application.Tests.ChequeTypes.Queries.GetChequeTypes;
 

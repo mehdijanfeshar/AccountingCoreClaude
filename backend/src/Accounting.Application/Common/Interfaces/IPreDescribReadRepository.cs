@@ -1,4 +1,4 @@
-using Accounting.Application.PreDescribs.Queries;
+﻿using Accounting.Application.Queries.PreDescribs;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

@@ -1,5 +1,5 @@
-using Accounting.Application.VahedInfos.Queries;
-using Accounting.Application.VahedInfos.Queries.GetVahedInfos;
+﻿using Accounting.Application.Queries.VahedInfos;
+using Accounting.Application.Queries.VahedInfos.GetVahedInfos;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Moq;

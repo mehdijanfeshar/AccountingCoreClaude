@@ -1,11 +1,11 @@
-using Accounting.Application.WorkShops.Commands.Common;
+﻿using Accounting.Application.Commands.WorkShops.Common;
 using Accounting.Application.Common;
-using Accounting.Application.WorkShops.Commands.CreateWorkShop;
-using Accounting.Application.WorkShops.Commands.DeleteWorkShop;
-using Accounting.Application.WorkShops.Commands.UpdateWorkShop;
-using Accounting.Application.WorkShops.Queries;
-using Accounting.Application.WorkShops.Queries.GetWorkShopById;
-using Accounting.Application.WorkShops.Queries.GetWorkShops;
+using Accounting.Application.Commands.WorkShops.CreateWorkShop;
+using Accounting.Application.Commands.WorkShops.DeleteWorkShop;
+using Accounting.Application.Commands.WorkShops.UpdateWorkShop;
+using Accounting.Application.Queries.WorkShops;
+using Accounting.Application.Queries.WorkShops.GetWorkShopById;
+using Accounting.Application.Queries.WorkShops.GetWorkShops;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

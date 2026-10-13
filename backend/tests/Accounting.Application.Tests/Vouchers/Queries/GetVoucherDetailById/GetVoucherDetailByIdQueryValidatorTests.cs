@@ -1,4 +1,4 @@
-using Accounting.Application.Vouchers.Queries.GetVoucherDetailById;
+﻿using Accounting.Application.Queries.Vouchers.GetVoucherDetailById;
 
 namespace Accounting.Application.Tests.Vouchers.Queries.GetVoucherDetailById;
 

@@ -1,5 +1,5 @@
-using Accounting.Application.Common;
-using Accounting.Application.PayReciveHeads.Queries;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Queries.PayReciveHeads;
 
 namespace Accounting.Application.Common.Interfaces;
 

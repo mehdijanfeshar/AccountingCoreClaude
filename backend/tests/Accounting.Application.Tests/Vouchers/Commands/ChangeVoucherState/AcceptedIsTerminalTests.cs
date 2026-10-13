@@ -1,6 +1,6 @@
-using Accounting.Application.Common.Exceptions;
+﻿using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.Vouchers.Commands.ChangeVoucherState;
+using Accounting.Application.Commands.Vouchers.ChangeVoucherState;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using Moq;

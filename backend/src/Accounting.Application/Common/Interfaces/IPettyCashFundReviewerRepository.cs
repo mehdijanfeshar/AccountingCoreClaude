@@ -1,4 +1,4 @@
-using Accounting.Domain.Entity;
+﻿using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Interfaces;
@@ -18,7 +18,7 @@ public interface IPettyCashFundReviewerRepository
     /// is unique on since تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸؛ پیش‌تر فقط (fundId, reviewerUserId)) — or
     /// <see langword="null"/> when none exists yet. Returns soft-deleted rows too (both the upsert
     /// command, which reactivates them, and
-    /// <c>Accounting.Application.PettyCash.Commands.Common.IPettyCashReviewAuthorizer</c>, which
+    /// <c>Accounting.Application.Commands.PettyCash.Common.IPettyCashReviewAuthorizer</c>, which
     /// must treat them as inactive, need to see them).
     /// </summary>
     Task<TB_PC_REVIEWER?> GetByFundUserAndRoleAsync(

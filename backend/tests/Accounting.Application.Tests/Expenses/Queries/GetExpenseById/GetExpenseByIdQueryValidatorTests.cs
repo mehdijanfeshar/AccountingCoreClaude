@@ -1,4 +1,4 @@
-using Accounting.Application.Expenses.Queries.GetExpenseById;
+﻿using Accounting.Application.Queries.Expenses.GetExpenseById;
 
 namespace Accounting.Application.Tests.Expenses.Queries.GetExpenseById;
 

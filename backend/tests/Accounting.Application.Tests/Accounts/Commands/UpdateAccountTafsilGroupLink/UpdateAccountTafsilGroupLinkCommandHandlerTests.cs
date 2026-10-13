@@ -1,5 +1,5 @@
-using Accounting.Application.Accounts.Commands.Common;
-using Accounting.Application.Accounts.Commands.UpdateAccountTafsilGroupLink;
+﻿using Accounting.Application.Commands.Accounts.Common;
+using Accounting.Application.Commands.Accounts.UpdateAccountTafsilGroupLink;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Tests.Accounts.Commands.Common;

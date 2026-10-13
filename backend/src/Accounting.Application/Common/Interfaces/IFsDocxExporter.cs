@@ -1,5 +1,5 @@
-using Accounting.Application.FinancialStatements.Narratives;
-using Accounting.Application.FinancialStatements.Queries;
+﻿using Accounting.Application.FinancialStatements.Narratives;
+using Accounting.Application.Queries.FinancialStatements;
 
 namespace Accounting.Application.Common.Interfaces;
 

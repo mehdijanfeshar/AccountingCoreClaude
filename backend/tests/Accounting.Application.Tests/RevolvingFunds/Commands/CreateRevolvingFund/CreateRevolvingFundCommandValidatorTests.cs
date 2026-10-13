@@ -1,4 +1,4 @@
-using Accounting.Application.RevolvingFunds.Commands.CreateRevolvingFund;
+﻿using Accounting.Application.Commands.RevolvingFunds.CreateRevolvingFund;
 
 namespace Accounting.Application.Tests.RevolvingFunds.Commands.CreateRevolvingFund;
 

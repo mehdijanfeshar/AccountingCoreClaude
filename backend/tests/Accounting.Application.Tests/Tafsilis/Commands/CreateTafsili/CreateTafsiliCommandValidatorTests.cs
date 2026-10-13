@@ -1,4 +1,4 @@
-using Accounting.Application.Tafsilis.Commands.CreateTafsili;
+﻿using Accounting.Application.Commands.Tafsilis.CreateTafsili;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.Tafsilis.Commands.CreateTafsili;

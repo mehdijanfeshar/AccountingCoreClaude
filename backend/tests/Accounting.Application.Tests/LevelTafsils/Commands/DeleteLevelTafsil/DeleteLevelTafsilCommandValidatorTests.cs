@@ -1,4 +1,4 @@
-using Accounting.Application.LevelTafsils.Commands.DeleteLevelTafsil;
+﻿using Accounting.Application.Commands.LevelTafsils.DeleteLevelTafsil;
 
 namespace Accounting.Application.Tests.LevelTafsils.Commands.DeleteLevelTafsil;
 

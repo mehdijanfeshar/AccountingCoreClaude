@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteLists.Commands.CreateWhiteList;
+﻿using Accounting.Application.Commands.WhiteLists.CreateWhiteList;
 
 namespace Accounting.Application.Tests.WhiteLists.Commands.CreateWhiteList;
 

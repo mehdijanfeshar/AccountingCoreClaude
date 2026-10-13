@@ -1,4 +1,4 @@
-using Accounting.Application.Expenses.Commands.DeleteExpense;
+﻿using Accounting.Application.Commands.Expenses.DeleteExpense;
 
 namespace Accounting.Application.Tests.Expenses.Commands.DeleteExpense;
 

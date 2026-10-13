@@ -1,6 +1,6 @@
-using Accounting.Application.Common.Interfaces;
-using Accounting.Application.PersonActions.Queries;
-using Accounting.Application.PersonActions.Queries.GetPersonActionById;
+﻿using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Queries.PersonActions;
+using Accounting.Application.Queries.PersonActions.GetPersonActionById;
 using Accounting.Domain.ValueObjects;
 using Moq;
 

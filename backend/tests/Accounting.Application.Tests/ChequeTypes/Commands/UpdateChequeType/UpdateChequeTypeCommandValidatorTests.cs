@@ -1,4 +1,4 @@
-using Accounting.Application.ChequeTypes.Commands.UpdateChequeType;
+﻿using Accounting.Application.Commands.ChequeTypes.UpdateChequeType;
 
 namespace Accounting.Application.Tests.ChequeTypes.Commands.UpdateChequeType;
 

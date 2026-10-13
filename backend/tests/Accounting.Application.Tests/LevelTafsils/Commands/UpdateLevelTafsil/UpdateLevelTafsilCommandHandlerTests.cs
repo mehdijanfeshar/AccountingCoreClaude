@@ -1,4 +1,4 @@
-using Accounting.Application.LevelTafsils.Commands.UpdateLevelTafsil;
+﻿using Accounting.Application.Commands.LevelTafsils.UpdateLevelTafsil;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

@@ -1,7 +1,7 @@
-using Accounting.Application.Common;
+﻿using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.Vouchers.Queries;
-using Accounting.Application.Vouchers.Queries.GetVoucherDetails;
+using Accounting.Application.Queries.Vouchers;
+using Accounting.Application.Queries.Vouchers.GetVoucherDetails;
 using Moq;
 
 namespace Accounting.Application.Tests.Vouchers.Queries.GetVoucherDetails;

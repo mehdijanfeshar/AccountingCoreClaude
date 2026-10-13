@@ -1,4 +1,4 @@
-using Accounting.Domain.Entity;
+﻿using Accounting.Domain.Entity;
 
 namespace Accounting.Application.Common.Interfaces;
 
@@ -8,7 +8,7 @@ namespace Accounting.Application.Common.Interfaces;
 ///
 /// <c>TB_VOUCHERSDETAIL</c> is an independent aggregate root with its own standalone CRUD
 /// (2026-08-20 project-owner decision, recorded in <c>docs/tamin-core-entity-reference.md</c>
-/// بخش ۵) — it is used both by <see cref="Accounting.Application.Vouchers.Commands.CreateVoucherHead.CreateVoucherHeadCommandHandler"/>
+/// بخش ۵) — it is used both by <see cref="Accounting.Application.Commands.Vouchers.CreateVoucherHead.CreateVoucherHeadCommandHandler"/>
 /// (composite create alongside a brand-new head) and by the standalone
 /// <c>CreateVoucherDetailCommand</c>/<c>UpdateVoucherDetailCommand</c>/<c>DeleteVoucherDetailCommand</c>
 /// handlers (add/edit/remove a line on an already-existing voucher). The phase-9 cascade

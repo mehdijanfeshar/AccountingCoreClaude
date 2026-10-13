@@ -1,5 +1,5 @@
-using Accounting.Application.Tafsilis.Queries;
-using Accounting.Application.Tafsilis.Queries.GetTafsilis;
+﻿using Accounting.Application.Queries.Tafsilis;
+using Accounting.Application.Queries.Tafsilis.GetTafsilis;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.ValueObjects;

@@ -1,5 +1,5 @@
-using Accounting.Application.CheckBooks.Queries;
-using Accounting.Application.CheckBooks.Queries.GetCheckBookById;
+﻿using Accounting.Application.Queries.CheckBooks;
+using Accounting.Application.Queries.CheckBooks.GetCheckBookById;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.ValueObjects;
 using Moq;

@@ -1,4 +1,4 @@
-using Accounting.Application.Accounts.Queries.GetAccountTafsilGroupLinks;
+﻿using Accounting.Application.Queries.Accounts.GetAccountTafsilGroupLinks;
 
 namespace Accounting.Application.Tests.Accounts.Queries.GetAccountTafsilGroupLinks;
 

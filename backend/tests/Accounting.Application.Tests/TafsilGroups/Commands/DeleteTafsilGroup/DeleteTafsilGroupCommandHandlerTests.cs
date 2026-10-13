@@ -1,4 +1,4 @@
-using Accounting.Application.TafsilGroups.Commands.DeleteTafsilGroup;
+﻿using Accounting.Application.Commands.TafsilGroups.DeleteTafsilGroup;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

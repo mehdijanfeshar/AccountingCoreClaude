@@ -1,5 +1,5 @@
-using Accounting.Application.CheckBooks.Queries;
-using Accounting.Application.CheckBooks.Queries.GetCheckBooks;
+﻿using Accounting.Application.Queries.CheckBooks;
+using Accounting.Application.Queries.CheckBooks.GetCheckBooks;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.ValueObjects;

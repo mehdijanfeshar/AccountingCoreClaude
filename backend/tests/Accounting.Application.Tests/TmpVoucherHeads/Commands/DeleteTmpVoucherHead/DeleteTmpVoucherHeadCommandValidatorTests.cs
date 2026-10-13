@@ -1,4 +1,4 @@
-using Accounting.Application.TmpVoucherHeads.Commands.DeleteTmpVoucherHead;
+﻿using Accounting.Application.Commands.TmpVoucherHeads.DeleteTmpVoucherHead;
 
 namespace Accounting.Application.Tests.TmpVoucherHeads.Commands.DeleteTmpVoucherHead;
 

@@ -1,4 +1,4 @@
-using Accounting.Application.BankAccounts.Commands.CreateBankAccount;
+﻿using Accounting.Application.Commands.BankAccounts.CreateBankAccount;
 
 namespace Accounting.Application.Tests.BankAccounts.Commands.CreateBankAccount;
 

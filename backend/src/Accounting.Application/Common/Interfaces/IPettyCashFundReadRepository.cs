@@ -1,4 +1,4 @@
-using Accounting.Application.PettyCash.Queries;
+﻿using Accounting.Application.Queries.PettyCash;
 
 namespace Accounting.Application.Common.Interfaces;
 

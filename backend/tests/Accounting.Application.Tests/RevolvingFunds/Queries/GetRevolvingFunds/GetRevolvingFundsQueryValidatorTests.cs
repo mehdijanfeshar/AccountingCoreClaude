@@ -1,4 +1,4 @@
-using Accounting.Application.RevolvingFunds.Queries.GetRevolvingFunds;
+﻿using Accounting.Application.Queries.RevolvingFunds.GetRevolvingFunds;
 
 namespace Accounting.Application.Tests.RevolvingFunds.Queries.GetRevolvingFunds;
 

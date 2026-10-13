@@ -1,4 +1,4 @@
-using Accounting.Application.BillLogs.Queries.GetBillLogs;
+﻿using Accounting.Application.Queries.BillLogs.GetBillLogs;
 
 namespace Accounting.Application.Tests.BillLogs.Queries.GetBillLogs;
 

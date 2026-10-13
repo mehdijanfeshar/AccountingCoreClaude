@@ -1,4 +1,4 @@
-using Accounting.Application.RevolvingFunds.Commands.UpdateRevolvingFund;
+﻿using Accounting.Application.Commands.RevolvingFunds.UpdateRevolvingFund;
 
 namespace Accounting.Application.Tests.RevolvingFunds.Commands.UpdateRevolvingFund;
 

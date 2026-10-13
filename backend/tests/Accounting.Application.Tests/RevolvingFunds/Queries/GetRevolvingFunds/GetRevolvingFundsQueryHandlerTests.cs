@@ -1,5 +1,5 @@
-using Accounting.Application.RevolvingFunds.Queries;
-using Accounting.Application.RevolvingFunds.Queries.GetRevolvingFunds;
+﻿using Accounting.Application.Queries.RevolvingFunds;
+using Accounting.Application.Queries.RevolvingFunds.GetRevolvingFunds;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Moq;

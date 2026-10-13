@@ -1,9 +1,9 @@
-using Accounting.Application.Common;
-using Accounting.Application.VahedInfos.Commands.CreateVahedInfo;
-using Accounting.Application.VahedInfos.Commands.UpdateVahedInfo;
-using Accounting.Application.VahedInfos.Queries;
-using Accounting.Application.VahedInfos.Queries.GetVahedInfoById;
-using Accounting.Application.VahedInfos.Queries.GetVahedInfos;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.VahedInfos.CreateVahedInfo;
+using Accounting.Application.Commands.VahedInfos.UpdateVahedInfo;
+using Accounting.Application.Queries.VahedInfos;
+using Accounting.Application.Queries.VahedInfos.GetVahedInfoById;
+using Accounting.Application.Queries.VahedInfos.GetVahedInfos;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

@@ -1,5 +1,5 @@
-using Accounting.Application.IdentitySubGroups.Queries;
-using Accounting.Application.IdentitySubGroups.Queries.GetIdentitySubGroupById;
+﻿using Accounting.Application.Queries.IdentitySubGroups;
+using Accounting.Application.Queries.IdentitySubGroups.GetIdentitySubGroupById;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.ValueObjects;
 using Moq;

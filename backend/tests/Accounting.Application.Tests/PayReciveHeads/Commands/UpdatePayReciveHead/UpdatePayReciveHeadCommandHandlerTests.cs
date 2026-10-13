@@ -1,8 +1,8 @@
-using Accounting.Application.Tests.TestSupport;
+﻿using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.PayReciveHeads.Commands.UpdatePayReciveHead;
+using Accounting.Application.Commands.PayReciveHeads.UpdatePayReciveHead;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using MediatR;

@@ -1,4 +1,4 @@
-using Accounting.Application.ChequesIncorrents.Commands.UpdateChequesIncorrent;
+﻿using Accounting.Application.Commands.ChequesIncorrents.UpdateChequesIncorrent;
 
 namespace Accounting.Application.Tests.ChequesIncorrents.Commands.UpdateChequesIncorrent;
 

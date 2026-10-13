@@ -1,5 +1,5 @@
-using Accounting.Application.Common;
-using Accounting.Application.TmpVoucherHeads.Queries;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Queries.TmpVoucherHeads;
 
 namespace Accounting.Application.Common.Interfaces;
 

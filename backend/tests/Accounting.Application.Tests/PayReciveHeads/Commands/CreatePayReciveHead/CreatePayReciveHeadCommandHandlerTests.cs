@@ -1,7 +1,7 @@
-using Accounting.Application.Tests.TestSupport;
+﻿using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.PayReciveHeads.Commands.CreatePayReciveHead;
+using Accounting.Application.Commands.PayReciveHeads.CreatePayReciveHead;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using Moq;

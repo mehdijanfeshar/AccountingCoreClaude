@@ -1,4 +1,4 @@
-using Accounting.Application.RevolvingFunds.Queries;
+﻿using Accounting.Application.Queries.RevolvingFunds;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

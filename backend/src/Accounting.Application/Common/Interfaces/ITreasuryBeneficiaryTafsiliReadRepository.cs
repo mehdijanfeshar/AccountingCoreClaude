@@ -1,4 +1,4 @@
-using Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems;
+﻿using Accounting.Application.Queries.AccountCodes.GetTafsiliLevelItems;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

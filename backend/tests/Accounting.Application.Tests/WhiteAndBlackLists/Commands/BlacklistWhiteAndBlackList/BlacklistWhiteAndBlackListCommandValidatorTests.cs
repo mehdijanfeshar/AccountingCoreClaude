@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteAndBlackLists.Commands.BlacklistWhiteAndBlackList;
+﻿using Accounting.Application.Commands.WhiteAndBlackLists.BlacklistWhiteAndBlackList;
 
 namespace Accounting.Application.Tests.WhiteAndBlackLists.Commands.BlacklistWhiteAndBlackList;
 

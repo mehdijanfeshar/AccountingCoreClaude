@@ -1,4 +1,4 @@
-using Accounting.Application.WorkShops.Commands.CreateWorkShop;
+﻿using Accounting.Application.Commands.WorkShops.CreateWorkShop;
 
 namespace Accounting.Application.Tests.WorkShops.Commands.CreateWorkShop;
 

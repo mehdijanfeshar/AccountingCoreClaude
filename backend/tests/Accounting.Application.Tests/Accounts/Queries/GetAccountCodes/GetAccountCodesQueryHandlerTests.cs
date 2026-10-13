@@ -1,5 +1,5 @@
-using Accounting.Application.Accounts.Queries;
-using Accounting.Application.Accounts.Queries.GetAccountCodes;
+﻿using Accounting.Application.Queries.Accounts;
+using Accounting.Application.Queries.Accounts.GetAccountCodes;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.ValueObjects;

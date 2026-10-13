@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteLists.Commands.UpdateWhiteList;
+﻿using Accounting.Application.Commands.WhiteLists.UpdateWhiteList;
 
 namespace Accounting.Application.Tests.WhiteLists.Commands.UpdateWhiteList;
 

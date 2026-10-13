@@ -1,5 +1,5 @@
-using Accounting.Application.Common;
-using Accounting.Application.IdentityHeads.Queries;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Queries.IdentityHeads;
 
 namespace Accounting.Application.Common.Interfaces;
 

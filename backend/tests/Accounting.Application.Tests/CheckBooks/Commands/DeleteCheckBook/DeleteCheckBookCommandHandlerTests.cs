@@ -1,4 +1,4 @@
-using Accounting.Application.CheckBooks.Commands.DeleteCheckBook;
+﻿using Accounting.Application.Commands.CheckBooks.DeleteCheckBook;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

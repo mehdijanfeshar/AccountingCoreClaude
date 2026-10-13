@@ -1,7 +1,7 @@
-using Accounting.Application.Common;
+﻿using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Common.Security;
-using Accounting.Application.PettyCash.Queries;
+using Accounting.Application.Queries.PettyCash;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using Accounting.Infrastructure.Legacy;

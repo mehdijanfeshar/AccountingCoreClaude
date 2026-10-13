@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.BankAccounts.Commands.CreateBankAccount;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.BankAccounts.CreateBankAccount;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

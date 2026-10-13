@@ -1,4 +1,4 @@
-using Accounting.Application.AccountCodeInterfaces.Commands.CreateAccountCodeInterface;
+﻿using Accounting.Application.Commands.AccountCodeInterfaces.CreateAccountCodeInterface;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.AccountCodeInterfaces.Commands.CreateAccountCodeInterface;

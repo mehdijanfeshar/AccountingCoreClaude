@@ -1,4 +1,4 @@
-using Accounting.Application.Accounts.Commands.UpdateAccountTafsilGroupLink;
+﻿using Accounting.Application.Commands.Accounts.UpdateAccountTafsilGroupLink;
 
 namespace Accounting.Application.Tests.Accounts.Commands.UpdateAccountTafsilGroupLink;
 

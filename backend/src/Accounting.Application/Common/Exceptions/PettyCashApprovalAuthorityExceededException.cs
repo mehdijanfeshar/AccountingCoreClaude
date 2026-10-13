@@ -1,7 +1,7 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
-/// Thrown by <c>Accounting.Application.PettyCash.Commands.Common.PettyCashFinalApprovalService</c>
+/// Thrown by <c>Accounting.Application.Commands.PettyCash.Common.PettyCashFinalApprovalService</c>
 /// when the caller's only qualifying role is
 /// <see cref="Accounting.Domain.ValueObjects.PettyCashRole.FinanceManager"/> and the document's
 /// total amount exceeds <c>TB_PC_FUND.FINANCE_MANAGER_APPROVAL_LIMIT</c> — final approval above

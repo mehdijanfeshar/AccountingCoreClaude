@@ -1,6 +1,6 @@
-using Accounting.Application.Common;
-using Accounting.Application.Vouchers.Queries;
-using Accounting.Application.Vouchers.Queries.GetVoucherHeads;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Queries.Vouchers;
+using Accounting.Application.Queries.Vouchers.GetVoucherHeads;
 
 namespace Accounting.Application.Common.Interfaces;
 

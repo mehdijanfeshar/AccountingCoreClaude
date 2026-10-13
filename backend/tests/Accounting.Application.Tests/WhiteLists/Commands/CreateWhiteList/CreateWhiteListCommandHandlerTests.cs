@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteLists.Commands.CreateWhiteList;
+﻿using Accounting.Application.Commands.WhiteLists.CreateWhiteList;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using Moq;

@@ -1,10 +1,10 @@
-using Accounting.Application.Common;
-using Accounting.Application.TafsilGroups.Commands.CreateTafsilGroup;
-using Accounting.Application.TafsilGroups.Commands.DeleteTafsilGroup;
-using Accounting.Application.TafsilGroups.Commands.UpdateTafsilGroup;
-using Accounting.Application.TafsilGroups.Queries;
-using Accounting.Application.TafsilGroups.Queries.GetTafsilGroupById;
-using Accounting.Application.TafsilGroups.Queries.GetTafsilGroups;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.TafsilGroups.CreateTafsilGroup;
+using Accounting.Application.Commands.TafsilGroups.DeleteTafsilGroup;
+using Accounting.Application.Commands.TafsilGroups.UpdateTafsilGroup;
+using Accounting.Application.Queries.TafsilGroups;
+using Accounting.Application.Queries.TafsilGroups.GetTafsilGroupById;
+using Accounting.Application.Queries.TafsilGroups.GetTafsilGroups;
 using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

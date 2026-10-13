@@ -1,6 +1,6 @@
-using Accounting.Application.Expenses.Commands.Common;
-using Accounting.Application.Expenses.Commands.CreateExpense;
-using Accounting.Application.Expenses.Commands.UpdateExpense;
+﻿using Accounting.Application.Commands.Expenses.Common;
+using Accounting.Application.Commands.Expenses.CreateExpense;
+using Accounting.Application.Commands.Expenses.UpdateExpense;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using Moq;

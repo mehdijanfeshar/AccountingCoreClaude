@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.IdentityGroups.Commands.CreateIdentityGroup;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.IdentityGroups.CreateIdentityGroup;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

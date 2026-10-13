@@ -1,4 +1,4 @@
-using Accounting.Application.WorkShops.Commands.DeleteWorkShop;
+﻿using Accounting.Application.Commands.WorkShops.DeleteWorkShop;
 
 namespace Accounting.Application.Tests.WorkShops.Commands.DeleteWorkShop;
 

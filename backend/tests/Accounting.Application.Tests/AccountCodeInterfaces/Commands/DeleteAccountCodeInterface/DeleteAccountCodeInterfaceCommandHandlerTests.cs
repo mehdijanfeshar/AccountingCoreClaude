@@ -1,4 +1,4 @@
-using Accounting.Application.AccountCodeInterfaces.Commands.DeleteAccountCodeInterface;
+﻿using Accounting.Application.Commands.AccountCodeInterfaces.DeleteAccountCodeInterface;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

@@ -1,4 +1,4 @@
-using Accounting.Application.ChequesIncorrents.Queries;
+﻿using Accounting.Application.Queries.ChequesIncorrents;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

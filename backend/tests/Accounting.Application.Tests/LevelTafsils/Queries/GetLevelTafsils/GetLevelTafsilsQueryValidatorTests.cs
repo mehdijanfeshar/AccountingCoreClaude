@@ -1,4 +1,4 @@
-using Accounting.Application.LevelTafsils.Queries.GetLevelTafsils;
+﻿using Accounting.Application.Queries.LevelTafsils.GetLevelTafsils;
 
 namespace Accounting.Application.Tests.LevelTafsils.Queries.GetLevelTafsils;
 

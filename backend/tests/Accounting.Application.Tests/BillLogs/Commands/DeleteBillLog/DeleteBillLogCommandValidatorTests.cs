@@ -1,4 +1,4 @@
-using Accounting.Application.BillLogs.Commands.DeleteBillLog;
+﻿using Accounting.Application.Commands.BillLogs.DeleteBillLog;
 
 namespace Accounting.Application.Tests.BillLogs.Commands.DeleteBillLog;
 

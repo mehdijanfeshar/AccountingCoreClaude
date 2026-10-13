@@ -1,5 +1,5 @@
-using Accounting.Application.WhiteLists.Queries;
-using Accounting.Application.WhiteLists.Queries.GetWhiteLists;
+﻿using Accounting.Application.Queries.WhiteLists;
+using Accounting.Application.Queries.WhiteLists.GetWhiteLists;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Moq;

@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteAndBlackLists.Commands.UpdateWhiteAndBlackList;
+﻿using Accounting.Application.Commands.WhiteAndBlackLists.UpdateWhiteAndBlackList;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.WhiteAndBlackLists.Commands.UpdateWhiteAndBlackList;

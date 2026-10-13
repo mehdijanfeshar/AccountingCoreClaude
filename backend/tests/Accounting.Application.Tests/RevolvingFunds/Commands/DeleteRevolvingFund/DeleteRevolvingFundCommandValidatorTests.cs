@@ -1,4 +1,4 @@
-using Accounting.Application.RevolvingFunds.Commands.DeleteRevolvingFund;
+﻿using Accounting.Application.Commands.RevolvingFunds.DeleteRevolvingFund;
 
 namespace Accounting.Application.Tests.RevolvingFunds.Commands.DeleteRevolvingFund;
 

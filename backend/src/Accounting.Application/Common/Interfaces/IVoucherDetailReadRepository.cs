@@ -1,5 +1,5 @@
-using Accounting.Application.Common;
-using Accounting.Application.Vouchers.Queries;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Queries.Vouchers;
 
 namespace Accounting.Application.Common.Interfaces;
 

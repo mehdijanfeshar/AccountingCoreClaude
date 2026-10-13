@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteAndBlackLists.Commands.CreateWhiteAndBlackList;
+﻿using Accounting.Application.Commands.WhiteAndBlackLists.CreateWhiteAndBlackList;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;

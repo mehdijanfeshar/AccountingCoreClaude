@@ -1,4 +1,4 @@
-using Accounting.Application.Receipts.Queries;
+﻿using Accounting.Application.Queries.Receipts;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

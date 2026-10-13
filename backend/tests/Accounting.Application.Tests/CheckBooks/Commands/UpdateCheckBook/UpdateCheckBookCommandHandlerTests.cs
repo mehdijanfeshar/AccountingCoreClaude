@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.CheckBooks.Commands.UpdateCheckBook;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.CheckBooks.UpdateCheckBook;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;

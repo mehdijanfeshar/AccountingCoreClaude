@@ -1,4 +1,4 @@
-using Accounting.Application.Rabets.Queries.GetRabetTypes;
+﻿using Accounting.Application.Queries.Rabets.GetRabetTypes;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;
 

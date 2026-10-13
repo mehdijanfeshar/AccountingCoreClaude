@@ -1,4 +1,4 @@
-using Accounting.Application.Accounts.Commands.CreateAccountCode;
+﻿using Accounting.Application.Commands.Accounts.CreateAccountCode;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.Accounts.Commands.CreateAccountCode;

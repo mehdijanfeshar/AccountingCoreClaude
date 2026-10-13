@@ -1,4 +1,4 @@
-using Accounting.Application.Receipts.Commands.UpdateReceipt;
+﻿using Accounting.Application.Commands.Receipts.UpdateReceipt;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.Receipts.Commands.UpdateReceipt;

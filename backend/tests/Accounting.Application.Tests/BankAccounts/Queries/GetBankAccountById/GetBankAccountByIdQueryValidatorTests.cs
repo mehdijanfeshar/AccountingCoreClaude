@@ -1,4 +1,4 @@
-using Accounting.Application.BankAccounts.Queries.GetBankAccountById;
+﻿using Accounting.Application.Queries.BankAccounts.GetBankAccountById;
 
 namespace Accounting.Application.Tests.BankAccounts.Queries.GetBankAccountById;
 

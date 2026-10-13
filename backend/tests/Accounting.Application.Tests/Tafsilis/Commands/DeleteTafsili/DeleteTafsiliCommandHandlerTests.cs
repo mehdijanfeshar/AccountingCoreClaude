@@ -1,4 +1,4 @@
-using Accounting.Application.Tafsilis.Commands.DeleteTafsili;
+﻿using Accounting.Application.Commands.Tafsilis.DeleteTafsili;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

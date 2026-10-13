@@ -1,5 +1,5 @@
-using Accounting.Application.ChequesIncorrents.Queries;
-using Accounting.Application.ChequesIncorrents.Queries.GetChequesIncorrents;
+﻿using Accounting.Application.Queries.ChequesIncorrents;
+using Accounting.Application.Queries.ChequesIncorrents.GetChequesIncorrents;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Moq;

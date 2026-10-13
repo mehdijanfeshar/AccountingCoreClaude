@@ -1,4 +1,4 @@
-using Accounting.Application.LevelTafsils.Commands.UpdateLevelTafsil;
+﻿using Accounting.Application.Commands.LevelTafsils.UpdateLevelTafsil;
 
 namespace Accounting.Application.Tests.LevelTafsils.Commands.UpdateLevelTafsil;
 

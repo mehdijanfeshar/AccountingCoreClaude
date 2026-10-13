@@ -1,5 +1,5 @@
-using Accounting.Application.Receipts.Queries;
-using Accounting.Application.Receipts.Queries.GetReceipts;
+﻿using Accounting.Application.Queries.Receipts;
+using Accounting.Application.Queries.Receipts.GetReceipts;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.ValueObjects;

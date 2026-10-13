@@ -1,4 +1,4 @@
-using Accounting.Application.CheckBooks.Queries;
+﻿using Accounting.Application.Queries.CheckBooks;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

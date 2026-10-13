@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteAndBlackLists.Queries;
+﻿using Accounting.Application.Queries.WhiteAndBlackLists;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using Accounting.Infrastructure.Legacy;

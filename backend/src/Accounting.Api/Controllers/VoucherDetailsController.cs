@@ -1,11 +1,11 @@
-using Accounting.Application.Common;
-using Accounting.Application.Vouchers.Commands.Common;
-using Accounting.Application.Vouchers.Commands.CreateVoucherDetail;
-using Accounting.Application.Vouchers.Commands.DeleteVoucherDetail;
-using Accounting.Application.Vouchers.Commands.UpdateVoucherDetail;
-using Accounting.Application.Vouchers.Queries;
-using Accounting.Application.Vouchers.Queries.GetVoucherDetailById;
-using Accounting.Application.Vouchers.Queries.GetVoucherDetails;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.Vouchers.Common;
+using Accounting.Application.Commands.Vouchers.CreateVoucherDetail;
+using Accounting.Application.Commands.Vouchers.DeleteVoucherDetail;
+using Accounting.Application.Commands.Vouchers.UpdateVoucherDetail;
+using Accounting.Application.Queries.Vouchers;
+using Accounting.Application.Queries.Vouchers.GetVoucherDetailById;
+using Accounting.Application.Queries.Vouchers.GetVoucherDetails;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

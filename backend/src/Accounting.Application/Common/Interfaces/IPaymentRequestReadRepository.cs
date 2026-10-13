@@ -1,5 +1,5 @@
-using Accounting.Application.Common;
-using Accounting.Application.Treasury.Queries;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Queries.Treasury;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Interfaces;

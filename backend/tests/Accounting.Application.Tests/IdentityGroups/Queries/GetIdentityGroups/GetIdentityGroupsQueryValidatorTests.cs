@@ -1,4 +1,4 @@
-using Accounting.Application.IdentityGroups.Queries.GetIdentityGroups;
+﻿using Accounting.Application.Queries.IdentityGroups.GetIdentityGroups;
 
 namespace Accounting.Application.Tests.IdentityGroups.Queries.GetIdentityGroups;
 

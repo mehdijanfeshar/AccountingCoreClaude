@@ -1,5 +1,5 @@
-using Accounting.Domain.ValueObjects;
-using Accounting.Application.IdentitySubGroups.Queries.GetIdentitySubGroups;
+﻿using Accounting.Domain.ValueObjects;
+using Accounting.Application.Queries.IdentitySubGroups.GetIdentitySubGroups;
 
 namespace Accounting.Application.Tests.IdentitySubGroups.Queries.GetIdentitySubGroups;
 

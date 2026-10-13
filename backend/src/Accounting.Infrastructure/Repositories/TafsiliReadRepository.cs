@@ -1,4 +1,4 @@
-using Accounting.Application.Tafsilis.Queries;
+﻿using Accounting.Application.Queries.Tafsilis;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

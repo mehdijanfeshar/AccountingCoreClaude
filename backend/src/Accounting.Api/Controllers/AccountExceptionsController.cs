@@ -1,9 +1,9 @@
-using Accounting.Application.AccountExceptions.Commands.CreateAccountException;
-using Accounting.Application.AccountExceptions.Commands.DeleteAccountException;
-using Accounting.Application.AccountExceptions.Commands.UpdateAccountException;
-using Accounting.Application.AccountExceptions.Queries;
-using Accounting.Application.AccountExceptions.Queries.GetAccountExceptionById;
-using Accounting.Application.AccountExceptions.Queries.GetAccountExceptions;
+﻿using Accounting.Application.Commands.AccountExceptions.CreateAccountException;
+using Accounting.Application.Commands.AccountExceptions.DeleteAccountException;
+using Accounting.Application.Commands.AccountExceptions.UpdateAccountException;
+using Accounting.Application.Queries.AccountExceptions;
+using Accounting.Application.Queries.AccountExceptions.GetAccountExceptionById;
+using Accounting.Application.Queries.AccountExceptions.GetAccountExceptions;
 using Accounting.Application.Common;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

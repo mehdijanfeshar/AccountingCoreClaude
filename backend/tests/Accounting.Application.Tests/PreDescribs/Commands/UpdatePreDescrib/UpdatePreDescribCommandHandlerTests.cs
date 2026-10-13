@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.PreDescribs.Commands.UpdatePreDescrib;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.PreDescribs.UpdatePreDescrib;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;

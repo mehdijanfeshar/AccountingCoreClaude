@@ -35,19 +35,16 @@ public sealed class GeneralLedgerReadRepository : IGeneralLedgerReadRepository
                    MAX(b.KOLNAME) AS "KolName",
                    NVL(SUM(CASE WHEN {OpeningPredicate} THEN b.DEB - b.CRED END), 0) AS "Opening",
                    NVL(SUM(CASE WHEN NOT {OpeningPredicate} THEN b.DEB END), 0) AS "PeriodDebit",
-                   NVL(SUM(CASE WHEN NOT {OpeningPredicate} THEN b.CRED END), 0) AS "PeriodCredit"
+                   NVL(SUM(CASE WHEN NOT {OpeningPredicate} THEN b.CRED END), 0) AS "PeriodCredit",
+                   COUNT(CASE WHEN NOT {OpeningPredicate} THEN 1 END) AS "PeriodRows"
             FROM base b
             GROUP BY b.KOL
             ORDER BY b.KOL
             """,
             CloneList(baseParams).ToArray()).ToListAsync(cancellationToken);
 
-        var total = (await _dbContext.Database.SqlQueryRaw<CountRow>(
-            $"""
-            WITH base AS ({baseSql})
-            SELECT COUNT(*) AS "Value" FROM base b WHERE NOT {OpeningPredicate}
-            """,
-            CloneList(baseParams).ToArray()).ToListAsync(cancellationToken)).FirstOrDefault()?.Value ?? 0;
+        // شمار سطرهای دوره از همان کوئری تجمیعی می‌آید؛ کوئری COUNT جدا یک پیمایش کامل اضافه بود.
+        var total = accounts.Sum(a => a.PeriodRows);
 
         var pageParams = CloneList(baseParams);
         pageParams.Add(new OracleParameter { ParameterName = "skip", OracleDbType = OracleDbType.Int32, Value = (q.PageNumber - 1) * q.PageSize });
@@ -165,11 +162,7 @@ public sealed class GeneralLedgerReadRepository : IGeneralLedgerReadRepository
         public decimal Opening { get; set; }
         public decimal PeriodDebit { get; set; }
         public decimal PeriodCredit { get; set; }
-    }
-
-    public sealed class CountRow
-    {
-        public int Value { get; set; }
+        public int PeriodRows { get; set; }
     }
 
     public sealed class LedgerRow

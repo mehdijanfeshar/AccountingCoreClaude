@@ -1,4 +1,4 @@
-using Accounting.Application.AccountExceptions.Commands.UpdateAccountException;
+﻿using Accounting.Application.Commands.AccountExceptions.UpdateAccountException;
 
 namespace Accounting.Application.Tests.AccountExceptions.Commands.UpdateAccountException;
 

@@ -1,5 +1,5 @@
-using Accounting.Application.Common.Interfaces;
-using Accounting.Application.Treasury.Queries;
+﻿using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Queries.Treasury;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +8,20 @@ namespace Accounting.Infrastructure.Repositories;
 /// <summary>See <see cref="IBankStatementBookCandidateReadRepository"/> XML doc.</summary>
 public sealed class BankStatementBookCandidateReadRepository : IBankStatementBookCandidateReadRepository
 {
+    // اوراکل بیش از ۱۰۰۰ عنصر در IN را نمی‌پذیرد (ORA-01795)؛ لیست‌های بزرگ دسته‌دسته پرسیده می‌شوند.
+    private const int InListChunk = 900;
+
+    private static async Task<List<T>> ChunkedAsync<TId, T>(IReadOnlyCollection<TId> ids, Func<List<TId>, Task<List<T>>> run)
+    {
+        var result = new List<T>();
+        foreach (var chunk in ids.Chunk(InListChunk))
+        {
+            result.AddRange(await run(chunk.ToList()));
+        }
+
+        return result;
+    }
+
     private readonly LegacyDbContext _dbContext;
 
     public BankStatementBookCandidateReadRepository(LegacyDbContext dbContext)
@@ -41,9 +55,10 @@ public sealed class BankStatementBookCandidateReadRepository : IBankStatementBoo
                   && (debitSide ? detail.DEBTOR > 0 : detail.CREDITOR > 0)
             select new { detail, head };
 
-        if (excludeIds.Count > 0)
+        foreach (var excludeChunk in excludeIds.Chunk(InListChunk))
         {
-            query = query.Where(x => !excludeIds.Contains(x.detail.ID));
+            var part = excludeChunk;
+            query = query.Where(x => !part.Contains(x.detail.ID));
         }
 
         // همان قاعدهٔ محدودسازی تفصیلی TreasuryBankAccountBalanceReadRepository — چند حساب بانکی
@@ -87,29 +102,29 @@ public sealed class BankStatementBookCandidateReadRepository : IBankStatementBoo
         // اولویت (۱) auto-match — مرجع بانکی سند صاحب این ردیف را، اگر توسط یکی از سه جریان
         // خزانه‌داری (درخواست پرداخت/دریافت/انتقال) صادر شده باشد، پیدا می‌کند. سه کوئری مستقل،
         // batched (نه N+1 به‌ازای ردیف) — هرگز join سراسری روی جدول‌های دو ماژول.
-        var refFromPaymentVoucher = await _dbContext.TB_TR_PAYMENT_REQUESTs.AsNoTracking()
+        var refFromPaymentVoucher = await ChunkedAsync(headIds, ids => _dbContext.TB_TR_PAYMENT_REQUESTs.AsNoTracking()
             .Where(p => !p.ISDELETED && p.BANK_REFERENCE != null
-                        && p.PAYMENT_VOUCHER_ID != null && headIds.Contains(p.PAYMENT_VOUCHER_ID.Value))
+                        && p.PAYMENT_VOUCHER_ID != null && ids.Contains(p.PAYMENT_VOUCHER_ID.Value))
             .Select(p => new { HeadId = p.PAYMENT_VOUCHER_ID, p.BANK_REFERENCE })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken));
 
-        var refFromLiabilityVoucher = await _dbContext.TB_TR_PAYMENT_REQUESTs.AsNoTracking()
+        var refFromLiabilityVoucher = await ChunkedAsync(headIds, ids => _dbContext.TB_TR_PAYMENT_REQUESTs.AsNoTracking()
             .Where(p => !p.ISDELETED && p.BANK_REFERENCE != null
-                        && p.LIABILITY_VOUCHER_ID != null && headIds.Contains(p.LIABILITY_VOUCHER_ID.Value))
+                        && p.LIABILITY_VOUCHER_ID != null && ids.Contains(p.LIABILITY_VOUCHER_ID.Value))
             .Select(p => new { HeadId = p.LIABILITY_VOUCHER_ID, p.BANK_REFERENCE })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken));
 
         var refFromPaymentRequest = refFromPaymentVoucher.Concat(refFromLiabilityVoucher).ToList();
 
-        var refFromReceipt = await _dbContext.TB_TR_RECEIPTs.AsNoTracking()
-            .Where(r => !r.ISDELETED && r.VOUCHER_ID != null && headIds.Contains(r.VOUCHER_ID.Value))
+        var refFromReceipt = await ChunkedAsync(headIds, ids => _dbContext.TB_TR_RECEIPTs.AsNoTracking()
+            .Where(r => !r.ISDELETED && r.VOUCHER_ID != null && ids.Contains(r.VOUCHER_ID.Value))
             .Select(r => new { HeadId = r.VOUCHER_ID, BANK_REFERENCE = (string?)r.BANK_REFERENCE })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken));
 
-        var refFromTransfer = await _dbContext.TB_TR_TRANSFERs.AsNoTracking()
-            .Where(t => !t.ISDELETED && t.VOUCHER_ID != null && headIds.Contains(t.VOUCHER_ID.Value))
+        var refFromTransfer = await ChunkedAsync(headIds, ids => _dbContext.TB_TR_TRANSFERs.AsNoTracking()
+            .Where(t => !t.ISDELETED && t.VOUCHER_ID != null && ids.Contains(t.VOUCHER_ID.Value))
             .Select(t => new { HeadId = t.VOUCHER_ID, t.BANK_REFERENCE })
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken));
 
         var bankRefByHeadId = new Dictionary<Guid, string?>();
 
@@ -127,14 +142,14 @@ public sealed class BankStatementBookCandidateReadRepository : IBankStatementBoo
         var receiptIds = rows.Where(r => r.RECEIP_ID != null).Select(r => r.RECEIP_ID!.Value).Distinct().ToList();
         var chequeNoById = checkIds.Count == 0
             ? new Dictionary<Guid, string>()
-            : await _dbContext.TB_CHECKs.AsNoTracking()
-                .Where(c => checkIds.Contains(c.ID))
-                .ToDictionaryAsync(c => c.ID, c => c.CHEQ_NO, cancellationToken);
+            : (await ChunkedAsync(checkIds, ids => _dbContext.TB_CHECKs.AsNoTracking()
+                .Where(c => ids.Contains(c.ID)).Select(c => new { c.ID, c.CHEQ_NO }).ToListAsync(cancellationToken)))
+                .ToDictionary(c => c.ID, c => c.CHEQ_NO);
         var receiptNoById = receiptIds.Count == 0
             ? new Dictionary<Guid, string>()
-            : await _dbContext.TB_RECEIPs.AsNoTracking()
-                .Where(c => receiptIds.Contains(c.ID))
-                .ToDictionaryAsync(c => c.ID, c => c.RECEIPT_NO, cancellationToken);
+            : (await ChunkedAsync(receiptIds, ids => _dbContext.TB_RECEIPs.AsNoTracking()
+                .Where(c => ids.Contains(c.ID)).Select(c => new { c.ID, c.RECEIPT_NO }).ToListAsync(cancellationToken)))
+                .ToDictionary(c => c.ID, c => c.RECEIPT_NO);
 
         return rows.Select(r => new BankStatementBookLineDto(
             r.ID,

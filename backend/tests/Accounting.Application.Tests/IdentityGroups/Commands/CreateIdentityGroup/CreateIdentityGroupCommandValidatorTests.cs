@@ -1,4 +1,4 @@
-using Accounting.Application.IdentityGroups.Commands.CreateIdentityGroup;
+﻿using Accounting.Application.Commands.IdentityGroups.CreateIdentityGroup;
 
 namespace Accounting.Application.Tests.IdentityGroups.Commands.CreateIdentityGroup;
 

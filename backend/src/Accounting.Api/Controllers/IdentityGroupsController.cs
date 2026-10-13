@@ -1,10 +1,10 @@
-using Accounting.Application.Common;
-using Accounting.Application.IdentityGroups.Commands.CreateIdentityGroup;
-using Accounting.Application.IdentityGroups.Commands.DeleteIdentityGroup;
-using Accounting.Application.IdentityGroups.Commands.UpdateIdentityGroup;
-using Accounting.Application.IdentityGroups.Queries;
-using Accounting.Application.IdentityGroups.Queries.GetIdentityGroupById;
-using Accounting.Application.IdentityGroups.Queries.GetIdentityGroups;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.IdentityGroups.CreateIdentityGroup;
+using Accounting.Application.Commands.IdentityGroups.DeleteIdentityGroup;
+using Accounting.Application.Commands.IdentityGroups.UpdateIdentityGroup;
+using Accounting.Application.Queries.IdentityGroups;
+using Accounting.Application.Queries.IdentityGroups.GetIdentityGroupById;
+using Accounting.Application.Queries.IdentityGroups.GetIdentityGroups;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

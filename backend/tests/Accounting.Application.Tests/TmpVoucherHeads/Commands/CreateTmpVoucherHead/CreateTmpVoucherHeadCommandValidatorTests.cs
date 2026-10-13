@@ -1,4 +1,4 @@
-using Accounting.Application.TmpVoucherHeads.Commands.CreateTmpVoucherHead;
+﻿using Accounting.Application.Commands.TmpVoucherHeads.CreateTmpVoucherHead;
 
 namespace Accounting.Application.Tests.TmpVoucherHeads.Commands.CreateTmpVoucherHead;
 

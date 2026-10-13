@@ -1,6 +1,6 @@
-using Accounting.Domain.ValueObjects;
-using Accounting.Application.ElamHeads.Queries;
-using Accounting.Application.ElamHeads.Queries.GetElamHeadById;
+﻿using Accounting.Domain.ValueObjects;
+using Accounting.Application.Queries.ElamHeads;
+using Accounting.Application.Queries.ElamHeads.GetElamHeadById;
 using Accounting.Application.Common.Interfaces;
 using Moq;
 

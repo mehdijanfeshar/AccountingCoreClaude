@@ -1,5 +1,5 @@
-using Accounting.Application.Tafsilis.Queries;
-using Accounting.Application.Tafsilis.Queries.GetTafsiliById;
+﻿using Accounting.Application.Queries.Tafsilis;
+using Accounting.Application.Queries.Tafsilis.GetTafsiliById;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.ValueObjects;
 using Moq;

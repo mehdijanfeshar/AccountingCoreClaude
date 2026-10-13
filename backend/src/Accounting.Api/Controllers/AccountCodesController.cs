@@ -1,15 +1,15 @@
-using Accounting.Application.Accounts.Commands.CreateAccountCode;
-using Accounting.Application.Accounts.Commands.DeleteAccountCode;
-using Accounting.Application.Accounts.Commands.LinkAccountCodeToTafsilGroup;
-using Accounting.Application.Accounts.Commands.UnlinkAccountCodeFromTafsilGroup;
-using Accounting.Application.Accounts.Commands.UpdateAccountCode;
-using Accounting.Application.Accounts.Commands.UpdateAccountTafsilGroupLink;
-using Accounting.Application.Accounts.Queries;
-using Accounting.Application.Accounts.Queries.GetAccountCodeById;
-using Accounting.Application.Accounts.Queries.GetAccountCodes;
-using Accounting.Application.Accounts.Queries.GetAccountTafsilGroupLinks;
-using Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems;
-using Accounting.Application.AccountCodes.Queries.GetTafsiliLevels;
+﻿using Accounting.Application.Commands.Accounts.CreateAccountCode;
+using Accounting.Application.Commands.Accounts.DeleteAccountCode;
+using Accounting.Application.Commands.Accounts.LinkAccountCodeToTafsilGroup;
+using Accounting.Application.Commands.Accounts.UnlinkAccountCodeFromTafsilGroup;
+using Accounting.Application.Commands.Accounts.UpdateAccountCode;
+using Accounting.Application.Commands.Accounts.UpdateAccountTafsilGroupLink;
+using Accounting.Application.Queries.Accounts;
+using Accounting.Application.Queries.Accounts.GetAccountCodeById;
+using Accounting.Application.Queries.Accounts.GetAccountCodes;
+using Accounting.Application.Queries.Accounts.GetAccountTafsilGroupLinks;
+using Accounting.Application.Queries.AccountCodes.GetTafsiliLevelItems;
+using Accounting.Application.Queries.AccountCodes.GetTafsiliLevels;
 using Accounting.Application.Common;
 using Accounting.Domain.ValueObjects;
 using MediatR;
@@ -129,7 +129,7 @@ public sealed class AccountCodesController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var result = await _mediator.Send(
-            new Accounting.Application.Accounts.Queries.GetEntryMoins.GetEntryMoinsQuery(search, dateDoc, pageNumber, pageSize),
+            new Accounting.Application.Queries.Accounts.GetEntryMoins.GetEntryMoinsQuery(search, dateDoc, pageNumber, pageSize),
             cancellationToken);
 
         return Ok(result);

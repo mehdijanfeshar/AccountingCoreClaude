@@ -1,4 +1,4 @@
-using Accounting.Application.Receipts.Queries.GetReceiptById;
+﻿using Accounting.Application.Queries.Receipts.GetReceiptById;
 
 namespace Accounting.Application.Tests.Receipts.Queries.GetReceiptById;
 

@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.CheckBooks.Commands.CreateCheckBook;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.CheckBooks.CreateCheckBook;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

@@ -1,4 +1,4 @@
-using Accounting.Application.AccountCodeInterfaces.Commands.DeleteAccountCodeInterface;
+﻿using Accounting.Application.Commands.AccountCodeInterfaces.DeleteAccountCodeInterface;
 
 namespace Accounting.Application.Tests.AccountCodeInterfaces.Commands.DeleteAccountCodeInterface;
 

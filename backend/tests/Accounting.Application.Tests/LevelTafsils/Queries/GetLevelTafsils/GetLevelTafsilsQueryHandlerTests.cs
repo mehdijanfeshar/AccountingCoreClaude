@@ -1,5 +1,5 @@
-using Accounting.Application.LevelTafsils.Queries;
-using Accounting.Application.LevelTafsils.Queries.GetLevelTafsils;
+﻿using Accounting.Application.Queries.LevelTafsils;
+using Accounting.Application.Queries.LevelTafsils.GetLevelTafsils;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Moq;

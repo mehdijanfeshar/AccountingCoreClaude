@@ -1,4 +1,4 @@
-using Accounting.Application.Expenses.Queries;
+﻿using Accounting.Application.Queries.Expenses;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

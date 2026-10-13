@@ -1,4 +1,4 @@
-using Accounting.Application.ChequeTypes.Commands.DeleteChequeType;
+﻿using Accounting.Application.Commands.ChequeTypes.DeleteChequeType;
 
 namespace Accounting.Application.Tests.ChequeTypes.Commands.DeleteChequeType;
 

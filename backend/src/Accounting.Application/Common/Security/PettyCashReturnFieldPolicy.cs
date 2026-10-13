@@ -1,4 +1,4 @@
-using Accounting.Application.Common.Exceptions;
+﻿using Accounting.Application.Common.Exceptions;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Security;
@@ -19,7 +19,7 @@ namespace Accounting.Application.Common.Security;
 /// than one reason, the union of each reason's fields is allowed.
 ///
 /// Field names are the exact camelCase body names of
-/// <c>Accounting.Application.PettyCash.Commands.UpdatePettyCashExpenseDoc.UpdatePettyCashExpenseDocCommand</c>
+/// <c>Accounting.Application.Commands.PettyCash.UpdatePettyCashExpenseDoc.UpdatePettyCashExpenseDocCommand</c>
 /// (plus the synthetic name <c>"attachments"</c>, handled separately by
 /// <see cref="CanEditAttachments"/> since attachments are not an Update body field) — never a
 /// Legacy column name, so a caller-facing message never leaks schema.

@@ -1,5 +1,5 @@
-using Accounting.Domain.ValueObjects;
-using Accounting.Application.Vouchers.Commands.UpdateVoucherHead;
+﻿using Accounting.Domain.ValueObjects;
+using Accounting.Application.Commands.Vouchers.UpdateVoucherHead;
 
 namespace Accounting.Application.Tests.Vouchers.Commands.UpdateVoucherHead;
 

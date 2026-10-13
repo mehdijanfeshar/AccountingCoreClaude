@@ -1,4 +1,4 @@
-using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodeById;
+﻿using Accounting.Application.Queries.AttribForAccountCodes.GetAttribForAccountCodeById;
 
 namespace Accounting.Application.Tests.AttribForAccountCodes.Queries.GetAttribForAccountCodeById;
 

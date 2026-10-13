@@ -1,4 +1,4 @@
-using Accounting.Application.IdentityGroups.Commands.UpdateIdentityGroup;
+﻿using Accounting.Application.Commands.IdentityGroups.UpdateIdentityGroup;
 
 namespace Accounting.Application.Tests.IdentityGroups.Commands.UpdateIdentityGroup;
 

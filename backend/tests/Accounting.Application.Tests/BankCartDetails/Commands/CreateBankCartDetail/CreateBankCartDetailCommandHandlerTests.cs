@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.BankCartDetails.Commands.CreateBankCartDetail;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.BankCartDetails.CreateBankCartDetail;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

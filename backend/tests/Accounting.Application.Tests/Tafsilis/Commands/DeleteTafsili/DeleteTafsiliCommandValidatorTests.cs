@@ -1,4 +1,4 @@
-using Accounting.Application.Tafsilis.Commands.DeleteTafsili;
+﻿using Accounting.Application.Commands.Tafsilis.DeleteTafsili;
 
 namespace Accounting.Application.Tests.Tafsilis.Commands.DeleteTafsili;
 

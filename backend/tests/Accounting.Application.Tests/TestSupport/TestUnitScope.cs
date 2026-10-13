@@ -1,6 +1,6 @@
-using Accounting.Application.Common.Interfaces;
+﻿using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Common.Security;
-using Accounting.Application.UnitAccess.Queries;
+using Accounting.Application.Queries.UnitAccess;
 using Moq;
 
 namespace Accounting.Application.Tests.TestSupport;

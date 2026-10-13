@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.AttribForAccountCodes.Commands.UpdateAttribForAccountCode;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.AttribForAccountCodes.UpdateAttribForAccountCode;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;

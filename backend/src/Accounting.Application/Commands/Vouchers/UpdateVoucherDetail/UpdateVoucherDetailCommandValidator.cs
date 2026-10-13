@@ -1,0 +1,49 @@
+﻿using Accounting.Application.Commands.Vouchers.Common;
+using FluentValidation;
+
+namespace Accounting.Application.Commands.Vouchers.UpdateVoucherDetail;
+
+/// <summary>
+/// Surface-level (syntactic) validation only, matching the Fluent mapping constraints in
+/// <c>LegacyDbContext</c>. Per the recorded "Legacy fully replaces the rich model"
+/// architecture decision, accounting invariants were deliberately discarded and must NOT be
+/// re-created here.
+///
+/// ✅ <b>These rules really do run now — fixed in phase 31; they did not before.</b>
+/// <c>ValidationBehavior</c> used to declare <c>where TRequest : IRequest&lt;TResponse&gt;</c>,
+/// which MediatR 14 never satisfies for a void (<c>: IRequest</c>) command, so the DI container
+/// skipped the validator for every <c>Update</c>/<c>Delete</c> request project-wide — silently,
+/// from phase 8 to phase 30. The constraint is gone and
+/// <c>BehaviorPipelineConstraintTests</c> fails if it ever comes back. Practical consequence:
+/// rules here were written and unit-tested but never exercised against real traffic, so a 400
+/// that appears for the first time is most likely this validator finally firing, not a new bug.
+/// </summary>
+public sealed class UpdateVoucherDetailCommandValidator : AbstractValidator<UpdateVoucherDetailCommand>
+{
+    public UpdateVoucherDetailCommandValidator()
+    {
+        RuleFor(x => x.Cheque!).SetValidator(new VoucherChequeInfoInputValidator()).When(x => x.Cheque is not null);
+        RuleFor(x => x.Id)
+            .NotEmpty();
+
+        RuleFor(x => x.Debtor).WholeRialAmount("مبلغ بدهکار");
+        RuleFor(x => x.Creditor).WholeRialAmount("مبلغ بستانکار");
+
+        RuleFor(x => x.Description)
+            .MaximumLength(200);
+
+        RuleFor(x => x.VahedCode)
+            .NotEmpty()
+            .MaximumLength(4);
+
+        RuleFor(x => x.Year)
+            .MaximumLength(4);
+
+        // No-op when TafsiliLinks is null ("leave existing links untouched" — see the command's
+        // XML doc for why null and empty differ here). An EMPTY list is still valid and is NOT a
+        // validation failure: it is the caller explicitly asking for "no links on this line".
+        RuleForEach(x => x.TafsiliLinks)
+            .SetValidator(new VoucherDetailTafsiliLinkInputValidator())
+            .When(x => x.TafsiliLinks is not null);
+    }
+}

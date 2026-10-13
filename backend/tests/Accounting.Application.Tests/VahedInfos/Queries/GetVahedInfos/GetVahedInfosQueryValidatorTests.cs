@@ -1,4 +1,4 @@
-using Accounting.Application.VahedInfos.Queries.GetVahedInfos;
+﻿using Accounting.Application.Queries.VahedInfos.GetVahedInfos;
 
 namespace Accounting.Application.Tests.VahedInfos.Queries.GetVahedInfos;
 

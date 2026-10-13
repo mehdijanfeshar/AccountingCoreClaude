@@ -1,9 +1,9 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
-/// Thrown by <c>Accounting.Application.PettyCash.Commands.Common.PettyCashReviewTransitionService</c>
+/// Thrown by <c>Accounting.Application.Commands.PettyCash.Common.PettyCashReviewTransitionService</c>
 /// when a صورت‌هزینه is not in the exact <c>DOC_STATE</c> a review action (StartReview/Approve/
 /// Return/Reject) requires as its source state — e.g. Approve requires
 /// <see cref="PettyCashDocState.PendingReview"/>, and finds the document already

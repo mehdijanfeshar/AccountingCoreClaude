@@ -1,4 +1,4 @@
-using Accounting.Application.PayReciveHeads.Queries.GetPayReciveHeads;
+﻿using Accounting.Application.Queries.PayReciveHeads.GetPayReciveHeads;
 
 namespace Accounting.Application.Tests.PayReciveHeads.Queries.GetPayReciveHeads;
 

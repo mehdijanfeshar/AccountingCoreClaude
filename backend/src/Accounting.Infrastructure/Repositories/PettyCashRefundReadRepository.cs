@@ -1,5 +1,5 @@
-using Accounting.Application.Common.Interfaces;
-using Accounting.Application.PettyCash.Queries;
+﻿using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Queries.PettyCash;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;
 

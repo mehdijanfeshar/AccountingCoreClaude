@@ -1,6 +1,6 @@
-using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
-using Accounting.Application.AttribForAccountCodes.Queries;
-using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodeById;
+﻿using Accounting.Application.Queries.AttribForAccountCodes.GetAttribForAccountCodes;
+using Accounting.Application.Queries.AttribForAccountCodes;
+using Accounting.Application.Queries.AttribForAccountCodes.GetAttribForAccountCodeById;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.ValueObjects;
 using Moq;

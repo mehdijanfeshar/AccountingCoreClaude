@@ -1,4 +1,4 @@
-using Accounting.Application.BankCartDetails.Commands.UpdateBankCartDetail;
+﻿using Accounting.Application.Commands.BankCartDetails.UpdateBankCartDetail;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.BankCartDetails.Commands.UpdateBankCartDetail;

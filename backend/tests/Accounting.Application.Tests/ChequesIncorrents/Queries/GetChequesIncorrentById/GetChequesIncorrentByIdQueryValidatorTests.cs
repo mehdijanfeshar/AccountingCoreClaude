@@ -1,4 +1,4 @@
-using Accounting.Application.ChequesIncorrents.Queries.GetChequesIncorrentById;
+﻿using Accounting.Application.Queries.ChequesIncorrents.GetChequesIncorrentById;
 
 namespace Accounting.Application.Tests.ChequesIncorrents.Queries.GetChequesIncorrentById;
 

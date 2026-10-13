@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteLists.Queries.GetWhiteLists;
+﻿using Accounting.Application.Queries.WhiteLists.GetWhiteLists;
 
 namespace Accounting.Application.Tests.WhiteLists.Queries.GetWhiteLists;
 

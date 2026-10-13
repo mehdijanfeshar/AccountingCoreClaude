@@ -1,10 +1,10 @@
-using Accounting.Application.Common;
-using Accounting.Application.LevelTafsils.Commands.CreateLevelTafsil;
-using Accounting.Application.LevelTafsils.Commands.DeleteLevelTafsil;
-using Accounting.Application.LevelTafsils.Commands.UpdateLevelTafsil;
-using Accounting.Application.LevelTafsils.Queries;
-using Accounting.Application.LevelTafsils.Queries.GetLevelTafsilById;
-using Accounting.Application.LevelTafsils.Queries.GetLevelTafsils;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.LevelTafsils.CreateLevelTafsil;
+using Accounting.Application.Commands.LevelTafsils.DeleteLevelTafsil;
+using Accounting.Application.Commands.LevelTafsils.UpdateLevelTafsil;
+using Accounting.Application.Queries.LevelTafsils;
+using Accounting.Application.Queries.LevelTafsils.GetLevelTafsilById;
+using Accounting.Application.Queries.LevelTafsils.GetLevelTafsils;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

@@ -1,8 +1,8 @@
-using Accounting.Application.Common.Exceptions;
+﻿using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.Vouchers.Commands.DeleteVoucherHead;
-using Accounting.Application.Vouchers.Commands.UpdateVoucherHead;
+using Accounting.Application.Commands.Vouchers.DeleteVoucherHead;
+using Accounting.Application.Commands.Vouchers.UpdateVoucherHead;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using Moq;

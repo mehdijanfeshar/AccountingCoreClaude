@@ -1,4 +1,4 @@
-using Accounting.Application.RevolvingFunds.Commands.DeleteRevolvingFund;
+﻿using Accounting.Application.Commands.RevolvingFunds.DeleteRevolvingFund;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

@@ -1,5 +1,5 @@
-using Accounting.Application.FinancialStatements;
-using Accounting.Application.FinancialStatements.Queries;
+﻿using Accounting.Application.FinancialStatements;
+using Accounting.Application.Queries.FinancialStatements;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Interfaces;

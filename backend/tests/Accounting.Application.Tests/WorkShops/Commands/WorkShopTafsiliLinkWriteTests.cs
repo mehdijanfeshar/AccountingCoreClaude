@@ -1,6 +1,6 @@
-using Accounting.Application.WorkShops.Commands.Common;
-using Accounting.Application.WorkShops.Commands.CreateWorkShop;
-using Accounting.Application.WorkShops.Commands.UpdateWorkShop;
+﻿using Accounting.Application.Commands.WorkShops.Common;
+using Accounting.Application.Commands.WorkShops.CreateWorkShop;
+using Accounting.Application.Commands.WorkShops.UpdateWorkShop;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using Moq;

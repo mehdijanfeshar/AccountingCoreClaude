@@ -1,4 +1,4 @@
-using Accounting.Application.PersonActions.Commands.CreatePersonAction;
+﻿using Accounting.Application.Commands.PersonActions.CreatePersonAction;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.PersonActions.Commands.CreatePersonAction;

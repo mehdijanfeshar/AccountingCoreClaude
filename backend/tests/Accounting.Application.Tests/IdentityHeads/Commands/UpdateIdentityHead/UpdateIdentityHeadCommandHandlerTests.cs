@@ -1,7 +1,7 @@
-using Accounting.Application.Common.Exceptions;
+﻿using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.IdentityHeads.Commands.Common;
-using Accounting.Application.IdentityHeads.Commands.UpdateIdentityHead;
+using Accounting.Application.Commands.IdentityHeads.Common;
+using Accounting.Application.Commands.IdentityHeads.UpdateIdentityHead;
 using Accounting.Domain.Entity;
 using Moq;
 

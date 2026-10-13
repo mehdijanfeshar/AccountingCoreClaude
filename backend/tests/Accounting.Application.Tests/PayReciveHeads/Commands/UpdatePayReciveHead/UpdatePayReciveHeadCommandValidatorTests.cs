@@ -1,4 +1,4 @@
-using Accounting.Application.PayReciveHeads.Commands.UpdatePayReciveHead;
+﻿using Accounting.Application.Commands.PayReciveHeads.UpdatePayReciveHead;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.PayReciveHeads.Commands.UpdatePayReciveHead;

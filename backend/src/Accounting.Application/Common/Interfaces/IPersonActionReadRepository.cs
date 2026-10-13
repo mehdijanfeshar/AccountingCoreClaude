@@ -1,5 +1,5 @@
-using Accounting.Application.Common;
-using Accounting.Application.PersonActions.Queries;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Queries.PersonActions;
 
 namespace Accounting.Application.Common.Interfaces;
 

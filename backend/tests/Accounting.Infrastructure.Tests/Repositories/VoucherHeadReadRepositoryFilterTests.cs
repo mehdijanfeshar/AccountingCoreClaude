@@ -1,4 +1,4 @@
-using Accounting.Application.Vouchers.Queries.GetVoucherHeads;
+﻿using Accounting.Application.Queries.Vouchers.GetVoucherHeads;
 using Accounting.Domain.Entity;
 using Accounting.Infrastructure.Legacy;
 using Accounting.Infrastructure.Repositories;

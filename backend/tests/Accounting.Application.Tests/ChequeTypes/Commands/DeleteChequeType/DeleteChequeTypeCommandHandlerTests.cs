@@ -1,4 +1,4 @@
-using Accounting.Application.ChequeTypes.Commands.DeleteChequeType;
+﻿using Accounting.Application.Commands.ChequeTypes.DeleteChequeType;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

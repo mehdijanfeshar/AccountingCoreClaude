@@ -1,4 +1,4 @@
-using Accounting.Application.ElamHeads.Queries;
+﻿using Accounting.Application.Queries.ElamHeads;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

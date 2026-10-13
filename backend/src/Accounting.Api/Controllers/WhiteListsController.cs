@@ -1,10 +1,10 @@
-using Accounting.Application.Common;
-using Accounting.Application.WhiteLists.Commands.CreateWhiteList;
-using Accounting.Application.WhiteLists.Commands.DeleteWhiteList;
-using Accounting.Application.WhiteLists.Commands.UpdateWhiteList;
-using Accounting.Application.WhiteLists.Queries;
-using Accounting.Application.WhiteLists.Queries.GetWhiteListById;
-using Accounting.Application.WhiteLists.Queries.GetWhiteLists;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.WhiteLists.CreateWhiteList;
+using Accounting.Application.Commands.WhiteLists.DeleteWhiteList;
+using Accounting.Application.Commands.WhiteLists.UpdateWhiteList;
+using Accounting.Application.Queries.WhiteLists;
+using Accounting.Application.Queries.WhiteLists.GetWhiteListById;
+using Accounting.Application.Queries.WhiteLists.GetWhiteLists;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

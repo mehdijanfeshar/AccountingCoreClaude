@@ -1,5 +1,5 @@
-using Accounting.Application.TafsilGroups.Queries;
-using Accounting.Application.TafsilGroups.Queries.GetTafsilGroups;
+﻿using Accounting.Application.Queries.TafsilGroups;
+using Accounting.Application.Queries.TafsilGroups.GetTafsilGroups;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Moq;

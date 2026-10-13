@@ -1,8 +1,8 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.FinancialStatements.Narratives;
-using Accounting.Application.FinancialStatements.Queries;
+using Accounting.Application.Queries.FinancialStatements;
 using Accounting.Domain.ValueObjects;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;

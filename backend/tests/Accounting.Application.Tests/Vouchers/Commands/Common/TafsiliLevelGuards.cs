@@ -1,4 +1,4 @@
-using Accounting.Application.Vouchers.Commands.Common;
+﻿using Accounting.Application.Commands.Vouchers.Common;
 using Moq;
 
 namespace Accounting.Application.Tests.Vouchers.Commands.Common;

@@ -1,4 +1,4 @@
-using Accounting.Application.BankCartDetails.Queries.GetBankCartDetailById;
+﻿using Accounting.Application.Queries.BankCartDetails.GetBankCartDetailById;
 
 namespace Accounting.Application.Tests.BankCartDetails.Queries.GetBankCartDetailById;
 

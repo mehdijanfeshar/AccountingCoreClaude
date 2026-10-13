@@ -1,5 +1,5 @@
-using Accounting.Application.BankCartDetails.Queries;
-using Accounting.Application.BankCartDetails.Queries.GetBankCartDetails;
+﻿using Accounting.Application.Queries.BankCartDetails;
+using Accounting.Application.Queries.BankCartDetails.GetBankCartDetails;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.ValueObjects;

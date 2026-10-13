@@ -1,9 +1,9 @@
-using Accounting.Application.CheckBooks.Commands.CreateCheckBook;
-using Accounting.Application.CheckBooks.Commands.DeleteCheckBook;
-using Accounting.Application.CheckBooks.Commands.UpdateCheckBook;
-using Accounting.Application.CheckBooks.Queries;
-using Accounting.Application.CheckBooks.Queries.GetCheckBookById;
-using Accounting.Application.CheckBooks.Queries.GetCheckBooks;
+﻿using Accounting.Application.Commands.CheckBooks.CreateCheckBook;
+using Accounting.Application.Commands.CheckBooks.DeleteCheckBook;
+using Accounting.Application.Commands.CheckBooks.UpdateCheckBook;
+using Accounting.Application.Queries.CheckBooks;
+using Accounting.Application.Queries.CheckBooks.GetCheckBookById;
+using Accounting.Application.Queries.CheckBooks.GetCheckBooks;
 using Accounting.Application.Common;
 using Accounting.Domain.ValueObjects;
 using MediatR;

@@ -1,4 +1,4 @@
-using Accounting.Application.IdentitySubGroups.Queries;
+﻿using Accounting.Application.Queries.IdentitySubGroups;
 using Accounting.Application.Common;
 using Accounting.Domain.ValueObjects;
 

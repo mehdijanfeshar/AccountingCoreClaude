@@ -1,4 +1,4 @@
-using Accounting.Application.PreDescribs.Commands.UpdatePreDescrib;
+﻿using Accounting.Application.Commands.PreDescribs.UpdatePreDescrib;
 
 namespace Accounting.Application.Tests.PreDescribs.Commands.UpdatePreDescrib;
 

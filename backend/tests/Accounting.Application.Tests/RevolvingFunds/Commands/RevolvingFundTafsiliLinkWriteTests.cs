@@ -1,6 +1,6 @@
-using Accounting.Application.RevolvingFunds.Commands.Common;
-using Accounting.Application.RevolvingFunds.Commands.CreateRevolvingFund;
-using Accounting.Application.RevolvingFunds.Commands.UpdateRevolvingFund;
+﻿using Accounting.Application.Commands.RevolvingFunds.Common;
+using Accounting.Application.Commands.RevolvingFunds.CreateRevolvingFund;
+using Accounting.Application.Commands.RevolvingFunds.UpdateRevolvingFund;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using Moq;

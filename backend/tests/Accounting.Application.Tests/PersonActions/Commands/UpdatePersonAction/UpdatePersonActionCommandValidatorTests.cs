@@ -1,4 +1,4 @@
-using Accounting.Application.PersonActions.Commands.UpdatePersonAction;
+﻿using Accounting.Application.Commands.PersonActions.UpdatePersonAction;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.PersonActions.Commands.UpdatePersonAction;

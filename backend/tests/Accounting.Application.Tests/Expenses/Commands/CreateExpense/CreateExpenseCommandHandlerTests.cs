@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.Expenses.Commands.CreateExpense;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.Expenses.CreateExpense;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

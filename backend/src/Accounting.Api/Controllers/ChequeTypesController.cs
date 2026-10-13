@@ -1,10 +1,10 @@
-using Accounting.Application.Common;
-using Accounting.Application.ChequeTypes.Commands.CreateChequeType;
-using Accounting.Application.ChequeTypes.Commands.DeleteChequeType;
-using Accounting.Application.ChequeTypes.Commands.UpdateChequeType;
-using Accounting.Application.ChequeTypes.Queries;
-using Accounting.Application.ChequeTypes.Queries.GetChequeTypeById;
-using Accounting.Application.ChequeTypes.Queries.GetChequeTypes;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.ChequeTypes.CreateChequeType;
+using Accounting.Application.Commands.ChequeTypes.DeleteChequeType;
+using Accounting.Application.Commands.ChequeTypes.UpdateChequeType;
+using Accounting.Application.Queries.ChequeTypes;
+using Accounting.Application.Queries.ChequeTypes.GetChequeTypeById;
+using Accounting.Application.Queries.ChequeTypes.GetChequeTypes;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

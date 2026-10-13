@@ -1,10 +1,10 @@
-using Accounting.Application.Common;
-using Accounting.Application.PersonActions.Commands.CreatePersonAction;
-using Accounting.Application.PersonActions.Commands.DeletePersonAction;
-using Accounting.Application.PersonActions.Commands.UpdatePersonAction;
-using Accounting.Application.PersonActions.Queries;
-using Accounting.Application.PersonActions.Queries.GetPersonActionById;
-using Accounting.Application.PersonActions.Queries.GetPersonActions;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.PersonActions.CreatePersonAction;
+using Accounting.Application.Commands.PersonActions.DeletePersonAction;
+using Accounting.Application.Commands.PersonActions.UpdatePersonAction;
+using Accounting.Application.Queries.PersonActions;
+using Accounting.Application.Queries.PersonActions.GetPersonActionById;
+using Accounting.Application.Queries.PersonActions.GetPersonActions;
 using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

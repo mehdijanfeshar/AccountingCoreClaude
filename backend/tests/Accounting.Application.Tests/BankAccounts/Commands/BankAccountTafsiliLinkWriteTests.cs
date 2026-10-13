@@ -1,6 +1,6 @@
-using Accounting.Application.BankAccounts.Commands.Common;
-using Accounting.Application.BankAccounts.Commands.CreateBankAccount;
-using Accounting.Application.BankAccounts.Commands.UpdateBankAccount;
+﻿using Accounting.Application.Commands.BankAccounts.Common;
+using Accounting.Application.Commands.BankAccounts.CreateBankAccount;
+using Accounting.Application.Commands.BankAccounts.UpdateBankAccount;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using Moq;

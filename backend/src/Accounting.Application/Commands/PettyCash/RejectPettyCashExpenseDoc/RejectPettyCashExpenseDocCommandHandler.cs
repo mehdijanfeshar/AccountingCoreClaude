@@ -1,0 +1,44 @@
+﻿using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Commands.PettyCash.Common;
+using Accounting.Domain.ValueObjects;
+using MediatR;
+
+namespace Accounting.Application.Commands.PettyCash.RejectPettyCashExpenseDoc;
+
+public sealed class RejectPettyCashExpenseDocCommandHandler : IRequestHandler<RejectPettyCashExpenseDocCommand>
+{
+    private readonly IPettyCashReviewTransitionService _transitionService;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public RejectPettyCashExpenseDocCommandHandler(
+        IPettyCashReviewTransitionService transitionService,
+        IUnitOfWork unitOfWork)
+    {
+        _transitionService = transitionService;
+        _unitOfWork = unitOfWork;
+    }
+
+    private static readonly PettyCashRole[] AllowedRoles =
+    {
+        PettyCashRole.Inspector,
+        PettyCashRole.FinanceManager,
+        PettyCashRole.ChiefExecutive,
+    };
+
+    public async Task Handle(RejectPettyCashExpenseDocCommand request, CancellationToken cancellationToken)
+    {
+        await _transitionService.TransitionAsync(
+            request.Id,
+            request.VahedCode,
+            PettyCashDocState.PendingReview,
+            PettyCashDocState.Rejected,
+            PettyCashDocAction.Reject,
+            AllowedRoles,
+            request.Note,
+            returnReasonsCsv: null,
+            returnDeadline: null,
+            cancellationToken);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+}

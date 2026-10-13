@@ -1,7 +1,7 @@
-using Accounting.Application.Common;
+﻿using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.PersonActions.Queries;
-using Accounting.Application.PersonActions.Queries.GetPersonActions;
+using Accounting.Application.Queries.PersonActions;
+using Accounting.Application.Queries.PersonActions.GetPersonActions;
 using Accounting.Domain.ValueObjects;
 using Moq;
 

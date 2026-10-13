@@ -1,4 +1,4 @@
-using Accounting.Application.IdentityGroups.Commands.DeleteIdentityGroup;
+﻿using Accounting.Application.Commands.IdentityGroups.DeleteIdentityGroup;
 
 namespace Accounting.Application.Tests.IdentityGroups.Commands.DeleteIdentityGroup;
 

@@ -1,4 +1,4 @@
-using Accounting.Application.BankCartDetails.Commands.CreateBankCartDetail;
+﻿using Accounting.Application.Commands.BankCartDetails.CreateBankCartDetail;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.BankCartDetails.Commands.CreateBankCartDetail;

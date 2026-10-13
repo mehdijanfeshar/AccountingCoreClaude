@@ -1,4 +1,4 @@
-using Accounting.Application.Accounts.Queries.GetAccountCodeById;
+﻿using Accounting.Application.Queries.Accounts.GetAccountCodeById;
 
 namespace Accounting.Application.Tests.Accounts.Queries.GetAccountCodeById;
 

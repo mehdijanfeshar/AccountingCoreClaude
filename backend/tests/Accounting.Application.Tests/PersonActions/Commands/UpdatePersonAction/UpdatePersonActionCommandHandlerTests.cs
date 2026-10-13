@@ -1,6 +1,6 @@
-using Accounting.Application.Common.Exceptions;
+﻿using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.PersonActions.Commands.UpdatePersonAction;
+using Accounting.Application.Commands.PersonActions.UpdatePersonAction;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using Moq;

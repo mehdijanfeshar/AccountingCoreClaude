@@ -1,4 +1,4 @@
-using Accounting.Application.Accounts.Commands.Common;
+﻿using Accounting.Application.Commands.Accounts.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using Moq;

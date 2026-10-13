@@ -1,10 +1,10 @@
-using Accounting.Application.Common;
-using Accounting.Application.Receipts.Commands.CreateReceipt;
-using Accounting.Application.Receipts.Commands.DeleteReceipt;
-using Accounting.Application.Receipts.Commands.UpdateReceipt;
-using Accounting.Application.Receipts.Queries;
-using Accounting.Application.Receipts.Queries.GetReceiptById;
-using Accounting.Application.Receipts.Queries.GetReceipts;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.Receipts.CreateReceipt;
+using Accounting.Application.Commands.Receipts.DeleteReceipt;
+using Accounting.Application.Commands.Receipts.UpdateReceipt;
+using Accounting.Application.Queries.Receipts;
+using Accounting.Application.Queries.Receipts.GetReceiptById;
+using Accounting.Application.Queries.Receipts.GetReceipts;
 using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

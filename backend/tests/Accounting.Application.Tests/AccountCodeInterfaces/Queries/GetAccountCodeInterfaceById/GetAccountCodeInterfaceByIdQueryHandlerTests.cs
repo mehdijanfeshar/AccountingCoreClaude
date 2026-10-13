@@ -1,5 +1,5 @@
-using Accounting.Application.AccountCodeInterfaces.Queries;
-using Accounting.Application.AccountCodeInterfaces.Queries.GetAccountCodeInterfaceById;
+﻿using Accounting.Application.Queries.AccountCodeInterfaces;
+using Accounting.Application.Queries.AccountCodeInterfaces.GetAccountCodeInterfaceById;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.ValueObjects;
 using Moq;

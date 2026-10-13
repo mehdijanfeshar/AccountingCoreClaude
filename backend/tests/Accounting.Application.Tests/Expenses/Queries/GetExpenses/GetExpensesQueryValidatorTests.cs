@@ -1,4 +1,4 @@
-using Accounting.Application.Expenses.Queries.GetExpenses;
+﻿using Accounting.Application.Queries.Expenses.GetExpenses;
 
 namespace Accounting.Application.Tests.Expenses.Queries.GetExpenses;
 

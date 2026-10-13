@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteAndBlackLists.Commands.UpdateWhiteAndBlackList;
+﻿using Accounting.Application.Commands.WhiteAndBlackLists.UpdateWhiteAndBlackList;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

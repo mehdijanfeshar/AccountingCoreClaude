@@ -1,4 +1,4 @@
-using Accounting.Application.AttribForAccountCodes.Commands.UpdateAttribForAccountCode;
+﻿using Accounting.Application.Commands.AttribForAccountCodes.UpdateAttribForAccountCode;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.AttribForAccountCodes.Commands.UpdateAttribForAccountCode;

@@ -1,5 +1,5 @@
-using Accounting.Application.Rabets.Queries;
-using Accounting.Application.Rabets.Queries.GetRabetById;
+﻿using Accounting.Application.Queries.Rabets;
+using Accounting.Application.Queries.Rabets.GetRabetById;
 using Accounting.Application.Common.Interfaces;
 using Moq;
 

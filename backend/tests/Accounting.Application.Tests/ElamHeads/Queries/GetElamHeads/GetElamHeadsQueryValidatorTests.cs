@@ -1,4 +1,4 @@
-using Accounting.Application.ElamHeads.Queries.GetElamHeads;
+﻿using Accounting.Application.Queries.ElamHeads.GetElamHeads;
 
 namespace Accounting.Application.Tests.ElamHeads.Queries.GetElamHeads;
 

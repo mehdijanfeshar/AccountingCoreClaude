@@ -1,4 +1,4 @@
-using Accounting.Application.TafsilGroups.Commands.UpdateTafsilGroup;
+﻿using Accounting.Application.Commands.TafsilGroups.UpdateTafsilGroup;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.TafsilGroups.Commands.UpdateTafsilGroup;

@@ -1,4 +1,4 @@
-using Accounting.Application.AccountExceptions.Queries.GetAccountExceptionById;
+﻿using Accounting.Application.Queries.AccountExceptions.GetAccountExceptionById;
 
 namespace Accounting.Application.Tests.AccountExceptions.Queries.GetAccountExceptionById;
 

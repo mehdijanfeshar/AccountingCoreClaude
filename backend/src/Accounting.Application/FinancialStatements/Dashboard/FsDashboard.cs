@@ -1,9 +1,9 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Common.Security;
 using Accounting.Application.FinancialStatements.Approvals;
-using Accounting.Application.FinancialStatements.Commands.TransitionFsRun;
-using Accounting.Application.FinancialStatements.Queries;
+using Accounting.Application.Commands.FinancialStatements.TransitionFsRun;
+using Accounting.Application.Queries.FinancialStatements;
 using Accounting.Application.FinancialStatements.Ratios;
 using Accounting.Domain.ValueObjects;
 using MediatR;

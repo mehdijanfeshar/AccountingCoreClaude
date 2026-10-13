@@ -1,4 +1,4 @@
-using Accounting.Application.Rabets.Queries.GetRabetById;
+﻿using Accounting.Application.Queries.Rabets.GetRabetById;
 
 namespace Accounting.Application.Tests.Rabets.Queries.GetRabetById;
 

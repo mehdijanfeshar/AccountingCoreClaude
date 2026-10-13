@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.ChequeTypes.Commands.UpdateChequeType;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.ChequeTypes.UpdateChequeType;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;

@@ -1,4 +1,4 @@
-using Accounting.Application.WorkShops.Queries;
+﻿using Accounting.Application.Queries.WorkShops;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

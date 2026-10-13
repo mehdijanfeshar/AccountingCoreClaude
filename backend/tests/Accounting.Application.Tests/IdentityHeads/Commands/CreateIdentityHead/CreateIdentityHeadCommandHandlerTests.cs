@@ -1,6 +1,6 @@
-using Accounting.Application.Common.Interfaces;
-using Accounting.Application.IdentityHeads.Commands.Common;
-using Accounting.Application.IdentityHeads.Commands.CreateIdentityHead;
+﻿using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Commands.IdentityHeads.Common;
+using Accounting.Application.Commands.IdentityHeads.CreateIdentityHead;
 using Accounting.Domain.Entity;
 using Moq;
 

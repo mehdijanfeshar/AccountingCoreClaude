@@ -1,4 +1,4 @@
-using Accounting.Application.LevelTafsils.Commands.DeleteLevelTafsil;
+﻿using Accounting.Application.Commands.LevelTafsils.DeleteLevelTafsil;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

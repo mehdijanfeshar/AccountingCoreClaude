@@ -1,4 +1,4 @@
-using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
+﻿using Accounting.Application.Queries.AttribForAccountCodes.GetAttribForAccountCodes;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using Accounting.Infrastructure.Legacy;

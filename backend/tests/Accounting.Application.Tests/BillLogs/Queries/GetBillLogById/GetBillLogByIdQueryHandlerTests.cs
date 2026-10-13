@@ -1,5 +1,5 @@
-using Accounting.Application.BillLogs.Queries;
-using Accounting.Application.BillLogs.Queries.GetBillLogById;
+﻿using Accounting.Application.Queries.BillLogs;
+using Accounting.Application.Queries.BillLogs.GetBillLogById;
 using Accounting.Application.Common.Interfaces;
 using Moq;
 

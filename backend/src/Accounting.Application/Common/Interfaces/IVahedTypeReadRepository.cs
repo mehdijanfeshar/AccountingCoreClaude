@@ -1,4 +1,4 @@
-using Accounting.Application.VahedTypes.Queries;
+﻿using Accounting.Application.Queries.VahedTypes;
 
 namespace Accounting.Application.Common.Interfaces;
 

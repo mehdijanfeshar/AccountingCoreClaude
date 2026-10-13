@@ -1,4 +1,4 @@
-using Accounting.Application.AccountExceptions.Commands.UpdateAccountException;
+﻿using Accounting.Application.Commands.AccountExceptions.UpdateAccountException;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

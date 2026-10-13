@@ -1,4 +1,4 @@
-using Accounting.Application.BillLogs.Queries.GetBillLogById;
+﻿using Accounting.Application.Queries.BillLogs.GetBillLogById;
 
 namespace Accounting.Application.Tests.BillLogs.Queries.GetBillLogById;
 

@@ -1,4 +1,4 @@
-using Accounting.Application.PersonActions.Queries.GetPersonActionById;
+﻿using Accounting.Application.Queries.PersonActions.GetPersonActionById;
 
 namespace Accounting.Application.Tests.PersonActions.Queries.GetPersonActionById;
 

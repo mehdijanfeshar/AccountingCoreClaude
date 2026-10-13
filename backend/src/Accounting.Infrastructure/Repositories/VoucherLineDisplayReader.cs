@@ -1,4 +1,4 @@
-using Accounting.Application.Vouchers.Queries.LineExtras;
+﻿using Accounting.Application.Queries.Vouchers.LineExtras;
 using Accounting.Domain.ValueObjects;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;

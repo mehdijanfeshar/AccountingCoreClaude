@@ -1,4 +1,4 @@
-using Accounting.Application.ChequesIncorrents.Commands.CreateChequesIncorrent;
+﻿using Accounting.Application.Commands.ChequesIncorrents.CreateChequesIncorrent;
 
 namespace Accounting.Application.Tests.ChequesIncorrents.Commands.CreateChequesIncorrent;
 

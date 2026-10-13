@@ -1,4 +1,4 @@
-using Accounting.Application.UnitAccess.Queries;
+﻿using Accounting.Application.Queries.UnitAccess;
 
 namespace Accounting.Application.Common.Interfaces;
 

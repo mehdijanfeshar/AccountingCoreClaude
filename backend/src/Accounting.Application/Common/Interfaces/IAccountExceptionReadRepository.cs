@@ -1,4 +1,4 @@
-using Accounting.Application.AccountExceptions.Queries;
+﻿using Accounting.Application.Queries.AccountExceptions;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

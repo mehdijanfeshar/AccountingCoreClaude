@@ -1,6 +1,6 @@
-using Accounting.Application.Common.Exceptions;
+﻿using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.TmpVoucherHeads.Commands.DeleteTmpVoucherHead;
+using Accounting.Application.Commands.TmpVoucherHeads.DeleteTmpVoucherHead;
 using Accounting.Domain.Entity;
 using Moq;
 

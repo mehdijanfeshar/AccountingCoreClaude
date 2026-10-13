@@ -1,4 +1,4 @@
-using Accounting.Application.FinancialStatements.Queries;
+﻿using Accounting.Application.Queries.FinancialStatements;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 

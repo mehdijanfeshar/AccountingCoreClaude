@@ -1,4 +1,4 @@
-using Accounting.Application.CheckBooks.Commands.UpdateCheckBook;
+﻿using Accounting.Application.Commands.CheckBooks.UpdateCheckBook;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.CheckBooks.Commands.UpdateCheckBook;

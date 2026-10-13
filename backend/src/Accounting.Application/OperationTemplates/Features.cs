@@ -72,8 +72,8 @@ public sealed class PreviewOperationHandler : IRequestHandler<PreviewOperationQu
 public sealed record DraftLineExtrasInput(
     int LineIndex,
     Guid? CheckId = null,
-    Vouchers.Commands.Common.VoucherChequeInfoInput? Cheque = null,
-    Vouchers.Commands.Common.VoucherLineExtrasInput? Extras = null);
+    Accounting.Application.Commands.Vouchers.Common.VoucherChequeInfoInput? Cheque = null,
+    Accounting.Application.Commands.Vouchers.Common.VoucherLineExtrasInput? Extras = null);
 
 public sealed record ExecuteOperationCommand(
     Guid TemplateId,

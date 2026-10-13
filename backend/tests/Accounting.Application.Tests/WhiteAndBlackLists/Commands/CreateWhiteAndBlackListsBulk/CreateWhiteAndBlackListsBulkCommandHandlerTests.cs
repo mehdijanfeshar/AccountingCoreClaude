@@ -1,6 +1,6 @@
-using Accounting.Application.Common.Interfaces;
-using Accounting.Application.WhiteAndBlackLists.Commands.CreateWhiteAndBlackListsBulk;
-using Accounting.Application.WhiteAndBlackLists.Queries;
+﻿using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Commands.WhiteAndBlackLists.CreateWhiteAndBlackListsBulk;
+using Accounting.Application.Queries.WhiteAndBlackLists;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using Moq;

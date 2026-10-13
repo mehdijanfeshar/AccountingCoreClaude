@@ -1,4 +1,4 @@
-using Accounting.Application.TafsilGroups.Commands.CreateTafsilGroup;
+﻿using Accounting.Application.Commands.TafsilGroups.CreateTafsilGroup;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.TafsilGroups.Commands.CreateTafsilGroup;

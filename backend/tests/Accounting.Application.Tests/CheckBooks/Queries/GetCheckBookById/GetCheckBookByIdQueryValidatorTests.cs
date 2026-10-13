@@ -1,4 +1,4 @@
-using Accounting.Application.CheckBooks.Queries.GetCheckBookById;
+﻿using Accounting.Application.Queries.CheckBooks.GetCheckBookById;
 
 namespace Accounting.Application.Tests.CheckBooks.Queries.GetCheckBookById;
 

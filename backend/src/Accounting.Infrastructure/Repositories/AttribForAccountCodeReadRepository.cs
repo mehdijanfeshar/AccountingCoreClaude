@@ -1,6 +1,6 @@
-using System.Linq.Expressions;
-using Accounting.Application.AttribForAccountCodes.Queries;
-using Accounting.Application.AttribForAccountCodes.Queries.GetAttribForAccountCodes;
+﻿using System.Linq.Expressions;
+using Accounting.Application.Queries.AttribForAccountCodes;
+using Accounting.Application.Queries.AttribForAccountCodes.GetAttribForAccountCodes;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

@@ -1,7 +1,7 @@
-using Accounting.Application.Tests.TestSupport;
+﻿using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.Vouchers.Commands.DeleteVoucherDetail;
+using Accounting.Application.Commands.Vouchers.DeleteVoucherDetail;
 using Accounting.Domain.Entity;
 using Moq;
 

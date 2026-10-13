@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.Expenses.Commands.UpdateExpense;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.Expenses.UpdateExpense;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;

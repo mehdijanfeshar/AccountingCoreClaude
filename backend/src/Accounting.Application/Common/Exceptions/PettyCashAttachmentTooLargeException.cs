@@ -1,9 +1,9 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
 /// Thrown by <c>UploadPettyCashAttachmentCommandHandler</c> when the uploaded content exceeds the
 /// project's 10 MiB attachment cap
-/// (<see cref="Accounting.Application.PettyCash.Commands.UploadPettyCashAttachment.UploadPettyCashAttachmentCommandValidator.MaxAttachmentSizeBytes"/>,
+/// (<see cref="Accounting.Application.Commands.PettyCash.UploadPettyCashAttachment.UploadPettyCashAttachmentCommandValidator.MaxAttachmentSizeBytes"/>,
 /// <c>docs/tankhah-khazaneh-module.md</c>، تصمیم‌های بخش ۲، پیوست). The handler re-checks
 /// <c>Content.Length</c> itself rather than relying solely on
 /// <c>UploadPettyCashAttachmentCommandValidator</c>'s identical rule — belt-and-suspenders, so the

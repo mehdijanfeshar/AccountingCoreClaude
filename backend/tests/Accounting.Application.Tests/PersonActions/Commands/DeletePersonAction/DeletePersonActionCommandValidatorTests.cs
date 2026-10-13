@@ -1,4 +1,4 @@
-using Accounting.Application.PersonActions.Commands.DeletePersonAction;
+﻿using Accounting.Application.Commands.PersonActions.DeletePersonAction;
 
 namespace Accounting.Application.Tests.PersonActions.Commands.DeletePersonAction;
 

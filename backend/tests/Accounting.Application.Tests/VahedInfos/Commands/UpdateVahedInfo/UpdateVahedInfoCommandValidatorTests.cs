@@ -1,4 +1,4 @@
-using Accounting.Application.VahedInfos.Commands.UpdateVahedInfo;
+﻿using Accounting.Application.Commands.VahedInfos.UpdateVahedInfo;
 
 namespace Accounting.Application.Tests.VahedInfos.Commands.UpdateVahedInfo;
 

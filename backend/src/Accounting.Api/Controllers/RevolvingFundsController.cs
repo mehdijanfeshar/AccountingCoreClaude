@@ -1,11 +1,11 @@
-using Accounting.Application.RevolvingFunds.Commands.Common;
+﻿using Accounting.Application.Commands.RevolvingFunds.Common;
 using Accounting.Application.Common;
-using Accounting.Application.RevolvingFunds.Commands.CreateRevolvingFund;
-using Accounting.Application.RevolvingFunds.Commands.DeleteRevolvingFund;
-using Accounting.Application.RevolvingFunds.Commands.UpdateRevolvingFund;
-using Accounting.Application.RevolvingFunds.Queries;
-using Accounting.Application.RevolvingFunds.Queries.GetRevolvingFundById;
-using Accounting.Application.RevolvingFunds.Queries.GetRevolvingFunds;
+using Accounting.Application.Commands.RevolvingFunds.CreateRevolvingFund;
+using Accounting.Application.Commands.RevolvingFunds.DeleteRevolvingFund;
+using Accounting.Application.Commands.RevolvingFunds.UpdateRevolvingFund;
+using Accounting.Application.Queries.RevolvingFunds;
+using Accounting.Application.Queries.RevolvingFunds.GetRevolvingFundById;
+using Accounting.Application.Queries.RevolvingFunds.GetRevolvingFunds;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

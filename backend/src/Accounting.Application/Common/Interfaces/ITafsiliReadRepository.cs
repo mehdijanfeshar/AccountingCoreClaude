@@ -1,5 +1,5 @@
-using Accounting.Application.Common;
-using Accounting.Application.Tafsilis.Queries;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Queries.Tafsilis;
 
 namespace Accounting.Application.Common.Interfaces;
 

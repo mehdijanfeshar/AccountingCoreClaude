@@ -1,4 +1,4 @@
-using Accounting.Application.BankCartDetails.Commands.DeleteBankCartDetail;
+﻿using Accounting.Application.Commands.BankCartDetails.DeleteBankCartDetail;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

@@ -1,4 +1,4 @@
-using Accounting.Application.BillLogs.Queries;
+﻿using Accounting.Application.Queries.BillLogs;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

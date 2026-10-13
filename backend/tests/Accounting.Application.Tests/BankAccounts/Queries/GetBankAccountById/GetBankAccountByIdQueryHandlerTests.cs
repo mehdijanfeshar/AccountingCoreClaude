@@ -1,5 +1,5 @@
-using Accounting.Application.BankAccounts.Queries;
-using Accounting.Application.BankAccounts.Queries.GetBankAccountById;
+﻿using Accounting.Application.Queries.BankAccounts;
+using Accounting.Application.Queries.BankAccounts.GetBankAccountById;
 using Accounting.Application.Common.Interfaces;
 using Moq;
 

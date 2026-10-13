@@ -1,10 +1,10 @@
-using Accounting.Application.Common;
-using Accounting.Application.ElamHeads.Commands.CreateElamHead;
-using Accounting.Application.ElamHeads.Commands.DeleteElamHead;
-using Accounting.Application.ElamHeads.Commands.UpdateElamHead;
-using Accounting.Application.ElamHeads.Queries;
-using Accounting.Application.ElamHeads.Queries.GetElamHeadById;
-using Accounting.Application.ElamHeads.Queries.GetElamHeads;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.ElamHeads.CreateElamHead;
+using Accounting.Application.Commands.ElamHeads.DeleteElamHead;
+using Accounting.Application.Commands.ElamHeads.UpdateElamHead;
+using Accounting.Application.Queries.ElamHeads;
+using Accounting.Application.Queries.ElamHeads.GetElamHeadById;
+using Accounting.Application.Queries.ElamHeads.GetElamHeads;
 using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

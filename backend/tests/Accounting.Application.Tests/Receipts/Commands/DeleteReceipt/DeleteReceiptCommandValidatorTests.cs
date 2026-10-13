@@ -1,4 +1,4 @@
-using Accounting.Application.Receipts.Commands.DeleteReceipt;
+﻿using Accounting.Application.Commands.Receipts.DeleteReceipt;
 
 namespace Accounting.Application.Tests.Receipts.Commands.DeleteReceipt;
 

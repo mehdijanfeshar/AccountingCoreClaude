@@ -1,4 +1,4 @@
-using Accounting.Application.CheckBooks.Queries.GetCheckBooks;
+﻿using Accounting.Application.Queries.CheckBooks.GetCheckBooks;
 
 namespace Accounting.Application.Tests.CheckBooks.Queries.GetCheckBooks;
 

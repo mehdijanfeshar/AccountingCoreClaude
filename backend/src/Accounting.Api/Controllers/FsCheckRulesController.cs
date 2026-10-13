@@ -1,5 +1,5 @@
-using Accounting.Application.FinancialStatements.CheckRules;
-using Accounting.Application.FinancialStatements.Queries;
+﻿using Accounting.Application.FinancialStatements.CheckRules;
+using Accounting.Application.Queries.FinancialStatements;
 using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

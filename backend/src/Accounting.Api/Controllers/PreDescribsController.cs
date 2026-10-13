@@ -1,9 +1,9 @@
-using Accounting.Application.Common;
-using Accounting.Application.PreDescribs.Commands.CreatePreDescrib;
-using Accounting.Application.PreDescribs.Commands.UpdatePreDescrib;
-using Accounting.Application.PreDescribs.Queries;
-using Accounting.Application.PreDescribs.Queries.GetPreDescribById;
-using Accounting.Application.PreDescribs.Queries.GetPreDescribs;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.PreDescribs.CreatePreDescrib;
+using Accounting.Application.Commands.PreDescribs.UpdatePreDescrib;
+using Accounting.Application.Queries.PreDescribs;
+using Accounting.Application.Queries.PreDescribs.GetPreDescribById;
+using Accounting.Application.Queries.PreDescribs.GetPreDescribs;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

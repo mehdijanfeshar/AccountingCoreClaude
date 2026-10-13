@@ -1,9 +1,9 @@
-using Accounting.Application.BillLogs.Commands.CreateBillLog;
-using Accounting.Application.BillLogs.Commands.DeleteBillLog;
-using Accounting.Application.BillLogs.Commands.UpdateBillLog;
-using Accounting.Application.BillLogs.Queries;
-using Accounting.Application.BillLogs.Queries.GetBillLogById;
-using Accounting.Application.BillLogs.Queries.GetBillLogs;
+﻿using Accounting.Application.Commands.BillLogs.CreateBillLog;
+using Accounting.Application.Commands.BillLogs.DeleteBillLog;
+using Accounting.Application.Commands.BillLogs.UpdateBillLog;
+using Accounting.Application.Queries.BillLogs;
+using Accounting.Application.Queries.BillLogs.GetBillLogById;
+using Accounting.Application.Queries.BillLogs.GetBillLogs;
 using Accounting.Application.Common;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

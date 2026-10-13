@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace Accounting.Domain.Entity;
 
@@ -11,7 +11,7 @@ namespace Accounting.Domain.Entity;
 ///
 /// یک ردیف فعال اینجا برای (<see cref="FUND_ID"/>, کاربر جاری) پیش‌نیاز هر اکشن بررسی/
 /// تأیید/برگشت/رد روی یک <see cref="TB_PC_EXPENSE_DOC"/> است — رجوع به
-/// <c>Accounting.Application.PettyCash.Commands.Common.IPettyCashReviewAuthorizer</c>.
+/// <c>Accounting.Application.Commands.PettyCash.Common.IPettyCashReviewAuthorizer</c>.
 /// جدول جدید «جانبی» (پیشوند <c>TB_PC_</c>)، همان استثنای صریح صاحب پروژه بر قانون «هیچ جدول
 /// جدیدی» که بخش ۱ استفاده کرد. <c>ID</c> بدون <c>DEFAULT sys_guid()</c> (ریسک #۱۱)؛ همیشه
 /// application-side تولید می‌شود. <c>UK_PC_REVIEWER</c> روی (<see cref="FUND_ID"/>,

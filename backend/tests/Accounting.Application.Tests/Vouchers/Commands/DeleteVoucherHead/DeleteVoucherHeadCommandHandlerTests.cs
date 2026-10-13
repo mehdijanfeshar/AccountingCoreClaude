@@ -1,7 +1,7 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.Vouchers.Commands.DeleteVoucherHead;
+using Accounting.Application.Commands.Vouchers.DeleteVoucherHead;
 using Accounting.Domain.Entity;
 using Moq;
 

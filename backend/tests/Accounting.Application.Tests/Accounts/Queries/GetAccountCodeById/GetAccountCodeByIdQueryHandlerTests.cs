@@ -1,5 +1,5 @@
-using Accounting.Application.Accounts.Queries;
-using Accounting.Application.Accounts.Queries.GetAccountCodeById;
+﻿using Accounting.Application.Queries.Accounts;
+using Accounting.Application.Queries.Accounts.GetAccountCodeById;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.ValueObjects;
 using Moq;

@@ -1,4 +1,4 @@
-using Accounting.Application.BankAccounts.Queries;
+﻿using Accounting.Application.Queries.BankAccounts;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

@@ -1,5 +1,5 @@
-using Accounting.Application.Common.Interfaces;
-using Accounting.Application.Years.Queries;
+﻿using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Queries.Years;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;
 

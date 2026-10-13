@@ -1,9 +1,9 @@
-using Accounting.Application.ChequesIncorrents.Commands.CreateChequesIncorrent;
-using Accounting.Application.ChequesIncorrents.Commands.DeleteChequesIncorrent;
-using Accounting.Application.ChequesIncorrents.Commands.UpdateChequesIncorrent;
-using Accounting.Application.ChequesIncorrents.Queries;
-using Accounting.Application.ChequesIncorrents.Queries.GetChequesIncorrentById;
-using Accounting.Application.ChequesIncorrents.Queries.GetChequesIncorrents;
+﻿using Accounting.Application.Commands.ChequesIncorrents.CreateChequesIncorrent;
+using Accounting.Application.Commands.ChequesIncorrents.DeleteChequesIncorrent;
+using Accounting.Application.Commands.ChequesIncorrents.UpdateChequesIncorrent;
+using Accounting.Application.Queries.ChequesIncorrents;
+using Accounting.Application.Queries.ChequesIncorrents.GetChequesIncorrentById;
+using Accounting.Application.Queries.ChequesIncorrents.GetChequesIncorrents;
 using Accounting.Application.Common;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

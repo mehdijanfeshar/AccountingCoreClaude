@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.ChequesIncorrents.Commands.UpdateChequesIncorrent;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.ChequesIncorrents.UpdateChequesIncorrent;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;

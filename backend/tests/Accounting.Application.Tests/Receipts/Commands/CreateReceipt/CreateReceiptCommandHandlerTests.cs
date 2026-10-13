@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.Receipts.Commands.CreateReceipt;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.Receipts.CreateReceipt;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

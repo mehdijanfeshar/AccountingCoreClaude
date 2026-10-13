@@ -1,4 +1,4 @@
-using Accounting.Application.Tafsilis.Queries.GetTafsilis;
+﻿using Accounting.Application.Queries.Tafsilis.GetTafsilis;
 
 namespace Accounting.Application.Tests.Tafsilis.Queries.GetTafsilis;
 

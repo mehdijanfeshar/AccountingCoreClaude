@@ -1,4 +1,4 @@
-using Accounting.Application.Receipts.Commands.CreateReceipt;
+﻿using Accounting.Application.Commands.Receipts.CreateReceipt;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Tests.Receipts.Commands.CreateReceipt;

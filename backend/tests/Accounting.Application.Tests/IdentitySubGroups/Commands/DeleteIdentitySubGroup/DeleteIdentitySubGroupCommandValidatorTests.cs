@@ -1,4 +1,4 @@
-using Accounting.Application.IdentitySubGroups.Commands.DeleteIdentitySubGroup;
+﻿using Accounting.Application.Commands.IdentitySubGroups.DeleteIdentitySubGroup;
 
 namespace Accounting.Application.Tests.IdentitySubGroups.Commands.DeleteIdentitySubGroup;
 

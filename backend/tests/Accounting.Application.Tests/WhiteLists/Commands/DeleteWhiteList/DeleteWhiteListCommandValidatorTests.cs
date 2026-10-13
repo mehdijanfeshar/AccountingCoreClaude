@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteLists.Commands.DeleteWhiteList;
+﻿using Accounting.Application.Commands.WhiteLists.DeleteWhiteList;
 
 namespace Accounting.Application.Tests.WhiteLists.Commands.DeleteWhiteList;
 

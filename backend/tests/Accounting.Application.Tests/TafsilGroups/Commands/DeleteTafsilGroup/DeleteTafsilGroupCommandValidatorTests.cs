@@ -1,4 +1,4 @@
-using Accounting.Application.TafsilGroups.Commands.DeleteTafsilGroup;
+﻿using Accounting.Application.Commands.TafsilGroups.DeleteTafsilGroup;
 
 namespace Accounting.Application.Tests.TafsilGroups.Commands.DeleteTafsilGroup;
 

@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteAndBlackLists.Queries.GetWhiteAndBlackListById;
+﻿using Accounting.Application.Queries.WhiteAndBlackLists.GetWhiteAndBlackListById;
 
 namespace Accounting.Application.Tests.WhiteAndBlackLists.Queries.GetWhiteAndBlackListById;
 

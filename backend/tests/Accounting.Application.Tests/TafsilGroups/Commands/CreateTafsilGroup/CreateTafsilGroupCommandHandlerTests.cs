@@ -1,4 +1,4 @@
-using Accounting.Application.TafsilGroups.Commands.CreateTafsilGroup;
+﻿using Accounting.Application.Commands.TafsilGroups.CreateTafsilGroup;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;

@@ -1,4 +1,4 @@
-using Accounting.Application.ChequesIncorrents.Commands.DeleteChequesIncorrent;
+﻿using Accounting.Application.Commands.ChequesIncorrents.DeleteChequesIncorrent;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

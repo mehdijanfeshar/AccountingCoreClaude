@@ -1,4 +1,4 @@
-using Accounting.Application.Rabets.Queries.GetRabets;
+﻿using Accounting.Application.Queries.Rabets.GetRabets;
 
 namespace Accounting.Application.Tests.Rabets.Queries.GetRabets;
 

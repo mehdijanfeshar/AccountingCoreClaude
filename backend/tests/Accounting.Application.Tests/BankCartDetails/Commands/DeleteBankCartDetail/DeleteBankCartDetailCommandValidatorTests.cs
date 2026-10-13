@@ -1,4 +1,4 @@
-using Accounting.Application.BankCartDetails.Commands.DeleteBankCartDetail;
+﻿using Accounting.Application.Commands.BankCartDetails.DeleteBankCartDetail;
 
 namespace Accounting.Application.Tests.BankCartDetails.Commands.DeleteBankCartDetail;
 

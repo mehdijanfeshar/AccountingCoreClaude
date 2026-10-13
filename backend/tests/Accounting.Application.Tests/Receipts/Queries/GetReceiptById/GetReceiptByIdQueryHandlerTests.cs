@@ -1,5 +1,5 @@
-using Accounting.Application.Receipts.Queries;
-using Accounting.Application.Receipts.Queries.GetReceiptById;
+﻿using Accounting.Application.Queries.Receipts;
+using Accounting.Application.Queries.Receipts.GetReceiptById;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.ValueObjects;
 using Moq;

@@ -1,11 +1,11 @@
-using Accounting.Application.Common;
-using Accounting.Application.IdentityHeads.Commands.Common;
-using Accounting.Application.IdentityHeads.Commands.CreateIdentityHead;
-using Accounting.Application.IdentityHeads.Commands.DeleteIdentityHead;
-using Accounting.Application.IdentityHeads.Commands.UpdateIdentityHead;
-using Accounting.Application.IdentityHeads.Queries;
-using Accounting.Application.IdentityHeads.Queries.GetIdentityHeadById;
-using Accounting.Application.IdentityHeads.Queries.GetIdentityHeads;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.IdentityHeads.Common;
+using Accounting.Application.Commands.IdentityHeads.CreateIdentityHead;
+using Accounting.Application.Commands.IdentityHeads.DeleteIdentityHead;
+using Accounting.Application.Commands.IdentityHeads.UpdateIdentityHead;
+using Accounting.Application.Queries.IdentityHeads;
+using Accounting.Application.Queries.IdentityHeads.GetIdentityHeadById;
+using Accounting.Application.Queries.IdentityHeads.GetIdentityHeads;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

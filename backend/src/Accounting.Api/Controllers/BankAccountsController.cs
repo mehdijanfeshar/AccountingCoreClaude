@@ -1,10 +1,10 @@
-using Accounting.Application.BankAccounts.Commands.Common;
-using Accounting.Application.BankAccounts.Commands.CreateBankAccount;
-using Accounting.Application.BankAccounts.Commands.DeleteBankAccount;
-using Accounting.Application.BankAccounts.Commands.UpdateBankAccount;
-using Accounting.Application.BankAccounts.Queries;
-using Accounting.Application.BankAccounts.Queries.GetBankAccountById;
-using Accounting.Application.BankAccounts.Queries.GetBankAccounts;
+﻿using Accounting.Application.Commands.BankAccounts.Common;
+using Accounting.Application.Commands.BankAccounts.CreateBankAccount;
+using Accounting.Application.Commands.BankAccounts.DeleteBankAccount;
+using Accounting.Application.Commands.BankAccounts.UpdateBankAccount;
+using Accounting.Application.Queries.BankAccounts;
+using Accounting.Application.Queries.BankAccounts.GetBankAccountById;
+using Accounting.Application.Queries.BankAccounts.GetBankAccounts;
 using Accounting.Application.Common;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

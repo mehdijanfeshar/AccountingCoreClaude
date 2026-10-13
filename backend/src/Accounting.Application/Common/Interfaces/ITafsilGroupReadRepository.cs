@@ -1,5 +1,5 @@
-using Accounting.Application.Common;
-using Accounting.Application.TafsilGroups.Queries;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Queries.TafsilGroups;
 
 namespace Accounting.Application.Common.Interfaces;
 

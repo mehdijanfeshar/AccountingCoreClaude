@@ -1,4 +1,4 @@
-using Accounting.Application.Rabets.Queries;
+﻿using Accounting.Application.Queries.Rabets;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

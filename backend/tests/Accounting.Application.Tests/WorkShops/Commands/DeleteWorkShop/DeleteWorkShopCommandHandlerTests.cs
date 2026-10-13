@@ -1,4 +1,4 @@
-using Accounting.Application.WorkShops.Commands.DeleteWorkShop;
+﻿using Accounting.Application.Commands.WorkShops.DeleteWorkShop;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

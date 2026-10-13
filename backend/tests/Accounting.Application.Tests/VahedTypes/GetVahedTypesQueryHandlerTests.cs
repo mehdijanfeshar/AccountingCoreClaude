@@ -1,6 +1,6 @@
-using Accounting.Application.Common.Interfaces;
-using Accounting.Application.VahedTypes.Queries;
-using Accounting.Application.VahedTypes.Queries.GetVahedTypes;
+﻿using Accounting.Application.Common.Interfaces;
+using Accounting.Application.Queries.VahedTypes;
+using Accounting.Application.Queries.VahedTypes.GetVahedTypes;
 using Moq;
 
 namespace Accounting.Application.Tests.VahedTypes;

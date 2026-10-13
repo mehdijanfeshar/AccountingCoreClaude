@@ -1,4 +1,4 @@
-using Accounting.Application.Vouchers.Commands.UpdateVoucherDetail;
+﻿using Accounting.Application.Commands.Vouchers.UpdateVoucherDetail;
 
 namespace Accounting.Application.Tests.Vouchers.Commands.UpdateVoucherDetail;
 

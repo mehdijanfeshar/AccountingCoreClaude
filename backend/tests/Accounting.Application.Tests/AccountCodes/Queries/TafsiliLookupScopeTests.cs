@@ -1,5 +1,5 @@
-using Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems;
-using Accounting.Application.AccountCodes.Queries.GetTafsiliLevels;
+﻿using Accounting.Application.Queries.AccountCodes.GetTafsiliLevelItems;
+using Accounting.Application.Queries.AccountCodes.GetTafsiliLevels;
 using Accounting.Application.Common.Security;
 
 namespace Accounting.Application.Tests.AccountCodes.Queries;

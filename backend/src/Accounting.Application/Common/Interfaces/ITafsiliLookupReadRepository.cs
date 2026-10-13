@@ -1,5 +1,5 @@
-using Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems;
-using Accounting.Application.AccountCodes.Queries.GetTafsiliLevels;
+﻿using Accounting.Application.Queries.AccountCodes.GetTafsiliLevelItems;
+using Accounting.Application.Queries.AccountCodes.GetTafsiliLevels;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;
@@ -17,7 +17,7 @@ public interface ITafsiliLookupReadRepository
 {
     /// <summary>
     /// Returns every "active" تفصیلی level configured for <paramref name="accountCodeId"/> — see
-    /// <see cref="Accounting.Application.AccountCodes.Queries.GetTafsiliLevels.GetTafsiliLevelsQuery"/>
+    /// <see cref="Accounting.Application.Queries.AccountCodes.GetTafsiliLevels.GetTafsiliLevelsQuery"/>
     /// XML doc for Rule A. Ordered by numeric <c>TB_LEVEL_TAFSIL.LEVEL_CODE</c> ascending, never
     /// more than 7 rows. Returns an empty list — never <see langword="null"/> — for an account
     /// with no configured levels or an unknown <paramref name="accountCodeId"/>.
@@ -29,7 +29,7 @@ public interface ITafsiliLookupReadRepository
     /// <summary>
     /// Returns a page of selectable تفصیلی items for one (<paramref name="accountCodeId"/>,
     /// <paramref name="levelId"/>) pair, scoped by Rule B (see
-    /// <see cref="Accounting.Application.AccountCodes.Queries.GetTafsiliLevelItems.GetTafsiliLevelItemsQuery"/>
+    /// <see cref="Accounting.Application.Queries.AccountCodes.GetTafsiliLevelItems.GetTafsiliLevelItemsQuery"/>
     /// XML doc) to <paramref name="callerVahedCode"/>, optionally filtered by
     /// <paramref name="search"/> (see that query's <c>Search</c> parameter doc for the exact
     /// digit-vs-name heuristic). The caller's <see cref="Accounting.Domain.ValueObjects.VahedCategory"/>

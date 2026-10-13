@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteAndBlackLists.Queries;
+﻿using Accounting.Application.Queries.WhiteAndBlackLists;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

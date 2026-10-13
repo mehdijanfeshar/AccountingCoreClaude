@@ -1,4 +1,4 @@
-using Accounting.Application.BankAccounts.Commands.DeleteBankAccount;
+﻿using Accounting.Application.Commands.BankAccounts.DeleteBankAccount;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

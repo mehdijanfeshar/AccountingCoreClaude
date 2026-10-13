@@ -1,4 +1,4 @@
-using Accounting.Application.BankCartDetails.Queries;
+﻿using Accounting.Application.Queries.BankCartDetails;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

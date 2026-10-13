@@ -1,7 +1,7 @@
-namespace Accounting.Application.Common.Exceptions;
+﻿namespace Accounting.Application.Common.Exceptions;
 
 /// <summary>
-/// Thrown by <c>Accounting.Application.PettyCash.Commands.Common.PettyCashFinalApprovalService</c>
+/// Thrown by <c>Accounting.Application.Commands.PettyCash.Common.PettyCashFinalApprovalService</c>
 /// when final approval is attempted on a صورت‌هزینه whose control has not yet been verified by an
 /// inspector (<c>TB_PC_EXPENSE_DOC.VERIFIED_BY_USERID</c> is still <see langword="null"/>) —
 /// تکمیل بخش ۲ (۲۰۲۶-۰۹-۲۸، تأیید دومرحله‌ای، صفحهٔ ۱۲ پاورپوینت).

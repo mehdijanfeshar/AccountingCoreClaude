@@ -1,6 +1,6 @@
-using Accounting.Application.UnitAccess.Queries;
-using Accounting.Application.UnitAccess.Queries.GetAccessibleUnits;
-using Accounting.Application.UnitAccess.Queries.GetCurrentUser;
+﻿using Accounting.Application.Queries.UnitAccess;
+using Accounting.Application.Queries.UnitAccess.GetAccessibleUnits;
+using Accounting.Application.Queries.UnitAccess.GetCurrentUser;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

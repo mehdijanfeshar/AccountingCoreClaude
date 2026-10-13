@@ -1,5 +1,5 @@
-using Accounting.Application.WhiteAndBlackLists.Queries;
-using Accounting.Application.WhiteAndBlackLists.Queries.GetWhiteAndBlackLists;
+﻿using Accounting.Application.Queries.WhiteAndBlackLists;
+using Accounting.Application.Queries.WhiteAndBlackLists.GetWhiteAndBlackLists;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.ValueObjects;

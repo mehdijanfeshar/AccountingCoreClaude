@@ -1,7 +1,7 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.PayReciveHeads.Queries;
+using Accounting.Application.Queries.PayReciveHeads;
 using Accounting.Domain.Entity;
 using Accounting.Infrastructure.Legacy;
 using Microsoft.EntityFrameworkCore;

@@ -1,10 +1,10 @@
-using Accounting.Application.Common;
-using Accounting.Application.PayReciveHeads.Commands.CreatePayReciveHead;
-using Accounting.Application.PayReciveHeads.Commands.DeletePayReciveHead;
-using Accounting.Application.PayReciveHeads.Commands.UpdatePayReciveHead;
-using Accounting.Application.PayReciveHeads.Queries;
-using Accounting.Application.PayReciveHeads.Queries.GetPayReciveHeadById;
-using Accounting.Application.PayReciveHeads.Queries.GetPayReciveHeads;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.PayReciveHeads.CreatePayReciveHead;
+using Accounting.Application.Commands.PayReciveHeads.DeletePayReciveHead;
+using Accounting.Application.Commands.PayReciveHeads.UpdatePayReciveHead;
+using Accounting.Application.Queries.PayReciveHeads;
+using Accounting.Application.Queries.PayReciveHeads.GetPayReciveHeadById;
+using Accounting.Application.Queries.PayReciveHeads.GetPayReciveHeads;
 using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

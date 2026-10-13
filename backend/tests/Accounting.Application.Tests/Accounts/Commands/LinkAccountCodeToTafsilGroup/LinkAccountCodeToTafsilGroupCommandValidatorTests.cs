@@ -1,4 +1,4 @@
-using Accounting.Application.Accounts.Commands.LinkAccountCodeToTafsilGroup;
+﻿using Accounting.Application.Commands.Accounts.LinkAccountCodeToTafsilGroup;
 
 namespace Accounting.Application.Tests.Accounts.Commands.LinkAccountCodeToTafsilGroup;
 

@@ -1,4 +1,4 @@
-using Accounting.Application.AccountExceptions.Commands.DeleteAccountException;
+﻿using Accounting.Application.Commands.AccountExceptions.DeleteAccountException;
 
 namespace Accounting.Application.Tests.AccountExceptions.Commands.DeleteAccountException;
 

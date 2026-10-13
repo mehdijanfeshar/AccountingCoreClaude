@@ -1,10 +1,10 @@
-using Accounting.Domain.ValueObjects;
+﻿using Accounting.Domain.ValueObjects;
 using Accounting.Application.Tests.TestSupport;
 using Accounting.Application.Tests.Vouchers.Commands.Common;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.Vouchers.Commands.CreateVoucherDetail;
+using Accounting.Application.Commands.Vouchers.CreateVoucherDetail;
 using Accounting.Domain.Entity;
 using Moq;
 

@@ -1,6 +1,6 @@
-using Accounting.Application.Common.Exceptions;
+﻿using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.WhiteAndBlackLists.Commands.ReactivateWhiteAndBlackList;
+using Accounting.Application.Commands.WhiteAndBlackLists.ReactivateWhiteAndBlackList;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using Moq;

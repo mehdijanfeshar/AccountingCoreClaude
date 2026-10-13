@@ -1,5 +1,5 @@
-using System.Linq.Expressions;
-using Accounting.Application.AccountExceptions.Queries;
+﻿using System.Linq.Expressions;
+using Accounting.Application.Queries.AccountExceptions;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

@@ -1,4 +1,4 @@
-using Accounting.Application.BankAccounts.Commands.UpdateBankAccount;
+﻿using Accounting.Application.Commands.BankAccounts.UpdateBankAccount;
 
 namespace Accounting.Application.Tests.BankAccounts.Commands.UpdateBankAccount;
 

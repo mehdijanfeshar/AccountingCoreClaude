@@ -1,4 +1,4 @@
-using Accounting.Application.BankAccounts.Queries.GetBankAccounts;
+﻿using Accounting.Application.Queries.BankAccounts.GetBankAccounts;
 
 namespace Accounting.Application.Tests.BankAccounts.Queries.GetBankAccounts;
 

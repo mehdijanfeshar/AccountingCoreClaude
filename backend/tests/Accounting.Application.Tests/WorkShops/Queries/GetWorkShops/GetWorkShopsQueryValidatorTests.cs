@@ -1,4 +1,4 @@
-using Accounting.Application.WorkShops.Queries.GetWorkShops;
+﻿using Accounting.Application.Queries.WorkShops.GetWorkShops;
 
 namespace Accounting.Application.Tests.WorkShops.Queries.GetWorkShops;
 

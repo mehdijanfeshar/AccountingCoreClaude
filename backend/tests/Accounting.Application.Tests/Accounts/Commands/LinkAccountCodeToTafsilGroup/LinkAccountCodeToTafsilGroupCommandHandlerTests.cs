@@ -1,5 +1,5 @@
-using Accounting.Application.Accounts.Commands.Common;
-using Accounting.Application.Accounts.Commands.LinkAccountCodeToTafsilGroup;
+﻿using Accounting.Application.Commands.Accounts.Common;
+using Accounting.Application.Commands.Accounts.LinkAccountCodeToTafsilGroup;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Tests.Accounts.Commands.Common;
 using Accounting.Domain.Entity;

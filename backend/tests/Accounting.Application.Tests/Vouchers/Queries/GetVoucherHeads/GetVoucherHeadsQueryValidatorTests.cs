@@ -1,4 +1,4 @@
-using Accounting.Application.Vouchers.Queries.GetVoucherHeads;
+﻿using Accounting.Application.Queries.Vouchers.GetVoucherHeads;
 
 namespace Accounting.Application.Tests.Vouchers.Queries.GetVoucherHeads;
 

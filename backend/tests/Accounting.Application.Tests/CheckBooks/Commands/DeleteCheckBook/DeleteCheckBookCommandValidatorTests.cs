@@ -1,4 +1,4 @@
-using Accounting.Application.CheckBooks.Commands.DeleteCheckBook;
+﻿using Accounting.Application.Commands.CheckBooks.DeleteCheckBook;
 
 namespace Accounting.Application.Tests.CheckBooks.Commands.DeleteCheckBook;
 

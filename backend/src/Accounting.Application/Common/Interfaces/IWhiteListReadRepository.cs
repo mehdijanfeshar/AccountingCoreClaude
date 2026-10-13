@@ -1,4 +1,4 @@
-using Accounting.Application.WhiteLists.Queries;
+﻿using Accounting.Application.Queries.WhiteLists;
 using Accounting.Application.Common;
 
 namespace Accounting.Application.Common.Interfaces;

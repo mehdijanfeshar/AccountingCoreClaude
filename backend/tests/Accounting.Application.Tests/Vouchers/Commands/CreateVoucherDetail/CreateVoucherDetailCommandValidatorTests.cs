@@ -1,4 +1,4 @@
-using Accounting.Application.Vouchers.Commands.CreateVoucherDetail;
+﻿using Accounting.Application.Commands.Vouchers.CreateVoucherDetail;
 
 namespace Accounting.Application.Tests.Vouchers.Commands.CreateVoucherDetail;
 

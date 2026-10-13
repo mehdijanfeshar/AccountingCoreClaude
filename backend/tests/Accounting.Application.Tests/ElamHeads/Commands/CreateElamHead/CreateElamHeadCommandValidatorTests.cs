@@ -1,5 +1,5 @@
-using Accounting.Domain.ValueObjects;
-using Accounting.Application.ElamHeads.Commands.CreateElamHead;
+﻿using Accounting.Domain.ValueObjects;
+using Accounting.Application.Commands.ElamHeads.CreateElamHead;
 
 namespace Accounting.Application.Tests.ElamHeads.Commands.CreateElamHead;
 

@@ -1,9 +1,9 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.FinancialStatements;
 using Accounting.Application.FinancialStatements.Engine;
-using Accounting.Application.FinancialStatements.Queries;
+using Accounting.Application.Queries.FinancialStatements;
 using Accounting.Domain.ValueObjects;
 using ClosedXML.Excel;
 

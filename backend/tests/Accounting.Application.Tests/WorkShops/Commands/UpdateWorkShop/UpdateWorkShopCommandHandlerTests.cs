@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.WorkShops.Commands.UpdateWorkShop;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.WorkShops.UpdateWorkShop;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;

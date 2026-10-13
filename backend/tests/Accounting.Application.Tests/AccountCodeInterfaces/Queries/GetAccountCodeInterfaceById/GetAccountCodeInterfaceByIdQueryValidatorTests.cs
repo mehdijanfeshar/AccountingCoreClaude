@@ -1,4 +1,4 @@
-using Accounting.Application.AccountCodeInterfaces.Queries.GetAccountCodeInterfaceById;
+﻿using Accounting.Application.Queries.AccountCodeInterfaces.GetAccountCodeInterfaceById;
 
 namespace Accounting.Application.Tests.AccountCodeInterfaces.Queries.GetAccountCodeInterfaceById;
 

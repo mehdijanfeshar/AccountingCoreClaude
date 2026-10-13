@@ -1,5 +1,5 @@
-using Accounting.Application.WorkShops.Queries;
-using Accounting.Application.WorkShops.Queries.GetWorkShops;
+﻿using Accounting.Application.Queries.WorkShops;
+using Accounting.Application.Queries.WorkShops.GetWorkShops;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Moq;

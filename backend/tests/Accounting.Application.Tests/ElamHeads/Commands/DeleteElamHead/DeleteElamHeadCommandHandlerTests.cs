@@ -1,4 +1,4 @@
-using Accounting.Application.ElamHeads.Commands.DeleteElamHead;
+﻿using Accounting.Application.Commands.ElamHeads.DeleteElamHead;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

@@ -1,7 +1,7 @@
-using Accounting.Application.AccountCodes.Queries.GetTafsiliLevels;
+﻿using Accounting.Application.Queries.AccountCodes.GetTafsiliLevels;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
-using Accounting.Application.Vouchers.Commands.Common;
+using Accounting.Application.Commands.Vouchers.Common;
 using Moq;
 
 namespace Accounting.Application.Tests.Vouchers.Commands.Common;

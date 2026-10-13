@@ -1,5 +1,5 @@
-using Accounting.Application.ChequeTypes.Queries;
-using Accounting.Application.ChequeTypes.Queries.GetChequeTypes;
+﻿using Accounting.Application.Queries.ChequeTypes;
+using Accounting.Application.Queries.ChequeTypes.GetChequeTypes;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Moq;

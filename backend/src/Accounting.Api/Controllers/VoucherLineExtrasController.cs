@@ -1,5 +1,5 @@
-using Accounting.Application.Vouchers.Commands.Common;
-using Accounting.Application.Vouchers.Queries.LineExtras;
+﻿using Accounting.Application.Commands.Vouchers.Common;
+using Accounting.Application.Queries.Vouchers.LineExtras;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

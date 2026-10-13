@@ -1,6 +1,6 @@
-using Accounting.Application.Common.Interfaces;
+﻿using Accounting.Application.Common.Interfaces;
 using Accounting.Application.FinancialStatements;
-using Accounting.Application.FinancialStatements.Queries;
+using Accounting.Application.Queries.FinancialStatements;
 using Accounting.Domain.Entity;
 using Accounting.Domain.ValueObjects;
 using Accounting.Infrastructure.Legacy;

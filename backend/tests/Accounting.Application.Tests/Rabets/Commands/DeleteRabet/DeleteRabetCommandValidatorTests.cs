@@ -1,4 +1,4 @@
-using Accounting.Application.Rabets.Commands.DeleteRabet;
+﻿using Accounting.Application.Commands.Rabets.DeleteRabet;
 
 namespace Accounting.Application.Tests.Rabets.Commands.DeleteRabet;
 

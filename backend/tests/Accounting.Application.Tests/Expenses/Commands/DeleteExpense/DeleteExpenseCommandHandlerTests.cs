@@ -1,4 +1,4 @@
-using Accounting.Application.Expenses.Commands.DeleteExpense;
+﻿using Accounting.Application.Commands.Expenses.DeleteExpense;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

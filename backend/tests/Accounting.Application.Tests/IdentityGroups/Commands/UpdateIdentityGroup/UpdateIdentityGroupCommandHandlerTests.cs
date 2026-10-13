@@ -1,5 +1,5 @@
-using Accounting.Application.Tests.TestSupport;
-using Accounting.Application.IdentityGroups.Commands.UpdateIdentityGroup;
+﻿using Accounting.Application.Tests.TestSupport;
+using Accounting.Application.Commands.IdentityGroups.UpdateIdentityGroup;
 using Accounting.Application.Common.Behaviors;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;

@@ -1,4 +1,4 @@
-using Accounting.Application.AccountCodes.Queries.GetTafsiliLevels;
+﻿using Accounting.Application.Queries.AccountCodes.GetTafsiliLevels;
 using Accounting.Application.Common.Interfaces;
 using Moq;
 

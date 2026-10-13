@@ -1,4 +1,4 @@
-using Accounting.Application.Tafsilis.Commands.UpdateTafsili;
+﻿using Accounting.Application.Commands.Tafsilis.UpdateTafsili;
 using Accounting.Application.Common.Exceptions;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Domain.Entity;

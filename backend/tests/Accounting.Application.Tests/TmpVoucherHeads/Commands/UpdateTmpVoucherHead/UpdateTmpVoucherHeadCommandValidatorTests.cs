@@ -1,4 +1,4 @@
-using Accounting.Application.TmpVoucherHeads.Commands.UpdateTmpVoucherHead;
+﻿using Accounting.Application.Commands.TmpVoucherHeads.UpdateTmpVoucherHead;
 
 namespace Accounting.Application.Tests.TmpVoucherHeads.Commands.UpdateTmpVoucherHead;
 

@@ -1,5 +1,5 @@
-using Accounting.Application.Common;
-using Accounting.Application.PettyCash.Queries;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Queries.PettyCash;
 using Accounting.Domain.ValueObjects;
 
 namespace Accounting.Application.Common.Interfaces;

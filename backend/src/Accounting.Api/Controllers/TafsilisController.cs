@@ -1,10 +1,10 @@
-using Accounting.Application.Common;
-using Accounting.Application.Tafsilis.Commands.CreateTafsili;
-using Accounting.Application.Tafsilis.Commands.DeleteTafsili;
-using Accounting.Application.Tafsilis.Commands.UpdateTafsili;
-using Accounting.Application.Tafsilis.Queries;
-using Accounting.Application.Tafsilis.Queries.GetTafsiliById;
-using Accounting.Application.Tafsilis.Queries.GetTafsilis;
+﻿using Accounting.Application.Common;
+using Accounting.Application.Commands.Tafsilis.CreateTafsili;
+using Accounting.Application.Commands.Tafsilis.DeleteTafsili;
+using Accounting.Application.Commands.Tafsilis.UpdateTafsili;
+using Accounting.Application.Queries.Tafsilis;
+using Accounting.Application.Queries.Tafsilis.GetTafsiliById;
+using Accounting.Application.Queries.Tafsilis.GetTafsilis;
 using Accounting.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;

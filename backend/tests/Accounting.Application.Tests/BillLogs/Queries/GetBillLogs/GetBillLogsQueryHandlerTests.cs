@@ -1,5 +1,5 @@
-using Accounting.Application.BillLogs.Queries;
-using Accounting.Application.BillLogs.Queries.GetBillLogs;
+﻿using Accounting.Application.Queries.BillLogs;
+using Accounting.Application.Queries.BillLogs.GetBillLogs;
 using Accounting.Application.Common;
 using Accounting.Application.Common.Interfaces;
 using Moq;
