@@ -83,11 +83,14 @@ public sealed class CreateIdentitySubGroupCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_NullSubgrpsTypeAndNullIdentySubGroupsCode_Passes()
+    public void Validate_NullSubgrpsTypeAndNullIdentySubGroupsCode_Fails()
     {
         var result = _validator.Validate(ValidCommand() with { SubgrpsType = null, IdentySubGroupsCode = null });
 
-        Assert.True(result.IsValid);
+        // حالت ویژگی و کد زیرگروه الزامی‌اند.
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateIdentitySubGroupCommand.SubgrpsType));
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateIdentitySubGroupCommand.IdentySubGroupsCode));
     }
 
     /// <summary>

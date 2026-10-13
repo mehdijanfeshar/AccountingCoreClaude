@@ -100,14 +100,15 @@ public sealed class UpdateElamHeadCommandHandlerTests
         await handler.Handle(command, CancellationToken.None);
 
         Assert.Equal(command.VoucherHeadId, entity.VOUCHERSHEAD_ID);
-        Assert.Equal(command.SerialNo, entity.ELAMH_SERIALNO);
-        Assert.Equal(command.Code, entity.ELAMH_CODE);
+        // سریال و کد با ویرایش عمومی عوض نمی‌شوند.
+        Assert.Equal("SER-001", entity.ELAMH_SERIALNO);
+        Assert.Equal("COD-01", entity.ELAMH_CODE);
         Assert.Equal(command.DabirNo, entity.ELAMH_DABIRNO);
         Assert.Equal(command.DabirDate, entity.ELAMH_DABIRDATE);
         Assert.Equal(command.PrintNo, entity.ELAMH_PRINTNO);
         Assert.Equal(command.Case, entity.ELAMH_CASE);
         Assert.Equal(command.SerialNoInput, entity.SERIALNO_INPUT);
-        Assert.Equal(command.WebStat, entity.WEB_STAT);
+        Assert.Equal((short?)2, entity.WEB_STAT); // با ویرایش عمومی عوض نمی‌شود
         Assert.Equal(command.Date, entity.ELAMH_DATE);
         Assert.Equal(command.Desc, entity.ELAMH_DESC);
         Assert.Equal(command.WorkShopId, entity.WORKSHOP_ID);
@@ -218,7 +219,7 @@ public sealed class UpdateElamHeadCommandHandlerTests
 
         await handler.Handle(command, CancellationToken.None);
 
-        Assert.Equal(command.Code, entity.ELAMH_CODE);
+        Assert.Equal("COD-01", entity.ELAMH_CODE);
         unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

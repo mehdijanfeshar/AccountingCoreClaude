@@ -149,6 +149,9 @@ public sealed class RealHttpPipelineTests : IClassFixture<RealHttpPipelineTests.
 
             builder.ConfigureServices(services =>
             {
+                // جدول دسترسی نقش‌ها از دیتابیس واقعی می‌خواند؛ این تست‌ها «جدول ساخته‌نشده» را شبیه‌سازی می‌کنند (رفتار ثابت نقش‌ها).
+                services.RemoveAll<Accounting.Application.Common.Security.IRoleMenuAccessStore>();
+                services.AddSingleton<Accounting.Application.Common.Security.IRoleMenuAccessStore, NoTableRoleMenuAccessStore>();
                 services.RemoveAll<IWorkShopReadRepository>();
                 services.AddSingleton<IWorkShopReadRepository>(ReadRepository);
 
@@ -221,10 +224,26 @@ public sealed class RealHttpPipelineTests : IClassFixture<RealHttpPipelineTests.
             {
                 new Claim(ClaimTypes.NameIdentifier, "tester"),
                 new Claim("urn:tamin:jwt:claim:org", CallerUnit),
+                // نقش سامانهٔ مالی الزامی است (ریسک #۳۳)؛ نقش واحدی، نه مدیر ستاد، تا مرز واحدها همچنان آزموده شود.
+                new Claim(ClaimTypes.Role, Accounting.Application.Common.Security.AppRoles.MaliAdmin),
             };
 
             var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName));
             return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, SchemeName)));
         }
     }
+}
+
+/// <summary>جدول دسترسی نقش‌ها (DDL 075) وجود ندارد ⇒ <c>GetSnapshotAsync</c> برابر null و رفتار ثابت اعمال می‌شود.</summary>
+internal sealed class NoTableRoleMenuAccessStore : Accounting.Application.Common.Security.IRoleMenuAccessStore
+{
+    public Task<Accounting.Application.Common.Security.RoleMenuAccessSnapshot?> GetSnapshotAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<Accounting.Application.Common.Security.RoleMenuAccessSnapshot?>(null);
+
+    public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) => Task.FromResult(false);
+
+    public Task SaveRoleAsync(string role, IReadOnlyDictionary<string, int> levels, string userId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    public Task DeleteRoleAsync(string role, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

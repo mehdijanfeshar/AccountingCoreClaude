@@ -247,11 +247,13 @@ internal static class YearEndComputer
 
 public sealed record GetYearEndPreviewQuery(string Kind, string Year) : IRequest<YearEndPreviewDto>, IVahedScopedQuery
 {
+    [System.Text.Json.Serialization.JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 
 public sealed record IssueYearEndVouchersCommand(string Kind, string Year) : IRequest<YearEndIssueResultDto>, IVahedScopedCommand
 {
+    [System.Text.Json.Serialization.JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 

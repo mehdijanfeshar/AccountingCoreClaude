@@ -70,14 +70,15 @@ public sealed class CreateElamHeadCommandHandlerTests
 
         Assert.NotNull(staged);
         Assert.Equal(command.VoucherHeadId, staged!.VOUCHERSHEAD_ID);
-        Assert.Equal(command.SerialNo, staged.ELAMH_SERIALNO);
-        Assert.Equal(command.Code, staged.ELAMH_CODE);
+        // سریال و کد را فقط ماژول اعلامیه تعیین می‌کند؛ مسیر عمومی خالی می‌گذارد (ریسک ۲-ب).
+        Assert.Null(staged.ELAMH_SERIALNO);
+        Assert.Null(staged.ELAMH_CODE);
         Assert.Equal(command.DabirNo, staged.ELAMH_DABIRNO);
         Assert.Equal(command.DabirDate, staged.ELAMH_DABIRDATE);
         Assert.Equal(command.PrintNo, staged.ELAMH_PRINTNO);
         Assert.Equal(command.Case, staged.ELAMH_CASE);
         Assert.Equal(command.SerialNoInput, staged.SERIALNO_INPUT);
-        Assert.Equal(command.WebStat, staged.WEB_STAT);
+        Assert.Null(staged.WEB_STAT); // ماشین حالت اعلامیه فقط در ماژول Elams
         Assert.Equal(command.Date, staged.ELAMH_DATE);
         Assert.Equal(command.Desc, staged.ELAMH_DESC);
         Assert.Equal(command.WorkShopId, staged.WORKSHOP_ID);

@@ -14,7 +14,7 @@ public sealed class CreateVoucherHeadCommandHandlerTests
     private static CreateVoucherHeadCommand ValidCommand() => new(
         DocNum: "000001",
         DateDoc: "14050101",
-        DocLife: DocLife.Temporary,
+        DocLife: DocLife.Draft,
         HeadDesc: "سند افتتاحیه",
         Apendix: null,
         SystemTypeId: null,

@@ -61,6 +61,14 @@ public sealed class VahedScopeConventionTests
     /// </summary>
     private static readonly HashSet<string> NoVahedCodeColumnExemptCommands = new(StringComparer.Ordinal)
     {
+        // جدول‌های تعریفی سراسری که ستون VAHEDCODE ندارند (فازهای ۵۱ و ۵۵): سال مالی، قالب عملیات،
+        // گزارش ذخیره‌شده و رابط اختتامیه (به‌ازای نوع واحد). دسترسی‌شان با نقش/قابلیت ستاد کنترل می‌شود.
+        "CreateFinancialYearCommand",
+        "CreateOperationTemplateCommand",
+        "UpdateOperationTemplateCommand",
+        "CreateSavedReportCommand",
+        "UpdateSavedReportCommand",
+        "CreateRabetClosingsCommand",
         // TB_ACCOUNTCODE_INTERFACE
         "CreateAccountCodeInterfaceCommand",
         "UpdateAccountCodeInterfaceCommand",
@@ -367,6 +375,7 @@ public sealed class VahedScopeConventionTests
     /// </summary>
     private static readonly HashSet<string> NoVahedCodeColumnExemptByIdAndDelete = new(StringComparer.Ordinal)
     {
+        "DeleteRabetClosingCommand", // TB_RABET_CLOSING بدون VAHEDCODE (به‌ازای نوع واحد)
         "DeleteAccountCodeCommand",
         "DeleteAccountCodeInterfaceCommand",
         "DeleteAccountExceptionCommand",

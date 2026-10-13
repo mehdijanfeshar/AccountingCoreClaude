@@ -226,12 +226,21 @@ public sealed class CreateVoucherHeadCommandValidatorTests
     [Theory]
     [InlineData(DocLife.Draft)]
     [InlineData(DocLife.Temporary)]
-    [InlineData(DocLife.Reviewed)]
-    [InlineData(DocLife.Accepted)]
     public void Validate_EveryRealDocLifeState_Passes(DocLife state)
     {
         var result = _validator.Validate(ValidCommand() with { DocLife = state });
 
         Assert.True(result.IsValid);
+    }
+
+    /// <summary>فرم سند فقط بین یادداشت و موقت جابه‌جا می‌شود؛ بررسی‌شده و تأیید دائم از مسیر تغییر وضعیت می‌آیند (فاز ۵۲).</summary>
+    [Theory]
+    [InlineData(DocLife.Reviewed)]
+    [InlineData(DocLife.Accepted)]
+    public void Validate_StatesBeyondTemporary_AreRejected(DocLife state)
+    {
+        var result = _validator.Validate(ValidCommand() with { DocLife = state });
+
+        Assert.False(result.IsValid);
     }
 }

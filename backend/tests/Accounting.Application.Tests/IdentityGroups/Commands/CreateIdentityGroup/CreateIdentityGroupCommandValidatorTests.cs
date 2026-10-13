@@ -50,11 +50,12 @@ public sealed class CreateIdentityGroupCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_NullIdentityGroupsCode_Passes()
+    public void Validate_NullIdentityGroupsCode_Fails()
     {
         var result = _validator.Validate(ValidCommand() with { IdentityGroupsCode = null });
 
-        Assert.True(result.IsValid);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(CreateIdentityGroupCommand.IdentityGroupsCode));
     }
 
     [Fact]

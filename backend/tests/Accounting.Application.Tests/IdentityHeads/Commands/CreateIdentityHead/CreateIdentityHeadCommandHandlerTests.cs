@@ -26,6 +26,9 @@ public sealed class CreateIdentityHeadCommandHandlerTests
     private static Harness CreateHarness(int nextSerial = 1)
     {
         var repository = new Mock<IIdentityHeadRepository>();
+        repository
+            .Setup(r => r.GetFixedSubGroupIdsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Guid>());
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = new Mock<ICurrentUser>();
         currentUser.SetupGet(u => u.UserId).Returns("tester");

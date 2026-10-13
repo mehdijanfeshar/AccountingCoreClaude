@@ -123,13 +123,14 @@ public sealed class DeletePayReciveHeadCommandHandlerTests
     /// cascade assertion (see docs/open-decisions.md).
     /// </summary>
     [Fact]
-    public void WriteRepository_HasNoMethodReachingPayReciveDetail()
+    public async Task Handle_NeverTouchesPayReciveDetailRows()
     {
-        var methodNames = typeof(IPayReciveHeadRepository)
-            .GetMethods()
-            .Select(m => m.Name)
-            .ToList();
+        // مخزن حالا متدهای ردیف (AddDetailAsync …) برای ثبت دارد؛ حذف سرسند همچنان به آن‌ها نمی‌رسد.
+        var (handler, repository, _) = Build(ExistingEntity());
 
-        Assert.Equal(new[] { "AddAsync", "GetForUpdateAsync" }.OrderBy(n => n), methodNames.OrderBy(n => n));
+        await handler.Handle(new DeletePayReciveHeadCommand(ExistingId), CancellationToken.None);
+
+        repository.Verify(r => r.AddDetailAsync(It.IsAny<TB_PAYRECIVDETAIL>(), It.IsAny<CancellationToken>()), Times.Never);
+        repository.Verify(r => r.AddDetailTafsiliLinkAsync(It.IsAny<TB_PAYRECIVDETAIL_LINK_TAFSILI>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

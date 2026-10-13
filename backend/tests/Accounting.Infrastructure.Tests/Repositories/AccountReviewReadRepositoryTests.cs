@@ -514,10 +514,10 @@ public sealed class AccountReviewReadRepositoryTests : IDisposable
             AccountReviewLevel.Moin,
             scope: new[] { Step(AccountReviewLevel.Kol, "10"), Step(AccountReviewLevel.Group, "1") });
 
-        // Returned shallowest-first regardless of the order the caller sent, because a breadcrumb
-        // that rendered گروه after کل would read as a different hierarchy than the data has.
-        Assert.Equal(new[] { "1", "10" }, result.Scope.Select(s => s.Code));
-        Assert.Equal(new[] { "دارایی", "دارایی جاری" }, result.Scope.Select(s => s.Name));
+        // ترتیب همان ترتیبی است که کاربر فرستاده (فاز ۵۶): مسیر می‌تواند «معین ← استان ← واحد» باشد و
+        // بازگشت به سطح بالاتر در فرانت با بریدن همین فهرست انجام می‌شود.
+        Assert.Equal(new[] { "10", "1" }, result.Scope.Select(s => s.Code));
+        Assert.Equal(new[] { "دارایی جاری", "دارایی" }, result.Scope.Select(s => s.Name));
     }
 
     /// <summary>

@@ -23,7 +23,7 @@ public sealed class CreateVoucherHeadCommandHandlerInitialDetailsTests
         IReadOnlyList<CreateVoucherHeadDetailInput>? initialDetails = null) => new(
         DocNum: "000001",
         DateDoc: "14050101",
-        DocLife: DocLife.Temporary,
+        DocLife: DocLife.Draft,
         HeadDesc: "سند افتتاحیه",
         Apendix: null,
         SystemTypeId: null,

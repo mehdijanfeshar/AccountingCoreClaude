@@ -74,3 +74,18 @@ internal static class TestUnitScope
         return unitAccess.Object;
     }
 }
+
+/// <summary>
+/// مخزن واحدهای بدون هیچ واحدی — برای handlerهایی که درخت واحدها را می‌خوانند (HeadquartersAccess.CategoryOfAsync)
+/// و تست‌شان به آن وابسته نیست. Mock پیش‌فرض برای <c>IReadOnlyList</c> مقدار null برمی‌گرداند.
+/// </summary>
+internal static class EmptyUnitAccess
+{
+    public static IUnitAccessReadRepository Create()
+    {
+        var mock = new Mock<IUnitAccessReadRepository>();
+        mock.Setup(r => r.GetAllUnitsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new List<UnitNode>());
+        mock.Setup(r => r.GetUnitProfileAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(new UnitProfile("ستاد", true));
+        return mock.Object;
+    }
+}

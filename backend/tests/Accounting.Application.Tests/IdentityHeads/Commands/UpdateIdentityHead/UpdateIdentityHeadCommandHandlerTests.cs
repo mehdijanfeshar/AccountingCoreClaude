@@ -51,6 +51,9 @@ public sealed class UpdateIdentityHeadCommandHandlerTests
     private static Harness CreateHarness(TB_IDENTITYHEAD? head, IEnumerable<TB_IDENTITYFIXITEM>? existingItems = null)
     {
         var repository = new Mock<IIdentityHeadRepository>();
+        repository
+            .Setup(r => r.GetFixedSubGroupIdsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Guid>());
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = new Mock<ICurrentUser>();
         currentUser.SetupGet(u => u.UserId).Returns("editor");
