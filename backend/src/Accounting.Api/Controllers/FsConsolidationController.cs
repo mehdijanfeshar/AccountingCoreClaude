@@ -149,6 +149,21 @@ public sealed class FsConsolidationController : ControllerBase
     public async Task<IActionResult> GetWorksheet(Guid id, CancellationToken cancellationToken)
         => Ok(await _mediator.Send(new GetFsRunWorksheetQuery(id), cancellationToken));
 
+    /// <summary>تطبیق فی‌مابین به تفکیک جفت واحد (طرف مقابل از شناسهٔ ردیف یا اعلامیه).</summary>
+    [HttpGet("runs/{id:guid}/elim-pairs")]
+    [ProducesResponseType(typeof(FsElimPairsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetElimPairs(Guid id, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(new GetFsElimPairsQuery(id), cancellationToken));
+
+    /// <summary>ردیف‌های سند پشت یک جفت؛ <c>unitB</c> خالی = ردیف‌های بی‌طرف مقابل واحد الف.</summary>
+    [HttpGet("runs/{id:guid}/elim-pairs/lines")]
+    [ProducesResponseType(typeof(IReadOnlyList<FsElimPairLineDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetElimPairLines(Guid id, [FromQuery] string rule, [FromQuery] string unitA, [FromQuery] string? unitB, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(new GetFsElimPairLinesQuery(id, rule, unitA, unitB), cancellationToken));
+
     /// <summary>سند XBRL Instance اجرا (نگاشت و تنظیمات XBRL لازم است؛ نبودشان = ۴۰۹).</summary>
     [HttpGet("runs/{id:guid}/xbrl")]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]

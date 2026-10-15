@@ -112,6 +112,7 @@ public static class MenuCatalog
         M("/fs/check-rules", Fs, "کنترل‌های صورت‌ها", MenuGroupAccess.Any, "FinancialStatements"),
         M("/fs/approval-steps", Fs, "گردش تأیید صورت‌ها", MenuGroupAccess.Any, "FinancialStatements"),
         M("/fs/period-close", Fs, "بستن دوره", MenuGroupAccess.Any, "FinancialStatements"),
+        M("/fs/intercompany", Fs, "تلفیق و حذف فی‌مابین", MenuGroupAccess.Any, "FinancialStatements"),
         M("/fs/narratives", Fs, "یادداشت‌های توضیحی", MenuGroupAccess.Any, "FinancialStatements"),
         M("/fs/analysis", Fs, "تحلیل و نسبت‌ها", MenuGroupAccess.Any),
     ];

@@ -69,6 +69,32 @@ public interface IFsBalanceReadRepository
         int minDocLife,
         IReadOnlyCollection<string> touchAccCodes,
         CancellationToken cancellationToken = default);
+
+    /// <summary>کد همهٔ معین‌های زنده — برای اعمال انتخاب‌گر قواعد حذف فی‌مابین.</summary>
+    Task<IReadOnlyList<string>> GetMoeinCodesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// تطبیق فی‌مابین به تفکیک جفت واحد: مانده به‌ازای (واحد سند، معین، واحد طرف مقابل) با همان فیلترهای
+    /// <see cref="GetBalancesAsync"/> (تا پایان دوره، با افتتاحیه، بدون اختتامیه). طرف مقابل (تصمیم صاحب پروژه
+    /// ۲۰۲۶-۱۰-۱۵): ۴ رقم اول شناسهٔ ردیف سند اگر کد واحد باشد، وگرنه واحد فرستنده/گیرندهٔ اعلامیهٔ همان سند؛
+    /// نبود هر دو = null.
+    /// </summary>
+    Task<IReadOnlyList<FsCounterpartyBalance>> GetCounterpartyBalancesAsync(
+        string year, string fromDate, string toDate, IReadOnlyCollection<string> vahedCodes, int minDocLife,
+        IReadOnlyCollection<string> accCodes, CancellationToken cancellationToken = default);
+
+    /// <summary>ردیف‌های سند واحد <paramref name="owner"/> با طرف مقابل <paramref name="counterparty"/> (null = نامعلوم)؛ حداکثر ۱۰۰۰.</summary>
+    Task<IReadOnlyList<FsCounterpartyLine>> GetCounterpartyLinesAsync(
+        string year, string toDate, int minDocLife, IReadOnlyCollection<string> accCodes, string owner, string? counterparty,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record FsTouchLine(string AccCode, string? AccName, string? VahedCode, decimal Debtor, decimal Creditor);
+
+/// <param name="Counterparty">کد واحد طرف مقابل؛ null = از شناسه و اعلامیه معلوم نشد.</param>
+public sealed record FsCounterpartyBalance(string VahedCode, string AccCode, string? Counterparty, decimal Debtor, decimal Creditor);
+
+/// <param name="Source"><c>A</c> = از شناسهٔ ردیف، <c>E</c> = از اعلامیه، null = نامعلوم.</param>
+public sealed record FsCounterpartyLine(
+    Guid VoucherHeadId, string? DocNum, string? DateDoc, string VahedCode, string AccCode, string? Counterparty, string? Source,
+    string? AttributeValue, string? LineDesc, decimal Debtor, decimal Creditor);

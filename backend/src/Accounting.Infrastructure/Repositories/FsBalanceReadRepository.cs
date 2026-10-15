@@ -457,6 +457,182 @@ public sealed class FsBalanceReadRepository : IFsBalanceReadRepository
         return sql.ToString();
     }
 
+    public async Task<IReadOnlyList<string>> GetMoeinCodesAsync(CancellationToken cancellationToken = default)
+        => (await _dbContext.TB_ACCOUNTCODEs.AsNoTracking()
+                .Where(a => a.TYPECODE == Accounting.Domain.ValueObjects.TypeCodes.Moin && a.ISDELETED != true && a.ACCCODE != null)
+                .Select(a => a.ACCCODE!)
+                .ToListAsync(cancellationToken))
+            .Select(c => c.Trim()).Distinct(StringComparer.Ordinal).ToList();
+
+    /// <summary>
+    /// طرف مقابل یک ردیف سند (تصمیم صاحب پروژه ۲۰۲۶-۱۰-۱۵): ۴ رقم اول شناسهٔ ردیف (حساب شناسه‌دار) اگر کد واحد
+    /// باشد؛ وگرنه واحد فرستنده/گیرندهٔ اعلامیه‌ای که به همین سند وصل است.
+    /// </summary>
+    private const string CounterpartyAttr = """
+        (SELECT MIN(SUBSTR(TRIM(av.ATTRIBUTEVALUE), 1, 4)) FROM TB_ATTRIBSINVOUCHERS av
+          WHERE av.VOUCHERSDETAIL_ID = d.ID AND (av.ISDELETED IS NULL OR av.ISDELETED = 0)
+            AND EXISTS (SELECT 1 FROM TB_VAHED_INFO vi WHERE TRIM(vi.VAHEDCODE) = SUBSTR(TRIM(av.ATTRIBUTEVALUE), 1, 4)))
+        """;
+
+    private const string CounterpartyElam = """
+        (SELECT MIN(TRIM(e.ELAMH_SENDRCVVAHED)) FROM TB_ELAMHEAD e
+          WHERE e.VOUCHERSHEAD_ID = h.ID AND (e.ISDELETED IS NULL OR e.ISDELETED = 0) AND e.ELAMH_SENDRCVVAHED IS NOT NULL)
+        """;
+
+    public async Task<IReadOnlyList<FsCounterpartyBalance>> GetCounterpartyBalancesAsync(
+        string year, string fromDate, string toDate, IReadOnlyCollection<string> vahedCodes, int minDocLife,
+        IReadOnlyCollection<string> accCodes, CancellationToken cancellationToken = default)
+    {
+        if (vahedCodes.Count == 0 || accCodes.Count == 0)
+        {
+            return Array.Empty<FsCounterpartyBalance>();
+        }
+
+        var parameters = new List<OracleParameter>
+        {
+            new() { ParameterName = "year", OracleDbType = OracleDbType.Char, Value = year },
+            new() { ParameterName = "toDate", OracleDbType = OracleDbType.Varchar2, Value = toDate },
+            new() { ParameterName = "minDocLife", OracleDbType = OracleDbType.Int32, Value = minDocLife },
+        };
+        var vahedSql = AppendVahedClause(parameters, vahedCodes);
+        var accSql = AppendInClause(parameters, "a.ACCCODE", accCodes, "acc");
+
+        var sql = $"""
+            {OpeningVoucherCte}
+            SELECT x."VahedCode", x."AccCode", x."Counterparty", SUM(x."Debtor") AS "Debtor", SUM(x."Creditor") AS "Creditor"
+            FROM (
+              SELECT
+                TRIM(h.VAHEDCODE) AS "VahedCode",
+                TRIM(a.ACCCODE)   AS "AccCode",
+                COALESCE({CounterpartyAttr}, {CounterpartyElam}) AS "Counterparty",
+                NVL(d.DEBTOR, 0)   AS "Debtor",
+                NVL(d.CREDITOR, 0) AS "Creditor"
+              FROM TB_VOUCHERSDETAIL d
+              JOIN TB_VOUCHERSHEAD h ON h.ID = d.VOUCHERSHEAD_ID
+              JOIN TB_ACCOUNTCODE  a ON a.ID = d.ACCOUNT_ID
+              LEFT JOIN oh ON oh.HID = h.ID
+              WHERE {CommonWhere}
+                AND ({accSql})
+                AND ({vahedSql})
+            ) x
+            GROUP BY x."VahedCode", x."AccCode", x."Counterparty"
+            """;
+
+        var rows = await _dbContext.Database
+            .SqlQueryRaw<FsCounterpartyRow>(sql, parameters.ToArray<object>())
+            .ToListAsync(cancellationToken);
+
+        return rows.Select(r => new FsCounterpartyBalance(r.VahedCode, r.AccCode, string.IsNullOrWhiteSpace(r.Counterparty) ? null : r.Counterparty.Trim(),
+            r.Debtor, r.Creditor)).ToList();
+    }
+
+    public async Task<IReadOnlyList<FsCounterpartyLine>> GetCounterpartyLinesAsync(
+        string year, string toDate, int minDocLife, IReadOnlyCollection<string> accCodes, string owner, string? counterparty,
+        CancellationToken cancellationToken = default)
+    {
+        if (accCodes.Count == 0)
+        {
+            return Array.Empty<FsCounterpartyLine>();
+        }
+
+        var parameters = new List<OracleParameter>
+        {
+            new() { ParameterName = "year", OracleDbType = OracleDbType.Char, Value = year },
+            new() { ParameterName = "toDate", OracleDbType = OracleDbType.Varchar2, Value = toDate },
+            new() { ParameterName = "minDocLife", OracleDbType = OracleDbType.Int32, Value = minDocLife },
+        };
+        var vahedSql = AppendVahedClause(parameters, [owner]);
+        var accSql = AppendInClause(parameters, "a.ACCCODE", accCodes, "acc");
+        var cpSql = counterparty is null ? "y.\"Counterparty\" IS NULL" : "y.\"Counterparty\" = :cp";
+        if (counterparty is not null)
+        {
+            parameters.Add(new OracleParameter { ParameterName = "cp", OracleDbType = OracleDbType.Varchar2, Value = counterparty });
+        }
+
+        var sql = $"""
+            {OpeningVoucherCte}
+            SELECT * FROM (
+              SELECT y.*, ROW_NUMBER() OVER (ORDER BY y."DateDoc", y."DocNum", y."Radif") AS "Rn" FROM (
+                SELECT
+                  h.ID               AS "VoucherHeadId",
+                  h.DOC_NUM          AS "DocNum",
+                  h.DATE_DOC         AS "DateDoc",
+                  d.RADIF            AS "Radif",
+                  TRIM(h.VAHEDCODE)  AS "VahedCode",
+                  TRIM(a.ACCCODE)    AS "AccCode",
+                  {CounterpartyAttr} AS "AttrCp",
+                  COALESCE({CounterpartyAttr}, {CounterpartyElam}) AS "Counterparty",
+                  (SELECT MIN(TRIM(av2.ATTRIBUTEVALUE)) FROM TB_ATTRIBSINVOUCHERS av2
+                    WHERE av2.VOUCHERSDETAIL_ID = d.ID AND (av2.ISDELETED IS NULL OR av2.ISDELETED = 0)) AS "AttributeValue",
+                  d.DESCRIPTION      AS "LineDesc",
+                  NVL(d.DEBTOR, 0)   AS "Debtor",
+                  NVL(d.CREDITOR, 0) AS "Creditor"
+                FROM TB_VOUCHERSDETAIL d
+                JOIN TB_VOUCHERSHEAD h ON h.ID = d.VOUCHERSHEAD_ID
+                JOIN TB_ACCOUNTCODE  a ON a.ID = d.ACCOUNT_ID
+                LEFT JOIN oh ON oh.HID = h.ID
+                WHERE {CommonWhere}
+                  AND ({accSql})
+                  AND ({vahedSql})
+              ) y
+              WHERE {cpSql}
+            ) WHERE "Rn" <= 1000
+            ORDER BY "Rn"
+            """;
+
+        var rows = await _dbContext.Database
+            .SqlQueryRaw<FsCounterpartyLineRow>(sql, parameters.ToArray<object>())
+            .ToListAsync(cancellationToken);
+
+        return rows.Select(r => new FsCounterpartyLine(
+            Guid.Parse(r.VoucherHeadId.Trim()), r.DocNum, r.DateDoc, r.VahedCode, r.AccCode,
+            string.IsNullOrWhiteSpace(r.Counterparty) ? null : r.Counterparty.Trim(),
+            r.AttrCp != null ? "A" : r.Counterparty != null ? "E" : null,
+            r.AttributeValue, r.LineDesc, r.Debtor, r.Creditor)).ToList();
+    }
+
+    public sealed class FsCounterpartyRow
+    {
+        public string VahedCode { get; set; } = string.Empty;
+
+        public string AccCode { get; set; } = string.Empty;
+
+        public string? Counterparty { get; set; }
+
+        public decimal Debtor { get; set; }
+
+        public decimal Creditor { get; set; }
+    }
+
+    public sealed class FsCounterpartyLineRow
+    {
+        public string VoucherHeadId { get; set; } = string.Empty;
+
+        public string? DocNum { get; set; }
+
+        public string? DateDoc { get; set; }
+
+        public decimal? Radif { get; set; }
+
+        public string VahedCode { get; set; } = string.Empty;
+
+        public string AccCode { get; set; } = string.Empty;
+
+        public string? AttrCp { get; set; }
+
+        public string? Counterparty { get; set; }
+
+        public string? AttributeValue { get; set; }
+
+        public string? LineDesc { get; set; }
+
+        public decimal Debtor { get; set; }
+
+        public decimal Creditor { get; set; }
+
+        public decimal Rn { get; set; }
+    }
+
     /// <summary>شکل خام ردیف کوئری — ستون‌ها با alias هم‌نام پراپرتی‌ها.</summary>
     public sealed class FsBalanceRow
     {
