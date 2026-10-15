@@ -41,4 +41,35 @@ public sealed class ElamHeadRepository : IElamHeadRepository
 
         return entity;
     }
+
+    public async Task SoftDeleteDetailTreeAsync(
+        Guid headId,
+        string? changeUserId,
+        DateTime updatedDate,
+        CancellationToken cancellationToken = default)
+    {
+        var details = await _dbContext.TB_ELAMDETAILs
+            .Where(d => d.ELAMHEAD_ID == headId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var detail in details.Where(d => d.ISDELETED != true))
+        {
+            detail.ISDELETED = true;
+            detail.CHANGEUSERID = changeUserId;
+            detail.UPDATEDDATE = updatedDate;
+        }
+
+        var detailIds = details.Select(d => d.ID).ToList();
+
+        var links = await _dbContext.TB_ELAMDETAIL_LINK_TAFSILIs
+            .Where(l => detailIds.Contains(l.ELAMDETAIL_ID!.Value) && l.ISDELETED != true)
+            .ToListAsync(cancellationToken);
+
+        foreach (var link in links)
+        {
+            link.ISDELETED = true;
+            link.CHANGEUSERID = changeUserId;
+            link.UPDATEDDATE = updatedDate;
+        }
+    }
 }

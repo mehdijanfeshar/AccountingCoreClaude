@@ -57,9 +57,11 @@ public sealed class DeleteElamHeadCommandHandlerTests
             .Select(m => m.Name)
             .ToArray();
 
+        // SoftDeleteDetailTree* only flips ISDELETED on the head's detail rows — not a physical delete.
         Assert.DoesNotContain(repositoryMethodNames, name =>
-            name.Contains("Remove", StringComparison.OrdinalIgnoreCase) ||
-            name.Contains("Delete", StringComparison.OrdinalIgnoreCase));
+            !name.StartsWith("SoftDelete", StringComparison.Ordinal) &&
+            (name.Contains("Remove", StringComparison.OrdinalIgnoreCase) ||
+             name.Contains("Delete", StringComparison.OrdinalIgnoreCase)));
 
         var id = Guid.NewGuid();
         var entity = ExistingEntity(id);

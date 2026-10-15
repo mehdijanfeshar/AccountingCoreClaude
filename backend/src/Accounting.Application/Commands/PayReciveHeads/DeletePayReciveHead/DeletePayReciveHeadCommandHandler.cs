@@ -18,11 +18,9 @@ namespace Accounting.Application.Commands.PayReciveHeads.DeletePayReciveHead;
 /// <c>bool</c> on this table, so unlike <c>DeleteTmpVoucherHeadCommandHandler</c> there is no
 /// <c>null</c> case to reason about at all.
 ///
-/// ⚠️ HEAD ONLY — does NOT cascade to <c>TB_PAYRECIVDETAIL</c> rows; no repository or command
-/// exists to reach them from here (the Head/Detail aggregate boundary for this pair is
-/// undecided). Soft-deleting a header therefore leaves its detail rows — and their
-/// <c>TB_PAYRECIVDETAIL_LINK_TAFSILI</c> links — active, exactly the situation the voucher had
-/// before phase 9.
+/// Cascades the soft-delete to the head's <c>TB_PAYRECIVDETAIL</c> rows and their
+/// <c>TB_PAYRECIVDETAIL_LINK_TAFSILI</c> links in the same <c>SaveChangesAsync</c> (a live orphan link
+/// would block deleting its tafsili forever).
 /// </summary>
 public sealed class DeletePayReciveHeadCommandHandler : IRequestHandler<DeletePayReciveHeadCommand>
 {
@@ -67,6 +65,8 @@ public sealed class DeletePayReciveHeadCommandHandler : IRequestHandler<DeletePa
         entity.ISDELETED = true;
         entity.CHANGEUSERID = _currentUser.UserId;
         entity.UPDATEDDATE = DateTime.UtcNow;
+
+        await _payReciveHeadRepository.SoftDeleteDetailTreeAsync(entity.ID, _currentUser.UserId, entity.UPDATEDDATE.Value, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }

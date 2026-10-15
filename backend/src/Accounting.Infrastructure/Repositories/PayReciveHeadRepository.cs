@@ -72,4 +72,35 @@ public sealed class PayReciveHeadRepository : IPayReciveHeadRepository
     {
         await _dbContext.TB_PAYRECIVDETAIL_LINK_TAFSILIs.AddAsync(tafsiliLink, cancellationToken);
     }
+
+    public async Task SoftDeleteDetailTreeAsync(
+        Guid headId,
+        string? changeUserId,
+        DateTime updatedDate,
+        CancellationToken cancellationToken = default)
+    {
+        var details = await _dbContext.TB_PAYRECIVDETAILs
+            .Where(d => d.PAYRECIVHEAD_ID == headId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var detail in details.Where(d => !d.ISDELETED))
+        {
+            detail.ISDELETED = true;
+            detail.CHANGEUSERID = changeUserId;
+            detail.UPDATEDDATE = updatedDate;
+        }
+
+        var detailIds = details.Select(d => d.ID).ToList();
+
+        var links = await _dbContext.TB_PAYRECIVDETAIL_LINK_TAFSILIs
+            .Where(l => detailIds.Contains(l.PAYRECIVDETAIL_ID) && !l.ISDELETED)
+            .ToListAsync(cancellationToken);
+
+        foreach (var link in links)
+        {
+            link.ISDELETED = true;
+            link.CHANGEUSERID = changeUserId;
+            link.UPDATEDDATE = updatedDate;
+        }
+    }
 }

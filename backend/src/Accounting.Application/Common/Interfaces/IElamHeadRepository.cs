@@ -26,4 +26,11 @@ public interface IElamHeadRepository
     /// still returned here (the caller decides how to treat <c>ISDELETED</c>).
     /// </summary>
     Task<TB_ELAMHEAD?> GetForUpdateAsync(Guid id, string vahedCode, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Stages the soft-delete of every live <see cref="TB_ELAMDETAIL"/> row of the head and of their
+    /// <see cref="TB_ELAMDETAIL_LINK_TAFSILI"/> links (same change tracker, so the handler's single
+    /// <c>SaveChangesAsync</c> persists head and subtree together and the audit log sees each row).
+    /// Links are scoped to ALL detail rows of the head, not only the freshly deleted ones.
+    /// </summary>
+    Task SoftDeleteDetailTreeAsync(Guid headId, string? changeUserId, DateTime updatedDate, CancellationToken cancellationToken = default);
 }

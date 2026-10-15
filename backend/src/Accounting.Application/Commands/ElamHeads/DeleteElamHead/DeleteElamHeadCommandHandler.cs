@@ -17,8 +17,8 @@ namespace Accounting.Application.Commands.ElamHeads.DeleteElamHead;
 /// is NOT treated as already-deleted (mirrors <c>DeleteRabetCommandHandler</c>) — it is
 /// genuinely soft-deleted by this call.
 ///
-/// ⚠️ HEAD ONLY — does NOT cascade to <c>TB_ELAMDETAIL</c> rows; no repository/command exists
-/// to reach them from here (the Head/Detail aggregate boundary for this pair is undecided).
+/// Cascades the soft-delete to the head's <c>TB_ELAMDETAIL</c> rows and their tafsili links in the same
+/// <c>SaveChangesAsync</c> (a live orphan link would block deleting its tafsili forever).
 /// </summary>
 public sealed class DeleteElamHeadCommandHandler : IRequestHandler<DeleteElamHeadCommand>
 {
@@ -63,6 +63,8 @@ public sealed class DeleteElamHeadCommandHandler : IRequestHandler<DeleteElamHea
         entity.ISDELETED = true;
         entity.CHANGEUSERID = _currentUser.UserId;
         entity.UPDATEDDATE = DateTime.UtcNow;
+
+        await _elamHeadRepository.SoftDeleteDetailTreeAsync(entity.ID, _currentUser.UserId, entity.UPDATEDDATE.Value, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }

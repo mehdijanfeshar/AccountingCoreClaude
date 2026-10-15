@@ -70,13 +70,13 @@ public static class AppRoles
     /// (ایجاد/ویرایش/حذف حساب) و پیوند معین به گروه تفصیلی (ماژول <c>Accounts</c>). سطح تفصیلی
     /// (<c>Tafsilis</c>) در این فهرست نیست و کاربر حسابداری هم می‌تواند تعریف کند.
     /// </summary>
-    public static readonly HashSet<string> HeadquartersOnlyModules = new(StringComparer.Ordinal) { "Accounts" };
+    public static readonly HashSet<string> HeadquartersOnlyModules = new(StringComparer.Ordinal) { "Accounts", "LegacyChart" };
 
     /// <summary>ماژول‌هایی که نوشتن‌شان برای ادمین‌های واحد است (نه کارمند).</summary>
     public static readonly HashSet<string> UnitAdminModules = new(StringComparer.Ordinal)
     {
         "BankAccounts", "CheckBooks", "ChequeTypes", "AttribForAccountCodes", "Expenses",
-        "PersonActions", "RevolvingFunds", "IdentityHeads",
+        "PersonActions", "RevolvingFunds", "IdentityHeads", "LegacyImport",
     };
 
     /// <summary>نقش‌های مجاز برای یک درخواست MediatR بر اساس ماژول و خواندن/نوشتن.</summary>

@@ -826,9 +826,9 @@ public partial class LegacyDbContext : DbContext
             entity.Property(e => e.CHANGEUSERID)
                 .HasMaxLength(10)
                 .IsUnicode(false);
+            // ستون در دیتابیس NULL‌پذیر است و «بدون کنترل» = NULL. IsRequired + پیش‌فرض null باعث می‌شد EF مقدار را پس از
+            // درج بخواند و روی NULL خطای ORA-50032 بدهد.
             entity.Property(e => e.CONTROLID)
-                .IsRequired()
-                .HasDefaultValueSql("null ")
                 .HasComment("Accounting.Domain.ValueObjects.AttribControl (1=NotZero,2=IsDate)")
                 .HasConversion<int?>();
             entity.Property(e => e.CREATEDDATE).HasPrecision(6);

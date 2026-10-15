@@ -78,6 +78,21 @@ public sealed class AuditLogInterceptor : SaveChangesInterceptor
         var operationId = Guid.NewGuid();
         var rows = new List<TB_AUDITLOG>();
 
+        // عملیات انبوه (مثل انتقال اسناد از سیستم قدیم): به‌جای یک ردیف برای هر رکورد، یک ردیف خلاصه
+        if (context.BulkAuditLabel is { } bulk)
+        {
+            var counts = entries.GroupBy(e => (Table: e.Metadata.GetTableName()!, e.State))
+                .Select(g => new { g.Key.Table, State = g.Key.State.ToString(), Count = g.Count() });
+            context.Add(new TB_AUDITLOG
+            {
+                ID = Guid.NewGuid(), TABLENAME = "BULK", RECORDID = operationId, ACTIONTYPE = ActionInsert,
+                NEWVALUE = JsonSerializer.Serialize(counts, Json), RECORDLABEL = Truncate(bulk, 200),
+                USERID = who.UserId, USERFULLNAME = who.Name, VAHEDCODE = who.VahedCode, CHANGEDATE = now,
+                IPADDRESS = who.Ip, OPERATIONID = operationId,
+            });
+            return;
+        }
+
         foreach (var entry in entries)
         {
             var table = entry.Metadata.GetTableName()!;

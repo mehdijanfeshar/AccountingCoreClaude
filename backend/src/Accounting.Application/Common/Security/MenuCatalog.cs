@@ -73,6 +73,7 @@ public static class MenuCatalog
         M("/operation/year-end", Operation, "سند افتتاحیه و اختتامیه", MenuGroupAccess.Operate, "Vouchers"),
         M("/operation/elams", Operation, "اسناد اعلامیه", MenuGroupAccess.Operate, "Elams", "ElamHeads"),
         M("/operation/bank-card", Operation, "کارت حساب جاری", MenuGroupAccess.Operate, "BankCards", "BankCartDetails"),
+        M("/operation/legacy-import", Operation, "انتقال از سیستم قدیم", MenuGroupAccess.Operate, "LegacyImport"),
         M("/operation/cheque-book", Operation, "دفتر چک", MenuGroupAccess.Operate, "ChequeBook"),
         M("/operation/system-voucher-inbox", Operation, "دریافت اسناد از سایر سیستم‌ها", MenuGroupAccess.Operate, "Vouchers", "TmpVoucherHeads"),
         M("/operation/month-close", Operation, "صورتحساب ماه", MenuGroupAccess.Operate, "MonthReopen"),

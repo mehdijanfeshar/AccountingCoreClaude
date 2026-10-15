@@ -7,6 +7,7 @@ using Accounting.Infrastructure;
 using Accounting.Infrastructure.OperationTemplates;
 using Accounting.Infrastructure.OperationTemplates.Agent;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Tamin.Framework.Common.Security;
@@ -167,6 +168,14 @@ builder.Services.AddScoped<IClientInfoProvider, HttpContextClientInfoProvider>()
 // effective scope every IVahedScoped request runs under (phase 37-B). Scoped, because it reads
 // per-request state through ICurrentUser.
 builder.Services.AddScoped<IUnitScopeResolver, UnitScopeResolver>();
+
+// رمز اسکیماهای سیستم قدیم (انتقال) — کلیدها ماندگار تا پس از راه‌اندازی دوباره هم خوانده شوند؛ روی ویندوز با DPAPI.
+var dataProtection = builder.Services.AddDataProtection()
+    .SetApplicationName("Accounting.Api")
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(AppContext.BaseDirectory, "App_Data", "keys")));
+if (OperatingSystem.IsWindows())
+    dataProtection.ProtectKeysWithDpapi(protectToLocalMachine: true);
+builder.Services.AddSingleton<ISecretProtector, Accounting.Api.Security.DataProtectionSecretProtector>();
 
 // CORS (ریسک #۱۹): فقط مبدأهای صریح `Cors:AllowedOrigins`. خالی ⇒ هیچ هدر CORS (همان رفتار
 // same-origin پشت proxy/IIS). توکن در هدر Authorization است نه کوکی، پس AllowCredentials لازم نیست.

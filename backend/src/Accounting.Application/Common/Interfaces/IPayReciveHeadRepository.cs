@@ -57,4 +57,11 @@ public interface IPayReciveHeadRepository
     /// its <see cref="TB_PAYRECIVDETAIL"/> line.
     /// </summary>
     Task AddDetailTafsiliLinkAsync(TB_PAYRECIVDETAIL_LINK_TAFSILI tafsiliLink, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Stages the soft-delete of every live <see cref="TB_PAYRECIVDETAIL"/> row of the head and of their
+    /// <see cref="TB_PAYRECIVDETAIL_LINK_TAFSILI"/> links (same change tracker, so the handler's single
+    /// <c>SaveChangesAsync</c> persists head and subtree together and the audit log sees each row).
+    /// Links are scoped to ALL detail rows of the head, not only the freshly deleted ones.
+    /// </summary>
+    Task SoftDeleteDetailTreeAsync(Guid headId, string? changeUserId, DateTime updatedDate, CancellationToken cancellationToken = default);
 }

@@ -260,6 +260,15 @@ public static class DependencyInjection
         // صورت‌های مالی، بخش ۴۵-د — خروجی Excel (ClosedXML)، بی‌حالت.
         services.AddSingleton<IFsExcelExporter, Accounting.Infrastructure.Reporting.FsExcelExporter>();
         services.AddSingleton<IFsDocxExporter, Accounting.Infrastructure.Reporting.FsDocxExporter>();
+
+        // انتقال از سیستم قدیم (اسکیمای سالانهٔ هر واحد) — رمزها فقط از User Secrets/محیط.
+        var legacyImport = new Accounting.Infrastructure.LegacyImport.LegacyImportOptions();
+        configuration.GetSection(Accounting.Infrastructure.LegacyImport.LegacyImportOptions.Section).Bind(legacyImport);
+        services.AddSingleton(legacyImport);
+        services.AddSingleton<Accounting.Infrastructure.LegacyImport.LegacySourceLocator>();
+        services.AddSingleton<Accounting.Infrastructure.LegacyImport.LegacyImportStorage>();
+        services.AddSingleton<Accounting.Infrastructure.LegacyImport.LegacyXmlCredentials>();
+        services.AddScoped<ILegacyImportService, Accounting.Infrastructure.LegacyImport.LegacyImportService>();
         services.AddScoped<ITreasuryRoleRepository, TreasuryRoleRepository>();
         services.AddScoped<ITreasuryRoleReadRepository, TreasuryRoleReadRepository>();
         services.AddScoped<IPaymentRequestRepository, PaymentRequestRepository>();
