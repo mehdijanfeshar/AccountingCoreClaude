@@ -5,13 +5,49 @@ public sealed record LegacySourceDto(string Server, string Schema, int Year, boo
 
 public sealed record LegacyFileDto(string FileName, string ContentType, byte[] Content);
 
-/// <summary>نتیجهٔ بررسی یا اجرای انتقال؛ <c>Committed</c> فقط وقتی true است که واقعاً ثبت شده باشد.</summary>
+/// <summary>
+/// نتیجهٔ بررسی یا اجرای انتقال؛ <c>Committed</c> فقط وقتی true است که واقعاً ثبت شده باشد. <c>Success</c> = نه خطای
+/// کلی و نه مشکل حل‌نشده. انتقال‌های بخش‌بندی‌شده (اسناد سال) <c>Sections</c> و <c>Issues</c> هم دارند.
+/// </summary>
 public sealed record LegacyImportReportDto(
     bool Success,
     bool Committed,
     IReadOnlyList<string> Errors,
     IReadOnlyList<string> Warnings,
-    IReadOnlyList<string> Info);
+    IReadOnlyList<string> Info,
+    IReadOnlyList<LegacySectionDto>? Sections = null,
+    IReadOnlyList<LegacyIssueDto>? Issues = null);
+
+/// <summary>یک بخش انتقال (معمولاً یک جدول یا یک سرسند/ردیف): تعداد رکورد آماده و وضعیت مشکلاتش.</summary>
+public sealed record LegacySectionDto(string Key, string Title, int Records, int Open, int Resolved, IReadOnlyList<string> Notes);
+
+/// <param name="Picker">اگر گزینه مقدار می‌خواهد: <c>moein</c> یا <c>tafsili</c> (انتخاب از فهرست موجود سیستم جدید).</param>
+public sealed record LegacyIssueOptionDto(string Code, string Label, string? Picker = null);
+
+/// <summary>
+/// مشکل قابل‌رفع انتقال. شناسه پایدار است (مثلاً <c>moein:21/05</c>) تا تصمیم کاربر در بررسی بعدی هم اعمال شود.
+/// <c>Status</c>: <c>open</c> (منتظر تصمیم)، <c>resolved</c> (تصمیم اعمال شد)، <c>invalid</c> (تصمیم قابل اعمال نیست —
+/// <c>Problem</c>). مشکل بدون گزینه فقط با اصلاح بیرون از این صفحه (مثلاً تعریف کد) رفع می‌شود.
+/// </summary>
+public sealed record LegacyIssueDto(
+    string Id,
+    string Section,
+    string Message,
+    string? Hint,
+    int Uses,
+    IReadOnlyList<string> Samples,
+    IReadOnlyList<LegacyIssueOptionDto> Options,
+    string Status,
+    string? Option,
+    string? Value,
+    string? DecidedBy,
+    DateTime? DecidedAt,
+    string? Problem);
+
+/// <param name="Option">null = حذف تصمیم قبلی.</param>
+public sealed record LegacyDecisionInput(string IssueId, string? Option, string? Value);
+
+public sealed record LegacyLookupDto(string Code, string Title);
 
 /// <summary>سرور سیستم قدیم یک واحد (رمز هرگز برگردانده نمی‌شود).</summary>
 public sealed record LegacyServerDto(string DataSource, string? Title, string? UserName, bool HasPassword);
@@ -90,6 +126,12 @@ public interface ILegacyImportService
     Task<LegacyImportReportDto> ImportBankAsync(string vahedCode, bool commit, string userId, CancellationToken cancellationToken);
 
     Task<LegacyImportReportDto> ImportVouchersAsync(string vahedCode, int year, bool commit, string userId, CancellationToken cancellationToken);
+
+    /// <summary>تصمیم‌های کاربر روی مشکلات انتقال اسناد یک سال (در بررسی بعدی و ثبت نهایی اعمال می‌شوند).</summary>
+    Task SaveVoucherDecisionsAsync(string vahedCode, int year, IReadOnlyList<LegacyDecisionInput> decisions, string userId, CancellationToken cancellationToken);
+
+    /// <summary>فهرست کدهای موجود سیستم جدید برای «جایگزینی»؛ <paramref name="kind"/> = <c>moein</c> یا <c>tafsili</c>.</summary>
+    Task<IReadOnlyList<LegacyLookupDto>> LookupAsync(string kind, string? search, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<LegacyVoucherYearDto>> GetVoucherStatusAsync(string vahedCode, CancellationToken cancellationToken);
 

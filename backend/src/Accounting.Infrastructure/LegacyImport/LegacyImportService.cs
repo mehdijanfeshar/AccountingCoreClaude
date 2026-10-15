@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Infrastructure.Legacy;
 using Oracle.ManagedDataAccess.Client;
@@ -27,6 +28,7 @@ internal sealed class LegacyImportStorage(LegacyImportOptions options)
     public string ConnectionsPath(string vahed) => Path.Combine(Dir, $"connections-{vahed}.json");
     public string VouchersPath(string vahed, int year) => Path.Combine(Dir, $"vouchers-{vahed}-{year}.json");
     public string BankPath(string vahed) => Path.Combine(Dir, $"bank-{vahed}.json");
+    public string DecisionsPath(string vahed, int year) => Path.Combine(Dir, $"decisions-{vahed}-{year}.json");
     public IEnumerable<string> VoucherFiles(string vahed) => Directory.EnumerateFiles(Dir, $"vouchers-{vahed}-*.json");
 
     public DateTime? When(string path) => File.Exists(path) ? File.GetLastWriteTimeUtc(path) : null;
@@ -40,9 +42,23 @@ internal sealed class LegacyImportService(
     LegacyImportStorage storage,
     LegacyImportOptions options,
     ISecretProtector protector,
-    LegacyXmlCredentials xmlCredentials) : ILegacyImportService
+    LegacyXmlCredentials xmlCredentials,
+    IMemoryCache cache) : ILegacyImportService
 {
     private const string Xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+    /// <summary>
+    /// دادهٔ خوانده‌شدهٔ سیستم قدیم برای «بررسی»‌های پشت‌سرهم (هر بررسی دوباره پس از تصمیم کاربر) چند دقیقه نگه داشته
+    /// می‌شود؛ تغییر اتصال‌ها کلید را عوض می‌کند. ثبت نهایی همیشه دادهٔ تازه می‌خواند.
+    /// </summary>
+    private async Task<LegacyUnit> LoadUnitAsync(string vahed, bool fresh, CancellationToken ct)
+    {
+        var key = $"legacy-unit:{vahed}:{storage.When(storage.ConnectionsPath(vahed))?.Ticks}";
+        if (!fresh && cache.TryGetValue(key, out LegacyUnit? hit) && hit != null) return hit;
+        var unit = await locator.LoadUnitAsync(vahed, ManualSources(vahed), ct);
+        cache.Set(key, unit, new MemoryCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(15) });
+        return unit;
+    }
 
     public async Task<IReadOnlyList<LegacySourceDto>> FindSourcesAsync(string vahedCode, CancellationToken ct)
     {
@@ -291,15 +307,20 @@ internal sealed class LegacyImportService(
                     : $"کدینگ واحد {vahedCode} هنوز ثبت نهایی نشده است؛ اول کاربرگ کدینگ واحد را بارگذاری و ثبت کنید.");
                 return false;
             }
-            var unit = await locator.LoadUnitAsync(vahedCode, ManualSources(vahedCode), ct);
+            var unit = await LoadUnitAsync(vahedCode, fresh: commit, ct);
             var previous = LegacyVoucherImporter.Read(storage.Read(storage.VouchersPath(vahedCode, year)));
             var chart = ChartMapping.Read(chartBytes);
+            var book = new IssueBook(IssueBook.Read(storage.Read(storage.DecisionsPath(vahedCode, year))));
+            report.Issues = book;
             var importer = new LegacyVoucherImporter(db, unit, year, chart, UnitMapping.Read(unitBytes),
-                previous, userId, report);
+                previous, userId, report, book);
             try
             {
-                return await InTransactionAsync(commit, report, async () => { await EnsureMoeinsAsync(unit, chart, userId, report, ct); if (report.Ok) await importer.RunAsync(ct); },
+                var done = await InTransactionAsync(commit, report, async () => { await EnsureMoeinsAsync(unit, chart, userId, report, ct); if (report.Ok) await importer.RunAsync(ct); },
                     () => storage.Save(storage.VouchersPath(vahedCode, year), JsonSerializer.SerializeToUtf8Bytes(importer.Result!)), ct);
+                if (!report.Ok && report.Errors.Count == 0)
+                    report.Info.Add($"{book.Open} مورد هنوز تصمیم یا اصلاح می‌خواهد؛ تا همهٔ بخش‌ها بدون مشکل نشوند چیزی ثبت نمی‌شود.");
+                return done;
             }
             catch (DbUpdateException ex)
             {
@@ -316,6 +337,35 @@ internal sealed class LegacyImportService(
             }
             finally { db.BulkAuditLabel = null; }
         });
+
+    public Task SaveVoucherDecisionsAsync(string vahedCode, int year, IReadOnlyList<LegacyDecisionInput> decisions, string userId, CancellationToken ct)
+    {
+        var path = storage.DecisionsPath(vahedCode, year);
+        var all = IssueBook.Read(storage.Read(path));
+        foreach (var d in decisions)
+        {
+            if (string.IsNullOrWhiteSpace(d.Option)) all.Remove(d.IssueId);
+            else all[d.IssueId] = new IssueDecision(d.Option.Trim(), string.IsNullOrWhiteSpace(d.Value) ? null : d.Value.Trim(), userId, DateTime.UtcNow);
+        }
+        storage.Save(path, JsonSerializer.SerializeToUtf8Bytes(all));
+        return Task.CompletedTask;
+    }
+
+    public async Task<IReadOnlyList<LegacyLookupDto>> LookupAsync(string kind, string? search, CancellationToken ct)
+    {
+        var q = search?.Trim() ?? "";
+        if (kind == "moein")
+            return await db.TB_ACCOUNTCODEs.AsNoTracking()
+                .Where(a => a.TYPECODE == Accounting.Domain.ValueObjects.TypeCodes.Moin && a.ISDELETED != true && a.ACCCODE != null)
+                .Where(a => q == "" || a.ACCCODE!.StartsWith(q) || a.ACCCODENAME!.Contains(q))
+                .OrderBy(a => a.ACCCODE).Take(50).Select(a => new LegacyLookupDto(a.ACCCODE!.Trim(), a.ACCCODENAME ?? "")).ToListAsync(ct);
+        if (kind == "tafsili")
+            return await db.TB_TAFSILIs.AsNoTracking()
+                .Where(t => t.TAFSILI_CODE != null)
+                .Where(t => q == "" || t.TAFSILI_CODE!.StartsWith(q) || t.TAFSILI_NAME!.Contains(q))
+                .OrderBy(t => t.TAFSILI_CODE).Take(50).Select(t => new LegacyLookupDto(t.TAFSILI_CODE!.Trim(), t.TAFSILI_NAME ?? "")).ToListAsync(ct);
+        return [];
+    }
 
     public Task<IReadOnlyList<LegacyVoucherYearDto>> GetVoucherStatusAsync(string vahedCode, CancellationToken ct)
     {
@@ -380,8 +430,11 @@ internal sealed class LegacyImportService(
     {
         var tables = ex.Entries.Select(e => e.Metadata.GetTableName()).Where(t => t != null).Distinct().ToList();
         var msg = (ex.InnerException?.Message ?? ex.Message).Split('\n')[0];
+        var sections = tables.Select(Sections.OfTable).Where(s => s != null)
+            .Select(s => Sections.Voucher.First(x => x.Key == s).Title).Distinct().ToList();
+        var where = sections.Count > 0 ? $"بخش «{string.Join("، ", sections)}» — " : "";
         return tables.Count > 0
-            ? $"ذخیره در جدول {string.Join("، ", tables)} ممکن نشد: {msg}"
+            ? $"{where}ذخیره در جدول {string.Join("، ", tables)} ممکن نشد: {msg}"
             : $"ذخیره در پایگاه داده ممکن نشد: {msg}";
     }
 

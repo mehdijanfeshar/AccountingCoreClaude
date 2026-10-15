@@ -124,6 +124,43 @@ public sealed class ImportLegacyVouchersCommandValidator : AbstractValidator<Imp
     }
 }
 
+/// <summary>تصمیم‌های کاربر واحد روی مشکلات انتقال اسناد یک سال (کد جایگزین، بدون اتصال، کنار گذاشتن…).</summary>
+public sealed record SaveLegacyVoucherDecisionsCommand(int Year, IReadOnlyList<LegacyDecisionInput> Decisions) : IRequest<Unit>, IVahedScopedCommand
+{
+    public string VahedCode { get; set; } = string.Empty;
+}
+
+public sealed class SaveLegacyVoucherDecisionsCommandValidator : AbstractValidator<SaveLegacyVoucherDecisionsCommand>
+{
+    public SaveLegacyVoucherDecisionsCommandValidator()
+    {
+        RuleFor(x => x.Year).InclusiveBetween(1300, 1499).WithMessage("سال مالی باید ۴ رقمی (مثلاً ۱۴۰۰) باشد.");
+        RuleFor(x => x.Decisions).NotNull().Must(d => d.Count is > 0 and <= 5000).WithMessage("دست‌کم یک و حداکثر ۵۰۰۰ تصمیم.");
+        RuleForEach(x => x.Decisions).ChildRules(d =>
+        {
+            d.RuleFor(x => x.IssueId).NotEmpty().MaximumLength(200);
+            d.RuleFor(x => x.Option).MaximumLength(20).Matches("^[a-z0-9]*$").WithMessage("گزینه معتبر نیست.");
+            d.RuleFor(x => x.Value).MaximumLength(50);
+            d.RuleFor(x => x.Value).NotEmpty().WithMessage("کد جایگزین را انتخاب کنید.").When(x => x.Option == "replace");
+        }).When(x => x.Decisions != null);
+    }
+}
+
+/// <param name="Kind"><c>moein</c> یا <c>tafsili</c>.</param>
+public sealed record GetLegacyLookupQuery(string Kind, string? Search) : IRequest<IReadOnlyList<LegacyLookupDto>>, IVahedScopedQuery
+{
+    public string VahedCode { get; set; } = string.Empty;
+}
+
+public sealed class GetLegacyLookupQueryValidator : AbstractValidator<GetLegacyLookupQuery>
+{
+    public GetLegacyLookupQueryValidator()
+    {
+        RuleFor(x => x.Kind).Must(k => k is "moein" or "tafsili").WithMessage("نوع فهرست معتبر نیست.");
+        RuleFor(x => x.Search).MaximumLength(100);
+    }
+}
+
 /// <param name="Commit">false = فقط بررسی.</param>
 public sealed record ImportLegacyBankCommand(bool Commit) : IRequest<LegacyImportReportDto>, IVahedScopedCommand
 {
@@ -144,6 +181,8 @@ public sealed record GetLegacyVoucherMapQuery(int Year) : IRequest<LegacyFileDto
 public sealed class LegacyImportHandlers :
     IRequestHandler<ImportLegacyVouchersCommand, LegacyImportReportDto>,
     IRequestHandler<ImportLegacyBankCommand, LegacyImportReportDto>,
+    IRequestHandler<SaveLegacyVoucherDecisionsCommand, Unit>,
+    IRequestHandler<GetLegacyLookupQuery, IReadOnlyList<LegacyLookupDto>>,
     IRequestHandler<GetLegacyVoucherStatusQuery, IReadOnlyList<LegacyVoucherYearDto>>,
     IRequestHandler<GetLegacyVoucherMapQuery, LegacyFileDto>,
     IRequestHandler<GetLegacyConnectionsQuery, LegacyConnectionsDto>,
@@ -189,6 +228,15 @@ public sealed class LegacyImportHandlers :
 
     public Task<LegacyImportReportDto> Handle(ImportLegacyVouchersCommand request, CancellationToken cancellationToken)
         => _service.ImportVouchersAsync(request.VahedCode, request.Year, request.Commit, _currentUser.UserId, cancellationToken);
+
+    public async Task<Unit> Handle(SaveLegacyVoucherDecisionsCommand request, CancellationToken cancellationToken)
+    {
+        await _service.SaveVoucherDecisionsAsync(request.VahedCode, request.Year, request.Decisions, _currentUser.UserId, cancellationToken);
+        return Unit.Value;
+    }
+
+    public Task<IReadOnlyList<LegacyLookupDto>> Handle(GetLegacyLookupQuery request, CancellationToken cancellationToken)
+        => _service.LookupAsync(request.Kind, request.Search, cancellationToken);
 
     public Task<IReadOnlyList<LegacyVoucherYearDto>> Handle(GetLegacyVoucherStatusQuery request, CancellationToken cancellationToken)
         => _service.GetVoucherStatusAsync(request.VahedCode, cancellationToken);

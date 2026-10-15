@@ -9,8 +9,11 @@ internal sealed class ImportReport
     public List<string> Errors { get; } = new();
     public List<string> Warnings { get; } = new();
     public List<string> Info { get; } = new();
-    public bool Ok => Errors.Count == 0;
-    public LegacyImportReportDto ToDto(bool committed) => new(Ok, committed, Errors, Warnings, Info);
+    /// <summary>مشکلات قابل‌رفع (انتقال بخش‌بندی‌شده)؛ مشکل باز هم مانع ثبت است.</summary>
+    public IssueBook? Issues { get; set; }
+    public bool Ok => Errors.Count == 0 && (Issues?.Open ?? 0) == 0;
+    public LegacyImportReportDto ToDto(bool committed) =>
+        new(Ok, committed, Errors, Warnings, Info, Issues?.SectionsDto(), Issues?.IssuesDto());
 }
 
 /// <summary>قالب مشترک کاربرگ‌ها: ستون زرد = ورودی کارشناس، آبی = پیشنهاد، ستون کنترل سبز/قرمز.</summary>

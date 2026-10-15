@@ -120,6 +120,25 @@ public sealed class LegacyImportController : ControllerBase
     public async Task<IActionResult> ImportVouchers([FromQuery] int year, [FromQuery] bool commit, CancellationToken cancellationToken)
         => Ok(await _mediator.Send(new ImportLegacyVouchersCommand(year, commit), cancellationToken));
 
+    /// <summary>تصمیم‌های کاربر روی مشکلات انتقال اسناد یک سال؛ در «بررسی» بعدی و ثبت نهایی اعمال می‌شوند.</summary>
+    [HttpPost("vouchers/{year:int}/decisions")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> SaveVoucherDecisions(int year, [FromBody] List<LegacyDecisionInput> decisions, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new SaveLegacyVoucherDecisionsCommand(year, decisions), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>معین‌ها یا تفصیلی‌های موجود سیستم جدید برای «جایگزینی».</summary>
+    [HttpGet("lookup")]
+    [ProducesResponseType(typeof(IReadOnlyList<LegacyLookupDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Lookup([FromQuery] string kind, [FromQuery] string? q, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(new GetLegacyLookupQuery(kind, q), cancellationToken));
+
     /// <summary>حساب‌های بانکی، نوع چک، دسته‌چک و برگ چک واحد از همهٔ سال‌ها؛ <c>commit=false</c> فقط بررسی. تکرارپذیر.</summary>
     [HttpPost("bank")]
     [ProducesResponseType(typeof(LegacyImportReportDto), StatusCodes.Status200OK)]
