@@ -105,9 +105,12 @@ public sealed class VoucherHeadRepository : IVoucherHeadRepository
         string? year,
         CancellationToken cancellationToken = default)
     {
+        // اسناد حذف‌شده (حذف نرم) هم حساب‌اند: UK_VOUCHERHEAD_NUMBER روی (DOC_NUM, YEAR, VAHEDCODE) آن‌ها را هم
+        // در بر می‌گیرد، پس شمارهٔ سند حذف‌شده قابل بازاستفاده نیست. نادیده‌گرفتن‌شان (تا ۲۰۲۶-۱۰-۱۷) وقتی آخرین سند
+        // سال حذف شده بود به ORA-00001 و پاسخ ۴۰۹ می‌رسید — مثلاً صدور دوبارهٔ سند اختتامیه/افتتاحیه.
         var existing = await _dbContext.TB_VOUCHERSHEADs
             .AsNoTracking()
-            .Where(v => v.VAHEDCODE == vahedCode && v.YEAR == year && v.ISDELETED != true)
+            .Where(v => v.VAHEDCODE == vahedCode && v.YEAR == year)
             .Select(v => v.DOC_NUM)
             .ToListAsync(cancellationToken);
 

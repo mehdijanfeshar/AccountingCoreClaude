@@ -16,5 +16,6 @@ public partial class LegacyDbContext
         modelBuilder.ApplyConfiguration(new OperationExecutionConfig());
         modelBuilder.ApplyConfiguration(new SavedReportConfig()); // DDL 072
         modelBuilder.ApplyConfiguration(new QuickVoucherConfig()); // DDL 079
+        Accounting.Infrastructure.Sales.SalesMappingExtensions.ApplySales(modelBuilder); // DDL 080
     }
 }

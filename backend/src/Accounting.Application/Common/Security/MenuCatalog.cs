@@ -37,6 +37,7 @@ public static class MenuCatalog
 {
     private const string Base = "اطلاعات پایه";
     private const string Assistant = "حسابیار";
+    private const string Sales = "فروش";
     private const string Operation = "عملیات";
     private const string Reports = "گزارش‌ها";
     private const string Treasury = "تنخواه و خزانه‌داری";
@@ -68,6 +69,12 @@ public static class MenuCatalog
         M("/assistant/reports", Assistant, "گزارش با حسابیار", MenuGroupAccess.Operate, "OperationTemplates"),
         M("/assistant/reports/manage", Assistant, "گزارش‌های ذخیره‌شده", MenuGroupAccess.Operate, "OperationTemplates"),
         M("/assistant/templates", Assistant, "الگوهای عملیات", MenuGroupAccess.Operate, "OperationTemplates"),
+
+        M("/sales", Sales, "میز کار فروش", MenuGroupAccess.Operate),
+        M("/sales/docs", Sales, "اسناد فروش", MenuGroupAccess.Operate, "Sales"),
+        M("/sales/customers", Sales, "مشتریان", MenuGroupAccess.Operate),
+        M("/sales/items", Sales, "کالا و خدمات", MenuGroupAccess.Operate),
+        M("/sales/settings", Sales, "تنظیمات فروش", MenuGroupAccess.Operate),
 
         M("/operation/voucher-heads", Operation, "کارتابل اسناد", MenuGroupAccess.Operate, "Vouchers"),
         M("/operation/vouchers/new", Operation, "صدور سند", MenuGroupAccess.Operate, "Vouchers"),
