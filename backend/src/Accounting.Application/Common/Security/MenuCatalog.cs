@@ -63,6 +63,7 @@ public static class MenuCatalog
         M("/base/work-shops", Base, "کارگاه", MenuGroupAccess.OperateOrNational, "WorkShops"),
 
         M("/assistant", Assistant, "ثبت سند با حسابیار", MenuGroupAccess.Operate, "OperationTemplates"),
+        M("/assistant/batch", Assistant, "ثبت گروهی از اکسل", MenuGroupAccess.Operate, "OperationTemplates"),
         M("/assistant/history", Assistant, "سندهای حسابیار", MenuGroupAccess.Operate),
         M("/assistant/reports", Assistant, "گزارش با حسابیار", MenuGroupAccess.Operate, "OperationTemplates"),
         M("/assistant/reports/manage", Assistant, "گزارش‌های ذخیره‌شده", MenuGroupAccess.Operate, "OperationTemplates"),

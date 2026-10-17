@@ -183,6 +183,33 @@ public sealed class OperationsController : ControllerBase
         [FromBody] Accounting.Application.OperationTemplates.Agent.InterpretSentenceQuery query, [FromQuery] string? year, CancellationToken ct) =>
         Ok(await _mediator.Send(query with { Year = year }, ct));
 
+    // ─────────── سندهای پرتکرار (DDL 079) — ثبت از همان preview/execute الگو ───────────
+
+    /// <summary>سندهای پرتکرار واحد جاری با جواب‌های ثابت.</summary>
+    [HttpGet("quick")]
+    [ProducesResponseType(typeof(IReadOnlyList<QuickVoucherDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> QuickVouchers(CancellationToken ct) =>
+        Ok(await _mediator.Send(new ListQuickVouchersQuery(), ct));
+
+    /// <summary>تعریف سند پرتکرار: الگو + جواب‌های ثابت (بقیه هنگام ثبت پرسیده می‌شود).</summary>
+    [HttpPost("quick")]
+    [ProducesResponseType(typeof(QuickVoucherWriteResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> CreateQuickVoucher([FromBody] CreateQuickVoucherCommand cmd, CancellationToken ct)
+    {
+        var r = await _mediator.Send(cmd, ct);
+        return r.Success ? Ok(r) : Problem422("سند پرتکرار ذخیره نشد.", r.Errors);
+    }
+
+    [HttpPost("quick/{id:guid}/delete")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteQuickVoucher(Guid id, CancellationToken ct)
+    {
+        await _mediator.Send(new DeleteQuickVoucherCommand { Id = id }, ct);
+        return NoContent();
+    }
+
     /// <summary>پیش‌نمایش سند کامل (ویرایش‌شده یا آزاد) — بدون ثبت</summary>
     [HttpPost("compose/preview")]
     [ProducesResponseType(typeof(OperationResult), StatusCodes.Status200OK)]

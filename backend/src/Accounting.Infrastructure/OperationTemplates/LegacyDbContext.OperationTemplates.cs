@@ -15,5 +15,6 @@ public partial class LegacyDbContext
         modelBuilder.ApplyConfiguration(new TemplateLineDetailConfig());
         modelBuilder.ApplyConfiguration(new OperationExecutionConfig());
         modelBuilder.ApplyConfiguration(new SavedReportConfig()); // DDL 072
+        modelBuilder.ApplyConfiguration(new QuickVoucherConfig()); // DDL 079
     }
 }

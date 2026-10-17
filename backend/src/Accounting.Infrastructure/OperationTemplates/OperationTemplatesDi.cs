@@ -14,6 +14,7 @@ public static class OperationTemplatesDi
         s.AddScoped<ComposedVoucherBuilder>();
         s.AddScoped<AssistantUnitPolicy>();
         s.AddScoped<ISavedReportRepository, SavedReportRepository>();
+        s.AddScoped<IQuickVoucherRepository, QuickVoucherRepository>();
         s.AddScoped<ISubsidiaryAccountReader, SubsidiaryAccountReader>();
         s.AddScoped<IDetailReader, DetailReader>();
         s.AddScoped<IVoucherWriter, VoucherWriter>();

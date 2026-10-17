@@ -156,3 +156,22 @@ public sealed class SavedReportConfig : IEntityTypeConfiguration<SavedReport>
         b.HasIndex(x => x.Code, "UK_OP_SAVED_REPORT_CODE").IsUnique();
     }
 }
+
+/// <summary>سندهای پرتکرار حسابیار — DDL 079.</summary>
+public sealed class QuickVoucherConfig : IEntityTypeConfiguration<QuickVoucher>
+{
+    public void Configure(EntityTypeBuilder<QuickVoucher> b)
+    {
+        b.ToTable("TB_OP_QUICK_VOUCHER");
+        b.HasKey(x => x.Id).HasName("PK_OP_QUICK_VOUCHER");
+        b.Property(x => x.Id).Char36("ID").ValueGeneratedNever();
+        b.Property(x => x.VahedCode).HasColumnName("VAHEDCODE").HasMaxLength(4).IsUnicode(false).IsRequired();
+        b.Property(x => x.TemplateId).Char36("TEMPLATE_ID");
+        b.Property(x => x.Title).HasColumnName("TITLE").HasMaxLength(200).IsUnicode(false).IsRequired();
+        b.Property(x => x.ValuesJson).HasColumnName("VALUES_JSON").HasMaxLength(4000).IsUnicode(false).IsRequired();
+        b.Property(x => x.IsDeleted).HasColumnName("ISDELETED").HasColumnType("NUMBER(1)");
+        b.Property(x => x.CreatedBy).HasColumnName("ADDUSERID").HasMaxLength(10).IsUnicode(false).IsRequired();
+        b.Property(x => x.CreatedAtUtc).HasColumnName("CREATEDDATE").HasPrecision(6);
+        b.HasIndex(x => new { x.VahedCode, x.IsDeleted }, "IX_OP_QUICK_VOUCHER_VAHED");
+    }
+}

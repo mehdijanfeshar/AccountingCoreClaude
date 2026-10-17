@@ -72,7 +72,7 @@ public sealed class ListMyRecentOperationsHandler : IRequestHandler<ListMyRecent
             .ToList();
     }
 
-    private static Dictionary<string, string?> ParseValues(string json)
+    internal static Dictionary<string, string?> ParseValues(string json)
     {
         try
         {
@@ -86,7 +86,7 @@ public sealed class ListMyRecentOperationsHandler : IRequestHandler<ListMyRecent
         }
     }
 
-    private static RecentAnswerDto? ToAnswer(TemplateParameter p, Dictionary<string, string?> values, IReadOnlyDictionary<Guid, DetailInfo> details)
+    internal static RecentAnswerDto? ToAnswer(TemplateParameter p, Dictionary<string, string?> values, IReadOnlyDictionary<Guid, DetailInfo> details)
     {
         if (!values.TryGetValue(p.Key, out var raw) || string.IsNullOrWhiteSpace(raw))
             return null;
