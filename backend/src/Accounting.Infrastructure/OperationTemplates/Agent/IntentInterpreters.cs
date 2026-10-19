@@ -21,7 +21,8 @@ namespace Accounting.Infrastructure.OperationTemplates.Agent;
 ///   "Model": "claude-sonnet-5-5",       // Ollama مثلاً "qwen2.5:7b"
 ///   "BaseUrl": null,                    // Claude: https://api.anthropic.com · Ollama: http://localhost:11434
 ///   "ProxyUrl": null,                   // اگر خروج به اینترنت از پراکسی است
-///   "TimeoutSeconds": 20 } }
+///   "TimeoutSeconds": 20,
+///   "MaskPii": false } }            // فقط Ollama؛ Claude همیشه پوشانده می‌شود
 /// </code>
 /// </summary>
 public sealed class AssistantLlmOptions
@@ -34,6 +35,12 @@ public sealed class AssistantLlmOptions
     public string? BaseUrl { get; set; }
     public string? ProxyUrl { get; set; }
     public int TimeoutSeconds { get; set; } = 20;
+
+    /// <summary>
+    /// پوشاندن دادهٔ شخصی پیش از ارسال (G5). برای Claude همیشه روشن است (این گزینه نادیده گرفته می‌شود)؛
+    /// برای Ollama داخلی پیش‌فرض خاموش.
+    /// </summary>
+    public bool MaskPii { get; set; }
 }
 
 public static class AssistantLlmDi
@@ -71,6 +78,7 @@ public sealed class DisabledIntentInterpreter : IIntentInterpreter
 {
     public bool IsEnabled => false;
     public string ProviderName => "None";
+    public bool RequiresPiiMasking => false;
     public Task<string> CompleteJsonAsync(IntentPrompt prompt, CancellationToken ct) =>
         throw new InvalidOperationException("هوش مصنوعی حسابیار خاموش است.");
 }
@@ -93,6 +101,8 @@ public sealed class ClaudeIntentInterpreter : IIntentInterpreter
 
     public bool IsEnabled => true;
     public string ProviderName => "Claude";
+    public string? ModelName => string.IsNullOrWhiteSpace(_options.Model) ? "claude-sonnet-5-5" : _options.Model;
+    public bool RequiresPiiMasking => true; // ارسال به سرویس بیرونی: پوشاندن اجباری، قابل خاموش شدن نیست
 
     public async Task<string> CompleteJsonAsync(IntentPrompt prompt, CancellationToken ct)
     {
@@ -149,6 +159,8 @@ public sealed class OllamaIntentInterpreter : IIntentInterpreter
 
     public bool IsEnabled => true;
     public string ProviderName => "Ollama";
+    public string? ModelName => string.IsNullOrWhiteSpace(_options.Model) ? "qwen2.5:7b" : _options.Model;
+    public bool RequiresPiiMasking => _options.MaskPii;
 
     public async Task<string> CompleteJsonAsync(IntentPrompt prompt, CancellationToken ct)
     {

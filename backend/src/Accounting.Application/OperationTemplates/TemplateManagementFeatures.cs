@@ -10,13 +10,21 @@ namespace Accounting.Application.OperationTemplates;
 // ═══════════════════════ طراحی الگو (صفحهٔ ستاد) ═══════════════════════
 // دیدن تعریف‌ها برای همهٔ نقش‌ها مجاز است (Query)؛ هر تغییر فقط مدیر ستاد.
 
+/// <summary>سیاست الگو (G7) هنگام ساخت/ذخیره.</summary>
+internal sealed record TemplatePolicyInput(string? PlainPattern, long? MaxAmount, bool RequireAttachment, RiskLevel? RiskBase, TemplateCategory? Category);
+
 internal static class TemplateMapping
 {
     public static OperationTemplate Build(Guid id, string? code, string? title, string? description,
         string? voucherDescriptionPattern, List<TemplateParameterDto>? parameters, List<TemplateLineDto>? lines, Guid? systemTypeId = null, string? keywords = null,
-        IReadOnlyList<string>? allowedVahedTypes = null) => new()
+        IReadOnlyList<string>? allowedVahedTypes = null, TemplatePolicyInput? policy = null) => new()
     {
         Id = id,
+        PlainPattern = string.IsNullOrWhiteSpace(policy?.PlainPattern) ? null : policy!.PlainPattern!.Trim(),
+        MaxAmount = policy?.MaxAmount,
+        RequireAttachment = policy?.RequireAttachment ?? false,
+        RiskBase = policy?.RiskBase,
+        Category = policy?.Category,
         SystemTypeId = systemTypeId,
         Keywords = string.IsNullOrWhiteSpace(keywords) ? null : keywords.Trim(),
         AllowedVahedTypes = JoinVahedTypes(allowedVahedTypes),
@@ -33,7 +41,8 @@ internal static class TemplateMapping
         {
             Id = Guid.NewGuid(),
             Key = p.Key?.Trim() ?? "", Title = p.Title?.Trim() ?? "", Type = p.Type, DetailGroupId = p.DetailGroupId,
-            IsRequired = p.IsRequired, AskPrompt = p.AskPrompt?.Trim() ?? "", SortOrder = p.SortOrder
+            IsRequired = p.IsRequired, AskPrompt = p.AskPrompt?.Trim() ?? "", SortOrder = p.SortOrder,
+            OptionsJson = p.Type == ParameterType.Choice ? ChoiceOptions.Serialize(p.Options) : null
         }).ToList();
 
     public static List<TemplateLine> BuildLines(List<TemplateLineDto>? lines) =>
@@ -42,7 +51,10 @@ internal static class TemplateMapping
             Id = Guid.NewGuid(),
             Side = l.Side, SubsidiaryAccountId = l.SubsidiaryAccountId,
             AmountParameterKey = l.IsBalancingLine ? "" : l.AmountParameterKey ?? "",
-            Percent = l.IsBalancingLine ? 100m : l.Percent,
+            Percent = l.IsBalancingLine || l.AmountSource == LineAmountSource.Vat ? 100m : l.Percent,
+            AmountSource = l.AmountSource,
+            ConditionParamKey = string.IsNullOrWhiteSpace(l.ConditionParamKey) ? null : l.ConditionParamKey.Trim(),
+            ConditionValue = string.IsNullOrWhiteSpace(l.ConditionParamKey) ? null : l.ConditionValue?.Trim(),
             IsBalancingLine = l.IsBalancingLine,
             DescriptionPattern = string.IsNullOrWhiteSpace(l.DescriptionPattern) ? null : l.DescriptionPattern.Trim(),
             SortOrder = l.SortOrder,
@@ -88,7 +100,9 @@ internal static class TemplateMapping
 public sealed record ListOperationTemplateDefinitionsQuery : IRequest<IReadOnlyList<TemplateDefinitionSummaryDto>>;
 
 public sealed record TemplateDefinitionSummaryDto(Guid Id, string Code, string Title, string Description,
-    bool IsActive, int ParameterCount, int LineCount, string CreatedBy, DateTime CreatedAtUtc);
+    bool IsActive, int ParameterCount, int LineCount, string CreatedBy, DateTime CreatedAtUtc,
+    long? MaxAmount = null, bool RequireAttachment = false, RiskLevel? RiskBase = null, TemplateCategory? Category = null,
+    string? PlainPattern = null, int QuestionCount = 0);
 
 public sealed class ListOperationTemplateDefinitionsHandler
     : IRequestHandler<ListOperationTemplateDefinitionsQuery, IReadOnlyList<TemplateDefinitionSummaryDto>>
@@ -99,7 +113,8 @@ public sealed class ListOperationTemplateDefinitionsHandler
     public async Task<IReadOnlyList<TemplateDefinitionSummaryDto>> Handle(ListOperationTemplateDefinitionsQuery q, CancellationToken ct) =>
         (await _repo.ListAllAsync(ct))
             .Select(t => new TemplateDefinitionSummaryDto(t.Id, t.Code, t.Title, t.Description, t.IsActive,
-                t.Parameters.Count, t.Lines.Count, t.CreatedBy, t.CreatedAtUtc))
+                t.Parameters.Count, t.Lines.Count, t.CreatedBy, t.CreatedAtUtc,
+                t.MaxAmount, t.RequireAttachment, t.RiskBase, t.Category, t.PlainPattern, t.Parameters.Count))
             .ToList();
 }
 
@@ -114,11 +129,14 @@ public sealed record GetOperationTemplateDefinitionQuery(Guid Id) : IRequest<Tem
 public sealed record TemplateDefinitionDto(Guid Id, string Code, string Title, string Description,
     string VoucherDescriptionPattern, bool IsActive,
     IReadOnlyList<TemplateParameterDto> Parameters, IReadOnlyList<TemplateLineDefinitionDto> Lines, Guid? SystemTypeId, string? Keywords,
-    IReadOnlyList<string>? AllowedVahedTypes = null);
+    IReadOnlyList<string>? AllowedVahedTypes = null,
+    string? PlainPattern = null, long? MaxAmount = null, bool RequireAttachment = false,
+    RiskLevel? RiskBase = null, TemplateCategory? Category = null);
 
 public sealed record TemplateLineDefinitionDto(LineSide Side, Guid SubsidiaryAccountId, string? AccountCode, string? AccountTitle,
     string? AmountParameterKey, decimal Percent, bool IsBalancingLine, string? DescriptionPattern, int SortOrder,
-    IReadOnlyList<TemplateLineDetailDefinitionDto> Details);
+    IReadOnlyList<TemplateLineDetailDefinitionDto> Details,
+    string? ConditionParamKey = null, string? ConditionValue = null, LineAmountSource AmountSource = LineAmountSource.Parameter);
 
 public sealed record TemplateLineDetailDefinitionDto(int Level, string? ParameterKey, Guid? FixedDetailId, string? FixedDetailTitle);
 
@@ -141,7 +159,8 @@ public sealed class GetOperationTemplateDefinitionHandler : IRequestHandler<GetO
 
         return new TemplateDefinitionDto(t.Id, t.Code, t.Title, t.Description, t.VoucherDescriptionPattern, t.IsActive,
             t.Parameters.OrderBy(p => p.SortOrder)
-                .Select(p => new TemplateParameterDto(p.Key, p.Title, p.Type, p.DetailGroupId, p.IsRequired, p.AskPrompt, p.SortOrder))
+                .Select(p => new TemplateParameterDto(p.Key, p.Title, p.Type, p.DetailGroupId, p.IsRequired, p.AskPrompt, p.SortOrder,
+                    Options: p.Type == ParameterType.Choice ? ChoiceOptions.Parse(p.OptionsJson) : null))
                 .ToList(),
             t.Lines.OrderBy(l => l.SortOrder).Select(l =>
             {
@@ -150,9 +169,11 @@ public sealed class GetOperationTemplateDefinitionHandler : IRequestHandler<GetO
                     string.IsNullOrEmpty(l.AmountParameterKey) ? null : l.AmountParameterKey, l.Percent, l.IsBalancingLine,
                     l.DescriptionPattern, l.SortOrder,
                     l.Details.OrderBy(d => d.Level).Select(d => new TemplateLineDetailDefinitionDto(d.Level, d.ParameterKey, d.FixedDetailId,
-                        d.FixedDetailId is Guid fid && details.TryGetValue(fid, out var det) ? det.Title : null)).ToList());
+                        d.FixedDetailId is Guid fid && details.TryGetValue(fid, out var det) ? det.Title : null)).ToList(),
+                    l.ConditionParamKey, l.ConditionValue, l.AmountSource);
             }).ToList(),
-            t.SystemTypeId, t.Keywords, TemplateMapping.SplitVahedTypes(t.AllowedVahedTypes));
+            t.SystemTypeId, t.Keywords, TemplateMapping.SplitVahedTypes(t.AllowedVahedTypes),
+            t.PlainPattern, t.MaxAmount, t.RequireAttachment, t.RiskBase, t.Category);
     }
 }
 
@@ -161,7 +182,9 @@ public sealed class GetOperationTemplateDefinitionHandler : IRequestHandler<GetO
 public sealed record ValidateOperationTemplateQuery(
     Guid? Id, string Code, string Title, string Description, string VoucherDescriptionPattern,
     List<TemplateParameterDto> Parameters, List<TemplateLineDto> Lines, Guid? SystemTypeId = null, string? Keywords = null,
-    IReadOnlyList<string>? AllowedVahedTypes = null) : IRequest<CreateTemplateResult>;
+    IReadOnlyList<string>? AllowedVahedTypes = null,
+    string? PlainPattern = null, long? MaxAmount = null, bool RequireAttachment = false,
+    RiskLevel? RiskBase = null, TemplateCategory? Category = null) : IRequest<CreateTemplateResult>;
 
 public sealed class ValidateOperationTemplateHandler : IRequestHandler<ValidateOperationTemplateQuery, CreateTemplateResult>
 {
@@ -173,7 +196,8 @@ public sealed class ValidateOperationTemplateHandler : IRequestHandler<ValidateO
 
     public async Task<CreateTemplateResult> Handle(ValidateOperationTemplateQuery q, CancellationToken ct)
     {
-        var t = TemplateMapping.Build(q.Id ?? Guid.Empty, q.Code, q.Title, q.Description, q.VoucherDescriptionPattern, q.Parameters, q.Lines, q.SystemTypeId, q.Keywords, q.AllowedVahedTypes);
+        var t = TemplateMapping.Build(q.Id ?? Guid.Empty, q.Code, q.Title, q.Description, q.VoucherDescriptionPattern, q.Parameters, q.Lines, q.SystemTypeId, q.Keywords, q.AllowedVahedTypes,
+            new TemplatePolicyInput(q.PlainPattern, q.MaxAmount, q.RequireAttachment, q.RiskBase, q.Category));
         var errors = (await _validator.ValidateAsync(t, ct)).ToList();
         if (errors.Count == 0 && await _repo.CodeExistsForOtherAsync(t.Code, q.Id, ct))
             errors.Add($"کد الگو «{t.Code}» قبلاً ثبت شده است.");
@@ -186,7 +210,9 @@ public sealed class ValidateOperationTemplateHandler : IRequestHandler<ValidateO
 public sealed record UpdateOperationTemplateCommand(
     string Code, string Title, string Description, string VoucherDescriptionPattern,
     List<TemplateParameterDto> Parameters, List<TemplateLineDto> Lines, Guid? SystemTypeId = null, string? Keywords = null,
-    IReadOnlyList<string>? AllowedVahedTypes = null) : IRequest<CreateTemplateResult>
+    IReadOnlyList<string>? AllowedVahedTypes = null,
+    string? PlainPattern = null, long? MaxAmount = null, bool RequireAttachment = false,
+    RiskLevel? RiskBase = null, TemplateCategory? Category = null) : IRequest<CreateTemplateResult>
 {
     /// <summary>از مسیر (<c>{id}/update</c>)، نه بدنه.</summary>
     [JsonIgnore]
@@ -211,7 +237,8 @@ public sealed class UpdateOperationTemplateHandler : IRequestHandler<UpdateOpera
     {
         await TemplateMapping.EnsureAbilityAsync(_currentUser, _hq, AbilityCatalog.TemplatesDefine, "الگوی عملیات", ct);
 
-        var candidate = TemplateMapping.Build(c.Id, c.Code, c.Title, c.Description, c.VoucherDescriptionPattern, c.Parameters, c.Lines, c.SystemTypeId, c.Keywords, c.AllowedVahedTypes);
+        var candidate = TemplateMapping.Build(c.Id, c.Code, c.Title, c.Description, c.VoucherDescriptionPattern, c.Parameters, c.Lines, c.SystemTypeId, c.Keywords, c.AllowedVahedTypes,
+            new TemplatePolicyInput(c.PlainPattern, c.MaxAmount, c.RequireAttachment, c.RiskBase, c.Category));
         var errors = (await _validator.ValidateAsync(candidate, ct)).ToList();
         if (errors.Count == 0 && await _repo.CodeExistsForOtherAsync(candidate.Code, c.Id, ct))
             errors.Add($"کد الگو «{candidate.Code}» قبلاً ثبت شده است.");
@@ -228,6 +255,11 @@ public sealed class UpdateOperationTemplateHandler : IRequestHandler<UpdateOpera
         t.SystemTypeId = candidate.SystemTypeId;
         t.Keywords = candidate.Keywords;
         t.AllowedVahedTypes = candidate.AllowedVahedTypes;
+        t.PlainPattern = candidate.PlainPattern;
+        t.MaxAmount = candidate.MaxAmount;
+        t.RequireAttachment = candidate.RequireAttachment;
+        t.RiskBase = candidate.RiskBase;
+        t.Category = candidate.Category;
         t.Parameters = candidate.Parameters;
         t.Lines = candidate.Lines;
         _repo.AddChildren(t);

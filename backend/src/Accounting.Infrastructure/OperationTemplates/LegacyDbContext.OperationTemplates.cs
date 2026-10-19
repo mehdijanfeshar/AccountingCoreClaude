@@ -16,6 +16,12 @@ public partial class LegacyDbContext
         modelBuilder.ApplyConfiguration(new OperationExecutionConfig());
         modelBuilder.ApplyConfiguration(new SavedReportConfig()); // DDL 072
         modelBuilder.ApplyConfiguration(new QuickVoucherConfig()); // DDL 079
+        modelBuilder.ApplyConfiguration(new OperationReviewConfig()); // DDL 081
+        modelBuilder.ApplyConfiguration(new OperationAiTraceConfig()); // DDL 083
+        modelBuilder.ApplyConfiguration(new OperationRequestConfig()); // DDL 084
+        modelBuilder.ApplyConfiguration(new HistoryPatternConfig()); // DDL 085
+        modelBuilder.ApplyConfiguration(new HistoryPatternUnitConfig()); // DDL 085
+        modelBuilder.ApplyConfiguration(new HistoryDismissedConfig()); // DDL 086
         Accounting.Infrastructure.Sales.SalesMappingExtensions.ApplySales(modelBuilder); // DDL 080
     }
 }

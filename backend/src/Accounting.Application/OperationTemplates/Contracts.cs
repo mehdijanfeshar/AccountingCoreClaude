@@ -67,7 +67,9 @@ public sealed record VoucherDraft(
     string SourceTemplateCode,
     IReadOnlyList<VoucherDraftLine> Lines,
     string? Apendix = null,
-    Guid? SystemTypeId = null)
+    Guid? SystemTypeId = null,
+    // جملهٔ ساده از PLAIN_PATTERN الگو (G7)؛ فقط مسیر الگو.
+    string? PlainText = null)
 {
     public long TotalDebit => Lines.Sum(l => l.Debit);
     public long TotalCredit => Lines.Sum(l => l.Credit);

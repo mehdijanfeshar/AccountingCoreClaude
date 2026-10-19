@@ -113,6 +113,36 @@ public sealed class SystemVoucherInboxRepository : ISystemVoucherInboxRepository
             .CountAsync(h => h.SOURCEID == sourceId && h.VAHEDCODE == vahedCode && h.ID != excludeHeadId
                              && h.VOUCHERSHEAD_ID != null && h.ISDELETED != true, ct) > 0;
 
+    public async Task<(Guid Id, string? Name)?> ResolveSysTypeAsync(string sysCode, CancellationToken ct)
+    {
+        var code = sysCode.Trim();
+        var rows = await _db.TB_SYSTYPEs.AsNoTracking()
+            .Where(s => s.SYS_COD.Trim() == code)
+            .Select(s => new { s.ID, s.SYS_NAME })
+            .Take(1)
+            .ToListAsync(ct);
+        return rows.Count > 0 ? (rows[0].ID, rows[0].SYS_NAME) : null;
+    }
+
+    public async Task<bool> VahedExistsAsync(string vahedCode, CancellationToken ct)
+        => await _db.TB_VAHED_INFOs.AsNoTracking().CountAsync(v => v.VAHEDCODE == vahedCode, ct) > 0;
+
+    public async Task<Guid?> FindStagedBySourceAsync(Guid sourceId, string vahedCode, CancellationToken ct)
+    {
+        var ids = await _db.TB_TMP_VOUCHERHEADs.AsNoTracking()
+            .Where(h => h.SOURCEID == sourceId && h.VAHEDCODE == vahedCode && h.ISDELETED != true)
+            .Select(h => h.ID)
+            .Take(1)
+            .ToListAsync(ct);
+        return ids.Count > 0 ? ids[0] : null;
+    }
+
+    public async Task StageAsync(TB_TMP_VOUCHERHEAD head, IReadOnlyList<TB_TMP_VOUCHERSDETAIL> lines, CancellationToken ct)
+    {
+        await _db.TB_TMP_VOUCHERHEADs.AddAsync(head, ct);
+        await _db.TB_TMP_VOUCHERSDETAILs.AddRangeAsync(lines, ct);
+    }
+
     public async Task<IReadOnlyDictionary<int, Guid>> GetLevelIdsByCodeAsync(CancellationToken ct)
     {
         var rows = await _db.TB_LEVEL_TAFSILs.AsNoTracking()

@@ -44,11 +44,51 @@ public class OperationTemplate
 
     public bool IsActive { get; set; } = true;
 
+    // ── سیاست الگو (DDL 084، G7) — همه اختیاری؛ الگوی قدیمی بدون تغییر کار می‌کند ──
+
+    /// <summary>جملهٔ «به زبان ساده» با همان جایگزینی <c>{key}</c> شرح سند؛ خالی ⇒ شرح سند.</summary>
+    public string? PlainPattern { get; set; }
+
+    /// <summary>سقف مبلغ (ریال)؛ بالاتر ⇒ ریسک بالا و تأیید مدیر مالی. null = بدون سقف.</summary>
+    public long? MaxAmount { get; set; }
+
+    /// <summary>مدرک الزامی است؟ نبود پیوست ⇒ هشدار و ریسک متوسط.</summary>
+    public bool RequireAttachment { get; set; }
+
+    /// <summary>کف ریسک ذاتی عملیات؛ null = پایین.</summary>
+    public RiskLevel? RiskBase { get; set; }
+
+    public TemplateCategory? Category { get; set; }
+
     public string CreatedBy { get; set; } = default!;
     public DateTime CreatedAtUtc { get; set; }
 
     public List<TemplateParameter> Parameters { get; set; } = new();
     public List<TemplateLine> Lines { get; set; } = new();
+}
+
+/// <summary>سطح ریسک: ۱ پایین، ۲ متوسط، ۳ بالا (ترتیب = شدت).</summary>
+public enum RiskLevel { Low = 1, Medium = 2, High = 3 }
+
+/// <summary>دستهٔ الگو برای گروه‌بندی در رابط (DDL 084).</summary>
+public enum TemplateCategory
+{
+    Expense = 1,
+    Payment = 2,
+    Receipt = 3,
+    Purchase = 4,
+    PettyCash = 5,
+    Sales = 6,
+    Other = 9
+}
+
+/// <summary>منبع مبلغ یک ردیف الگو (DDL 084، G9).</summary>
+public enum LineAmountSource
+{
+    /// <summary>درصد از پارامتر مبلغ (رفتار قبلی)</summary>
+    Parameter = 1,
+    /// <summary>نرخ مؤثر ارزش افزودهٔ <c>TB_SL_VAT_RATE</c> در تاریخ سند × پارامتر مبلغ، گرد به ریال صحیح</summary>
+    Vat = 2
 }
 
 public enum ParameterType
@@ -58,7 +98,9 @@ public enum ParameterType
     /// <summary>یک تفصیلی از یک گروه تفصیلی مشخص (شخص، بانک، صندوق، ...)</summary>
     Detail = 2,
     Text = 3,
-    Date = 4
+    Date = 4,
+    /// <summary>سؤال انتخابی با گزینه‌های <see cref="TemplateParameter.OptionsJson"/> (و همیشه «نمی‌دانم»)</summary>
+    Choice = 5
 }
 
 /// <summary>اطلاعاتی که برای اجرای الگو باید از کاربر گرفته شود.</summary>
@@ -84,6 +126,9 @@ public class TemplateParameter
     public string AskPrompt { get; set; } = default!;
 
     public int SortOrder { get; set; }
+
+    /// <summary>برای Type=Choice: JSON فهرست <c>[{"value":"yes","label":"بله"}]</c> (DDL 084).</summary>
+    public string? OptionsJson { get; set; }
 }
 
 public enum LineSide { Debit = 1, Credit = 2 }
@@ -100,7 +145,7 @@ public class TemplateLine
     public Guid SubsidiaryAccountId { get; set; }
 
     /// <summary>پارامتر مبلغی که این ردیف از آن محاسبه می‌شود</summary>
-    public string AmountParameterKey { get; set; } = default!;
+    public string? AmountParameterKey { get; set; } // ردیف تراز‌کننده: خالی (Oracle آن را NULL ذخیره می‌کند)
 
     /// <summary>درصد از مبلغ پارامتر (۱۰۰ = کل مبلغ). برای مالیات، کسورات و ...</summary>
     public decimal Percent { get; set; } = 100m;
@@ -115,6 +160,15 @@ public class TemplateLine
     public string? DescriptionPattern { get; set; }
 
     public int SortOrder { get; set; }
+
+    /// <summary>ردیف شرطی (DDL 084، G8): کلید سؤال انتخابی؛ null = همیشه ساخته می‌شود.</summary>
+    public string? ConditionParamKey { get; set; }
+
+    /// <summary>ردیف فقط وقتی ساخته می‌شود که جواب <see cref="ConditionParamKey"/> برابر این مقدار باشد.</summary>
+    public string? ConditionValue { get; set; }
+
+    /// <summary>منبع مبلغ ردیف (DDL 084، G9)؛ پیش‌فرض پارامتر.</summary>
+    public LineAmountSource AmountSource { get; set; } = LineAmountSource.Parameter;
 
     public List<TemplateLineDetail> Details { get; set; } = new();
 }

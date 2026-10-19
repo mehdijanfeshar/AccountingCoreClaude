@@ -60,6 +60,7 @@ public static class DependencyInjection
         // by the three «ارتباط معین با گروه تفصیلی» handlers, which keeps TB_ACCOUNT_LINK_LEVEL in
         // step with TB_ACCOUNT_LINK_TAFSILGROUP. Scoped, so it joins the caller's unit of work.
         services.AddScoped<AccountLevelLinkSynchronizer>();
+        services.AddScoped<Accounting.Application.Vouchers.Inbox.ISystemVoucherIngestService, Accounting.Application.Vouchers.Inbox.SystemVoucherIngestService>();
 
         // صورت‌های مالی (فاز ۴۵) — قواعد تفکیک واحد (دیدن/تغییر قالب، اولویت قالب در اجرا، گروه سهم واحدها).
         services.AddScoped<Accounting.Application.FinancialStatements.IFsUnitScopeProvider,

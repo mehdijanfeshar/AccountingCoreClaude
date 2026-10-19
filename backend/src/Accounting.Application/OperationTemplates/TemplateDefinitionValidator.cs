@@ -29,6 +29,10 @@ public sealed partial class TemplateDefinitionValidator
         if (string.IsNullOrWhiteSpace(t.VoucherDescriptionPattern)) e.Add("الگوی شرح سند الزامی است.");
         if ((t.Keywords?.Length ?? 0) > 1000) e.Add("کلمات کلیدی حداکثر ۱۰۰۰ کاراکتر است.");
         if ((t.AllowedVahedTypes?.Length ?? 0) > 400) e.Add("فهرست نوع واحدهای مجاز طولانی‌تر از حد است.");
+        if ((t.PlainPattern?.Length ?? 0) > 1000) e.Add("جملهٔ ساده حداکثر ۱۰۰۰ کاراکتر است.");
+        if (t.MaxAmount is <= 0) e.Add("سقف مبلغ باید بزرگ‌تر از صفر باشد.");
+        if (t.RiskBase is { } rb && !Enum.IsDefined(rb)) e.Add("ریسک پایه نامعتبر است (۱ پایین، ۲ متوسط، ۳ بالا).");
+        if (t.Category is { } cat && !Enum.IsDefined(cat)) e.Add("دستهٔ الگو نامعتبر است.");
 
         // ── پارامترها ──
         var pByKey = new Dictionary<string, TemplateParameter>(StringComparer.OrdinalIgnoreCase);
@@ -43,18 +47,20 @@ public sealed partial class TemplateDefinitionValidator
                 e.Add($"پارامتر تفصیلی «{p.Key}» باید گروه تفصیلی داشته باشد.");
             if (p.Type != ParameterType.Detail && p.DetailGroupId is not null)
                 e.Add($"پارامتر «{p.Key}» تفصیلی نیست و نباید گروه تفصیلی داشته باشد.");
+            if (p.Type == ParameterType.Choice) ValidateChoice(p, e);
+            else if (!string.IsNullOrWhiteSpace(p.OptionsJson))
+                e.Add($"پارامتر «{p.Key}» انتخابی نیست و نباید گزینه داشته باشد.");
         }
 
         // ── ردیف‌ها ──
         if (!t.Lines.Any(l => l.Side == LineSide.Debit) || !t.Lines.Any(l => l.Side == LineSide.Credit))
             e.Add("الگو باید حداقل یک ردیف بدهکار و یک ردیف بستانکار داشته باشد.");
 
-        var balancingCount = t.Lines.Count(l => l.IsBalancingLine);
-        if (balancingCount > 1) e.Add("حداکثر یک ردیف تراز‌کننده مجاز است.");
 
         foreach (var l in t.Lines)
         {
             var name = $"ردیف {l.SortOrder}";
+            ValidateLinePolicy(l, name, pByKey, e);
             if (!l.IsBalancingLine)
             {
                 if (!pByKey.TryGetValue(l.AmountParameterKey ?? "", out var ap) || ap.Type != ParameterType.Amount)
@@ -76,25 +82,11 @@ public sealed partial class TemplateDefinitionValidator
             }
         }
 
-        // ── تراز ساختاری: بدون ردیف تراز‌کننده، برای هر پارامتر مبلغ جمع درصدها باید برابر باشد ──
-        if (balancingCount == 0 && t.Lines.Any(l => l.Percent != 100m))
-            e.Add("الگویی که ردیف درصدی (غیر از ۱۰۰٪) دارد باید ردیف تراز‌کننده داشته باشد؛ " +
-                  "وگرنه گرد کردن ممکن است سند را یک ریال نامتراز کند.");
-
-        if (balancingCount == 0)
-        {
-            foreach (var g in t.Lines.GroupBy(l => l.AmountParameterKey, StringComparer.OrdinalIgnoreCase))
-            {
-                var dr = g.Where(l => l.Side == LineSide.Debit).Sum(l => l.Percent);
-                var cr = g.Where(l => l.Side == LineSide.Credit).Sum(l => l.Percent);
-                if (dr != cr)
-                    e.Add($"برای مبلغ «{g.Key}» جمع درصد بدهکار ({dr}) با بستانکار ({cr}) برابر نیست؛ " +
-                          "یا درصدها را اصلاح کنید یا یک ردیف تراز‌کننده تعریف کنید.");
-            }
-        }
+        // ── تراز ساختاری برای هر ترکیب جواب‌های انتخابی (G8): ردیف‌های شرطی هر شاخه باید خودشان تراز باشند ──
+        if (e.Count == 0) ValidateBalanceCombinations(t, pByKey, e);
 
         // ── Placeholderهای شرح ──
-        foreach (var pattern in t.Lines.Select(l => l.DescriptionPattern).Append(t.VoucherDescriptionPattern))
+        foreach (var pattern in t.Lines.Select(l => l.DescriptionPattern).Append(t.VoucherDescriptionPattern).Append(t.PlainPattern))
         {
             if (string.IsNullOrEmpty(pattern)) continue;
             foreach (Match m in PlaceholderRx().Matches(pattern))
@@ -138,4 +130,115 @@ public sealed partial class TemplateDefinitionValidator
 
         return e;
     }
+
+    // ─────────── G8: سؤال انتخابی ───────────
+
+    [GeneratedRegex("^[a-zA-Z0-9_]{1,30}$")] private static partial Regex OptionValueRx();
+
+    private static void ValidateChoice(TemplateParameter p, List<string> e)
+    {
+        if ((p.OptionsJson?.Length ?? 0) > 2000) { e.Add($"گزینه‌های «{p.Key}» طولانی‌تر از حد است."); return; }
+        var options = ChoiceOptions.Parse(p.OptionsJson);
+        if (options.Count < 2) { e.Add($"سؤال انتخابی «{p.Key}» حداقل دو گزینه لازم دارد."); return; }
+        if (options.Count > 20) e.Add($"سؤال انتخابی «{p.Key}» حداکثر ۲۰ گزینه دارد.");
+        if (options.GroupBy(o => o.Value, StringComparer.Ordinal).Any(g => g.Count() > 1))
+            e.Add($"مقدار گزینه‌های «{p.Key}» تکراری است.");
+        foreach (var o in options)
+        {
+            if (!OptionValueRx().IsMatch(o.Value))
+                e.Add($"مقدار گزینهٔ «{o.Value}» در «{p.Key}» باید لاتین/عدد/_ و حداکثر ۳۰ نویسه باشد.");
+            else if (string.Equals(o.Value, ChoiceOptions.Unknown, StringComparison.OrdinalIgnoreCase))
+                e.Add($"مقدار «{ChoiceOptions.Unknown}» رزرو است؛ «نمی‌دانم» خودکار اضافه می‌شود.");
+            if (string.IsNullOrWhiteSpace(o.Label) || o.Label.Length > 100)
+                e.Add($"عنوان گزینهٔ «{o.Value}» در «{p.Key}» الزامی و حداکثر ۱۰۰ نویسه است.");
+        }
+    }
+
+    /// <summary>شرط ردیف (G8) و منبع مبلغ ارزش افزوده (G9).</summary>
+    private static void ValidateLinePolicy(TemplateLine l, string name, IReadOnlyDictionary<string, TemplateParameter> pByKey, List<string> e)
+    {
+        var hasKey = !string.IsNullOrWhiteSpace(l.ConditionParamKey);
+        var hasValue = !string.IsNullOrWhiteSpace(l.ConditionValue);
+        if (hasKey != hasValue)
+            e.Add($"{name}: شرط ردیف باید هم سؤال انتخابی و هم مقدار داشته باشد.");
+        else if (hasKey)
+        {
+            if (!pByKey.TryGetValue(l.ConditionParamKey!, out var cp) || cp.Type != ParameterType.Choice)
+                e.Add($"{name}: شرط ردیف باید به یک سؤال انتخابی اشاره کند («{l.ConditionParamKey}» وجود ندارد یا انتخابی نیست).");
+            else if (!ChoiceOptions.Parse(cp.OptionsJson).Any(o => o.Value == l.ConditionValue))
+                e.Add($"{name}: مقدار شرط «{l.ConditionValue}» جزو گزینه‌های «{cp.Key}» نیست.");
+        }
+
+        if (!Enum.IsDefined(l.AmountSource))
+            e.Add($"{name}: منبع مبلغ نامعتبر است.");
+        else if (l.AmountSource == LineAmountSource.Vat && l.IsBalancingLine)
+            e.Add($"{name}: ردیف تراز‌کننده نمی‌تواند ارزش افزوده باشد.");
+    }
+
+    private const int MaxCombinations = 512;
+
+    /// <summary>
+    /// برای هر ترکیب جواب‌های سؤال‌های انتخابیِ مورد استفاده در شرط‌ها (به‌علاوهٔ «نمی‌دانم»)، ردیف‌های ساخته‌شده
+    /// باید حداقل یک بدهکار و یک بستانکار داشته باشند و یا تراز باشند (جمع درصدها) یا دقیقاً یک ردیف تراز‌کننده داشته باشند.
+    /// </summary>
+    private static void ValidateBalanceCombinations(OperationTemplate t, IReadOnlyDictionary<string, TemplateParameter> pByKey, List<string> e)
+    {
+        var keys = t.Lines.Where(l => !string.IsNullOrWhiteSpace(l.ConditionParamKey))
+            .Select(l => l.ConditionParamKey!).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var domains = keys.Select(k => ChoiceOptions.Parse(pByKey[k].OptionsJson).Select(o => o.Value).Append(ChoiceOptions.Unknown).ToList()).ToList();
+
+        long total = 1;
+        foreach (var d in domains) total *= d.Count;
+        if (total > MaxCombinations)
+        {
+            e.Add($"ترکیب جواب‌های سؤال‌های انتخابیِ شرط‌ها بیش از {MaxCombinations} حالت است؛ شرط‌ها را ساده‌تر کنید.");
+            return;
+        }
+
+        var seen = new HashSet<string>();
+        void Add(string msg) { if (seen.Add(msg)) e.Add(msg); }
+
+        var answers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        void Walk(int i)
+        {
+            if (i < keys.Count)
+            {
+                foreach (var v in domains[i]) { answers[keys[i]] = v; Walk(i + 1); }
+                return;
+            }
+            var suffix = keys.Count == 0 ? "" : " (وقتی " + string.Join("، ", keys.Select(k => $"«{pByKey[k].Title}» = {Label(pByKey[k], answers[k])}")) + ")";
+            var active = t.Lines.Where(l => TemplateLogic.LineApplies(l, k => answers.GetValueOrDefault(k))).ToList();
+
+            if (!active.Any(l => l.Side == LineSide.Debit) || !active.Any(l => l.Side == LineSide.Credit))
+            { Add("سند باید حداقل یک ردیف بدهکار و یک ردیف بستانکار داشته باشد" + suffix + "."); return; }
+
+            var balancing = active.Count(l => l.IsBalancingLine);
+            if (balancing > 1) { Add("حداکثر یک ردیف تراز‌کننده مجاز است" + suffix + "."); return; }
+            if (balancing == 1) return;
+
+            if (active.Any(l => l.AmountSource == LineAmountSource.Vat))
+            { Add("الگویی که ردیف ارزش افزوده دارد باید ردیف تراز‌کننده هم داشته باشد (مبلغ با مالیات تراز می‌شود)" + suffix + "."); return; }
+
+            if (active.Any(l => l.Percent != 100m))
+            {
+                Add("الگویی که ردیف درصدی (غیر از ۱۰۰٪) دارد باید ردیف تراز‌کننده داشته باشد؛ " +
+                    "وگرنه گرد کردن ممکن است سند را یک ریال نامتراز کند" + suffix + ".");
+                return;
+            }
+
+            foreach (var g in active.GroupBy(l => l.AmountParameterKey ?? "", StringComparer.OrdinalIgnoreCase))
+            {
+                var dr = g.Where(l => l.Side == LineSide.Debit).Sum(l => l.Percent);
+                var cr = g.Where(l => l.Side == LineSide.Credit).Sum(l => l.Percent);
+                if (dr != cr)
+                    Add($"برای مبلغ «{g.Key}» جمع درصد بدهکار ({dr}) با بستانکار ({cr}) برابر نیست" + suffix + "؛ " +
+                        "یا درصدها را اصلاح کنید یا یک ردیف تراز‌کننده تعریف کنید.");
+            }
+        }
+        Walk(0);
+    }
+
+    private static string Label(TemplateParameter p, string value) =>
+        value == ChoiceOptions.Unknown ? ChoiceOptions.UnknownLabel
+            : ChoiceOptions.Parse(p.OptionsJson).FirstOrDefault(o => o.Value == value)?.Label ?? value;
 }

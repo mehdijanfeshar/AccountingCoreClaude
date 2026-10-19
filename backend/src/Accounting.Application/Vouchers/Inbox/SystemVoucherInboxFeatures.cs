@@ -443,6 +443,8 @@ public sealed class ReceiveSystemVoucherCommandHandler : IRequestHandler<Receive
         var now = DateTime.UtcNow;
         var userId = _currentUser.UserId;
         var docNum = await _headRepository.GetNextDocNumAsync(c.VahedCode, year, ct);
+        // نوع سیستم مبدأ (کد TB_SYSTYPE) → SYSTEM_TYPE سند؛ کد ناشناخته (سندهای قدیمی) = بدون نوع.
+        var sysType = string.IsNullOrWhiteSpace(tmp.SYS_TYPE) ? null : await _repo.ResolveSysTypeAsync(tmp.SYS_TYPE, ct);
 
         var head = new TB_VOUCHERSHEAD
         {
@@ -451,7 +453,8 @@ public sealed class ReceiveSystemVoucherCommandHandler : IRequestHandler<Receive
             DATE_DOC = dateDoc,
             DOCLIFE = DocLife.Draft,
             HEAD_DESC = Truncate(tmp.HEAD_DESC, 250),
-            APENDIX = Truncate($"دریافت از سیستم {tmp.SYS_TYPE}".Trim(), 800),
+            APENDIX = Truncate($"دریافت از سیستم {sysType?.Name?.Trim() ?? tmp.SYS_TYPE}".Trim(), 800),
+            SYSTEM_TYPE = sysType?.Id,
             VAHEDCODE = c.VahedCode,
             YEAR = year,
             ISAUTOMATIC = true,

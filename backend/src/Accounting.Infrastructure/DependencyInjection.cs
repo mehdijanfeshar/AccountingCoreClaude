@@ -307,6 +307,12 @@ public static class DependencyInjection
         services.AddHttpClient(nameof(Accounting.Infrastructure.Idp.IdpPortalUserRoleProvider), c => c.Timeout = TimeSpan.FromSeconds(15));
         services.AddSingleton<IUserRoleProvider, Accounting.Infrastructure.Idp.IdpPortalUserRoleProvider>();
 
+        // کافکا → صندوق «دریافت از سایر سیستم‌ها». بدون Kafka:BootstrapServers (یا Kafka:Enabled=false) خاموش.
+        var kafkaSection = configuration.GetSection(Accounting.Infrastructure.Messaging.Kafka.KafkaOptions.SectionName);
+        services.Configure<Accounting.Infrastructure.Messaging.Kafka.KafkaOptions>(kafkaSection);
+        if (kafkaSection.Get<Accounting.Infrastructure.Messaging.Kafka.KafkaOptions>() is { IsActive: true })
+            services.AddHostedService<Accounting.Infrastructure.Messaging.Kafka.KafkaSystemVoucherConsumer>();
+
         return services;
     }
 

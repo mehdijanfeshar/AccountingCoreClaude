@@ -22,11 +22,14 @@ public sealed class VoucherGenerationEngine : IVoucherGenerationEngine
 {
     private readonly ISubsidiaryAccountReader _accounts;
     private readonly IDetailReader _details;
+    private readonly Accounting.Application.Sales.ISalesRepository? _sales;
 
-    public VoucherGenerationEngine(ISubsidiaryAccountReader accounts, IDetailReader details)
+    public VoucherGenerationEngine(ISubsidiaryAccountReader accounts, IDetailReader details,
+        Accounting.Application.Sales.ISalesRepository? sales = null)
     {
         _accounts = accounts;
         _details = details;
+        _sales = sales; // نرخ ارزش افزودهٔ تاریخ‌دار (G9) از همان خواننده/مخزن ماژول فروش
     }
 
     public async Task<EngineResult> GenerateAsync(
@@ -51,6 +54,7 @@ public sealed class VoucherGenerationEngine : IVoucherGenerationEngine
         var amounts = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
         var detailParams = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
         var texts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var choices = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var p in template.Parameters.OrderBy(p => p.SortOrder))
         {
@@ -92,6 +96,22 @@ public sealed class VoucherGenerationEngine : IVoucherGenerationEngine
                         texts[p.Key] = FiscalYearGuard.Jalali(d);
                     break;
 
+                case ParameterType.Choice:
+                    if (string.Equals(raw, ChoiceOptions.Unknown, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // «نمی‌دانم» همیشه مجاز است؛ هشدار و ریسک متوسط را ارزیاب ریسک می‌دهد.
+                        choices[p.Key] = ChoiceOptions.Unknown;
+                        texts[p.Key] = ChoiceOptions.UnknownLabel;
+                    }
+                    else if (ChoiceOptions.Parse(p.OptionsJson).FirstOrDefault(o => o.Value == raw) is { } picked)
+                    {
+                        choices[p.Key] = picked.Value;
+                        texts[p.Key] = picked.Label;
+                    }
+                    else
+                        errors.Add(Invalid(p, "گزینهٔ انتخاب‌شده در فهرست نیست."));
+                    break;
+
                 default:
                     texts[p.Key] = raw;
                     break;
@@ -102,7 +122,9 @@ public sealed class VoucherGenerationEngine : IVoucherGenerationEngine
         if (errors.Count > 0) return EngineResult.Fail(errors);
 
         // ── ۲. بارگذاری حساب‌ها و تفصیلی‌ها (یک رفت‌وبرگشت برای هر کدام) ──
-        var lines = template.Lines.OrderBy(l => l.SortOrder).ToList();
+        // G8: ردیف شرطی فقط وقتی ساخته می‌شود که جواب سؤال انتخابی برابر مقدار شرط باشد.
+        var lines = template.Lines.OrderBy(l => l.SortOrder)
+            .Where(l => TemplateLogic.LineApplies(l, k => choices.GetValueOrDefault(k))).ToList();
 
         var accountIds = lines.Select(l => l.SubsidiaryAccountId).Distinct().ToList();
         var detailIds = detailParams.Values
@@ -131,6 +153,18 @@ public sealed class VoucherGenerationEngine : IVoucherGenerationEngine
         if (errors.Count > 0) return EngineResult.Fail(errors);
 
         // ── ۴. ساخت ردیف‌ها ──
+        // G9: نرخ مؤثر ارزش افزودهٔ تاریخ سند، فقط اگر ردیف ارزش‌افزوده‌ای ساخته می‌شود.
+        decimal vatRate = 0m;
+        if (lines.Any(l => l.AmountSource == LineAmountSource.Vat))
+        {
+            if (_sales is not null)
+                vatRate = Accounting.Application.Sales.SalesCalculator.VatRateFor(
+                    await _sales.ListVatRatesAsync(false, ct), FiscalYearGuard.Jalali(voucherDate).Replace("/", ""));
+            if (vatRate <= 0)
+                return EngineResult.Fail(new EngineError(EngineErrorCode.InvalidParameterValue,
+                    "نرخ ارزش افزوده برای تاریخ سند تعریف نشده است؛ نرخ‌ها را در تنظیمات فروش وارد کنید."));
+        }
+
         var built = new List<(TemplateLine Tpl, SubsidiaryAccountInfo Acc, List<VoucherDraftDetail> Dets, long Amount)>();
 
         foreach (var line in lines)
@@ -153,16 +187,18 @@ public sealed class VoucherGenerationEngine : IVoucherGenerationEngine
             long amount = 0;
             if (!line.IsBalancingLine)
             {
-                if (!amounts.TryGetValue(line.AmountParameterKey, out var baseAmount))
+                if (!amounts.TryGetValue(line.AmountParameterKey ?? "", out var baseAmount))
                 {
                     // پارامتر مبلغ اختیاری و خالی ⇐ این ردیف تولید نمی‌شود
-                    if (paramByKey.TryGetValue(line.AmountParameterKey, out var ap) && !ap.IsRequired)
+                    if (paramByKey.TryGetValue(line.AmountParameterKey ?? "", out var ap) && !ap.IsRequired)
                         continue;
                     errors.Add(new EngineError(EngineErrorCode.InvalidParameterValue,
                         $"مبلغ ردیف «{acc.Title}» قابل محاسبه نیست (خطای تعریف الگو)."));
                     continue;
                 }
-                amount = (long)Math.Round(baseAmount * line.Percent / 100m, MidpointRounding.AwayFromZero);
+                amount = line.AmountSource == LineAmountSource.Vat
+                    ? (long)Math.Round(baseAmount * vatRate / 100m, MidpointRounding.AwayFromZero)
+                    : (long)Math.Round(baseAmount * line.Percent / 100m, MidpointRounding.AwayFromZero);
                 if (amount <= 0)
                 {
                     errors.Add(new EngineError(EngineErrorCode.NonPositiveAmount,
@@ -210,8 +246,10 @@ public sealed class VoucherGenerationEngine : IVoucherGenerationEngine
                 : Render(b.Tpl.DescriptionPattern!, placeholders),
             SubsidiaryAccountCode: b.Acc.Code)).ToList();
 
+        var plainText = string.IsNullOrWhiteSpace(template.PlainPattern) ? null : Render(template.PlainPattern!, placeholders);
+
         return EngineResult.Ok(new VoucherDraft(vahedCode, voucherDate, voucherDesc, template.Code, draftLines,
-            SystemTypeId: template.SystemTypeId));
+            SystemTypeId: template.SystemTypeId, PlainText: plainText));
     }
 
     private static List<VoucherDraftDetail> ResolveLineDetails(

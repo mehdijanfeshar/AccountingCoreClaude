@@ -17,7 +17,11 @@ namespace Accounting.Application.OperationTemplates;
 public sealed record PreviewOperationQuery(
     Guid TemplateId,
     DateOnly? VoucherDate,
-    Dictionary<string, string?> Values) : IRequest<OperationResult>, IVahedScopedQuery
+    Dictionary<string, string?> Values,
+    // فاز ۶۲ (همه اختیاری): منبع جواب‌ها، تأیید صریح جواب‌های هوش مصنوعی، و پیوست مدرک
+    Dictionary<string, string?>? AnswerSources = null,
+    bool AiConfirmed = false,
+    bool HasAttachment = false) : IRequest<OperationResult>, IVahedScopedQuery
 {
     /// <summary>از هدر X-Vahed-Code / واحد کاربر، به دست VahedScopeBehavior — هرگز از بدنه.</summary>
     [JsonIgnore]
@@ -34,16 +38,25 @@ public sealed record OperationResult(
     IReadOnlyList<EngineError> Errors,
     Guid? VoucherId = null,
     string? VoucherNo = null,
-    bool WasAlreadyExecuted = false);
+    bool WasAlreadyExecuted = false,
+    // فقط در Preview: جملهٔ ساده از الگوی شرح سند با جواب‌های جاینشان‌شده، و هشدارها (فعلاً خالی؛ G10).
+    string? PlainText = null,
+    IReadOnlyList<string>? Warnings = null,
+    // فاز ۶۲: ریسک، کنترل‌ها و مبنای محاسبه (Preview و Execute)
+    OperationRiskDto? Risk = null,
+    IReadOnlyList<ControlDto>? Controls = null,
+    OperationBasisDto? Basis = null);
 
 public sealed class PreviewOperationHandler : IRequestHandler<PreviewOperationQuery, OperationResult>
 {
     private readonly IOperationTemplateRepository _repo;
     private readonly IVoucherGenerationEngine _engine;
     private readonly AssistantUnitPolicy _policy;
+    private readonly OperationRiskEvaluator? _risk;
 
-    public PreviewOperationHandler(IOperationTemplateRepository repo, IVoucherGenerationEngine engine, AssistantUnitPolicy policy)
-    { _repo = repo; _engine = engine; _policy = policy; }
+    public PreviewOperationHandler(IOperationTemplateRepository repo, IVoucherGenerationEngine engine, AssistantUnitPolicy policy,
+        OperationRiskEvaluator? risk = null)
+    { _repo = repo; _engine = engine; _policy = policy; _risk = risk; }
 
     public async Task<OperationResult> Handle(PreviewOperationQuery q, CancellationToken ct)
     {
@@ -56,7 +69,13 @@ public sealed class PreviewOperationHandler : IRequestHandler<PreviewOperationQu
         if (await _policy.TemplateNotAllowedAsync(template!, q.VahedCode, ct) is { } notAllowed) return new(false, null, new[] { notAllowed });
         if (await _policy.PeriodLockedAsync(q.VahedCode, date, ct) is { } locked) return new(false, null, new[] { locked });
         var r = await _engine.GenerateAsync(template!, q.VahedCode, date, values, ct);
-        return new(r.IsSuccess, r.Draft, r.Errors);
+        var plain = r.Draft?.PlainText ?? r.Draft?.Description;
+        if (!r.IsSuccess || _risk is null)
+            return new(r.IsSuccess, r.Draft, r.Errors, PlainText: plain, Warnings: Array.Empty<string>());
+
+        // ریسک و هشدار: همان ارزیابی که هنگام Execute ذخیره می‌شود
+        var a = await _risk.EvaluateAsync(new RiskRequest(template!, q.VahedCode, r.Draft!, values, false, q.HasAttachment, q.AnswerSources, q.AiConfirmed), ct);
+        return new(true, r.Draft, r.Errors, PlainText: plain, Warnings: a.Warnings, Risk: a.ToDto(), Controls: a.Controls, Basis: a.Basis);
     }
 
     internal static DateOnly Today() => DateOnly.FromDateTime(DateTime.Now);
@@ -80,7 +99,13 @@ public sealed record ExecuteOperationCommand(
     DateOnly? VoucherDate,
     Dictionary<string, string?> Values,
     Guid ClientRequestId,
-    IReadOnlyList<DraftLineExtrasInput>? LineExtras = null) : IRequest<OperationResult>, IVahedScopedCommand
+    IReadOnlyList<DraftLineExtrasInput>? LineExtras = null,
+    Guid? AiTraceId = null,
+    // فاز ۶۲ (همه اختیاری): جملهٔ کاربر (≤۱۰۰۰)، منبع هر جواب، تأیید صریح جواب‌های هوش مصنوعی، پیوست مدرک
+    string? UserSentence = null,
+    Dictionary<string, string?>? AnswerSources = null,
+    bool AiConfirmed = false,
+    bool HasAttachment = false) : IRequest<OperationResult>, IVahedScopedCommand
 {
     [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
@@ -99,10 +124,13 @@ public sealed class ExecuteOperationHandler : IRequestHandler<ExecuteOperationCo
     private readonly IVoucherWriter _writer;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IHesabyarAuditRepository? _audit;
+    private readonly OperationRiskEvaluator? _risk;
 
     public ExecuteOperationHandler(IOperationTemplateRepository repo, IVoucherGenerationEngine engine,
-        ComposedVoucherBuilder composer, IVoucherWriter writer, IUnitOfWork unitOfWork, ICurrentUser currentUser, AssistantUnitPolicy policy)
-    { _repo = repo; _engine = engine; _composer = composer; _writer = writer; _unitOfWork = unitOfWork; _currentUser = currentUser; _policy = policy; }
+        ComposedVoucherBuilder composer, IVoucherWriter writer, IUnitOfWork unitOfWork, ICurrentUser currentUser, AssistantUnitPolicy policy,
+        IHesabyarAuditRepository? audit = null, OperationRiskEvaluator? risk = null)
+    { _repo = repo; _engine = engine; _composer = composer; _writer = writer; _unitOfWork = unitOfWork; _currentUser = currentUser; _policy = policy; _audit = audit; _risk = risk; }
 
     public async Task<OperationResult> Handle(ExecuteOperationCommand c, CancellationToken ct)
     {
@@ -137,10 +165,24 @@ public sealed class ExecuteOperationHandler : IRequestHandler<ExecuteOperationCo
         var extrasErrors = await _composer.ValidateExtrasAsync(draft, ct);
         if (extrasErrors.Count > 0) return new(false, draft, extrasErrors);
 
+        // ریسک و هشدار با همان ارزیاب Preview (قطعی)؛ روی ردیف اجرا ذخیره می‌شود.
+        var assessment = _risk is null ? null
+            : await _risk.EvaluateAsync(new RiskRequest(template!, c.VahedCode, draft, values, false, c.HasAttachment, c.AnswerSources, c.AiConfirmed), ct);
+
         // writer فقط stage می‌کند؛ سند و ردپای اجرا با یک SaveChanges (یک تراکنش) ثبت می‌شوند.
         var (voucherId, voucherNo) = await _writer.CreateDraftVoucherAsync(draft, ct);
 
-        await _repo.AddExecutionAsync(new OperationExecution
+        // G4: فقط ردپای همین کاربر در همین واحد به اجرا وصل می‌شود؛ شناسهٔ ناشناس/بیگانه نادیده گرفته می‌شود.
+        Guid? aiTraceId = null;
+        if (c.AiTraceId is { } traceId && _audit is not null
+            && await _audit.FindTraceAsync(traceId, ct) is { } trace
+            && trace.VahedCode == c.VahedCode && trace.CreatedBy == _currentUser.UserId)
+            aiTraceId = trace.Id;
+
+        // G3: تصویر الگو و هش آن در لحظهٔ اجرا
+        var (snapshotJson, snapshotHash) = TemplateSnapshot.Create(template!);
+
+        var execution = new OperationExecution
         {
             Id = Guid.NewGuid(),
             ClientRequestId = c.ClientRequestId,
@@ -152,8 +194,13 @@ public sealed class ExecuteOperationHandler : IRequestHandler<ExecuteOperationCo
             VoucherNo = voucherNo,
             Channel = "Form",
             CreatedBy = _currentUser.UserId,
-            CreatedAtUtc = DateTime.UtcNow
-        }, ct);
+            CreatedAtUtc = DateTime.UtcNow,
+            TemplateSnapshot = snapshotJson,
+            TemplateHash = snapshotHash,
+            AiTraceId = aiTraceId
+        };
+        ExecutionOrigin.Apply(execution, c.UserSentence, c.AnswerSources, c.AiConfirmed, assessment, draft.TotalDebit);
+        await _repo.AddExecutionAsync(execution, ct);
 
         try
         {
@@ -167,7 +214,9 @@ public sealed class ExecuteOperationHandler : IRequestHandler<ExecuteOperationCo
             return AlreadyExecuted(winner);
         }
 
-        return new(true, draft, Array.Empty<EngineError>(), voucherId, voucherNo);
+        return new(true, draft, Array.Empty<EngineError>(), voucherId, voucherNo,
+            PlainText: draft.PlainText ?? draft.Description, Warnings: assessment?.Warnings,
+            Risk: assessment?.ToDto(), Controls: assessment?.Controls, Basis: assessment?.Basis);
     }
 
     private static OperationResult AlreadyExecuted(OperationExecution e) =>
@@ -202,14 +251,18 @@ public sealed record ListOperationTemplatesQuery : IRequest<IReadOnlyList<Templa
 }
 
 public sealed record TemplateSummaryDto(Guid Id, string Code, string Title, string Description,
-    IReadOnlyList<TemplateParameterDto> Parameters, string? Keywords = null);
+    IReadOnlyList<TemplateParameterDto> Parameters, string? Keywords = null,
+    // فاز ۶۲: سیاست الگو، تعداد سؤال‌ها و تعداد اجرا در واحد جاری
+    long? MaxAmount = null, bool RequireAttachment = false, RiskLevel? RiskBase = null, TemplateCategory? Category = null,
+    string? PlainPattern = null, int QuestionCount = 0, int UsageCountInUnit = 0);
 
 // PickerAccountId/PickerLevel فقط در خروجی فهرست: معین و سطح (LEVEL_CODE) اولین ردیفی که این پارامتر
 // تفصیلی را مصرف می‌کند؛ فرانت با account-codes/{id}/tafsili-levels/{levelId}/items (همان قاعدهٔ B)
 // فهرست انتخاب را می‌سازد.
 public sealed record TemplateParameterDto(string Key, string Title, ParameterType Type,
     Guid? DetailGroupId, bool IsRequired, string AskPrompt, int SortOrder,
-    Guid? PickerAccountId = null, int? PickerLevel = null);
+    Guid? PickerAccountId = null, int? PickerLevel = null,
+    IReadOnlyList<ChoiceOptionDto>? Options = null);
 
 public sealed class ListOperationTemplatesHandler
     : IRequestHandler<ListOperationTemplatesQuery, IReadOnlyList<TemplateSummaryDto>>
@@ -223,14 +276,20 @@ public sealed class ListOperationTemplatesHandler
     public async Task<IReadOnlyList<TemplateSummaryDto>> Handle(ListOperationTemplatesQuery q, CancellationToken ct)
     {
         var list = await _policy.FilterAsync(await _repo.ListActiveWithParametersAsync(ct), q.VahedCode, ct);
+        var usage = string.IsNullOrWhiteSpace(q.VahedCode)
+            ? new Dictionary<Guid, int>()
+            : (await _repo.UsageAsync(q.VahedCode, ct)).ToDictionary(u => u.TemplateId, u => u.Count);
         return list.Select(t => new TemplateSummaryDto(t.Id, t.Code, t.Title, t.Description,
             t.Parameters.OrderBy(p => p.SortOrder)
              .Select(p =>
              {
                  var binding = p.Type == ParameterType.Detail ? FindBinding(t, p.Key) : null;
                  return new TemplateParameterDto(p.Key, p.Title, p.Type, p.DetailGroupId,
-                     p.IsRequired, p.AskPrompt, p.SortOrder, binding?.AccountId, binding?.Level);
-             }).ToList(), t.Keywords)).ToList();
+                     p.IsRequired, p.AskPrompt, p.SortOrder, binding?.AccountId, binding?.Level,
+                     p.Type == ParameterType.Choice ? ChoiceOptions.Parse(p.OptionsJson) : null);
+             }).ToList(), t.Keywords,
+            t.MaxAmount, t.RequireAttachment, t.RiskBase, t.Category, t.PlainPattern,
+            t.Parameters.Count, usage.GetValueOrDefault(t.Id))).ToList();
     }
 
     private static (Guid AccountId, int Level)? FindBinding(OperationTemplate t, string key)
@@ -251,11 +310,16 @@ public sealed record CreateOperationTemplateCommand(
     List<TemplateLineDto> Lines,
     Guid? SystemTypeId = null,
     string? Keywords = null,
-    IReadOnlyList<string>? AllowedVahedTypes = null) : IRequest<CreateTemplateResult>;
+    IReadOnlyList<string>? AllowedVahedTypes = null,
+    string? PlainPattern = null, long? MaxAmount = null, bool RequireAttachment = false,
+    RiskLevel? RiskBase = null, TemplateCategory? Category = null) : IRequest<CreateTemplateResult>;
 
 public sealed record TemplateLineDto(LineSide Side, Guid SubsidiaryAccountId, string? AmountParameterKey,
     decimal Percent, bool IsBalancingLine, string? DescriptionPattern, int SortOrder,
-    List<TemplateLineDetailDto> Details);
+    List<TemplateLineDetailDto> Details,
+    // فاز ۶۲: ردیف شرطی (G8) و منبع مبلغ (G9: 1 پارامتر، 2 ارزش افزوده)
+    string? ConditionParamKey = null, string? ConditionValue = null,
+    LineAmountSource AmountSource = LineAmountSource.Parameter);
 
 public sealed record TemplateLineDetailDto(int Level, string? ParameterKey, Guid? FixedDetailId);
 
@@ -282,7 +346,8 @@ public sealed class CreateOperationTemplateHandler
         await TemplateMapping.EnsureAbilityAsync(_currentUser, _hq, AbilityCatalog.TemplatesDefine, "الگوی عملیات", ct);
 
         var t = TemplateMapping.Build(Guid.NewGuid(), c.Code, c.Title, c.Description, c.VoucherDescriptionPattern,
-            c.Parameters, c.Lines, c.SystemTypeId, c.Keywords, c.AllowedVahedTypes);
+            c.Parameters, c.Lines, c.SystemTypeId, c.Keywords, c.AllowedVahedTypes,
+            new TemplatePolicyInput(c.PlainPattern, c.MaxAmount, c.RequireAttachment, c.RiskBase, c.Category));
         t.CreatedBy = _currentUser.UserId;
         t.CreatedAtUtc = DateTime.UtcNow;
 

@@ -2,6 +2,7 @@
 using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Commands.Vouchers.Common;
+using Accounting.Application.OperationTemplates;
 using MediatR;
 
 namespace Accounting.Application.Commands.Vouchers.ChangeVoucherState;
@@ -12,17 +13,20 @@ public sealed class ChangeVoucherStateCommandHandler : IRequestHandler<ChangeVou
     private readonly IVoucherDetailRepository _voucherDetailRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IHesabyarVoucherStateHook? _hesabyarHook;
 
     public ChangeVoucherStateCommandHandler(
         IVoucherHeadRepository voucherHeadRepository,
         IVoucherDetailRepository voucherDetailRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IHesabyarVoucherStateHook? hesabyarHook = null)
     {
         _voucherHeadRepository = voucherHeadRepository;
         _voucherDetailRepository = voucherDetailRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _hesabyarHook = hesabyarHook;
     }
 
     public async Task Handle(ChangeVoucherStateCommand request, CancellationToken cancellationToken)
@@ -60,6 +64,13 @@ public sealed class ChangeVoucherStateCommandHandler : IRequestHandler<ChangeVou
         if (VoucherBalanceGuard.RequiresBalance(request.NewState))
         {
             await VoucherBalanceGuard.EnsureBalancedAsync(_voucherDetailRepository, found, cancellationToken);
+        }
+
+        // حسابیار (فاز ۶۰/۶۱): تفکیک وظایف G1 (ثبت‌کنندهٔ سند اجرا-دار نمی‌تواند «بررسی‌شده» کند، ۴۰۳ برای کل دسته)
+        // و ثبت تاریخچهٔ بررسی/ارسال دوباره در همین تراکنش. روی سندهای بدون ردیف TB_OP_EXECUTION بی‌اثر است.
+        if (_hesabyarHook is not null)
+        {
+            await _hesabyarHook.BeforeStateChangeAsync(found, request.NewState, cancellationToken);
         }
 
         var now = DateTime.UtcNow;

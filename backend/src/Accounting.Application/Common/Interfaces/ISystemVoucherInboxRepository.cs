@@ -24,6 +24,18 @@ public interface ISystemVoucherInboxRepository
 
     /// <summary>شمارهٔ سطح (۱..۷) ← شناسهٔ سطح تفصیلی فعال.</summary>
     Task<IReadOnlyDictionary<int, Guid>> GetLevelIdsByCodeAsync(CancellationToken ct);
+
+    /// <summary>کد نوع سیستم (<c>TB_SYSTYPE.SYS_COD</c>، همان <c>TB_TMP_VOUCHERHEAD.SYS_TYPE</c>) ← شناسه و نام؛ نبود = null.</summary>
+    Task<(Guid Id, string? Name)?> ResolveSysTypeAsync(string sysCode, CancellationToken ct);
+
+    // ورودی کافکا (SystemVoucherIngestService)
+    Task<bool> VahedExistsAsync(string vahedCode, CancellationToken ct);
+
+    /// <summary>سرسند موقت حذف‌نشدهٔ دیگری با همین SOURCEID در این واحد (دریافت‌شده یا نه).</summary>
+    Task<Guid?> FindStagedBySourceAsync(Guid sourceId, string vahedCode, CancellationToken ct);
+
+    /// <summary>فقط Add؛ ذخیره با IUnitOfWork.</summary>
+    Task StageAsync(TB_TMP_VOUCHERHEAD head, IReadOnlyList<TB_TMP_VOUCHERSDETAIL> lines, CancellationToken ct);
 }
 
 public sealed record SystemVoucherInboxRow(

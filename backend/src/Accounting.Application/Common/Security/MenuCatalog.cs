@@ -66,9 +66,11 @@ public static class MenuCatalog
         M("/assistant", Assistant, "ثبت سند با حسابیار", MenuGroupAccess.Operate, "OperationTemplates"),
         M("/assistant/batch", Assistant, "ثبت گروهی از اکسل", MenuGroupAccess.Operate, "OperationTemplates"),
         M("/assistant/history", Assistant, "سندهای حسابیار", MenuGroupAccess.Operate),
+        M("/assistant/review", Assistant, "کارتابل بررسی حسابیار", MenuGroupAccess.Operate),
         M("/assistant/reports", Assistant, "گزارش با حسابیار", MenuGroupAccess.Operate, "OperationTemplates"),
         M("/assistant/reports/manage", Assistant, "گزارش‌های ذخیره‌شده", MenuGroupAccess.Operate, "OperationTemplates"),
         M("/assistant/templates", Assistant, "الگوهای عملیات", MenuGroupAccess.Operate, "OperationTemplates"),
+        M("/assistant/templates/discover", Assistant, "کشف الگو از اسناد گذشته", MenuGroupAccess.Operate, "OperationTemplates"),
 
         M("/sales", Sales, "میز کار فروش", MenuGroupAccess.Operate),
         M("/sales/docs", Sales, "اسناد فروش", MenuGroupAccess.Operate, "Sales"),

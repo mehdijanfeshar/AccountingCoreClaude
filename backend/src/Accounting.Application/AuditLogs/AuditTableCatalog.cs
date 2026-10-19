@@ -29,7 +29,7 @@ public static class AuditTableCatalog
     /// </summary>
     public static readonly HashSet<string> ExcludedTables = new(StringComparer.OrdinalIgnoreCase)
     {
-        "TB_AUDITLOG", "TB_FS_RUN_ROW", "TB_FS_RUN_ACCOUNT", "TB_FS_RUN_STATEMENT", "TB_FS_RUN_CHECK",
+        "TB_AUDITLOG", "TB_OP_HISTORY_PATTERN", "TB_OP_HISTORY_PATTERN_UNIT", "TB_FS_RUN_ROW", "TB_FS_RUN_ACCOUNT", "TB_FS_RUN_STATEMENT", "TB_FS_RUN_CHECK",
     };
 
     private static AuditTableInfo T(string table, string title, params string[] labels) => new(table, title, labels);

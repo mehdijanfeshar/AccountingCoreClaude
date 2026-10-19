@@ -36,7 +36,10 @@ public sealed record PreviewComposedVoucherQuery(
     string? Description,
     string? Apendix,
     List<ComposedLineInput> Lines,
-    Guid? SystemTypeId = null) : IRequest<OperationResult>, IVahedScopedQuery
+    Guid? SystemTypeId = null,
+    // فاز ۶۲ (اختیاری): الگوی مبدأ و پیوست مدرک برای ارزیابی ریسک
+    Guid? SourceTemplateId = null,
+    bool HasAttachment = false) : IRequest<OperationResult>, IVahedScopedQuery
 {
     [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
@@ -53,7 +56,12 @@ public sealed record ExecuteComposedVoucherCommand(
     List<ComposedLineInput> Lines,
     Guid? SourceTemplateId,
     Guid ClientRequestId,
-    Guid? SystemTypeId = null) : IRequest<OperationResult>, IVahedScopedCommand
+    Guid? SystemTypeId = null,
+    // فاز ۶۲ (همه اختیاری): جملهٔ کاربر، منبع جواب‌ها، تأیید جواب‌های هوش مصنوعی، پیوست مدرک
+    string? UserSentence = null,
+    Dictionary<string, string?>? AnswerSources = null,
+    bool AiConfirmed = false,
+    bool HasAttachment = false) : IRequest<OperationResult>, IVahedScopedCommand
 {
     [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
@@ -66,12 +74,20 @@ public sealed record ExecuteComposedVoucherCommand(
 public sealed class PreviewComposedVoucherHandler : IRequestHandler<PreviewComposedVoucherQuery, OperationResult>
 {
     private readonly ComposedVoucherBuilder _builder;
-    public PreviewComposedVoucherHandler(ComposedVoucherBuilder builder) => _builder = builder;
+    private readonly IOperationTemplateRepository? _repo;
+    private readonly OperationRiskEvaluator? _risk;
+
+    public PreviewComposedVoucherHandler(ComposedVoucherBuilder builder, IOperationTemplateRepository? repo = null, OperationRiskEvaluator? risk = null)
+    { _builder = builder; _repo = repo; _risk = risk; }
 
     public async Task<OperationResult> Handle(PreviewComposedVoucherQuery q, CancellationToken ct)
     {
         var r = await _builder.BuildAsync(q.VahedCode, q.VoucherDate, q.Description, q.Apendix, q.Lines, "MANUAL", q.Year, q.SystemTypeId, ct);
-        return new(r.IsSuccess, r.Draft, r.Errors);
+        if (!r.IsSuccess || _risk is null) return new(r.IsSuccess, r.Draft, r.Errors);
+
+        var source = q.SourceTemplateId is Guid sid && _repo is not null ? await _repo.GetFullAsync(sid, ct) : null;
+        var a = await _risk.EvaluateAsync(new RiskRequest(source, q.VahedCode, r.Draft!, new Dictionary<string, string?>(), true, q.HasAttachment, null, false), ct);
+        return new(true, r.Draft, r.Errors, PlainText: r.Draft!.Description, Warnings: a.Warnings, Risk: a.ToDto(), Controls: a.Controls, Basis: a.Basis);
     }
 }
 
@@ -82,10 +98,11 @@ public sealed class ExecuteComposedVoucherHandler : IRequestHandler<ExecuteCompo
     private readonly IVoucherWriter _writer;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly OperationRiskEvaluator? _risk;
 
     public ExecuteComposedVoucherHandler(ComposedVoucherBuilder builder, IOperationTemplateRepository repo,
-        IVoucherWriter writer, IUnitOfWork unitOfWork, ICurrentUser currentUser)
-    { _builder = builder; _repo = repo; _writer = writer; _unitOfWork = unitOfWork; _currentUser = currentUser; }
+        IVoucherWriter writer, IUnitOfWork unitOfWork, ICurrentUser currentUser, OperationRiskEvaluator? risk = null)
+    { _builder = builder; _repo = repo; _writer = writer; _unitOfWork = unitOfWork; _currentUser = currentUser; _risk = risk; }
 
     public async Task<OperationResult> Handle(ExecuteComposedVoucherCommand c, CancellationToken ct)
     {
@@ -112,7 +129,12 @@ public sealed class ExecuteComposedVoucherHandler : IRequestHandler<ExecuteCompo
 
         var (voucherId, voucherNo) = await _writer.CreateDraftVoucherAsync(r.Draft!, ct);
 
-        await _repo.AddExecutionAsync(new OperationExecution
+        var snapshot = source is null ? ((string Json, string Hash)?)null : TemplateSnapshot.Create(source);
+
+        var assessment = _risk is null ? null
+            : await _risk.EvaluateAsync(new RiskRequest(source, c.VahedCode, r.Draft!, new Dictionary<string, string?>(), true, c.HasAttachment, c.AnswerSources, c.AiConfirmed), ct);
+
+        var execution = new OperationExecution
         {
             Id = Guid.NewGuid(),
             ClientRequestId = c.ClientRequestId,
@@ -124,8 +146,12 @@ public sealed class ExecuteComposedVoucherHandler : IRequestHandler<ExecuteCompo
             VoucherNo = voucherNo,
             Channel = "Compose",
             CreatedBy = _currentUser.UserId,
-            CreatedAtUtc = DateTime.UtcNow
-        }, ct);
+            CreatedAtUtc = DateTime.UtcNow,
+            TemplateSnapshot = snapshot?.Json,
+            TemplateHash = snapshot?.Hash
+        };
+        ExecutionOrigin.Apply(execution, c.UserSentence, c.AnswerSources, c.AiConfirmed, assessment, r.Draft!.TotalDebit);
+        await _repo.AddExecutionAsync(execution, ct);
 
         try
         {
@@ -138,7 +164,9 @@ public sealed class ExecuteComposedVoucherHandler : IRequestHandler<ExecuteCompo
             return new(true, null, Array.Empty<EngineError>(), winner.VoucherId, winner.VoucherNo, WasAlreadyExecuted: true);
         }
 
-        return new(true, r.Draft, Array.Empty<EngineError>(), voucherId, voucherNo);
+        return new(true, r.Draft, Array.Empty<EngineError>(), voucherId, voucherNo,
+            PlainText: r.Draft!.Description, Warnings: assessment?.Warnings,
+            Risk: assessment?.ToDto(), Controls: assessment?.Controls, Basis: assessment?.Basis);
     }
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max];

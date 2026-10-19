@@ -138,7 +138,7 @@ public sealed class ListOperationExecutionsHandler : IRequestHandler<ListOperati
     {
         var page = Math.Max(1, q.Page);
         var size = Math.Clamp(q.PageSize, 5, 100);
-        var channel = q.Channel is "Form" or "Compose" or "Agent" ? q.Channel : null;
+        var channel = q.Channel is "Form" or "Compose" or "Agent" or "History" ? q.Channel : null;
         var (items, total) = await _repo.ListExecutionsAsync(new ExecutionFilter(
             q.VahedCode, q.MineOnly ? _currentUser.UserId : null, q.TemplateId, channel,
             JalaliToUtc(q.FromDate), JalaliToUtc(q.ToDate)?.AddDays(1), (page - 1) * size, size), ct);
@@ -146,7 +146,10 @@ public sealed class ListOperationExecutionsHandler : IRequestHandler<ListOperati
         var titles = (await _repo.ListAllAsync(ct)).ToDictionary(t => t.Id, t => t.Title);
         return new ExecutionPageDto(
             items.Select(e => new ExecutionRowDto(e.Id, e.OperationTemplateId, e.TemplateCode,
-                e.OperationTemplateId is { } id && titles.TryGetValue(id, out var title) ? title : null,
+                e.OperationTemplateId is { } id && titles.TryGetValue(id, out var title) ? title
+                    : e.OperationTemplateId is null && History.HistoryDefaults.IsHistoryCode(e.TemplateCode)
+                        ? History.HistoryDefaults.Title(e.UserSentence ?? "سند ساخته‌شده از سابقه") // فاز ۶۳: از سوابق، بدون الگو
+                        : null,
                 e.Channel, e.VoucherId, e.VoucherNo, e.CreatedBy, e.CreatedAtUtc, e.VahedCode)).ToList(),
             total, page, size);
     }

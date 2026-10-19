@@ -36,6 +36,9 @@ public interface IOperationTemplateRepository
 
     /// <summary>تعداد و آخرین استفادهٔ هر الگو؛ <paramref name="vahedCode"/> null = همهٔ واحدها.</summary>
     Task<IReadOnlyList<TemplateUsageRow>> UsageAsync(string? vahedCode, CancellationToken ct);
+
+    /// <summary>اجراهای همین الگو در این واحد از <paramref name="sinceUtc"/> (فقط سند حذف‌نشده)، جدیدترین اول — ورودی ارزیاب ریسک (ناهنجاری/تکرار).</summary>
+    Task<IReadOnlyList<RiskHistoryRow>> ListRiskHistoryAsync(string vahedCode, Guid templateId, DateTime sinceUtc, int take, CancellationToken ct);
 }
 
 /// <param name="VahedCode">null = همهٔ واحدها (فقط برای مدیر ستاد).</param>

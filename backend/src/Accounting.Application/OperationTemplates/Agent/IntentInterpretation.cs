@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Common.Security;
 using Accounting.Domain.OperationTemplates;
 using MediatR;
@@ -28,6 +30,15 @@ public interface IIntentInterpreter
 
     /// <summary>نام سرویس برای نمایش («Claude» / «Ollama»).</summary>
     string ProviderName { get; }
+
+    /// <summary>نام مدل برای ردپای هوش مصنوعی (G4).</summary>
+    string? ModelName => null;
+
+    /// <summary>
+    /// true = جمله پیش از ارسال با <see cref="PiiMasker"/> پوشانده و پاسخ در سرور برگردانده می‌شود (G5).
+    /// پیش‌فرض true (امن)؛ Claude همیشه true است، Ollama داخلی با <c>MaskPii</c> تنظیم می‌شود.
+    /// </summary>
+    bool RequiresPiiMasking => true;
 
     /// <summary>متن JSON یک شیء مطابق <see cref="IntentPrompt.JsonSchema"/>.</summary>
     Task<string> CompleteJsonAsync(IntentPrompt prompt, CancellationToken ct);
@@ -57,7 +68,8 @@ public sealed record InterpretResultDto(
     double? Confidence,
     string? VoucherDate,
     IReadOnlyList<InterpretedAnswerDto> Answers,
-    string? Clarification)
+    string? Clarification,
+    Guid? AiTraceId = null)
 {
     public static InterpretResultDto Disabled() => new(false, null, false, null, null, null, null, [], null);
 }
@@ -67,12 +79,19 @@ public sealed class InterpretSentenceHandler : IRequestHandler<InterpretSentence
     private readonly IIntentInterpreter _interpreter;
     private readonly IOperationTemplateRepository _repo;
     private readonly AssistantUnitPolicy _policy;
+    private readonly IHesabyarAuditRepository? _audit;
+    private readonly IUnitOfWork? _unitOfWork;
+    private readonly ICurrentUser? _currentUser;
 
-    public InterpretSentenceHandler(IIntentInterpreter interpreter, IOperationTemplateRepository repo, AssistantUnitPolicy policy)
+    public InterpretSentenceHandler(IIntentInterpreter interpreter, IOperationTemplateRepository repo, AssistantUnitPolicy policy,
+        IHesabyarAuditRepository? audit = null, IUnitOfWork? unitOfWork = null, ICurrentUser? currentUser = null)
     {
         _interpreter = interpreter;
         _repo = repo;
         _policy = policy;
+        _audit = audit;
+        _unitOfWork = unitOfWork;
+        _currentUser = currentUser;
     }
 
     public async Task<InterpretResultDto> Handle(InterpretSentenceQuery q, CancellationToken ct)
@@ -88,23 +107,60 @@ public sealed class InterpretSentenceHandler : IRequestHandler<InterpretSentence
         if (templates.Count == 0)
             return Fail("هیچ الگوی فعالی تعریف نشده است.");
 
-        var prompt = IntentPromptBuilder.Build(sentence, templates, q.Year);
-        string json;
+        // G5: جمله همیشه برای ردپا پوشانده می‌شود (جملهٔ خام هرگز ذخیره نمی‌شود)؛ برای ارسال به مدل
+        // فقط وقتی سرویس بیرونی/تنظیم‌شده بخواهد (Claude همیشه، Ollama با MaskPii).
+        var mask = PiiMasker.Mask(sentence);
+        var sendMasked = _interpreter.RequiresPiiMasking;
+        var prompt = IntentPromptBuilder.Build(sendMasked ? mask.Masked : sentence, templates, q.Year);
+
+        string? json = null;
+        string? error = null;
+        var clock = Stopwatch.StartNew();
         try
         {
             json = await _interpreter.CompleteJsonAsync(prompt, ct);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            return Fail("پاسخ هوش مصنوعی دیر رسید؛ با روش معمول ادامه می‌دهیم.");
+            error = "timeout";
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // جزئیات خطای سرویس بیرونی (کلید، آدرس، …) به کاربر برنمی‌گردد.
-            return Fail("سرویس هوش مصنوعی در دسترس نیست؛ با روش معمول ادامه می‌دهیم.");
+            // جزئیات خطای سرویس بیرونی (کلید، آدرس، …) نه به کاربر می‌رود و نه ذخیره می‌شود؛ فقط نوع خطا.
+            error = ex.GetType().Name;
         }
+        clock.Stop();
 
-        return IntentResultParser.Parse(json, templates, _interpreter.ProviderName);
+        var result = json is null
+            ? Fail(error == "timeout"
+                ? "پاسخ هوش مصنوعی دیر رسید؛ با روش معمول ادامه می‌دهیم."
+                : "سرویس هوش مصنوعی در دسترس نیست؛ با روش معمول ادامه می‌دهیم.")
+            : IntentResultParser.Parse(sendMasked ? mask.Restore(json) : json, templates, _interpreter.ProviderName);
+
+        if (_audit is null || _unitOfWork is null || _currentUser is null)
+            return result;
+
+        // ردپا: نتیجهٔ خام مدل فقط به شکل پوشانده (نشانه‌ها برنگردانده‌شده) ذخیره می‌شود.
+        var storedJson = json is null ? null : sendMasked ? json : PiiMasker.Mask(json).Masked;
+        var trace = new OperationAiTrace
+        {
+            Id = Guid.NewGuid(),
+            VahedCode = q.VahedCode,
+            MaskedSentence = mask.Masked,
+            Provider = _interpreter.ProviderName,
+            Model = _interpreter.ModelName,
+            PromptVersion = IntentPromptBuilder.PromptVersion,
+            ResultJson = storedJson is { Length: > 20000 } ? storedJson[..20000] : storedJson,
+            Confidence = result.Confidence,
+            LatencyMs = (int)Math.Min(clock.ElapsedMilliseconds, int.MaxValue),
+            Succeeded = result.Succeeded,
+            Error = error ?? (result.Succeeded ? null : "unparseable"),
+            CreatedBy = _currentUser.UserId,
+            CreatedAtUtc = DateTime.UtcNow,
+        };
+        await _audit.AddTraceAsync(trace, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+        return result with { AiTraceId = trace.Id };
 
         InterpretResultDto Fail(string message) =>
             new(true, _interpreter.ProviderName, false, message, null, null, null, [], null);
@@ -114,6 +170,9 @@ public sealed class InterpretSentenceHandler : IRequestHandler<InterpretSentence
 /// <summary>ساخت دستور و فهرست الگوها برای مدل.</summary>
 public static class IntentPromptBuilder
 {
+    /// <summary>نسخهٔ پرامپت/شِما برای ردپای هوش مصنوعی (G4) — با هر تغییر در متن دستور یا شِما بالا ببر.</summary>
+    public const string PromptVersion = "intent-v2";
+
     public const string Schema = """
     {
       "type": "object",
@@ -158,6 +217,7 @@ public static class IntentPromptBuilder
         system.AppendLine("- Text (توضیح): a short, clean Persian description of the event (e.g. «خرید دارو از شرکت هجرت»). No dates, no amounts, no request/question words (میخوام، سند بزنم، ؟). Never repeat a word.");
         if (!string.IsNullOrWhiteSpace(fiscalYear))
             system.AppendLine($"- The user's fiscal year is {fiscalYear}; a date without a year belongs to that year.");
+        system.AppendLine("- Placeholders like [[NID_1]], [[IBAN_1]], [[CARD_1]], [[TEL_1]] are masked private data: never interpret them as amounts or dates; if one belongs in an answer, copy it unchanged.");
         system.AppendLine("Return only the JSON object.");
 
         var catalog = new StringBuilder();
@@ -171,7 +231,10 @@ public static class IntentPromptBuilder
                 catalog.AppendLine($"keywords: {string.Join(" | ", t.Keywords.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))}");
             catalog.AppendLine("parameters:");
             foreach (var p in t.Parameters.OrderBy(p => p.SortOrder))
-                catalog.AppendLine($"- key: {p.Key} | type: {p.Type} | title: {p.Title} | question: {p.AskPrompt}");
+                catalog.AppendLine($"- key: {p.Key} | type: {p.Type} | title: {p.Title} | question: {p.AskPrompt}"
+                    + (p.Type == ParameterType.Choice
+                        ? " | options(value=label): " + string.Join("; ", ChoiceOptions.Parse(p.OptionsJson).Select(o => $"{o.Value}={o.Label}")) + "; answer unknown only if the user says they do not know"
+                        : ""));
         }
         catalog.AppendLine();
         catalog.AppendLine("User sentence:");

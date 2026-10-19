@@ -97,4 +97,15 @@ public sealed class OperationTemplateRepository : IOperationTemplateRepository
             .ToListAsync(ct);
         return rows.Select(r => new TemplateUsageRow(r.TemplateId!.Value, r.Count, r.Last)).ToList();
     }
+
+    public async Task<IReadOnlyList<RiskHistoryRow>> ListRiskHistoryAsync(string vahedCode, Guid templateId, DateTime sinceUtc, int take, CancellationToken ct)
+    {
+        var rows = await (from e in _db.Set<OperationExecution>().AsNoTracking()
+                          join h in _db.Set<Accounting.Domain.Entity.TB_VOUCHERSHEAD>().AsNoTracking() on e.VoucherId equals h.ID
+                          where e.VahedCode == vahedCode && e.OperationTemplateId == templateId && e.CreatedAtUtc >= sinceUtc && h.ISDELETED != true
+                          orderby e.CreatedAtUtc descending
+                          select new { e.InputJson, e.TotalAmount, e.CreatedAtUtc })
+            .Take(take).ToListAsync(ct);
+        return rows.Select(r => new RiskHistoryRow(r.InputJson, r.TotalAmount, r.CreatedAtUtc)).ToList();
+    }
 }
