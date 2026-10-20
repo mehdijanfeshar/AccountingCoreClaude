@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Accounting.Application.Common.Interfaces;
 using Accounting.Application.Common.Security;
 using FluentValidation;
@@ -12,11 +13,13 @@ namespace Accounting.Application.LegacyImport;
 /// </summary>
 public sealed record GetLegacySourcesQuery : IRequest<IReadOnlyList<LegacySourceDto>>, IVahedScopedQuery
 {
+    [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 
 public sealed record GetLegacyConnectionsQuery : IRequest<LegacyConnectionsDto>, IVahedScopedQuery
 {
+    [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 
@@ -26,6 +29,7 @@ public sealed record GetLegacyConnectionsQuery : IRequest<LegacyConnectionsDto>,
 /// </summary>
 public sealed record SaveLegacyConnectionsCommand(LegacyConnectionsInput Input, bool CheckOnly) : IRequest<LegacyConnectionsResultDto>, IVahedScopedCommand
 {
+    [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 
@@ -82,12 +86,14 @@ public sealed class ReadLegacyXmlServerCommandValidator : AbstractValidator<Read
 
 public sealed record GetLegacyImportStatusQuery : IRequest<LegacyImportStatusDto>, IVahedScopedQuery
 {
+    [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 
 /// <param name="Year">فقط این سال (خالی = همهٔ سال‌های ذخیره‌شده)؛ کاربرگ یک سال فقط برای مشاهده است.</param>
 public sealed record GetLegacyUnitWorkbookQuery(int? Year = null) : IRequest<LegacyFileDto>, IVahedScopedQuery
 {
+    [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 
@@ -95,6 +101,7 @@ public sealed record GetLegacyUnitWorkbookQuery(int? Year = null) : IRequest<Leg
 /// <param name="Commit">false = فقط بررسی (همه‌چیز در تراکنش اجرا و برگردانده می‌شود).</param>
 public sealed record ImportLegacyUnitCodingCommand(byte[] Workbook, bool Commit) : IRequest<LegacyImportReportDto>, IVahedScopedCommand
 {
+    [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 
@@ -113,6 +120,7 @@ public sealed class ImportLegacyUnitCodingCommandValidator : AbstractValidator<I
 /// <param name="Commit">false = فقط بررسی (همه‌چیز در تراکنش اجرا و برگردانده می‌شود).</param>
 public sealed record ImportLegacyVouchersCommand(int Year, bool Commit) : IRequest<LegacyImportReportDto>, IVahedScopedCommand
 {
+    [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 
@@ -127,6 +135,7 @@ public sealed class ImportLegacyVouchersCommandValidator : AbstractValidator<Imp
 /// <summary>تصمیم‌های کاربر واحد روی مشکلات انتقال اسناد یک سال (کد جایگزین، بدون اتصال، کنار گذاشتن…).</summary>
 public sealed record SaveLegacyVoucherDecisionsCommand(int Year, IReadOnlyList<LegacyDecisionInput> Decisions) : IRequest<Unit>, IVahedScopedCommand
 {
+    [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 
@@ -149,6 +158,7 @@ public sealed class SaveLegacyVoucherDecisionsCommandValidator : AbstractValidat
 /// <param name="Kind"><c>moein</c> یا <c>tafsili</c>.</param>
 public sealed record GetLegacyLookupQuery(string Kind, string? Search) : IRequest<IReadOnlyList<LegacyLookupDto>>, IVahedScopedQuery
 {
+    [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 
@@ -164,17 +174,20 @@ public sealed class GetLegacyLookupQueryValidator : AbstractValidator<GetLegacyL
 /// <param name="Commit">false = فقط بررسی.</param>
 public sealed record ImportLegacyBankCommand(bool Commit) : IRequest<LegacyImportReportDto>, IVahedScopedCommand
 {
+    [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 
 public sealed record GetLegacyVoucherStatusQuery : IRequest<IReadOnlyList<LegacyVoucherYearDto>>, IVahedScopedQuery
 {
+    [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 
 /// <summary>فهرست شمارهٔ جدید ← قدیم اسناد منتقل‌شدهٔ یک سال (xlsx).</summary>
 public sealed record GetLegacyVoucherMapQuery(int Year) : IRequest<LegacyFileDto>, IVahedScopedQuery
 {
+    [JsonIgnore]
     public string VahedCode { get; set; } = string.Empty;
 }
 

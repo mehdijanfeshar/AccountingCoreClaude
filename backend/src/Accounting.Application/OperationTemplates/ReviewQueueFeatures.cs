@@ -22,7 +22,8 @@ public sealed record ReviewItemDto(
     Guid ExecutionId, Guid VoucherId, string? DocNum, string? Date, string? TemplateTitle, string Channel,
     long TotalAmount, string CreatedBy, DateTime CreatedAtUtc, bool IsMine, string PlainText, IReadOnlyList<string> Warnings,
     string RiskLevel = "low", IReadOnlyList<string>? RiskReasons = null, string? UserSentence = null,
-    ReviewOriginDto? Origin = null, IReadOnlyList<ControlDto>? Controls = null, ReviewReplyDto? LatestReply = null);
+    ReviewOriginDto? Origin = null, IReadOnlyList<ControlDto>? Controls = null, ReviewReplyDto? LatestReply = null,
+    int AttachmentCount = 0);
 
 public sealed record ReviewCountsDto(int All, int Low, int Attention);
 
@@ -51,7 +52,8 @@ internal static class ReviewItemMapper
             RiskText.Level(r.Risk), RiskText.ParseList(r.RiskReasonsJson), r.UserSentence,
             new ReviewOriginDto(r.TemplateTitle, aiKeys, aiKeys.Count == 0 || r.AiConfirmed == true),
             controls,
-            reply is null ? null : new ReviewReplyDto(reply.Message ?? string.Empty, reply.CreatedAtUtc));
+            reply is null ? null : new ReviewReplyDto(reply.Message ?? string.Empty, reply.CreatedAtUtc),
+            r.AttachmentCount);
     }
 }
 

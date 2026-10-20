@@ -11,6 +11,7 @@ public static class OperationTemplatesDi
     public static IServiceCollection AddOperationTemplates(this IServiceCollection s)
     {
         s.AddScoped<IOperationTemplateRepository, OperationTemplateRepository>();
+        s.AddScoped<IVoucherAttachmentRepository, VoucherAttachmentRepository>();
         s.AddScoped<IVoucherGenerationEngine, VoucherGenerationEngine>();
         s.AddScoped<TemplateDefinitionValidator>();
         s.AddScoped<ComposedVoucherBuilder>();

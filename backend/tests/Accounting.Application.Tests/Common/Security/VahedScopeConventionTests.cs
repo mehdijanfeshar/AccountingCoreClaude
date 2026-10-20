@@ -376,6 +376,9 @@ public sealed class VahedScopeConventionTests
     private static readonly HashSet<string> NoVahedCodeColumnExemptByIdAndDelete = new(StringComparer.Ordinal)
     {
         "DeleteRabetClosingCommand", // TB_RABET_CLOSING بدون VAHEDCODE (به‌ازای نوع واحد)
+        // الگوهای سوابق (فاز ۶۳) از همهٔ واحدها کشف می‌شوند و سراسری‌اند؛ حذف فقط با قابلیت ستادی TemplatesDefine.
+        "DeleteHistoryPatternCommand",
+        "DeleteUncoveredHistoryPatternsCommand",
         "DeleteAccountCodeCommand",
         "DeleteAccountCodeInterfaceCommand",
         "DeleteAccountExceptionCommand",

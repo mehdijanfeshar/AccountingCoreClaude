@@ -180,7 +180,8 @@ public sealed class SystemVoucherIngestService : ISystemVoucherIngestService
             MaxLength(errors, at + "مقدار ویژگی", d.AttribValue, 20);
             if (d.Debtor < 0 || d.Creditor < 0)
                 errors.Add(at + "مبلغ منفی مجاز نیست.");
-            if (d.Debtor % 1 != 0 || d.Creditor % 1 != 0)
+            // مبلغ خالی = صفر (نه «اعشاری»): null % 1 != 0 در C# درست است و ردیف یک‌طرفه را رد می‌کرد.
+            if ((d.Debtor ?? 0) % 1 != 0 || (d.Creditor ?? 0) % 1 != 0)
                 errors.Add(at + "مبلغ باید ریال صحیح باشد.");
         }
 

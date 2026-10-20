@@ -370,6 +370,71 @@ public sealed class OperationsController : ControllerBase
     public async Task<IActionResult> Reply(Guid executionId, [FromBody] ReplyInput input, CancellationToken ct) =>
         Ok(await _mediator.Send(new ReplyToReviewCommand(executionId, input.Message), ct));
 
+    // ─────────── پیوست مدرک سند حسابیار (TB_ATTACH) ───────────
+
+    /// <summary>پیوست‌های یک سند حسابیار (بدون محتوا) — ثبت‌کننده یا بررسی‌کننده.</summary>
+    [HttpGet("vouchers/{voucherId:guid}/attachments")]
+    [ProducesResponseType(typeof(IReadOnlyList<VoucherAttachmentDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Attachments(Guid voucherId, CancellationToken ct) =>
+        Ok(await _mediator.Send(new ListVoucherAttachmentsQuery(voucherId), ct));
+
+    /// <summary>افزودن مدرک — فقط ثبت‌کنندهٔ سند و فقط تا سند «یادداشت» یا «موقت» است (۴۰۹ پس از آن).</summary>
+    [HttpPost("vouchers/{voucherId:guid}/attachments")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(Accounting.Api.Security.UploadGuard.AttachmentRequestLimit)]
+    [ProducesResponseType(typeof(UploadVoucherAttachmentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UploadAttachment(Guid voucherId, [FromForm] UploadVoucherAttachmentRequest request, CancellationToken ct)
+    {
+        if (request.File is null || request.File.Length == 0)
+        {
+            ModelState.AddModelError(nameof(request.File), "فایل پیوست الزامی است.");
+            return ValidationProblem(ModelState);
+        }
+
+        var fileError = await Accounting.Api.Security.UploadGuard.ValidateAttachmentAsync(
+            request.File, VoucherAttachmentAccessLimits.MaxFileBytes, ct);
+        if (fileError is not null)
+        {
+            ModelState.AddModelError(nameof(request.File), fileError);
+            return ValidationProblem(ModelState);
+        }
+
+        await using var stream = new MemoryStream();
+        await request.File.CopyToAsync(stream, ct);
+        var name = Accounting.Api.Security.UploadGuard.SafeFileName(request.File.FileName);
+        var id = await _mediator.Send(new UploadVoucherAttachmentCommand(voucherId, name, request.Title, stream.ToArray()), ct);
+        return Ok(new UploadVoucherAttachmentResponse(id));
+    }
+
+    /// <summary>دریافت فایل پیوست (همیشه دانلود، نه نمایش در مرورگر).</summary>
+    [HttpGet("vouchers/{voucherId:guid}/attachments/{attachmentId:guid}/download")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DownloadAttachment(Guid voucherId, Guid attachmentId, CancellationToken ct)
+    {
+        var file = await _mediator.Send(new GetVoucherAttachmentFileQuery(voucherId, attachmentId), ct);
+        return File(file.Content, "application/octet-stream", file.FileName);
+    }
+
+    /// <summary>حذف نرم پیوست — همان قاعدهٔ افزودن.</summary>
+    [HttpPost("vouchers/{voucherId:guid}/attachments/{attachmentId:guid}/delete")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeleteAttachment(Guid voucherId, Guid attachmentId, CancellationToken ct)
+    {
+        await _mediator.Send(new DeleteVoucherAttachmentCommand(voucherId, attachmentId), ct);
+        return NoContent();
+    }
+
     // ─────────── «موضوع را برای حسابدار بفرستید» (DDL 084) ───────────
 
     /// <summary>ارسال جمله برای حسابدار واحد (هر کاربر عملیات).</summary>
@@ -472,3 +537,14 @@ public sealed record HistoryExecuteInput(DateOnly? VoucherDate, Guid ClientReque
     : HistoryOperationInput(VoucherDate, Answers, Values, Description, UserSentence, AnswerSources, AiConfirmed, HasAttachment, AiTraceId, LineExtras);
 
 public sealed record ApproveReviewBatchInput(List<Guid>? ExecutionIds);
+
+/// <summary>بدنهٔ multipart افزودن پیوست سند حسابیار.</summary>
+public sealed class UploadVoucherAttachmentRequest
+{
+    public IFormFile File { get; set; } = null!;
+
+    /// <summary>عنوان اختیاری (مثلاً «فاکتور خرید»).</summary>
+    public string? Title { get; set; }
+}
+
+public sealed record UploadVoucherAttachmentResponse(Guid Id);

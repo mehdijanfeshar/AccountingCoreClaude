@@ -66,7 +66,8 @@ public sealed record ReviewVoucherRow(
     Guid? TemplateId, string TemplateCode, string? TemplateTitle, string Channel, string VahedCode,
     string CreatedBy, DateTime CreatedAtUtc, long Amount,
     RiskLevel? Risk = null, string? WarningsJson = null, string? RiskReasonsJson = null, string? UserSentence = null,
-    string? AnswerSourcesJson = null, bool? AiConfirmed = null, bool RequireAttachment = false, bool HasAttachment = false);
+    string? AnswerSourcesJson = null, bool? AiConfirmed = null, bool RequireAttachment = false, bool HasAttachment = false,
+    int AttachmentCount = 0);
 
 internal static class ReviewAccess
 {

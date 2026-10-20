@@ -193,6 +193,15 @@ public sealed class HesabyarAuditRepository : IHesabyarAuditRepository
             .Where(s => s.Key != null)
             .ToDictionary(s => s.Key!.Value, s => s.Total ?? 0m);
 
+        // پیوست واقعی روی TB_ATTACH (همان جدول برنامهٔ قدیم)؛ ATTACHFILE_NAME سرسند فقط برای سندهای قدیمی.
+        var attachCounts = (await _db.Set<TB_ATTACH>().AsNoTracking()
+                .Where(a => voucherIds.Contains(a.VOUCHERSHEAD_ID) && a.ISDELETED != true)
+                .GroupBy(a => a.VOUCHERSHEAD_ID)
+                .Select(g => new { Key = g.Key, Count = g.Count() })
+                .ToListAsync(ct))
+            .Where(a => a.Key != null)
+            .ToDictionary(a => a.Key!.Value, a => a.Count);
+
         return rows.Select(r => new ReviewVoucherRow(
             r.ExecutionId, r.VoucherId, r.DocNum, r.DateDoc, r.Life, r.Description, r.TemplateId, r.TemplateCode,
             r.TemplateId is { } tid && templates.TryGetValue(tid, out var tpl) ? tpl.Title
@@ -203,7 +212,8 @@ public sealed class HesabyarAuditRepository : IHesabyarAuditRepository
             r.Channel, r.VahedCode, r.CreatedBy, r.CreatedAtUtc,
             (long)Math.Round(sums.TryGetValue(r.VoucherId, out var s) ? s : 0m, MidpointRounding.AwayFromZero),
             r.Risk, r.WarningsJson, r.RiskReasonsJson, r.UserSentence, r.AnswerSourcesJson, r.AiConfirmed,
-            r.TemplateId is { } rid && templates.TryGetValue(rid, out var rt) && rt.RequireAttachment, r.HasAttachment)).ToList();
+            r.TemplateId is { } rid && templates.TryGetValue(rid, out var rt) && rt.RequireAttachment,
+            r.HasAttachment || attachCounts.ContainsKey(r.VoucherId), attachCounts.GetValueOrDefault(r.VoucherId))).ToList();
     }
 
     // ─────────── فاز ۶۲: پاسخ‌ها، تاریخچه، درخواست‌ها (DDL 084) ───────────
