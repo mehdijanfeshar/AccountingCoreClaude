@@ -30,6 +30,7 @@ public static class AbilityCatalog
     public const string FsUnitCategory = "fs.unit-category";
     public const string TemplatesDefine = "templates.define";
     public const string SavedReportsDefine = "saved-reports.define";
+    public const string AiEvaluate = "ai.evaluate";
 
     public static readonly IReadOnlyList<AbilityDefinition> All =
     [
@@ -43,6 +44,8 @@ public static class AbilityCatalog
             "تعریف و تغییر الگوهای عملیات (سراسری)", AbilityDefault.HeadquartersAdmin),
         new(SavedReportsDefine, "حسابیار", "/assistant/reports/manage",
             "تعریف و تغییر گزارش‌های ذخیره‌شده (سراسری)", AbilityDefault.HeadquartersAdmin),
+        new(AiEvaluate, "حسابیار", "/assistant/ai-eval",
+            "سنجش هوش مصنوعی: نمونه‌های طلایی و اجرای سایه روی جمله‌های واقعی", AbilityDefault.HeadquartersAdmin),
     ];
 
     public static string StorageKey(string ability) => StoragePrefix + ability;

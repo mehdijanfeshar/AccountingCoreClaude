@@ -379,6 +379,8 @@ public sealed class VahedScopeConventionTests
         // الگوهای سوابق (فاز ۶۳) از همهٔ واحدها کشف می‌شوند و سراسری‌اند؛ حذف فقط با قابلیت ستادی TemplatesDefine.
         "DeleteHistoryPatternCommand",
         "DeleteUncoveredHistoryPatternsCommand",
+        // نمونه‌های طلایی سنجش هوش مصنوعی (فاز ۶۵، DDL 088) سراسری‌اند، بدون VAHEDCODE؛ فقط با قابلیت ستادی ai.evaluate.
+        "DeleteAiGoldenCaseCommand",
         "DeleteAccountCodeCommand",
         "DeleteAccountCodeInterfaceCommand",
         "DeleteAccountExceptionCommand",

@@ -40,6 +40,17 @@ public interface IIntentInterpreter
     /// </summary>
     bool RequiresPiiMasking => true;
 
+    /// <summary>
+    /// false = فقط انتخاب الگو از مدل پذیرفته می‌شود و جواب‌ها (مبلغ، تاریخ، طرف حساب) را روش قاعده‌ای فرانت برمی‌دارد —
+    /// برای مدل کوچک داخلی که الگو را درست می‌گیرد ولی عدد فارسی را اشتباه می‌فهمد (فاز ۶۵). سنجش همیشه خام است.
+    /// </summary>
+    bool TrustAnswers => true;
+
+    /// <summary>
+    /// false = «فهم جمله» در صفحهٔ ثبت سند خاموش است (روش قاعده‌ای قبلی) ولی همین مدل برای گفتگو و سنجش در دسترس است.
+    /// </summary>
+    bool InterpretEnabled => true;
+
     /// <summary>متن JSON یک شیء مطابق <see cref="IntentPrompt.JsonSchema"/>.</summary>
     Task<string> CompleteJsonAsync(IntentPrompt prompt, CancellationToken ct);
 }
@@ -96,7 +107,7 @@ public sealed class InterpretSentenceHandler : IRequestHandler<InterpretSentence
 
     public async Task<InterpretResultDto> Handle(InterpretSentenceQuery q, CancellationToken ct)
     {
-        if (!_interpreter.IsEnabled)
+        if (!_interpreter.IsEnabled || !_interpreter.InterpretEnabled)
             return InterpretResultDto.Disabled();
 
         var sentence = (q.Sentence ?? "").Trim();
@@ -107,18 +118,62 @@ public sealed class InterpretSentenceHandler : IRequestHandler<InterpretSentence
         if (templates.Count == 0)
             return Fail("هیچ الگوی فعالی تعریف نشده است.");
 
-        // G5: جمله همیشه برای ردپا پوشانده می‌شود (جملهٔ خام هرگز ذخیره نمی‌شود)؛ برای ارسال به مدل
-        // فقط وقتی سرویس بیرونی/تنظیم‌شده بخواهد (Claude همیشه، Ollama با MaskPii).
+        var run = await IntentRun.ExecuteAsync(_interpreter, sentence, templates, q.Year, ct);
+        var result = run.Result;
+        if (!_interpreter.TrustAnswers)
+            result = result with { Answers = [], VoucherDate = null };
+
+        if (_audit is null || _unitOfWork is null || _currentUser is null)
+            return result;
+
+        var trace = new OperationAiTrace
+        {
+            Id = Guid.NewGuid(),
+            VahedCode = q.VahedCode,
+            MaskedSentence = run.MaskedSentence,
+            Provider = _interpreter.ProviderName,
+            Model = _interpreter.ModelName,
+            PromptVersion = IntentPromptBuilder.PromptVersion,
+            ResultJson = run.StoredJson is { Length: > 20000 } ? run.StoredJson[..20000] : run.StoredJson,
+            Confidence = result.Confidence,
+            LatencyMs = run.LatencyMs,
+            Succeeded = result.Succeeded,
+            Error = run.Error ?? (result.Succeeded ? null : "unparseable"),
+            CreatedBy = _currentUser.UserId,
+            CreatedAtUtc = DateTime.UtcNow,
+        };
+        await _audit.AddTraceAsync(trace, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+        return result with { AiTraceId = trace.Id };
+
+        InterpretResultDto Fail(string message) =>
+            new(true, _interpreter.ProviderName, false, message, null, null, null, [], null);
+    }
+}
+
+/// <summary>
+/// یک بار «فهم جمله» — مشترک بین <see cref="InterpretSentenceHandler"/> و سنجش هوش مصنوعی (فاز ۶۵)، تا سنجش دقیقاً
+/// همان مسیر کاربر (پوشاندن، پرامپت، اعتبارسنجی خروجی) را بسنجد.
+/// </summary>
+/// <param name="MaskedSentence">جملهٔ پوشانده (برای ذخیره؛ جملهٔ خام هرگز ذخیره نمی‌شود).</param>
+/// <param name="StoredJson">پاسخ خام مدل به شکل پوشانده، یا null در خطا.</param>
+/// <param name="Error">«timeout» یا نام نوع استثنا؛ null اگر پاسخ رسید.</param>
+public sealed record IntentRun(InterpretResultDto Result, string MaskedSentence, string? StoredJson, string? Error, int LatencyMs)
+{
+    public static async Task<IntentRun> ExecuteAsync(
+        IIntentInterpreter interpreter, string sentence, IReadOnlyList<OperationTemplate> templates, string? year, CancellationToken ct)
+    {
+        // G5: جمله همیشه برای ردپا پوشانده می‌شود؛ برای ارسال به مدل فقط وقتی سرویس بخواهد (Claude همیشه، Ollama با MaskPii).
         var mask = PiiMasker.Mask(sentence);
-        var sendMasked = _interpreter.RequiresPiiMasking;
-        var prompt = IntentPromptBuilder.Build(sendMasked ? mask.Masked : sentence, templates, q.Year);
+        var sendMasked = interpreter.RequiresPiiMasking;
+        var prompt = IntentPromptBuilder.Build(sendMasked ? mask.Masked : sentence, templates, year);
 
         string? json = null;
         string? error = null;
         var clock = Stopwatch.StartNew();
         try
         {
-            json = await _interpreter.CompleteJsonAsync(prompt, ct);
+            json = await interpreter.CompleteJsonAsync(prompt, ct);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -132,38 +187,15 @@ public sealed class InterpretSentenceHandler : IRequestHandler<InterpretSentence
         clock.Stop();
 
         var result = json is null
-            ? Fail(error == "timeout"
-                ? "پاسخ هوش مصنوعی دیر رسید؛ با روش معمول ادامه می‌دهیم."
-                : "سرویس هوش مصنوعی در دسترس نیست؛ با روش معمول ادامه می‌دهیم.")
-            : IntentResultParser.Parse(sendMasked ? mask.Restore(json) : json, templates, _interpreter.ProviderName);
+            ? new InterpretResultDto(true, interpreter.ProviderName, false, error == "timeout"
+                    ? "پاسخ هوش مصنوعی دیر رسید؛ با روش معمول ادامه می‌دهیم."
+                    : "سرویس هوش مصنوعی در دسترس نیست؛ با روش معمول ادامه می‌دهیم.",
+                null, null, null, [], null)
+            : IntentResultParser.Parse(sendMasked ? mask.Restore(json) : json, templates, interpreter.ProviderName);
 
-        if (_audit is null || _unitOfWork is null || _currentUser is null)
-            return result;
-
-        // ردپا: نتیجهٔ خام مدل فقط به شکل پوشانده (نشانه‌ها برنگردانده‌شده) ذخیره می‌شود.
+        // نتیجهٔ خام مدل فقط به شکل پوشانده (نشانه‌ها برنگردانده‌شده) ذخیره می‌شود.
         var storedJson = json is null ? null : sendMasked ? json : PiiMasker.Mask(json).Masked;
-        var trace = new OperationAiTrace
-        {
-            Id = Guid.NewGuid(),
-            VahedCode = q.VahedCode,
-            MaskedSentence = mask.Masked,
-            Provider = _interpreter.ProviderName,
-            Model = _interpreter.ModelName,
-            PromptVersion = IntentPromptBuilder.PromptVersion,
-            ResultJson = storedJson is { Length: > 20000 } ? storedJson[..20000] : storedJson,
-            Confidence = result.Confidence,
-            LatencyMs = (int)Math.Min(clock.ElapsedMilliseconds, int.MaxValue),
-            Succeeded = result.Succeeded,
-            Error = error ?? (result.Succeeded ? null : "unparseable"),
-            CreatedBy = _currentUser.UserId,
-            CreatedAtUtc = DateTime.UtcNow,
-        };
-        await _audit.AddTraceAsync(trace, ct);
-        await _unitOfWork.SaveChangesAsync(ct);
-        return result with { AiTraceId = trace.Id };
-
-        InterpretResultDto Fail(string message) =>
-            new(true, _interpreter.ProviderName, false, message, null, null, null, [], null);
+        return new(result, mask.Masked, storedJson, error, (int)Math.Min(clock.ElapsedMilliseconds, int.MaxValue));
     }
 }
 
@@ -199,9 +231,7 @@ public static class IntentPromptBuilder
 
     public static IntentPrompt Build(string sentence, IReadOnlyList<OperationTemplate> templates, string? fiscalYear)
     {
-        var today = DateTime.Now;
-        var pc = new PersianCalendar();
-        var todayJalali = $"{pc.GetYear(today):0000}{pc.GetMonth(today):00}{pc.GetDayOfMonth(today):00}";
+        var todayJalali = TodayJalali();
 
         var system = new StringBuilder();
         system.AppendLine("You are the intent parser of a Persian accounting system (حسابیار).");
@@ -221,6 +251,25 @@ public static class IntentPromptBuilder
         system.AppendLine("Return only the JSON object.");
 
         var catalog = new StringBuilder();
+        AppendCatalog(catalog, templates);
+        catalog.AppendLine();
+        catalog.AppendLine("User sentence:");
+        catalog.AppendLine(sentence);
+
+        return new IntentPrompt(system.ToString(), catalog.ToString(), Schema);
+    }
+
+    /// <summary>امروز به شمسی yyyyMMdd.</summary>
+    public static string TodayJalali()
+    {
+        var today = DateTime.Now;
+        var pc = new PersianCalendar();
+        return $"{pc.GetYear(today):0000}{pc.GetMonth(today):00}{pc.GetDayOfMonth(today):00}";
+    }
+
+    /// <summary>فهرست الگوها برای مدل (عنوان، توضیح، کلمات کلیدی، سؤال‌ها) — مشترک بین فهم جمله و دستیار گفتگو.</summary>
+    public static void AppendCatalog(StringBuilder catalog, IReadOnlyList<OperationTemplate> templates)
+    {
         catalog.AppendLine("Catalog of operation templates:");
         foreach (var t in templates)
         {
@@ -236,11 +285,6 @@ public static class IntentPromptBuilder
                         ? " | options(value=label): " + string.Join("; ", ChoiceOptions.Parse(p.OptionsJson).Select(o => $"{o.Value}={o.Label}")) + "; answer unknown only if the user says they do not know"
                         : ""));
         }
-        catalog.AppendLine();
-        catalog.AppendLine("User sentence:");
-        catalog.AppendLine(sentence);
-
-        return new IntentPrompt(system.ToString(), catalog.ToString(), Schema);
     }
 }
 

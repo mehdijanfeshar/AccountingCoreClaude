@@ -71,6 +71,8 @@ public static class MenuCatalog
         M("/assistant/reports/manage", Assistant, "گزارش‌های ذخیره‌شده", MenuGroupAccess.Operate, "OperationTemplates"),
         M("/assistant/templates", Assistant, "الگوهای عملیات", MenuGroupAccess.Operate, "OperationTemplates"),
         M("/assistant/templates/discover", Assistant, "کشف الگو از اسناد گذشته", MenuGroupAccess.Operate, "OperationTemplates"),
+        M("/assistant/chat", Assistant, "گفتگو با حسابیار", MenuGroupAccess.Operate),
+        M("/assistant/ai-eval", Assistant, "سنجش هوش مصنوعی", MenuGroupAccess.Operate),
 
         M("/sales", Sales, "میز کار فروش", MenuGroupAccess.Operate),
         M("/sales/docs", Sales, "اسناد فروش", MenuGroupAccess.Operate, "Sales"),
@@ -106,6 +108,7 @@ public static class MenuCatalog
         M("/treasury/petty-cash/settlement", Treasury, "تسویه دوره", MenuGroupAccess.Operate, "PettyCash"),
         M("/treasury/petty-cash/ledger", Treasury, "گزارش گردش تنخواه", MenuGroupAccess.Operate),
         M("/treasury/petty-cash/funds", Treasury, "تعریف تنخواه", MenuGroupAccess.Operate, "PettyCash"),
+        M("/treasury/petty-cash/expenses", Treasury, "تعریف هزینه", MenuGroupAccess.Operate, "Expenses"),
         M("/treasury/khazaneh/dashboard", Treasury, "داشبورد خزانه", MenuGroupAccess.Operate),
         M("/treasury/khazaneh/payment-requests", Treasury, "درخواست پرداخت", MenuGroupAccess.Operate, "Treasury"),
         M("/treasury/khazaneh/cartable", Treasury, "کارتابل تأیید", MenuGroupAccess.Operate, "Treasury"),

@@ -60,7 +60,7 @@ public sealed class UpdateExpenseCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
         var command = ValidCommand(id);
 
         await handler.Handle(command, CancellationToken.None);
@@ -87,7 +87,7 @@ public sealed class UpdateExpenseCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock("srvusr02");
 
-        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -114,7 +114,7 @@ public sealed class UpdateExpenseCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -136,7 +136,7 @@ public sealed class UpdateExpenseCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
 
         await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(ValidCommand(id), CancellationToken.None));
 
@@ -156,7 +156,7 @@ public sealed class UpdateExpenseCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
 
         await Assert.ThrowsAsync<NotFoundException>(() => handler.Handle(ValidCommand(id), CancellationToken.None));
 
@@ -177,7 +177,7 @@ public sealed class UpdateExpenseCommandHandlerTests
         var currentUser = CurrentUserMock();
         var command = ValidCommand(id);
 
-        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
 
         await handler.Handle(command, CancellationToken.None);
 
@@ -198,7 +198,7 @@ public sealed class UpdateExpenseCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
 
         await handler.Handle(ValidCommand(id), CancellationToken.None);
 
@@ -221,7 +221,7 @@ public sealed class UpdateExpenseCommandHandlerTests
 
         repository.Setup(r => r.GetForUpdateAsync(id, It.IsAny<string>(), token)).ReturnsAsync(entity);
 
-        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
 
         await handler.Handle(ValidCommand(id), token);
 
@@ -245,7 +245,7 @@ public sealed class UpdateExpenseCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
         var command = ValidCommand(id) with { VahedCode = "0009" };
 
         await handler.Handle(command, CancellationToken.None);
@@ -271,7 +271,7 @@ public sealed class UpdateExpenseCommandHandlerTests
         var currentUser = CurrentUserMock();
         currentUser.SetupGet(u => u.VahedCode).Returns("0009");
 
-        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new UpdateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
         var behavior = new VahedScopeBehavior<UpdateExpenseCommand, Unit>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand(id) with { VahedCode = "9999" };
 

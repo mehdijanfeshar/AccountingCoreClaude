@@ -22,6 +22,11 @@ public partial class LegacyDbContext
         modelBuilder.ApplyConfiguration(new HistoryPatternConfig()); // DDL 085
         modelBuilder.ApplyConfiguration(new HistoryPatternUnitConfig()); // DDL 085
         modelBuilder.ApplyConfiguration(new HistoryDismissedConfig()); // DDL 086
+        modelBuilder.ApplyConfiguration(new AgentConversationConfig()); // DDL 087
+        modelBuilder.ApplyConfiguration(new AgentMessageConfig()); // DDL 087
+        modelBuilder.ApplyConfiguration(new AiGoldenCaseConfig()); // DDL 088
+        modelBuilder.ApplyConfiguration(new AiEvalRunConfig()); // DDL 088
+        modelBuilder.ApplyConfiguration(new AiEvalItemConfig()); // DDL 088
         Accounting.Infrastructure.Sales.SalesMappingExtensions.ApplySales(modelBuilder); // DDL 080
     }
 }

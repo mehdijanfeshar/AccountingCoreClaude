@@ -106,15 +106,18 @@
 ## فاز ۲ — هوش مصنوعی (فهم جمله)
 - `POST api/operations/interpret?year=` با `{ sentence }` ⇒ `{ enabled, provider, succeeded, message, templateId, confidence, voucherDate, answers[{key,value,type}], clarification }`. بدون نوشتن.
 - `IIntentInterpreter` (Application/OperationTemplates/Agent) با سه پیاده‌سازی در Infrastructure: `DisabledIntentInterpreter` (پیش‌فرض)، `ClaudeIntentInterpreter` (Messages API، خروجی با ابزار اجباری `fill_operation`)، `OllamaIntentInterpreter` (`/api/chat` با `format` = شِما، دما ۰).
-- تنظیم: `Assistant:Llm` در appsettings — `Provider` (None/Claude/Ollama)، `ApiKey` (فقط Claude؛ فقط روی سرور یا متغیر محیطی `Assistant__Llm__ApiKey`، هرگز در مخزن)، `Model` (پیش‌فرض `claude-sonnet-5-5` / `qwen2.5:7b`)، `BaseUrl`، `ProxyUrl`، `TimeoutSeconds`. Claude بدون کلید = خاموش.
+- تنظیم: `Assistant:Llm` در appsettings — `Provider` (None/Claude/Ollama)، `ApiKey` (فقط Claude؛ فقط روی سرور یا متغیر محیطی `Assistant__Llm__ApiKey`، هرگز در مخزن)، `Model` (پیش‌فرض `claude-sonnet-5-5` / `qwen2.5:7b`)، `BaseUrl`، `ProxyUrl`، `TimeoutSeconds`، `Think` (فقط Ollama؛ false برای qwen3 = بی‌فکر و سریع؛ خالی = فرستاده نمی‌شود). Claude بدون کلید = خاموش.
 - سیاست داده (تصمیم صاحب پروژه ۲۰۲۶-۱۰-۰۶): فقط جمله + فهرست الگوهای فعال (عنوان، توضیح، کلمات کلیدی، سؤال‌ها). نام طرف حساب را مدل به‌صورت متن برمی‌گرداند و فرانت با lookup همان معین/سطح (قاعدهٔ B) و فقط با یک نتیجهٔ یکتا تفصیلی را می‌گذارد.
 - خروجی مدل در `IntentResultParser` دوباره کنترل می‌شود (کد الگو در فهرست، کلید سؤال مال همان الگو، مبلغ عدد مثبت، تاریخ شمسی معتبر). خطا/تأخیر سرویس ⇒ پیام کوتاه و ادامه با روش قاعده‌ای.
 - فرانت: «بفرست» اول `interpret`؛ اگر الگو انتخاب شد همان `selectTemplate` + `prefill` (برداشت هوش مصنوعی بر برداشت قاعده‌ای مقدم، جواب دستی کاربر هرگز بازنویسی نمی‌شود، برچسب «برداشت هوش مصنوعی»)؛ سؤال روشن‌کننده در حباب دستیار. هوش مصنوعی هرگز Preview/Execute صدا نمی‌زند.
 
-## فازهای بعد
-- **۲:** ابزارهای خواندنی برای Agent (جستجوی اشخاص/بانک‌ها با نام، مانده‌ها).
-- **۳:** `ILlmProvider` + Orchestrator + جدول گفتگو. Agent فقط Preview صدا می‌زند؛ Execute با کلیک کاربر.
-- **۴:** رابط React (ریپوی فرانت) بر اساس پروتوتایپ «حسابیار».
+## فاز ۳ — گفتگو با دستیار و سنجش (فاز ۶۵ پروژه، ۲۰۲۶-۱۰-۲۰) ✅
+- (همهٔ «فازهای بعد» قبلی انجام شد: ابزارهای خواندنی، `ILlmProvider` ⇒ `IAgentChatModel` + Orchestrator + جدول گفتگو، رابط React.)
+- `POST api/operations/agent/messages?year=` با `{ conversationId?, message }` ⇒ `{ enabled, provider, conversationId, succeeded, reply, proposal, steps[] }`. گفتگو: `GET agent/conversations`، `GET agent/conversations/{id}`، `POST …/{id}/delete`؛ `GET agent/status`. DDL `087` (`TB_OP_AGENT_CONV`، `TB_OP_AGENT_MSG`).
+- ابزارها (`AgentToolbox`): `search_counterparty`، `get_counterparty_balance`، `get_account_balance`، `preview_voucher`. همه از Queryهای موجود با همان رفتار واحد/نقش؛ خطای نقش/اعتبارسنجی ⇒ پیام خطای ابزار به مدل. ثبت ابزار ندارد.
+- `proposal` = آخرین پیش‌نمایش موفق (الگو، تاریخ شمسی، جواب‌ها با مقدار آمادهٔ سرور و نمایش، نتیجهٔ preview، `aiTraceId`). فرانت با «بررسی و ثبت» به `/assistant` با `state.agentProposal` می‌رود؛ جواب‌ها `fromAi` و ریسک «جواب هوش مصنوعی بی‌تأیید» تا «درست است» کاربر.
+- تنظیم: `Assistant:Agent` — `MaxToolRounds` (۶)، `HistoryMessages` (۱۲)، `AllowDataToolsForExternal` (false؛ ریسک #۳۷). مدل/کلید همان `Assistant:Llm`.
+- سنجش: `operations/ai-eval/golden` (فهرست/ساخت/`{id}/update`/`{id}/delete`/`import`) و `operations/ai-eval/runs` (`POST` با `{ kind: golden|shadow, take, allUnits }`، فهرست، جزئیات). DDL `088`. قابلیت `ai.evaluate` (پیش‌فرض کاربر ستاد مرکزی).
 
 ## سندهای پرتکرار و ثبت گروهی از اکسل (۲۰۲۶-۱۰-۱۵)
 - **سند پرتکرار (DDL `079`، `TB_OP_QUICK_VOUCHER`):** الگو + جواب‌های ثابت برای واحد (`VALUES_JSON`؛ تاریخ هرگز ثابت نمی‌شود). API: `GET operations/quick`، `POST operations/quick`، `POST operations/quick/{id}/delete` (حذف نرم). ساخت از صفحهٔ «ثبت شد» با «ذخیره به‌عنوان سند پرتکرار» (پیش‌فرض: همه جز مبلغ ثابت). کارت‌ها بالای `/assistant`: فقط سؤال‌های ثابت‌نشده + Enter ⇒ همان preview/execute الگو با تاریخ امروز (`defaultVoucherDate`)؛ ردیف بانکی/شناسه‌دار همان `LineExtrasDialog`. همهٔ کاربران واحد می‌بینند.

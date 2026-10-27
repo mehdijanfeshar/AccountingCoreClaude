@@ -29,6 +29,10 @@ public static class OperationTemplatesDi
         s.AddScoped<IHistoryPatternStore, HistoryPatternRepository>();
         s.AddScoped<HistoryTemplateFactory>();
         s.AddScoped<HistoryOperationPlanner>();
+        // فاز ۶۵ — گفتگو با دستیار (DDL 087) و سنجش هوش مصنوعی (DDL 088)
+        s.AddScoped<Accounting.Application.OperationTemplates.Agent.IAgentConversationRepository, AgentConversationRepository>();
+        s.AddScoped<Accounting.Application.OperationTemplates.Agent.AgentToolbox>();
+        s.AddScoped<Accounting.Application.OperationTemplates.Agent.IAiEvaluationRepository, AiEvaluationRepository>();
         return s;
     }
 

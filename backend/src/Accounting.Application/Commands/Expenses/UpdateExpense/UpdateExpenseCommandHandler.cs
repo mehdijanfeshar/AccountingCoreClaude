@@ -29,15 +29,18 @@ public sealed class UpdateExpenseCommandHandler : IRequestHandler<UpdateExpenseC
     private readonly IExpenseRepository _expenseRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IAccountCodeRepository _accountCodeRepository;
 
     public UpdateExpenseCommandHandler(
         IExpenseRepository expenseRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IAccountCodeRepository accountCodeRepository)
     {
         _expenseRepository = expenseRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _accountCodeRepository = accountCodeRepository;
     }
 
     public async Task Handle(UpdateExpenseCommand request, CancellationToken cancellationToken)
@@ -48,6 +51,9 @@ public sealed class UpdateExpenseCommandHandler : IRequestHandler<UpdateExpenseC
         {
             throw new NotFoundException("Expense", request.Id);
         }
+
+        if (request.AccountCodeId != entity.ACCOUNTCODE_ID)
+            await ExpenseAccountRule.EnsureMoinAsync(_accountCodeRepository, request.AccountCodeId, cancellationToken);
 
         entity.EXPENCECODE = request.ExpenseCode;
         entity.EXPENCENAME = request.ExpenseName;

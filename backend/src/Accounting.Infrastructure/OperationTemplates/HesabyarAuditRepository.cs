@@ -63,6 +63,15 @@ public sealed class HesabyarAuditRepository : IHesabyarAuditRepository
         return await _db.Set<OperationExecution>().AsNoTracking().Where(e => ids.Contains(e.VoucherId)).ToListAsync(ct);
     }
 
+    public Task UpdateExecutionRiskAsync(OperationExecution execution, CancellationToken ct)
+    {
+        var entry = _db.Set<OperationExecution>().Attach(execution);
+        entry.Property(e => e.RiskLevel).IsModified = true;
+        entry.Property(e => e.RiskReasonsJson).IsModified = true;
+        entry.Property(e => e.WarningsJson).IsModified = true;
+        return Task.CompletedTask;
+    }
+
     public async Task<IReadOnlyDictionary<Guid, OperationReview>> LatestReviewsAsync(IReadOnlyCollection<Guid> executionIds, CancellationToken ct)
     {
         if (executionIds.Count == 0) return new Dictionary<Guid, OperationReview>();

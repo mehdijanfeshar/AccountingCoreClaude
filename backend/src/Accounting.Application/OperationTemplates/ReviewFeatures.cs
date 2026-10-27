@@ -31,6 +31,9 @@ public interface IHesabyarAuditRepository
     Task AddReviewAsync(OperationReview review, CancellationToken ct);
     Task<IReadOnlyList<OperationExecution>> ListExecutionsByVouchersAsync(IReadOnlyCollection<Guid> voucherIds, CancellationToken ct);
 
+    /// <summary>ریسک/دلیل/هشدار یک اجرای خوانده‌شده (untracked) را برای ذخیره stage می‌کند.</summary>
+    Task UpdateExecutionRiskAsync(OperationExecution execution, CancellationToken ct);
+
     /// <summary>آخرین ردیف بررسی هر اجرا (کلید = ExecutionId).</summary>
     Task<IReadOnlyDictionary<Guid, OperationReview>> LatestReviewsAsync(IReadOnlyCollection<Guid> executionIds, CancellationToken ct);
 

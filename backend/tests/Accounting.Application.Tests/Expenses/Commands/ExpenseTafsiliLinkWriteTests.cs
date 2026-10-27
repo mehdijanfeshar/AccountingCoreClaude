@@ -68,7 +68,8 @@ public sealed class ExpenseTafsiliLinkWriteTests
         var handler = new CreateExpenseCommandHandler(
             repository.Object,
             new Mock<IUnitOfWork>().Object,
-            CurrentUserMock("creator").Object);
+            CurrentUserMock("creator").Object,
+            ExpenseTestAccounts.Moin());
 
         await handler.Handle(
             CreateCommand(new[]
@@ -98,7 +99,8 @@ public sealed class ExpenseTafsiliLinkWriteTests
         var handler = new CreateExpenseCommandHandler(
             repository.Object,
             new Mock<IUnitOfWork>().Object,
-            CurrentUserMock().Object);
+            CurrentUserMock().Object,
+            ExpenseTestAccounts.Moin());
 
         await handler.Handle(CreateCommand(null), CancellationToken.None);
 
@@ -146,7 +148,8 @@ public sealed class ExpenseTafsiliLinkWriteTests
         var handler = new UpdateExpenseCommandHandler(
             repository.Object,
             new Mock<IUnitOfWork>().Object,
-            CurrentUserMock("editor").Object);
+            CurrentUserMock("editor").Object,
+            ExpenseTestAccounts.Moin());
 
         await handler.Handle(
             UpdateCommand(parentId, new[]
@@ -195,7 +198,8 @@ public sealed class ExpenseTafsiliLinkWriteTests
         var handler = new UpdateExpenseCommandHandler(
             repository.Object,
             new Mock<IUnitOfWork>().Object,
-            CurrentUserMock().Object);
+            CurrentUserMock().Object,
+            ExpenseTestAccounts.Moin());
 
         await handler.Handle(UpdateCommand(parentId, null), CancellationToken.None);
 

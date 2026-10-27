@@ -178,6 +178,8 @@ public sealed class UploadVoucherAttachmentHandler : IRequestHandler<UploadVouch
             ISDELETED = false,
         };
         await _attachments.AddAsync(attachment, ct);
+        if (AttachmentRiskSync.Apply(execution, attachmentRequired: true, hasAttachment: true))
+            await _repo.UpdateExecutionRiskAsync(execution, ct);
         await _unitOfWork.SaveChangesAsync(ct);
         return attachment.ID;
     }
@@ -197,9 +199,11 @@ public sealed class DeleteVoucherAttachmentHandler : IRequestHandler<DeleteVouch
     private readonly IVoucherAttachmentRepository _attachments;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IOperationTemplateRepository? _templates;
 
-    public DeleteVoucherAttachmentHandler(IHesabyarAuditRepository repo, IVoucherAttachmentRepository attachments, IUnitOfWork unitOfWork, ICurrentUser currentUser)
-    { _repo = repo; _attachments = attachments; _unitOfWork = unitOfWork; _currentUser = currentUser; }
+    public DeleteVoucherAttachmentHandler(IHesabyarAuditRepository repo, IVoucherAttachmentRepository attachments, IUnitOfWork unitOfWork, ICurrentUser currentUser,
+        IOperationTemplateRepository? templates = null)
+    { _repo = repo; _attachments = attachments; _unitOfWork = unitOfWork; _currentUser = currentUser; _templates = templates; }
 
     public async Task<Unit> Handle(DeleteVoucherAttachmentCommand c, CancellationToken ct)
     {
@@ -209,6 +213,13 @@ public sealed class DeleteVoucherAttachmentHandler : IRequestHandler<DeleteVouch
         a.ISDELETED = true;
         a.UPDATEDDATE = DateTime.Now;
         a.CHANGEUSERID = _currentUser.UserId;
+
+        // آخرین مدرک حذف شد و الگو مدرک الزامی دارد ⇒ دلیل «پیوست نشده» به ریسک برمی‌گردد.
+        if (_templates is not null && execution.OperationTemplateId is { } templateId
+            && (await _attachments.ListAsync(c.VoucherId, ct)).All(x => x.Id == a.ID)
+            && await _templates.GetFullAsync(templateId, ct) is { RequireAttachment: true }
+            && AttachmentRiskSync.Apply(execution, attachmentRequired: true, hasAttachment: false))
+            await _repo.UpdateExecutionRiskAsync(execution, ct);
         await _unitOfWork.SaveChangesAsync(ct);
         return Unit.Value;
     }

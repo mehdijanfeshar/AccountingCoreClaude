@@ -24,19 +24,24 @@ public sealed class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseC
     private readonly IExpenseRepository _expenseRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
+    private readonly IAccountCodeRepository _accountCodeRepository;
 
     public CreateExpenseCommandHandler(
         IExpenseRepository expenseRepository,
         IUnitOfWork unitOfWork,
-        ICurrentUser currentUser)
+        ICurrentUser currentUser,
+        IAccountCodeRepository accountCodeRepository)
     {
         _expenseRepository = expenseRepository;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _accountCodeRepository = accountCodeRepository;
     }
 
     public async Task<Guid> Handle(CreateExpenseCommand request, CancellationToken cancellationToken)
     {
+        await ExpenseAccountRule.EnsureMoinAsync(_accountCodeRepository, request.AccountCodeId, cancellationToken);
+
         var entity = new TB_EXPENCE
         {
             ID = Guid.NewGuid(),

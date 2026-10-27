@@ -39,7 +39,7 @@ public sealed class CreateExpenseCommandHandlerTests
             .Callback<TB_EXPENCE, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
         var command = ValidCommand();
 
         await handler.Handle(command, CancellationToken.None);
@@ -66,7 +66,7 @@ public sealed class CreateExpenseCommandHandlerTests
             .Callback<TB_EXPENCE, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -87,7 +87,7 @@ public sealed class CreateExpenseCommandHandlerTests
             .Callback<TB_EXPENCE, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -108,7 +108,7 @@ public sealed class CreateExpenseCommandHandlerTests
             .Callback<TB_EXPENCE, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
 
         var result = await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -124,7 +124,7 @@ public sealed class CreateExpenseCommandHandlerTests
         var unitOfWork = new Mock<IUnitOfWork>();
         var currentUser = CurrentUserMock();
 
-        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -151,7 +151,7 @@ public sealed class CreateExpenseCommandHandlerTests
             .Callback(() => callOrder.Add("SaveChangesAsync"))
             .ReturnsAsync(1);
 
-        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
 
         await handler.Handle(ValidCommand(), CancellationToken.None);
 
@@ -167,7 +167,7 @@ public sealed class CreateExpenseCommandHandlerTests
         using var cts = new CancellationTokenSource();
         var token = cts.Token;
 
-        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
 
         await handler.Handle(ValidCommand(), token);
 
@@ -190,7 +190,7 @@ public sealed class CreateExpenseCommandHandlerTests
             .Callback<TB_EXPENCE, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
         var command = ValidCommand() with { VahedCode = "0009" };
 
         await handler.Handle(command, CancellationToken.None);
@@ -216,7 +216,7 @@ public sealed class CreateExpenseCommandHandlerTests
             .Callback<TB_EXPENCE, CancellationToken>((entity, _) => staged = entity)
             .Returns(Task.CompletedTask);
 
-        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object);
+        var handler = new CreateExpenseCommandHandler(repository.Object, unitOfWork.Object, currentUser.Object, ExpenseTestAccounts.Moin());
         var behavior = new VahedScopeBehavior<CreateExpenseCommand, Guid>(TestUnitScope.ResolverFor(currentUser.Object));
         var forgedCommand = ValidCommand() with { VahedCode = "9999" };
 

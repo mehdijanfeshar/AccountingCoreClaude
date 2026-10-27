@@ -22,7 +22,9 @@ namespace Accounting.Infrastructure.OperationTemplates.Agent;
 ///   "BaseUrl": null,                    // Claude: https://api.anthropic.com · Ollama: http://localhost:11434
 ///   "ProxyUrl": null,                   // اگر خروج به اینترنت از پراکسی است
 ///   "TimeoutSeconds": 20,
-///   "MaskPii": false } }            // فقط Ollama؛ Claude همیشه پوشانده می‌شود
+///   "MaskPii": false,              // فقط Ollama؛ Claude همیشه پوشانده می‌شود
+///   "TrustAnswers": true,           // false = فقط انتخاب الگو از مدل
+///   "KeepAlive": "30m" } }          // فقط Ollama
 /// </code>
 /// </summary>
 public sealed class AssistantLlmOptions
@@ -41,6 +43,23 @@ public sealed class AssistantLlmOptions
     /// برای Ollama داخلی پیش‌فرض خاموش.
     /// </summary>
     public bool MaskPii { get; set; }
+
+    /// <summary>
+    /// false = از «فهم جمله» فقط الگو پذیرفته می‌شود؛ مبلغ/تاریخ/طرف حساب را روش قاعده‌ای برمی‌دارد (مدل کوچک داخلی).
+    /// </summary>
+    public bool TrustAnswers { get; set; } = true;
+
+    /// <summary>false = صفحهٔ ثبت سند بدون هوش مصنوعی (روش قاعده‌ای)؛ گفتگو و سنجش همین مدل را به کار می‌برند.</summary>
+    public bool InterpretEnabled { get; set; } = true;
+
+    /// <summary>فقط Ollama: مدت ماندن مدل در حافظه پس از آخرین درخواست (مثل «30m»)؛ بارگذاری دوباره روی CPU ده‌ها ثانیه است.</summary>
+    public string KeepAlive { get; set; } = "30m";
+
+    /// <summary>
+    /// فقط Ollama: «فکر کردن» مدل‌های استدلالی (مثل qwen3). false = بی‌فکر و چند برابر سریع‌تر روی CPU؛
+    /// خالی = اصلاً فرستاده نمی‌شود (مدل‌هایی مثل qwen2.5 که این قابلیت را ندارند).
+    /// </summary>
+    public bool? Think { get; set; }
 }
 
 public static class AssistantLlmDi
@@ -61,14 +80,20 @@ public static class AssistantLlmDi
         {
             case "claude" when !string.IsNullOrWhiteSpace(options.ApiKey):
                 s.AddScoped<IIntentInterpreter, ClaudeIntentInterpreter>();
+                s.AddScoped<IAgentChatModel, ClaudeAgentChatModel>();
                 break;
             case "ollama":
                 s.AddScoped<IIntentInterpreter, OllamaIntentInterpreter>();
+                s.AddScoped<IAgentChatModel, OllamaAgentChatModel>();
                 break;
             default:
                 s.AddSingleton<IIntentInterpreter, DisabledIntentInterpreter>();
+                s.AddSingleton<IAgentChatModel, DisabledAgentChatModel>();
                 break;
         }
+
+        // فاز ۶۵ — دستیار گفتگو: تنظیمات Assistant:Agent
+        s.AddSingleton(configuration.GetSection(AssistantAgentOptions.Section).Get<AssistantAgentOptions>() ?? new AssistantAgentOptions());
         return s;
     }
 }
@@ -103,6 +128,8 @@ public sealed class ClaudeIntentInterpreter : IIntentInterpreter
     public string ProviderName => "Claude";
     public string? ModelName => string.IsNullOrWhiteSpace(_options.Model) ? "claude-sonnet-5-5" : _options.Model;
     public bool RequiresPiiMasking => true; // ارسال به سرویس بیرونی: پوشاندن اجباری، قابل خاموش شدن نیست
+    public bool TrustAnswers => _options.TrustAnswers;
+    public bool InterpretEnabled => _options.InterpretEnabled;
 
     public async Task<string> CompleteJsonAsync(IntentPrompt prompt, CancellationToken ct)
     {
@@ -161,6 +188,8 @@ public sealed class OllamaIntentInterpreter : IIntentInterpreter
     public string ProviderName => "Ollama";
     public string? ModelName => string.IsNullOrWhiteSpace(_options.Model) ? "qwen2.5:7b" : _options.Model;
     public bool RequiresPiiMasking => _options.MaskPii;
+    public bool TrustAnswers => _options.TrustAnswers;
+    public bool InterpretEnabled => _options.InterpretEnabled;
 
     public async Task<string> CompleteJsonAsync(IntentPrompt prompt, CancellationToken ct)
     {
@@ -168,12 +197,16 @@ public sealed class OllamaIntentInterpreter : IIntentInterpreter
         {
             ["model"] = string.IsNullOrWhiteSpace(_options.Model) ? "qwen2.5:7b" : _options.Model,
             ["stream"] = false,
+            ["keep_alive"] = string.IsNullOrWhiteSpace(_options.KeepAlive) ? "30m" : _options.KeepAlive,
             ["format"] = JsonNode.Parse(prompt.JsonSchema),
             ["options"] = new JsonObject { ["temperature"] = 0 },
             ["messages"] = new JsonArray(
                 new JsonObject { ["role"] = "system", ["content"] = prompt.System },
                 new JsonObject { ["role"] = "user", ["content"] = prompt.User }),
         };
+
+        if (_options.Think is { } think)
+            body["think"] = think;
 
         var baseUrl = (string.IsNullOrWhiteSpace(_options.BaseUrl) ? "http://localhost:11434" : _options.BaseUrl).TrimEnd('/');
         using var content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json");

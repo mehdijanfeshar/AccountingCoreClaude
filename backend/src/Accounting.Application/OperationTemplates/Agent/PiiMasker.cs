@@ -82,3 +82,47 @@ public sealed record PiiMaskResult(string Masked, IReadOnlyDictionary<string, st
         return text;
     }
 }
+
+/// <summary>
+/// پوشاندن چند متن در یک درخواست با یک نقشهٔ مشترک (گفتگو با دستیار، فاز ۶۵): مقدار یکسان همیشه همان نشانه را
+/// می‌گیرد و نشانهٔ دو پیام با هم برخورد نمی‌کند (<see cref="PiiMasker.Mask"/> شمارنده را برای هر متن از ۱ شروع می‌کند).
+/// </summary>
+public sealed class PiiMaskSession
+{
+    private readonly Dictionary<string, string> _tokenToValue = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _valueToToken = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _counters = new(StringComparer.Ordinal);
+
+    public bool HasMasked => _tokenToValue.Count > 0;
+
+    public string Mask(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return text ?? "";
+        var single = PiiMasker.Mask(text);
+        if (!single.HasMasked) return single.Masked;
+
+        // نشانه‌های محلی ⇒ نشانه‌های سراسری همین جلسه؛ از آخر به اول تا [[NID_1]] جای [[NID_12]] را نگیرد.
+        var masked = single.Masked;
+        foreach (var (local, value) in single.Map.OrderByDescending(kv => kv.Key.Length).ThenByDescending(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (!_valueToToken.TryGetValue(value, out var global))
+            {
+                var kind = local[2..local.IndexOf('_')];
+                _counters[kind] = _counters.GetValueOrDefault(kind) + 1;
+                global = $"[[{kind}_{_counters[kind]}]]";
+                _valueToToken[value] = global;
+                _tokenToValue[global] = value;
+            }
+            masked = masked.Replace(local, "\u0001" + global[2..], StringComparison.Ordinal);
+        }
+        return masked.Replace("\u0001", "[[", StringComparison.Ordinal);
+    }
+
+    public string Restore(string? text)
+    {
+        if (string.IsNullOrEmpty(text) || _tokenToValue.Count == 0) return text ?? "";
+        foreach (var (token, value) in _tokenToValue.OrderByDescending(kv => kv.Key.Length))
+            text = text.Replace(token, value, StringComparison.Ordinal);
+        return text;
+    }
+}

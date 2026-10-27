@@ -24,5 +24,16 @@ public sealed class TreasuryRoleRequiredException : Exception, IPublicProblemExc
 
     public int StatusCode => 403;
 
-    public string PublicDetail => "شما نقش لازم برای این اقدام مدیریتی خزانه‌داری را ندارید.";
+    public string PublicDetail =>
+        $"برای این کار باید در همین واحد نقش خزانهٔ «{RoleTitle(RequiredRole)}» داشته باشید — از منوی «نقش‌های خزانه» تعریف می‌شود.";
+
+    private static string RoleTitle(TreasuryRole role) => role switch
+    {
+        TreasuryRole.UnitManager => "مدیر واحد",
+        TreasuryRole.FinanceManager => "مدیر مالی",
+        TreasuryRole.Ceo => "مدیرعامل",
+        TreasuryRole.SeniorAccountant => "حسابدار ارشد",
+        TreasuryRole.Treasurer => "خزانه‌دار",
+        _ => role.ToString(),
+    };
 }

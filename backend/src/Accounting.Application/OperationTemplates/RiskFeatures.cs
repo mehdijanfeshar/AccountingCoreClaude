@@ -146,6 +146,9 @@ public sealed class OperationRiskEvaluator
     /// <summary>منبع‌های مجاز جواب (answerSources).</summary>
     public static readonly string[] SourceKinds = ["sentence", "ai", "recent", "quick", "user"];
 
+    public const string AttachmentReason = "مدرک الزامی است و پیوست نشده است.";
+    public const string AttachmentWarning = "برای این عملیات مدرک (فاکتور یا رسید) لازم است و هنوز پیوست نشده؛ لطفاً آن را پیوست کنید.";
+
     private readonly IOperationTemplateRepository _repo;
     private readonly AssistantRiskOptions _options;
 
@@ -183,8 +186,7 @@ public sealed class OperationRiskEvaluator
 
             // ۳. مدرک
             if (t.RequireAttachment && !r.HasAttachment)
-                Raise(RiskLevel.Medium, "مدرک الزامی است و پیوست نشده است.",
-                    "برای این عملیات مدرک (فاکتور یا رسید) لازم است و هنوز پیوست نشده؛ لطفاً آن را پیوست کنید.");
+                Raise(RiskLevel.Medium, AttachmentReason, AttachmentWarning);
 
             // ۴. «نمی‌دانم»
             foreach (var p in t.Parameters.Where(p => p.Type == ParameterType.Choice))
@@ -276,6 +278,41 @@ public sealed class OperationRiskEvaluator
         var now = DateTime.Now;
         var start = pc.ToDateTime(pc.GetYear(now), pc.GetMonth(now), 1, 0, 0, 0, 0);
         return DateTime.SpecifyKind(start, DateTimeKind.Local).ToUniversalTime();
+    }
+}
+
+/// <summary>
+/// هم‌گام‌سازی ریسک ذخیره‌شدهٔ اجرا با پیوست واقعی (فاز ۶۵): فایل پس از ثبت بارگذاری می‌شود، پس ریسک لحظهٔ ثبت
+/// ممکن است «مدرک پیوست نشده» داشته باشد. چون هر دلیل ریسک دست‌کم «متوسط» است و نبود مدرک فقط «متوسط» می‌سازد،
+/// بدون اجرای دوبارهٔ ارزیاب دقیق محاسبه می‌شود: با حذف این دلیل، سطح فقط وقتی «متوسط» بود و دلیل دیگری نماند ⇒ «پایین».
+/// </summary>
+public static class AttachmentRiskSync
+{
+    /// <returns>true اگر ریسک/هشدار اجرا تغییر کرد.</returns>
+    public static bool Apply(OperationExecution e, bool attachmentRequired, bool hasAttachment)
+    {
+        if (e.RiskLevel is null) return false; // اجرای قدیمی بدون ریسک: «نیازمند توجه» می‌ماند
+        var reasons = RiskText.ParseList(e.RiskReasonsJson).ToList();
+        var warnings = RiskText.ParseList(e.WarningsJson).ToList();
+        var flagged = reasons.Contains(OperationRiskEvaluator.AttachmentReason);
+
+        if (hasAttachment && flagged)
+        {
+            reasons.Remove(OperationRiskEvaluator.AttachmentReason);
+            warnings.Remove(OperationRiskEvaluator.AttachmentWarning);
+            if (e.RiskLevel == RiskLevel.Medium && reasons.Count == 0) e.RiskLevel = RiskLevel.Low;
+        }
+        else if (!hasAttachment && !flagged && attachmentRequired)
+        {
+            reasons.Add(OperationRiskEvaluator.AttachmentReason);
+            if (!warnings.Contains(OperationRiskEvaluator.AttachmentWarning)) warnings.Add(OperationRiskEvaluator.AttachmentWarning);
+            if (e.RiskLevel < RiskLevel.Medium) e.RiskLevel = RiskLevel.Medium;
+        }
+        else return false;
+
+        e.RiskReasonsJson = RiskText.SerializeList(reasons);
+        e.WarningsJson = RiskText.SerializeList(warnings);
+        return true;
     }
 }
 
