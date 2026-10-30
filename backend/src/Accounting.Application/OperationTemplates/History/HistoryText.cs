@@ -17,6 +17,20 @@ public static class HistoryText
         "حساب", "بدهکار", "بستانکار", "ردیف", "فاکتور", "وجه", "مبالغ", "خود", "بنده", "ما", "من", "شما",
     };
 
+    // نام ماه در سند ماهانه (حقوق بهمن، قبض اسفند) فقط دوره است، نه نوع عملیات؛ کلمهٔ کلیدی نمی‌شود.
+    private static readonly string[] MonthNames =
+        ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+
+    private static readonly HashSet<string> Months = new(
+        MonthNames.Concat(MonthNames.Select(m => m + "ماه")).Concat(["ماه", "ماهه", "ماهیانه", "ماهانه"]), StringComparer.Ordinal);
+
+    /// <summary>کلمهٔ نام ماه (با «ماه» چسبیده یا بدون آن) یا خود «ماه».</summary>
+    public static bool IsMonth(string normalizedWord) => Months.Contains(normalizedWord);
+
+    /// <summary>متن نرمال‌شده بدون نام ماه‌ها؛ برای گروه‌بندی معنایی شرح‌ها (حقوق بهمن و حقوق اسفند یک کارند).</summary>
+    public static string WithoutMonths(string? text) =>
+        string.Join(' ', Normalize(text).Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => !Months.Contains(w)));
+
     /// <summary>متن نرمال‌شده (ی/ک فارسی، بدون نیم‌فاصله/اعراب/رقم)؛ حروف غیرحرفی به فاصله تبدیل می‌شوند.</summary>
     public static string Normalize(string? text)
     {
@@ -40,7 +54,7 @@ public static class HistoryText
         foreach (var w in Normalize(text).Split(' ', StringSplitOptions.RemoveEmptyEntries))
         {
             var t = Stem(w);
-            if (t.Length < 2 || Stopwords.Contains(t) || Stopwords.Contains(w)) continue;
+            if (t.Length < 2 || Stopwords.Contains(t) || Stopwords.Contains(w) || Months.Contains(w)) continue;
             result.Add(t);
         }
         return result;

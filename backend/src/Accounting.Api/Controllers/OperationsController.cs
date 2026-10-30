@@ -273,13 +273,19 @@ public sealed class OperationsController : ControllerBase
     public async Task<IActionResult> DeleteHistoryPattern(Guid id, CancellationToken ct) =>
         Ok(await _mediator.Send(new DeleteHistoryPatternCommand(id), ct));
 
-    /// <summary>تعریف الگوی ذخیره‌نشده از یک الگوی سابقه برای پیش‌پر کردن طراح الگو (همان شکل بدنهٔ ساخت الگو).</summary>
+    /// <summary>تعریف الگوی ذخیره‌نشده از یک الگوی سابقه برای پیش‌پر کردن طراح الگو (همان شکل بدنهٔ ساخت الگو). <c>?meaning=</c> ⇒ از یک معنای الگوی چندمعنایی.</summary>
     [HttpPost("history/patterns/{id:guid}/to-template")]
     [ProducesResponseType(typeof(HistoryTemplateDraftDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> HistoryPatternToTemplate(Guid id, CancellationToken ct) =>
-        Ok(await _mediator.Send(new HistoryPatternToTemplateQuery(id), ct));
+    public async Task<IActionResult> HistoryPatternToTemplate(Guid id, [FromQuery] int? meaning, CancellationToken ct) =>
+        Ok(await _mediator.Send(new HistoryPatternToTemplateQuery(id, meaning), ct));
+
+    /// <summary>وضعیت جستجوی معنایی سوابق (RAG): روشن بودن، مدل، تعداد بردارها، آخرین همگام‌سازی.</summary>
+    [HttpGet("history/semantic-status")]
+    [ProducesResponseType(typeof(HistorySemanticStatusDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> HistorySemanticStatus(CancellationToken ct) =>
+        Ok(await _mediator.Send(new GetHistorySemanticStatusQuery(), ct));
 
     /// <summary>سه الگوی سابقهٔ نزدیک به جمله (فقط حساب‌ها و ساختار؛ هرگز تفصیلی واحدهای دیگر). واحد از هدر؛ سال از query.</summary>
     [HttpPost("history/match")]

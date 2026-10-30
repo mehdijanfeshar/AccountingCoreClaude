@@ -174,7 +174,7 @@ public sealed class HistoryPatternRepository : IHistoryPatternStore
         return (IReadOnlyList<HistoryPattern>)result;
     });
 
-    public Task<HistoryCandidates> FindCandidatesAsync(IReadOnlyCollection<string> tokens, string vahedCode, int take, CancellationToken ct) => Guard(async () =>
+    public Task<HistoryCandidates> FindCandidatesAsync(IReadOnlyCollection<string> tokens, string vahedCode, int take, IReadOnlyCollection<Guid> extraIds, CancellationToken ct) => Guard(async () =>
     {
         // سبک: بدون LinesJson (CLOB). ترتیب کاندیدا با امتیاز در Application تعیین می‌شود.
         var found = new Dictionary<Guid, HistoryPattern>();
@@ -201,8 +201,8 @@ public sealed class HistoryPatternRepository : IHistoryPatternStore
             foreach (var u in unitHits) own.TryAdd(u.PatternId, u);
         }
 
-        // الگوهای فقط-با-سابقهٔ-واحد که در فهرست کلی نبودند
-        var missing = own.Keys.Where(id => !found.ContainsKey(id)).ToList();
+        // الگوهای فقط-با-سابقهٔ-واحد یا فقط-معنایی که در فهرست کلی نبودند
+        var missing = own.Keys.Concat(extraIds).Distinct().Where(id => !found.ContainsKey(id)).ToList();
         foreach (var chunk in missing.Chunk(InChunk))
         {
             var part = chunk.ToList();

@@ -45,10 +45,12 @@ public sealed class RebuildHistoryPatternsHandler : IRequestHandler<RebuildHisto
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
     private readonly IHeadquartersAccessService? _hq;
+    private readonly IHistoryEmbeddingSignal? _embeddings;
 
     public RebuildHistoryPatternsHandler(IHistorySourceReader source, IHistoryPatternStore store, ISubsidiaryAccountReader accounts,
-        IUnitAccessReadRepository units, IUnitOfWork unitOfWork, ICurrentUser currentUser, IHeadquartersAccessService? hq = null)
-    { _source = source; _store = store; _accounts = accounts; _units = units; _unitOfWork = unitOfWork; _currentUser = currentUser; _hq = hq; }
+        IUnitAccessReadRepository units, IUnitOfWork unitOfWork, ICurrentUser currentUser, IHeadquartersAccessService? hq = null,
+        IHistoryEmbeddingSignal? embeddings = null)
+    { _source = source; _store = store; _accounts = accounts; _units = units; _unitOfWork = unitOfWork; _currentUser = currentUser; _hq = hq; _embeddings = embeddings; }
 
     public async Task<HistoryRebuildResult> Handle(RebuildHistoryPatternsCommand c, CancellationToken ct)
     {
@@ -165,6 +167,7 @@ public sealed class RebuildHistoryPatternsHandler : IRequestHandler<RebuildHisto
             throw;
         }
 
+        _embeddings?.Request(); // بردار معنایی الگوهای تازه در پس‌زمینه (DDL 089)
         sw.Stop();
         return new HistoryRebuildResult(patterns.Count, patterns.Sum(p => p.VoucherCount ?? 0), sw.ElapsedMilliseconds);
     }

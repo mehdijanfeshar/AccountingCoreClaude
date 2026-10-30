@@ -164,8 +164,8 @@ public interface IHistoryPatternStore
     Task<HistoryPattern?> GetAsync(Guid id, CancellationToken ct);
     Task<IReadOnlyList<HistoryPattern>> GetManyAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct);
 
-    /// <summary>الگوهایی که کلمهٔ کلیدی‌شان (کلی یا در سابقهٔ واحد) یکی از <paramref name="tokens"/> است.</summary>
-    Task<HistoryCandidates> FindCandidatesAsync(IReadOnlyCollection<string> tokens, string vahedCode, int take, CancellationToken ct);
+    /// <summary>الگوهایی که کلمهٔ کلیدی‌شان (کلی یا در سابقهٔ واحد) یکی از <paramref name="tokens"/> است، به‌علاوهٔ <paramref name="extraIds"/> (کاندیدای معنایی).</summary>
+    Task<HistoryCandidates> FindCandidatesAsync(IReadOnlyCollection<string> tokens, string vahedCode, int take, IReadOnlyCollection<Guid> extraIds, CancellationToken ct);
 
     /// <summary>عنوان گروه‌های تفصیلی (<c>TB_TAFSIL_GROUP</c>).</summary>
     Task<IReadOnlyDictionary<Guid, string>> GroupTitlesAsync(IReadOnlyCollection<Guid> groupIds, CancellationToken ct);
@@ -190,7 +190,7 @@ public sealed record CoveredByTemplateDto(Guid Id, string Title);
 public sealed record HistoryPatternDto(
     Guid Id, IReadOnlyList<HistoryLineDto> Lines, int VoucherCount, int UnitCount, string? Years, long MedianAmount,
     string? LastDate, IReadOnlyList<KeywordDto> Keywords, IReadOnlyList<string> SampleDescriptions,
-    CoveredByTemplateDto? CoveredByTemplate);
+    CoveredByTemplateDto? CoveredByTemplate, IReadOnlyList<HistoryMeaningDto>? Meanings = null);
 
 public sealed record HistoryPatternPageDto(IReadOnlyList<HistoryPatternDto> Items, int Total, int Page, int PageSize, bool NeedsRebuild);
 

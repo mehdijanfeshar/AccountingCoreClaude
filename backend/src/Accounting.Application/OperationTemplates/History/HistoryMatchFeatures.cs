@@ -41,12 +41,23 @@ public sealed class MatchHistoryPatternsHandler : IRequestHandler<MatchHistoryPa
     private const int CandidateTake = 150;
     private const int EvaluateAtMost = 25;
 
+    private const int FusionK = 10;
+
     private readonly IHistoryPatternStore _store;
     private readonly HistoryTemplateFactory _factory;
     private readonly IAccountEntryPolicy _policy;
+    private readonly IHistoryEmbedder? _embedder;
+    private readonly HistoryVectorIndex? _index;
+    private readonly IHistoryVectorStore? _vectors;
+    private readonly HistoryEmbeddingOptions _embedding;
 
-    public MatchHistoryPatternsHandler(IHistoryPatternStore store, HistoryTemplateFactory factory, IAccountEntryPolicy policy)
-    { _store = store; _factory = factory; _policy = policy; }
+    public MatchHistoryPatternsHandler(IHistoryPatternStore store, HistoryTemplateFactory factory, IAccountEntryPolicy policy,
+        IHistoryEmbedder? embedder = null, HistoryVectorIndex? index = null, IHistoryVectorStore? vectors = null,
+        HistoryEmbeddingOptions? embedding = null)
+    {
+        _store = store; _factory = factory; _policy = policy;
+        _embedder = embedder; _index = index; _vectors = vectors; _embedding = embedding ?? new HistoryEmbeddingOptions();
+    }
 
     public async Task<IReadOnlyList<HistoryMatchDto>> Handle(MatchHistoryPatternsQuery q, CancellationToken ct)
     {
@@ -54,15 +65,16 @@ public sealed class MatchHistoryPatternsHandler : IRequestHandler<MatchHistoryPa
         if (await _store.CountAsync(ct) == 0) throw new HistoryPatternsUnavailableException();
 
         var tokens = HistoryText.Tokens(q.Sentence).Distinct(StringComparer.Ordinal).Take(MaxTokens).ToList();
-        if (tokens.Count == 0) return [];
+        var semantic = await SemanticAsync(q.Sentence, ct);
+        if (tokens.Count == 0 && semantic.Count == 0) return [];
 
-        var found = await _store.FindCandidatesAsync(tokens, q.VahedCode, CandidateTake, ct);
+        var found = await _store.FindCandidatesAsync(tokens, q.VahedCode, CandidateTake, semantic.Keys.ToList(), ct);
         var set = tokens.ToHashSet(StringComparer.Ordinal);
-        var ranked = found.Patterns
-            .Select(p => (Pattern: p, Own: found.OwnUnit.GetValueOrDefault(p.Id)))
-            .Select(x => (x.Pattern, x.Own, Score: Score(x.Pattern, x.Own, set)))
-            .Where(x => x.Score > 0)
-            .OrderByDescending(x => x.Score).ThenByDescending(x => x.Pattern.VoucherCount ?? 0)
+        var ranked = Fuse(found.Patterns
+                .Select(p => (Pattern: p, Own: found.OwnUnit.GetValueOrDefault(p.Id)))
+                .Select(x => (x.Pattern, x.Own, Lexical: tokens.Count == 0 ? 0 : Score(x.Pattern, x.Own, set),
+                    Semantic: semantic.GetValueOrDefault(x.Pattern.Id)))
+                .ToList())
             .Take(EvaluateAtMost).ToList();
         if (ranked.Count == 0) return [];
 
@@ -90,6 +102,53 @@ public sealed class MatchHistoryPatternsHandler : IRequestHandler<MatchHistoryPa
                 samples, pattern.VoucherCount ?? 0, mine, HistoryTemplateFactory.Questions(template)));
         }
         return result;
+    }
+
+    /// <summary>
+    /// ادغام دو رتبه‌بندی (Reciprocal Rank Fusion): الگویی که هم در کلمه و هم در معنی بالاست اول می‌آید.
+    /// سابقهٔ خود واحد در امتیاز کلمه‌ای دو برابر است؛ در معنایی یک پلهٔ کوچک می‌گیرد.
+    /// </summary>
+    public static IEnumerable<(HistoryPattern Pattern, HistoryPatternUnit? Own)> Fuse(
+        IReadOnlyList<(HistoryPattern Pattern, HistoryPatternUnit? Own, double Lexical, double Semantic)> items)
+    {
+        var lexRank = items.Where(x => x.Lexical > 0)
+            .OrderByDescending(x => x.Lexical).ThenByDescending(x => x.Pattern.VoucherCount ?? 0)
+            .Select((x, i) => (x.Pattern.Id, Rank: i + 1)).ToDictionary(x => x.Id, x => x.Rank);
+        var semRank = items.Where(x => x.Semantic > 0)
+            .OrderByDescending(x => x.Semantic + (x.Own is null ? 0 : 0.02)).ThenByDescending(x => x.Pattern.VoucherCount ?? 0)
+            .Select((x, i) => (x.Pattern.Id, Rank: i + 1)).ToDictionary(x => x.Id, x => x.Rank);
+
+        return items
+            .Where(x => lexRank.ContainsKey(x.Pattern.Id) || semRank.ContainsKey(x.Pattern.Id))
+            .Select(x => (x.Pattern, x.Own, Fused:
+                (lexRank.TryGetValue(x.Pattern.Id, out var l) ? 1.0 / (FusionK + l) : 0)
+                + (semRank.TryGetValue(x.Pattern.Id, out var r) ? 1.0 / (FusionK + r) : 0)))
+            .OrderByDescending(x => x.Fused).ThenByDescending(x => x.Pattern.VoucherCount ?? 0)
+            .Select(x => (x.Pattern, x.Own));
+    }
+
+    /// <summary>نزدیک‌ترین الگوها از نظر معنی؛ خاموش، بدون جدول 089، کند یا خطا ⇒ خالی (فقط روش کلمه‌ای).</summary>
+    private async Task<IReadOnlyDictionary<Guid, double>> SemanticAsync(string sentence, CancellationToken ct)
+    {
+        if (_embedder is not { IsEnabled: true } || _index is null || _vectors is null) return new Dictionary<Guid, double>();
+        var text = HistoryText.Normalize(sentence);
+        if (text.Length == 0) return new Dictionary<Guid, double>();
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(Math.Clamp(_embedding.QueryTimeoutSeconds, 1, 60)));
+        try
+        {
+            await _index.EnsureLoadedAsync(_vectors, _embedder.ModelName, timeout.Token);
+            if (_index.Count == 0) return new Dictionary<Guid, double>();
+            var v = (await _embedder.EmbedAsync([text], timeout.Token)).FirstOrDefault();
+            if (v is null || v.Length == 0) return new Dictionary<Guid, double>();
+            return _index.Search(HistoryVectorMath.Normalize(v), Math.Clamp(_embedding.SemanticTake, 1, 200), _embedding.MinSimilarity,
+                    _embedding.RelativeMargin > 0 ? _embedding.RelativeMargin : null)
+                .ToDictionary(h => h.Id, h => h.Similarity);
+        }
+        catch (Exception) when (!ct.IsCancellationRequested)
+        {
+            return new Dictionary<Guid, double>(); // روش کلمه‌ای ادامه می‌دهد
+        }
     }
 
     internal static double Score(HistoryPattern p, HistoryPatternUnit? own, IReadOnlySet<string> tokens)

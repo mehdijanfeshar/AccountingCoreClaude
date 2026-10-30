@@ -59,3 +59,37 @@ public sealed class HistoryDismissedConfig : IEntityTypeConfiguration<HistoryDis
         b.Property(x => x.CreatedAtUtc).HasColumnName("CREATEDDATE").HasPrecision(6);
     }
 }
+
+/// <summary>بردار معنایی الگو — DDL 089. بدون FK به الگو (شناسهٔ پایدار؛ بردار از بازسازی جان سالم به در می‌برد). از لاگ تغییرات مستثنا.</summary>
+public sealed class HistoryPatternVectorConfig : IEntityTypeConfiguration<HistoryPatternVector>
+{
+    public void Configure(EntityTypeBuilder<HistoryPatternVector> b)
+    {
+        b.ToTable("TB_OP_HISTORY_PATTERN_VEC");
+        b.HasKey(x => x.PatternId).HasName("PK_OP_HISTORY_PATTERN_VEC");
+        b.Property(x => x.PatternId).Char36("PATTERN_ID").ValueGeneratedNever();
+        b.Property(x => x.Model).HasColumnName("MODEL").HasMaxLength(100).IsUnicode(false).IsRequired();
+        b.Property(x => x.TextHash).HasColumnName("TEXT_HASH").HasMaxLength(64).IsUnicode(false);
+        b.Property(x => x.Dim).HasColumnName("DIM").HasColumnType("NUMBER(5)");
+        b.Property(x => x.Vector).HasColumnName("VECTOR").HasColumnType("BLOB");
+        b.Property(x => x.CreatedAtUtc).HasColumnName("CREATEDDATE").HasPrecision(6);
+    }
+}
+
+/// <summary>معناهای الگو — DDL 089. بدون FK (مثل بردارها)؛ از لاگ تغییرات مستثنا.</summary>
+public sealed class HistoryPatternMeaningConfig : IEntityTypeConfiguration<HistoryPatternMeaning>
+{
+    public void Configure(EntityTypeBuilder<HistoryPatternMeaning> b)
+    {
+        b.ToTable("TB_OP_HISTORY_MEANING");
+        b.HasKey(x => new { x.PatternId, x.Index }).HasName("PK_OP_HISTORY_MEANING");
+        b.Property(x => x.PatternId).Char36("PATTERN_ID").ValueGeneratedNever();
+        b.Property(x => x.Index).HasColumnName("IDX").HasColumnType("NUMBER(3)").ValueGeneratedNever();
+        b.Property(x => x.Title).HasColumnName("TITLE").HasMaxLength(200).IsUnicode(true).IsRequired();
+        b.Property(x => x.Share).HasColumnName("SHARE").HasColumnType("NUMBER(5,1)");
+        b.Property(x => x.SampleCount).HasColumnName("SAMPLE_COUNT").HasColumnType("NUMBER(10)");
+        b.Property(x => x.SamplesJson).HasColumnName("SAMPLES_JSON").HasMaxLength(1000).IsUnicode(true);
+        b.Property(x => x.KeywordsJson).HasColumnName("KEYWORDS").HasMaxLength(1000).IsUnicode(true);
+        b.Property(x => x.CreatedAtUtc).HasColumnName("CREATEDDATE").HasPrecision(6);
+    }
+}

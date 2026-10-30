@@ -60,6 +60,7 @@ builder.Services.AddSales();
 // هوش مصنوعی حسابیار (Agent-UX فاز ۲) — پیش‌فرض خاموش؛ بخش Assistant:Llm در appsettings.
 builder.Services.AddAssistantLlm(builder.Configuration);
 builder.Services.AddAssistantRisk(builder.Configuration);
+builder.Services.AddHistoryEmbedding(builder.Configuration); // جستجوی معنایی سوابق (DDL 089)؛ پیش‌فرض خاموش
 
 // --- Authentication (Tamin org IDP, JWT Bearer) ------------------------------------------------
 //
