@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build *)",
+      "Bash(dotnet test *)",
+      "Bash(dotnet run *)",
+      "Bash(dotnet clean *)",
+      "Bash(dotnet list *)",
+      "Bash(dotnet add *)",
+      "Bash(dotnet remove *)",
+      "Bash(dotnet package *)",
+      "Bash(dotnet tool *)",
+      "Bash(dotnet user-secrets *)",
+      "Bash(dotnet --version)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git check-ignore *)",
+      "Bash(curl -s *http://localhost:*)"
+    ],
+    "deny": [
+      "Read(./artifacts/**)",
+      "Read(./backend/**/bin/**)",
+      "Read(./backend/**/obj/**)",
+      "Read(./docs/archive/**)",
+      "Read(./.claude/agents_old/**)",
+      "Read(./backend/**/*.xml)"
+    ]
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "permission_prompt|idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -Command \"[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); [System.Windows.Forms.MessageBox]::Show('Claude Code needs your attention', 'Claude Code')\""
+          }
+        ]
+      }
+    ]
+  }
+}
