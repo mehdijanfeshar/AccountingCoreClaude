@@ -1,4 +1,7 @@
+using Accounting.Application.Reports.AgePyramid;
 using Accounting.Application.Reports.GeneralLedger;
+using Accounting.Application.Reports.OpeningBalanceDiscrepancy;
+using Accounting.Application.Reports.TafsilGroupAccountLinks;
 using Accounting.Domain.ValueObjects;
 using Accounting.Application.Common.Security;
 using Accounting.Application.Common.Search;
@@ -332,4 +335,51 @@ public sealed class TrialBalanceReportsController : ControllerBase
             new GetGeneralLedgerQuery(year, fromDate, toDate, fromKol, toKol, docLife, fromVoucherNo, toVoucherNo, pageNumber, pageSize)
             { UnitScope = unitScope, UnitCategory = unitCategory, ProvinceCode = provinceCode },
             cancellationToken));
+
+    /// <summary>
+    /// ارتباط گروه تفصیلی با معین — فراگیر و فیلترپذیر روی همهٔ معین‌ها (نه فقط فرم کدینگ حساب که
+    /// تک‌معینی است). جدول VAHEDCODE ندارد، پس بدون دامنهٔ واحد.
+    /// </summary>
+    [HttpGet("tafsil-group-account-links")]
+    [ProducesResponseType(typeof(IReadOnlyList<TafsilGroupAccountLinkReportRowDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetTafsilGroupAccountLinkReport(
+        [FromQuery] List<Guid>? accountIds = null,
+        [FromQuery] Guid? levelId = null,
+        [FromQuery] Guid? tafsilGroupId = null,
+        [FromQuery] Guid? tafsiliId = null,
+        CancellationToken cancellationToken = default)
+        => Ok(await _mediator.Send(
+            new GetTafsilGroupAccountLinkReportQuery(accountIds, levelId, tafsilGroupId, tafsiliId), cancellationToken));
+
+    /// <summary>
+    /// هرم سنی — مانده بدهکار/بستانکار هر معینِ شناسه‌دار به تفکیک شناسه، محدود به بازهٔ شناسه. آخرین
+    /// سطر، جمع کل (<c>IsTotal</c>).
+    /// </summary>
+    [HttpGet("age-pyramid")]
+    [ProducesResponseType(typeof(IReadOnlyList<AgePyramidRowDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetAgePyramidReport(
+        [FromQuery] string year = "",
+        [FromQuery] List<Guid>? accountIds = null,
+        [FromQuery] string? fromIdentifier = null,
+        [FromQuery] string? toIdentifier = null,
+        CancellationToken cancellationToken = default)
+        => Ok(await _mediator.Send(new GetAgePyramidReportQuery(year, accountIds, fromIdentifier, toIdentifier), cancellationToken));
+
+    /// <summary>
+    /// مغایرت افتتاحیه با ماندهٔ سال قبل — ردیف‌های سند افتتاحیهٔ <paramref name="year"/> که مبلغش با
+    /// مانده همان معین/شناسه در کل سال قبل برابر نیست.
+    /// </summary>
+    [HttpGet("opening-balance-discrepancy")]
+    [ProducesResponseType(typeof(IReadOnlyList<OpeningBalanceDiscrepancyRowDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(HttpValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> GetOpeningBalanceDiscrepancyReport(
+        [FromQuery] string year = "", CancellationToken cancellationToken = default)
+        => Ok(await _mediator.Send(new GetOpeningBalanceDiscrepancyQuery(year), cancellationToken));
 }

@@ -127,6 +127,9 @@ public static class DependencyInjection
         services.AddScoped<IMatrixReportReadRepository, MatrixReportReadRepository>();
         services.AddScoped<IVoucherReviewReadRepository, VoucherReviewReadRepository>();
         services.AddScoped<IAttributeAccountReconciliationReadRepository, AttributeAccountReconciliationReadRepository>();
+        services.AddScoped<ITafsilGroupAccountLinkReportReadRepository, TafsilGroupAccountLinkReportReadRepository>();
+        services.AddScoped<IAgePyramidReadRepository, AgePyramidReadRepository>();
+        services.AddScoped<IOpeningBalanceDiscrepancyReadRepository, OpeningBalanceDiscrepancyReadRepository>();
         services.AddScoped<IElamWorkflowRepository, ElamWorkflowRepository>();
         // شناسه/ویژگی/فیش ردیف سند.
         services.AddScoped<Accounting.Application.Commands.Vouchers.Common.IVoucherLineExtrasStore, VoucherLineExtrasStore>();
