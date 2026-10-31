@@ -52,15 +52,18 @@ public sealed partial class TemplateDefinitionValidator
                 e.Add($"پارامتر «{p.Key}» انتخابی نیست و نباید گزینه داشته باشد.");
         }
 
-        // ── ردیف‌ها ──
-        if (!t.Lines.Any(l => l.Side == LineSide.Debit) || !t.Lines.Any(l => l.Side == LineSide.Credit))
+        // ── ردیف‌ها ── (ردیف «سهم ماهانه» تعهدی جزو سند اصلی نیست؛ قواعدش در AccrualTemplateRules)
+        var voucherLines = t.Lines.Where(l => !Accrual.AccrualSchedulePlanner.IsScheduleLine(l)).ToList();
+        if (!voucherLines.Any(l => l.Side == LineSide.Debit) || !voucherLines.Any(l => l.Side == LineSide.Credit))
             e.Add("الگو باید حداقل یک ردیف بدهکار و یک ردیف بستانکار داشته باشد.");
 
+        Accrual.AccrualTemplateRules.Validate(t, pByKey, e);
 
         foreach (var l in t.Lines)
         {
             var name = $"ردیف {l.SortOrder}";
-            ValidateLinePolicy(l, name, pByKey, e);
+            if (!Accrual.AccrualSchedulePlanner.IsScheduleLine(l))
+                ValidateLinePolicy(l, name, pByKey, e);
             if (!l.IsBalancingLine)
             {
                 if (!pByKey.TryGetValue(l.AmountParameterKey ?? "", out var ap) || ap.Type != ParameterType.Amount)
@@ -83,7 +86,7 @@ public sealed partial class TemplateDefinitionValidator
         }
 
         // ── تراز ساختاری برای هر ترکیب جواب‌های انتخابی (G8): ردیف‌های شرطی هر شاخه باید خودشان تراز باشند ──
-        if (e.Count == 0) ValidateBalanceCombinations(t, pByKey, e);
+        if (e.Count == 0) ValidateBalanceCombinations(voucherLines, pByKey, e);
 
         // ── Placeholderهای شرح ──
         foreach (var pattern in t.Lines.Select(l => l.DescriptionPattern).Append(t.VoucherDescriptionPattern).Append(t.PlainPattern))
@@ -181,9 +184,9 @@ public sealed partial class TemplateDefinitionValidator
     /// برای هر ترکیب جواب‌های سؤال‌های انتخابیِ مورد استفاده در شرط‌ها (به‌علاوهٔ «نمی‌دانم»)، ردیف‌های ساخته‌شده
     /// باید حداقل یک بدهکار و یک بستانکار داشته باشند و یا تراز باشند (جمع درصدها) یا دقیقاً یک ردیف تراز‌کننده داشته باشند.
     /// </summary>
-    private static void ValidateBalanceCombinations(OperationTemplate t, IReadOnlyDictionary<string, TemplateParameter> pByKey, List<string> e)
+    private static void ValidateBalanceCombinations(IReadOnlyList<TemplateLine> lines, IReadOnlyDictionary<string, TemplateParameter> pByKey, List<string> e)
     {
-        var keys = t.Lines.Where(l => !string.IsNullOrWhiteSpace(l.ConditionParamKey))
+        var keys = lines.Where(l => !string.IsNullOrWhiteSpace(l.ConditionParamKey))
             .Select(l => l.ConditionParamKey!).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         var domains = keys.Select(k => ChoiceOptions.Parse(pByKey[k].OptionsJson).Select(o => o.Value).Append(ChoiceOptions.Unknown).ToList()).ToList();
 
@@ -207,7 +210,7 @@ public sealed partial class TemplateDefinitionValidator
                 return;
             }
             var suffix = keys.Count == 0 ? "" : " (وقتی " + string.Join("، ", keys.Select(k => $"«{pByKey[k].Title}» = {Label(pByKey[k], answers[k])}")) + ")";
-            var active = t.Lines.Where(l => TemplateLogic.LineApplies(l, k => answers.GetValueOrDefault(k))).ToList();
+            var active = lines.Where(l => TemplateLogic.LineApplies(l, k => answers.GetValueOrDefault(k))).ToList();
 
             if (!active.Any(l => l.Side == LineSide.Debit) || !active.Any(l => l.Side == LineSide.Credit))
             { Add("سند باید حداقل یک ردیف بدهکار و یک ردیف بستانکار داشته باشد" + suffix + "."); return; }

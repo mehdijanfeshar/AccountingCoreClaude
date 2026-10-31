@@ -114,6 +114,26 @@ public class MonthCloseTests
     }
 
     [Fact]
+    public async Task Close_UnitWithOpenAccrualLines_IsRejectedWithReason()
+    {
+        AsHq();
+        Counts(new UnitDocLifeCount("0002", DocLife.Reviewed, 4));
+        var accrual = new Mock<Accounting.Application.Accrual.IAccrualScheduleRepository>();
+        accrual.Setup(a => a.CountOpenDueAsync("14040331", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, Accounting.Application.Accrual.AccrualOpenCount> { ["0002"] = new(3, 0) });
+
+        var r = await new CloseMonthHandler(_repo.Object, _unitAccess.Object, _user.Object, _uow.Object, accrual.Object)
+            .Handle(new("1404", 3, null, "0002"), default);
+
+        Assert.Equal(1, r.RejectedUnits);
+        Assert.Equal(0, r.ClosedUnits);
+        var log = _logs.Single();
+        Assert.Equal(MonthCloseResult.Rejected, log.RESULT);
+        Assert.Contains("3 برگشت برآورد اجرانشده", log.REASON);
+        _repo.Verify(x => x.AcceptReviewedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Close_UnknownDocLife_CountsAsPending()
     {
         AsHq();

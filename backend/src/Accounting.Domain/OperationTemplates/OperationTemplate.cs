@@ -60,6 +60,17 @@ public class OperationTemplate
 
     public TemplateCategory? Category { get; set; }
 
+    // ── حسابداری تعهدی (DDL 090، فاز ۶۶) — هر دو اختیاری و با هم ممنوع ──
+
+    /// <summary>سند این الگو روز اول ماه بعد خودکار برگردانده شود (برآورد هزینهٔ بدون فاکتور). برآورد اسفند برگشت نمی‌گیرد.</summary>
+    public bool AutoReverse { get; set; }
+
+    /// <summary>
+    /// تقسیم چندماهه: فقط <see cref="Accounting.Domain.Accrual.AccrualScheduleKind.Prepaid"/> یا
+    /// <see cref="Accounting.Domain.Accrual.AccrualScheduleKind.Deferred"/>؛ null = ندارد.
+    /// </summary>
+    public Accounting.Domain.Accrual.AccrualScheduleKind? ScheduleKind { get; set; }
+
     public string CreatedBy { get; set; } = default!;
     public DateTime CreatedAtUtc { get; set; }
 
@@ -79,6 +90,7 @@ public enum TemplateCategory
     Purchase = 4,
     PettyCash = 5,
     Sales = 6,
+    Accrual = 7,
     Other = 9
 }
 

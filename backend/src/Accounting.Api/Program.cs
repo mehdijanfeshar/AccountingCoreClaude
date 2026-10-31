@@ -7,6 +7,7 @@ using Accounting.Infrastructure;
 using Accounting.Infrastructure.OperationTemplates;
 using Accounting.Infrastructure.OperationTemplates.Agent;
 using Accounting.Infrastructure.Sales;
+using Accounting.Infrastructure.Accrual;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authorization;
@@ -57,6 +58,7 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddOperationTemplates();
 builder.Services.AddSales();
+builder.Services.AddAccrual(builder.Configuration); // حسابداری تعهدی (DDL 090)؛ کار روزانه با Accrual:Job:Enabled (پیش‌فرض خاموش)
 // هوش مصنوعی حسابیار (Agent-UX فاز ۲) — پیش‌فرض خاموش؛ بخش Assistant:Llm در appsettings.
 builder.Services.AddAssistantLlm(builder.Configuration);
 builder.Services.AddAssistantRisk(builder.Configuration);

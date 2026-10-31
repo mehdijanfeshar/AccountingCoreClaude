@@ -38,6 +38,7 @@ public static class MenuCatalog
     private const string Base = "اطلاعات پایه";
     private const string Assistant = "حسابیار";
     private const string Sales = "فروش";
+    private const string Accrual = "حسابداری تعهدی";
     private const string Operation = "عملیات";
     private const string Reports = "گزارش‌ها";
     private const string Treasury = "تنخواه و خزانه‌داری";
@@ -79,6 +80,9 @@ public static class MenuCatalog
         M("/sales/customers", Sales, "مشتریان", MenuGroupAccess.Operate),
         M("/sales/items", Sales, "کالا و خدمات", MenuGroupAccess.Operate),
         M("/sales/settings", Sales, "تنظیمات فروش", MenuGroupAccess.Operate),
+
+        M("/accrual", Accrual, "میز کار تعهدی", MenuGroupAccess.Operate, "Accrual"),
+        M("/accrual/schedules", Accrual, "زمان‌بندی‌ها", MenuGroupAccess.Operate, "Accrual"),
 
         M("/operation/voucher-heads", Operation, "کارتابل اسناد", MenuGroupAccess.Operate, "Vouchers"),
         M("/operation/vouchers/new", Operation, "صدور سند", MenuGroupAccess.Operate, "Vouchers"),

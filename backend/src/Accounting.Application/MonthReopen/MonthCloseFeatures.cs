@@ -49,9 +49,11 @@ public sealed class CloseMonthHandler : IRequestHandler<CloseMonthCommand, Month
     private readonly IUnitAccessReadRepository _unitAccess;
     private readonly ICurrentUser _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly Accrual.IAccrualScheduleRepository? _accrual;
 
-    public CloseMonthHandler(IMonthCloseRepository repo, IUnitAccessReadRepository unitAccess, ICurrentUser currentUser, IUnitOfWork unitOfWork)
-    { _repo = repo; _unitAccess = unitAccess; _currentUser = currentUser; _unitOfWork = unitOfWork; }
+    public CloseMonthHandler(IMonthCloseRepository repo, IUnitAccessReadRepository unitAccess, ICurrentUser currentUser, IUnitOfWork unitOfWork,
+        Accrual.IAccrualScheduleRepository? accrual = null)
+    { _repo = repo; _unitAccess = unitAccess; _currentUser = currentUser; _unitOfWork = unitOfWork; _accrual = accrual; }
 
     public async Task<MonthCloseSummaryDto> Handle(CloseMonthCommand c, CancellationToken ct)
     {
@@ -84,6 +86,10 @@ public sealed class CloseMonthHandler : IRequestHandler<CloseMonthCommand, Month
             .GroupBy(r => r.VahedCode, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
         var elams = await _repo.GetUnsentElamCountsAsync(c.Year, c.Month, ct);
+        // فاز ۶۶: سطر زمان‌بندی تعهدی باز با سررسید تا پایان همین ماه ⇒ واحد صورتحساب نمی‌شود.
+        IReadOnlyDictionary<string, Accrual.AccrualOpenCount> accrualOpen = _accrual is null
+            ? new Dictionary<string, Accrual.AccrualOpenCount>()
+            : await _accrual.CountOpenDueAsync($"{c.Year}{c.Month:00}31", ct);
 
         var batchId = Guid.NewGuid();
         var now = DateTime.UtcNow;
@@ -101,16 +107,22 @@ public sealed class CloseMonthHandler : IRequestHandler<CloseMonthCommand, Month
             var unknown = rows.Where(r => r.DocLife is null or < DocLife.Draft or > DocLife.Accepted).Sum(r => r.Count);
             var pendingVouchers = draft + temp + unknown;
             var pendingElams = elams.GetValueOrDefault(unit);
+            var accrual = accrualOpen.GetValueOrDefault(unit) ?? new Accrual.AccrualOpenCount(0, 0);
 
-            if (pendingVouchers > 0 || pendingElams > 0)
+            if (pendingVouchers > 0 || pendingElams > 0 || accrual.Total > 0)
             {
                 var reasons = new List<string>();
                 if (draft > 0) reasons.Add($"{draft} سند یادداشت");
                 if (temp > 0) reasons.Add($"{temp} سند موقت");
                 if (unknown > 0) reasons.Add($"{unknown} سند با وضعیت نامعلوم");
                 if (pendingElams > 0) reasons.Add($"{pendingElams} اعلامیهٔ صادرهٔ ارسال‌نشده");
+                if (accrual.Reversals > 0) reasons.Add($"{accrual.Reversals} برگشت برآورد اجرانشده");
+                if (accrual.Shares > 0) reasons.Add($"{accrual.Shares} سهم ماهانهٔ پیش‌پرداخت/درآمد انتقالی اجرانشده");
+                var tail = accrual.Total > 0
+                    ? " همهٔ اسناد باید «بررسی‌شده»، اعلامیه‌ها ارسال‌شده و اقلام تعهدی سررسیدشده از «حسابداری تعهدی» اجرا شده باشند."
+                    : " همهٔ اسناد باید «بررسی‌شده» و اعلامیه‌ها ارسال شده باشند.";
                 logs.Add(Log(unit, MonthCloseResult.Rejected, 0, pendingVouchers, pendingElams,
-                    $"صورتحساب نشد: {string.Join("، ", reasons)} در این ماه وجود دارد. همهٔ اسناد باید «بررسی‌شده» و اعلامیه‌ها ارسال شده باشند."));
+                    $"صورتحساب نشد: {string.Join("، ", reasons)} در این ماه وجود دارد.{tail}"));
                 continue;
             }
 

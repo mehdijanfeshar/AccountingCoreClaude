@@ -30,5 +30,6 @@ public partial class LegacyDbContext
         modelBuilder.ApplyConfiguration(new AiEvalRunConfig()); // DDL 088
         modelBuilder.ApplyConfiguration(new AiEvalItemConfig()); // DDL 088
         Accounting.Infrastructure.Sales.SalesMappingExtensions.ApplySales(modelBuilder); // DDL 080
+        modelBuilder.ApplyConfiguration(new Accounting.Infrastructure.Accrual.AccrualScheduleConfig()); // DDL 090
     }
 }

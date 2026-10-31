@@ -27,19 +27,33 @@ public sealed class HttpContextCurrentUser : ICurrentUser
     private const string VahedCodeClaimType = "urn:tamin:jwt:claim:org";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly SystemActorContext? _systemActor;
 
-    public HttpContextCurrentUser(IHttpContextAccessor httpContextAccessor)
+    public HttpContextCurrentUser(IHttpContextAccessor httpContextAccessor, SystemActorContext? systemActor = null)
     {
         _httpContextAccessor = httpContextAccessor;
+        _systemActor = systemActor;
     }
 
+    /// <summary>
+    /// کار پس‌زمینه (بدون درخواست HTTP) که در scope خودش <see cref="SystemActorContext.UserId"/> را گذاشته — مثل
+    /// اجرای روزانهٔ زمان‌بندی تعهدی. در درخواست HTTP هرگز؛ آنجا فقط توکن معتبر است.
+    /// </summary>
+    private string? SystemUserId =>
+        _httpContextAccessor.HttpContext is null && !string.IsNullOrEmpty(_systemActor?.UserId) ? _systemActor.UserId : null;
+
     public bool IsAuthenticated =>
-        _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
+        _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? SystemUserId is not null;
 
     public string UserId
     {
         get
         {
+            if (SystemUserId is { } systemUserId)
+            {
+                return systemUserId;
+            }
+
             var httpContext = _httpContextAccessor.HttpContext;
 
             if (httpContext is null || !(httpContext.User?.Identity?.IsAuthenticated ?? false))

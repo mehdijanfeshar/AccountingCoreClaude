@@ -126,11 +126,17 @@ public sealed class ExecuteOperationHandler : IRequestHandler<ExecuteOperationCo
     private readonly ICurrentUser _currentUser;
     private readonly IHesabyarAuditRepository? _audit;
     private readonly OperationRiskEvaluator? _risk;
+    private readonly Accrual.AccrualSchedulePlanner? _accrual;
+    private readonly Accrual.IAccrualScheduleRepository? _schedules;
 
     public ExecuteOperationHandler(IOperationTemplateRepository repo, IVoucherGenerationEngine engine,
         ComposedVoucherBuilder composer, IVoucherWriter writer, IUnitOfWork unitOfWork, ICurrentUser currentUser, AssistantUnitPolicy policy,
-        IHesabyarAuditRepository? audit = null, OperationRiskEvaluator? risk = null)
-    { _repo = repo; _engine = engine; _composer = composer; _writer = writer; _unitOfWork = unitOfWork; _currentUser = currentUser; _policy = policy; _audit = audit; _risk = risk; }
+        IHesabyarAuditRepository? audit = null, OperationRiskEvaluator? risk = null,
+        Accrual.AccrualSchedulePlanner? accrual = null, Accrual.IAccrualScheduleRepository? schedules = null)
+    {
+        _repo = repo; _engine = engine; _composer = composer; _writer = writer; _unitOfWork = unitOfWork; _currentUser = currentUser; _policy = policy; _audit = audit; _risk = risk;
+        _accrual = accrual; _schedules = schedules;
+    }
 
     public async Task<OperationResult> Handle(ExecuteOperationCommand c, CancellationToken ct)
     {
@@ -169,6 +175,15 @@ public sealed class ExecuteOperationHandler : IRequestHandler<ExecuteOperationCo
         var assessment = _risk is null ? null
             : await _risk.EvaluateAsync(new RiskRequest(template!, c.VahedCode, draft, values, false, c.HasAttachment, c.AnswerSources, c.AiConfirmed), ct);
 
+        // فاز ۶۶: زمان‌بندی تعهدی (برگشت خودکار / سهم ماهانه) پیش از stage سند تا خطای آن چیزی نسازد.
+        Accrual.AccrualPlan? accrualPlan = null;
+        if (_accrual is not null && _schedules is not null && (template!.AutoReverse || template.ScheduleKind is not null))
+        {
+            var (plan, accrualError) = await _accrual.PlanAsync(template, c.VahedCode, date, values, draft, ct);
+            if (accrualError is not null) return new(false, draft, new[] { accrualError });
+            accrualPlan = plan;
+        }
+
         // writer فقط stage می‌کند؛ سند و ردپای اجرا با یک SaveChanges (یک تراکنش) ثبت می‌شوند.
         var (voucherId, voucherNo) = await _writer.CreateDraftVoucherAsync(draft, ct);
 
@@ -201,6 +216,10 @@ public sealed class ExecuteOperationHandler : IRequestHandler<ExecuteOperationCo
         };
         ExecutionOrigin.Apply(execution, c.UserSentence, c.AnswerSources, c.AiConfirmed, assessment, draft.TotalDebit);
         await _repo.AddExecutionAsync(execution, ct);
+
+        if (accrualPlan is not null)
+            await _schedules!.AddRangeAsync(Accrual.AccrualSchedulePlanner.Stage(
+                accrualPlan, c.VahedCode, voucherId, execution.Id, _currentUser.UserId, execution.CreatedAtUtc), ct);
 
         try
         {
@@ -254,7 +273,9 @@ public sealed record TemplateSummaryDto(Guid Id, string Code, string Title, stri
     IReadOnlyList<TemplateParameterDto> Parameters, string? Keywords = null,
     // فاز ۶۲: سیاست الگو، تعداد سؤال‌ها و تعداد اجرا در واحد جاری
     long? MaxAmount = null, bool RequireAttachment = false, RiskLevel? RiskBase = null, TemplateCategory? Category = null,
-    string? PlainPattern = null, int QuestionCount = 0, int UsageCountInUnit = 0);
+    string? PlainPattern = null, int QuestionCount = 0, int UsageCountInUnit = 0,
+    // فاز ۶۶: حسابداری تعهدی (پیش‌نمایش برگشت خودکار / جدول تقسیم)
+    bool AutoReverse = false, Accounting.Domain.Accrual.AccrualScheduleKind? ScheduleKind = null);
 
 // PickerAccountId/PickerLevel فقط در خروجی فهرست: معین و سطح (LEVEL_CODE) اولین ردیفی که این پارامتر
 // تفصیلی را مصرف می‌کند؛ فرانت با account-codes/{id}/tafsili-levels/{levelId}/items (همان قاعدهٔ B)
@@ -289,7 +310,7 @@ public sealed class ListOperationTemplatesHandler
                      p.Type == ParameterType.Choice ? ChoiceOptions.Parse(p.OptionsJson) : null);
              }).ToList(), t.Keywords,
             t.MaxAmount, t.RequireAttachment, t.RiskBase, t.Category, t.PlainPattern,
-            t.Parameters.Count, usage.GetValueOrDefault(t.Id))).ToList();
+            t.Parameters.Count, usage.GetValueOrDefault(t.Id), t.AutoReverse, t.ScheduleKind)).ToList();
     }
 
     private static (Guid AccountId, int Level)? FindBinding(OperationTemplate t, string key)
@@ -312,14 +333,17 @@ public sealed record CreateOperationTemplateCommand(
     string? Keywords = null,
     IReadOnlyList<string>? AllowedVahedTypes = null,
     string? PlainPattern = null, long? MaxAmount = null, bool RequireAttachment = false,
-    RiskLevel? RiskBase = null, TemplateCategory? Category = null) : IRequest<CreateTemplateResult>;
+    RiskLevel? RiskBase = null, TemplateCategory? Category = null,
+    bool AutoReverse = false, Accounting.Domain.Accrual.AccrualScheduleKind? ScheduleKind = null) : IRequest<CreateTemplateResult>;
 
 public sealed record TemplateLineDto(LineSide Side, Guid SubsidiaryAccountId, string? AmountParameterKey,
     decimal Percent, bool IsBalancingLine, string? DescriptionPattern, int SortOrder,
     List<TemplateLineDetailDto> Details,
     // فاز ۶۲: ردیف شرطی (G8) و منبع مبلغ (G9: 1 پارامتر، 2 ارزش افزوده)
     string? ConditionParamKey = null, string? ConditionValue = null,
-    LineAmountSource AmountSource = LineAmountSource.Parameter);
+    LineAmountSource AmountSource = LineAmountSource.Parameter,
+    // فاز ۶۶: ردیف «سهم ماهانه» الگوی تقسیم چندماهه — در سند اصلی ساخته نمی‌شود
+    bool IsScheduleLine = false);
 
 public sealed record TemplateLineDetailDto(int Level, string? ParameterKey, Guid? FixedDetailId);
 
@@ -347,7 +371,7 @@ public sealed class CreateOperationTemplateHandler
 
         var t = TemplateMapping.Build(Guid.NewGuid(), c.Code, c.Title, c.Description, c.VoucherDescriptionPattern,
             c.Parameters, c.Lines, c.SystemTypeId, c.Keywords, c.AllowedVahedTypes,
-            new TemplatePolicyInput(c.PlainPattern, c.MaxAmount, c.RequireAttachment, c.RiskBase, c.Category));
+            new TemplatePolicyInput(c.PlainPattern, c.MaxAmount, c.RequireAttachment, c.RiskBase, c.Category, c.AutoReverse, c.ScheduleKind));
         t.CreatedBy = _currentUser.UserId;
         t.CreatedAtUtc = DateTime.UtcNow;
 

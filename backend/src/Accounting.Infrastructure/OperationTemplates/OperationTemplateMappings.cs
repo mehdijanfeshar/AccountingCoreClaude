@@ -42,6 +42,9 @@ public sealed class OperationTemplateConfig : IEntityTypeConfiguration<Operation
         b.Property(x => x.RequireAttachment).HasColumnName("REQUIRE_ATTACHMENT").HasColumnType("NUMBER(1)");
         b.Property(x => x.RiskBase).HasColumnName("RISK_BASE").HasConversion<int?>();
         b.Property(x => x.Category).HasColumnName("CATEGORY").HasConversion<int?>();
+        // DDL 090 (فاز ۶۶): حسابداری تعهدی.
+        b.Property(x => x.AutoReverse).HasColumnName("AUTO_REVERSE").HasColumnType("NUMBER(1)");
+        b.Property(x => x.ScheduleKind).HasColumnName("SCHEDULE_KIND").HasConversion<int?>();
         b.HasOne<TB_SYSTYPE>().WithMany().HasForeignKey(x => x.SystemTypeId)
          .HasConstraintName("FK_OP_TEMPLATE_SYSTYPE").OnDelete(DeleteBehavior.Restrict);
         b.Property(x => x.CreatedBy).HasColumnName("ADDUSERID").HasMaxLength(10).IsUnicode(false).IsRequired();

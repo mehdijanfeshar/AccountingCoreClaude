@@ -11,7 +11,8 @@ namespace Accounting.Application.OperationTemplates;
 // دیدن تعریف‌ها برای همهٔ نقش‌ها مجاز است (Query)؛ هر تغییر فقط مدیر ستاد.
 
 /// <summary>سیاست الگو (G7) هنگام ساخت/ذخیره.</summary>
-internal sealed record TemplatePolicyInput(string? PlainPattern, long? MaxAmount, bool RequireAttachment, RiskLevel? RiskBase, TemplateCategory? Category);
+internal sealed record TemplatePolicyInput(string? PlainPattern, long? MaxAmount, bool RequireAttachment, RiskLevel? RiskBase, TemplateCategory? Category,
+    bool AutoReverse = false, Accounting.Domain.Accrual.AccrualScheduleKind? ScheduleKind = null);
 
 internal static class TemplateMapping
 {
@@ -25,6 +26,8 @@ internal static class TemplateMapping
         RequireAttachment = policy?.RequireAttachment ?? false,
         RiskBase = policy?.RiskBase,
         Category = policy?.Category,
+        AutoReverse = policy?.AutoReverse ?? false,
+        ScheduleKind = policy?.ScheduleKind,
         SystemTypeId = systemTypeId,
         Keywords = string.IsNullOrWhiteSpace(keywords) ? null : keywords.Trim(),
         AllowedVahedTypes = JoinVahedTypes(allowedVahedTypes),
@@ -53,8 +56,10 @@ internal static class TemplateMapping
             AmountParameterKey = l.IsBalancingLine ? "" : l.AmountParameterKey ?? "",
             Percent = l.IsBalancingLine || l.AmountSource == LineAmountSource.Vat ? 100m : l.Percent,
             AmountSource = l.AmountSource,
-            ConditionParamKey = string.IsNullOrWhiteSpace(l.ConditionParamKey) ? null : l.ConditionParamKey.Trim(),
-            ConditionValue = string.IsNullOrWhiteSpace(l.ConditionParamKey) ? null : l.ConditionValue?.Trim(),
+            ConditionParamKey = l.IsScheduleLine ? Accounting.Domain.Accrual.AccrualConventions.ScheduleLineKey
+                : string.IsNullOrWhiteSpace(l.ConditionParamKey) ? null : l.ConditionParamKey.Trim(),
+            ConditionValue = l.IsScheduleLine ? Accounting.Domain.Accrual.AccrualConventions.ScheduleLineValue
+                : string.IsNullOrWhiteSpace(l.ConditionParamKey) ? null : l.ConditionValue?.Trim(),
             IsBalancingLine = l.IsBalancingLine,
             DescriptionPattern = string.IsNullOrWhiteSpace(l.DescriptionPattern) ? null : l.DescriptionPattern.Trim(),
             SortOrder = l.SortOrder,
@@ -131,12 +136,14 @@ public sealed record TemplateDefinitionDto(Guid Id, string Code, string Title, s
     IReadOnlyList<TemplateParameterDto> Parameters, IReadOnlyList<TemplateLineDefinitionDto> Lines, Guid? SystemTypeId, string? Keywords,
     IReadOnlyList<string>? AllowedVahedTypes = null,
     string? PlainPattern = null, long? MaxAmount = null, bool RequireAttachment = false,
-    RiskLevel? RiskBase = null, TemplateCategory? Category = null);
+    RiskLevel? RiskBase = null, TemplateCategory? Category = null,
+    bool AutoReverse = false, Accounting.Domain.Accrual.AccrualScheduleKind? ScheduleKind = null);
 
 public sealed record TemplateLineDefinitionDto(LineSide Side, Guid SubsidiaryAccountId, string? AccountCode, string? AccountTitle,
     string? AmountParameterKey, decimal Percent, bool IsBalancingLine, string? DescriptionPattern, int SortOrder,
     IReadOnlyList<TemplateLineDetailDefinitionDto> Details,
-    string? ConditionParamKey = null, string? ConditionValue = null, LineAmountSource AmountSource = LineAmountSource.Parameter);
+    string? ConditionParamKey = null, string? ConditionValue = null, LineAmountSource AmountSource = LineAmountSource.Parameter,
+    bool IsScheduleLine = false);
 
 public sealed record TemplateLineDetailDefinitionDto(int Level, string? ParameterKey, Guid? FixedDetailId, string? FixedDetailTitle);
 
@@ -170,10 +177,12 @@ public sealed class GetOperationTemplateDefinitionHandler : IRequestHandler<GetO
                     l.DescriptionPattern, l.SortOrder,
                     l.Details.OrderBy(d => d.Level).Select(d => new TemplateLineDetailDefinitionDto(d.Level, d.ParameterKey, d.FixedDetailId,
                         d.FixedDetailId is Guid fid && details.TryGetValue(fid, out var det) ? det.Title : null)).ToList(),
-                    l.ConditionParamKey, l.ConditionValue, l.AmountSource);
+                    Accrual.AccrualSchedulePlanner.IsScheduleLine(l) ? null : l.ConditionParamKey,
+                    Accrual.AccrualSchedulePlanner.IsScheduleLine(l) ? null : l.ConditionValue, l.AmountSource,
+                    Accrual.AccrualSchedulePlanner.IsScheduleLine(l));
             }).ToList(),
             t.SystemTypeId, t.Keywords, TemplateMapping.SplitVahedTypes(t.AllowedVahedTypes),
-            t.PlainPattern, t.MaxAmount, t.RequireAttachment, t.RiskBase, t.Category);
+            t.PlainPattern, t.MaxAmount, t.RequireAttachment, t.RiskBase, t.Category, t.AutoReverse, t.ScheduleKind);
     }
 }
 
@@ -184,7 +193,8 @@ public sealed record ValidateOperationTemplateQuery(
     List<TemplateParameterDto> Parameters, List<TemplateLineDto> Lines, Guid? SystemTypeId = null, string? Keywords = null,
     IReadOnlyList<string>? AllowedVahedTypes = null,
     string? PlainPattern = null, long? MaxAmount = null, bool RequireAttachment = false,
-    RiskLevel? RiskBase = null, TemplateCategory? Category = null) : IRequest<CreateTemplateResult>;
+    RiskLevel? RiskBase = null, TemplateCategory? Category = null,
+    bool AutoReverse = false, Accounting.Domain.Accrual.AccrualScheduleKind? ScheduleKind = null) : IRequest<CreateTemplateResult>;
 
 public sealed class ValidateOperationTemplateHandler : IRequestHandler<ValidateOperationTemplateQuery, CreateTemplateResult>
 {
@@ -197,7 +207,7 @@ public sealed class ValidateOperationTemplateHandler : IRequestHandler<ValidateO
     public async Task<CreateTemplateResult> Handle(ValidateOperationTemplateQuery q, CancellationToken ct)
     {
         var t = TemplateMapping.Build(q.Id ?? Guid.Empty, q.Code, q.Title, q.Description, q.VoucherDescriptionPattern, q.Parameters, q.Lines, q.SystemTypeId, q.Keywords, q.AllowedVahedTypes,
-            new TemplatePolicyInput(q.PlainPattern, q.MaxAmount, q.RequireAttachment, q.RiskBase, q.Category));
+            new TemplatePolicyInput(q.PlainPattern, q.MaxAmount, q.RequireAttachment, q.RiskBase, q.Category, q.AutoReverse, q.ScheduleKind));
         var errors = (await _validator.ValidateAsync(t, ct)).ToList();
         if (errors.Count == 0 && await _repo.CodeExistsForOtherAsync(t.Code, q.Id, ct))
             errors.Add($"کد الگو «{t.Code}» قبلاً ثبت شده است.");
@@ -212,7 +222,8 @@ public sealed record UpdateOperationTemplateCommand(
     List<TemplateParameterDto> Parameters, List<TemplateLineDto> Lines, Guid? SystemTypeId = null, string? Keywords = null,
     IReadOnlyList<string>? AllowedVahedTypes = null,
     string? PlainPattern = null, long? MaxAmount = null, bool RequireAttachment = false,
-    RiskLevel? RiskBase = null, TemplateCategory? Category = null) : IRequest<CreateTemplateResult>
+    RiskLevel? RiskBase = null, TemplateCategory? Category = null,
+    bool AutoReverse = false, Accounting.Domain.Accrual.AccrualScheduleKind? ScheduleKind = null) : IRequest<CreateTemplateResult>
 {
     /// <summary>از مسیر (<c>{id}/update</c>)، نه بدنه.</summary>
     [JsonIgnore]
@@ -238,7 +249,7 @@ public sealed class UpdateOperationTemplateHandler : IRequestHandler<UpdateOpera
         await TemplateMapping.EnsureAbilityAsync(_currentUser, _hq, AbilityCatalog.TemplatesDefine, "الگوی عملیات", ct);
 
         var candidate = TemplateMapping.Build(c.Id, c.Code, c.Title, c.Description, c.VoucherDescriptionPattern, c.Parameters, c.Lines, c.SystemTypeId, c.Keywords, c.AllowedVahedTypes,
-            new TemplatePolicyInput(c.PlainPattern, c.MaxAmount, c.RequireAttachment, c.RiskBase, c.Category));
+            new TemplatePolicyInput(c.PlainPattern, c.MaxAmount, c.RequireAttachment, c.RiskBase, c.Category, c.AutoReverse, c.ScheduleKind));
         var errors = (await _validator.ValidateAsync(candidate, ct)).ToList();
         if (errors.Count == 0 && await _repo.CodeExistsForOtherAsync(candidate.Code, c.Id, ct))
             errors.Add($"کد الگو «{candidate.Code}» قبلاً ثبت شده است.");
@@ -260,6 +271,8 @@ public sealed class UpdateOperationTemplateHandler : IRequestHandler<UpdateOpera
         t.RequireAttachment = candidate.RequireAttachment;
         t.RiskBase = candidate.RiskBase;
         t.Category = candidate.Category;
+        t.AutoReverse = candidate.AutoReverse;
+        t.ScheduleKind = candidate.ScheduleKind;
         t.Parameters = candidate.Parameters;
         t.Lines = candidate.Lines;
         _repo.AddChildren(t);
